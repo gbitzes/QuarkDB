@@ -13,7 +13,7 @@ XrdPlugin.cc
 XrdRedisProtocol.cc XrdRedisProtocol.hh
 Configuration.cc    Configuration.hh
                     RedisConnection.hh
-                    Utils.hh
+Utils.cc            Utils.hh
                     Common.hh
 )
 

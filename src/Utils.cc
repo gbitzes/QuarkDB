@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: example.cc
+// File: Utils.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,8 +21,55 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include <gtest/gtest.h>
+#include <climits>
+#include "Utils.hh"
 
-TEST(Example, Example) {
-  ASSERT_EQ(1, 1);
+namespace quarkdb {
+
+bool my_strtoll(const std::string &str, int64_t &ret) {
+  char *endptr = NULL;
+  ret = strtoll(str.c_str(), &endptr, 10);
+  if(endptr != str.c_str() + str.size() || ret == LLONG_MIN || ret == LONG_LONG_MAX) {
+    return false;
+  }
+  return true;
+}
+
+std::vector<std::string> split(std::string data, std::string token) {
+    std::vector<std::string> output;
+    size_t pos = std::string::npos;
+    do {
+        pos = data.find(token);
+        output.push_back(data.substr(0, pos));
+        if(std::string::npos != pos)
+            data = data.substr(pos + token.size());
+    } while (std::string::npos != pos);
+    return output;
+}
+
+bool parseServer(const std::string &str, RaftServer &srv) {
+  std::vector<std::string> parts = split(str, ":");
+
+  if(parts.size() != 2) return false;
+
+  int64_t port;
+  if(!my_strtoll(parts[1], port)) return false;
+
+  srv = RaftServer{ parts[0], (int) port };
+  return true;
+}
+
+bool parseServers(const std::string &str, std::vector<RaftServer> &servers) {
+  std::vector<std::string> parts = split(str, ",");
+
+  for(size_t i = 0; i < parts.size(); i++) {
+    RaftServer srv;
+    if(!parseServer(parts[i], srv)) return false;
+    servers.push_back(srv);
+  }
+
+  return true;
+}
+
+
 }

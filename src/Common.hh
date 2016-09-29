@@ -26,6 +26,14 @@
 
 namespace quarkdb {
 
+enum class TraceLevel {
+  off = 0,
+  error = 1,
+  warning = 2,
+  info = 3,
+  debug = 4
+};
+
 class Status {
 public:
   // up to kTryAgain we are compatible to rocksdb error codes
@@ -73,7 +81,33 @@ private:
   std::string error_;
 };
 
+using RaftClusterID = std::string;
+
+struct RaftServer {
+  std::string hostname;
+  int port;
+
+  RaftServer() {}
+  RaftServer(const std::string &h, int p) : hostname(h), port(p) {}
+
+  bool operator==(const RaftServer& rhs) const {
+    return hostname == rhs.hostname && port == rhs.port;
+  }
 };
 
+class FatalException : public std::exception {
+public:
+  FatalException(const std::string &m) : msg(m) {}
+  virtual ~FatalException() {}
+
+  virtual const char* what() const noexcept {
+    return msg.c_str();
+  }
+
+private:
+  std::string msg;
+};
+
+}
 
 #endif

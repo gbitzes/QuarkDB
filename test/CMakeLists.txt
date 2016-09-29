@@ -14,5 +14,15 @@ add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
 
 file(GLOB_RECURSE sources "*.cc")
 add_executable(tests ${sources})
-include_directories(${CMAKE_SOURCE_DIR}/src) # need access to the private headers
-target_link_libraries(tests gtest_main)
+
+include_directories(
+  ${XROOTD_INCLUDE_DIRS}
+  ${CMAKE_SOURCE_DIR}/src  # need access to the private headers
+)
+
+target_link_libraries(tests
+  XrdRedis
+  gtest_main
+  ${XROOTD_CL_LIBRARY}
+  ${XROOTD_UTILS_LIBRARY}
+)

@@ -14,7 +14,7 @@ find_package(XRootD REQUIRED)
 # Compiler options
 #-------------------------------------------------------------------------------
 
-add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter)
+add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++11)
 
 #-------------------------------------------------------------------------------
 # Build source and tests

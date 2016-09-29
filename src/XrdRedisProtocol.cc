@@ -77,6 +77,8 @@ void XrdRedisProtocol::DoIt() {
 }
 
 int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
+  eDest.logger(pi->eDest->logger());
+
   char* rdf = (parms && *parms ? parms : pi->ConfigFN);
   bool success = Configuration::fromFile(rdf, configuration);
   if(success) return 1;

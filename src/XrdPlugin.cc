@@ -59,7 +59,6 @@ XrdVERSIONINFO(GetProtocolPort, xrdredis);
 
 extern "C" {
 int GetProtocolPort(const char *pname, char *parms, XrdProtocol_Config *pi) {
-  std::cout << "port: " << pi->Port << std::endl;
   if (pi->Port < 0) return 6379;
   return pi->Port;
 }
