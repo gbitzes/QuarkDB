@@ -30,6 +30,15 @@
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
+// Return code from XrdLink.
+// 1 or higher means success. The value is typically the number of bytes read.
+// 0 means slow link, ie there's not enough data yet to complete the operation.
+//   This is not an error, and you should retry later.
+// Negative means an error occured.
+//------------------------------------------------------------------------------
+using LinkStatus = int;
+
+//------------------------------------------------------------------------------
 // Our link class either directly maps to an XrdLink, or to an internal buffer.
 // Needed for unit tests.
 //------------------------------------------------------------------------------
@@ -39,19 +48,19 @@ public:
   Link(XrdLink *lp) : link(lp) {}
   Link() {}
 
-  int Recv(char *buff, int blen, int timeout);
-  int Send(const char *buff, int blen);
-  int Close(int defer = 0);
+  LinkStatus Recv(char *buff, int blen, int timeout);
+  LinkStatus Send(const char *buff, int blen);
+  LinkStatus Close(int defer = 0);
 
   // not present in XrdLink, but convenient
-  int Send(const std::string &str);
+  LinkStatus Send(const std::string &str);
 private:
   std::stringstream stream;
   XrdLink *link = nullptr;
 
-  int streamRecv(char *buff, int blen, int timeout);
-  int streamSend(const char *buff, int blen);
-  int streamClose(int defer = 0);
+  LinkStatus streamRecv(char *buff, int blen, int timeout);
+  LinkStatus streamSend(const char *buff, int blen);
+  LinkStatus streamClose(int defer = 0);
 };
 
 }

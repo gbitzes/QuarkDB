@@ -30,37 +30,37 @@
 
 using namespace quarkdb;
 
-int Link::Recv(char *buff, int blen, int timeout) {
+LinkStatus Link::Recv(char *buff, int blen, int timeout) {
   if(link) return link->Recv(buff, blen, timeout);
   return streamRecv(buff, blen, timeout);
 }
 
-int Link::Close(int defer) {
+LinkStatus Link::Close(int defer) {
   if(link) return link->Close(defer);
   return streamClose(defer);
 }
 
-int Link::Send(const char *buff, int blen) {
+LinkStatus Link::Send(const char *buff, int blen) {
   if(link) return link->Send(buff, blen);
   return streamSend(buff, blen);
 }
 
-int Link::Send(const std::string &str) {
+LinkStatus Link::Send(const std::string &str) {
   return Send(str.c_str(), str.size());
 }
 
-int Link::streamSend(const char *buff, int blen) {
+LinkStatus Link::streamSend(const char *buff, int blen) {
   if(stream.eof()) return -1;
   stream.write(buff, blen);
   return blen;
 }
 
-int Link::streamClose(int defer) {
+LinkStatus Link::streamClose(int defer) {
   stream.ignore(std::numeric_limits<std::streamsize>::max());
   return 0;
 }
 
-int Link::streamRecv(char *buff, int blen, int timeout) {
+LinkStatus Link::streamRecv(char *buff, int blen, int timeout) {
   if(stream.eof()) return -1;
 
   int totalRead = 0;
