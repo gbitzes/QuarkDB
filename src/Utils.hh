@@ -40,7 +40,9 @@ namespace quarkdb {
 
 // temporary solution for now
 #define qdb_log(message) std::cerr << message << std::endl;
-#define qdb_critical(message) std::cerr << message << std::endl;
+#define qdb_warn(message) std::cerr << message << std::endl;
+#define qdb_error(message) std::cerr << message << std::endl;
+#define qdb_info(message) std::cerr << message << std::endl;
 #define qdb_debug(message) if(false) { std::cerr << message << std::endl; }
 
 bool my_strtoll(const std::string &str, int64_t &ret);

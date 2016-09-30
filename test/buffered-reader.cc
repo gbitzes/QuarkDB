@@ -83,6 +83,6 @@ TEST_P(Buffered_Reader, T1) {
   ASSERT_EQ(buffer, std::string(2038, 'q'));
 
   ASSERT_EQ(reader->consume(1, buffer), 0);
-  ASSERT_LE(link.Close(), 0);
-  ASSERT_LE(reader->consume(1, buffer), 0);
+  ASSERT_EQ(link.Close(), 0);
+  ASSERT_LT(reader->consume(1, buffer), 0);
 }
