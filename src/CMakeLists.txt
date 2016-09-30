@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 2.6)
 include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${BACKWARD_INCLUDE_DIRS}
+  ${ROCKSDB_INCLUDE_DIRS}
 )
 
 #-------------------------------------------------------------------------------
@@ -26,5 +27,6 @@ target_link_libraries(
   XrdRedis
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
+  ${ROCKSDB_LIBRARY}
   ${BACKWARD_LIBRARIES}
 )

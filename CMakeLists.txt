@@ -4,10 +4,11 @@ project(quarkdb)
 #-------------------------------------------------------------------------------
 # Search for dependencies
 #-------------------------------------------------------------------------------
+
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
 find_package(XRootD REQUIRED)
-
-
+find_package(RocksDB REQUIRED)
 
 #-------------------------------------------------------------------------------
 # Compiler options
