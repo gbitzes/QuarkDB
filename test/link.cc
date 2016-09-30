@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Utils.hh
+// File: link.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,46 +21,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_UTILS_H__
-#define __QUARKDB_UTILS_H__
+#include "Link.hh"
+#include <gtest/gtest.h>
 
-#include <iostream>
-#include <sstream>
-#include <vector>
-#include <set>
+using namespace quarkdb;
 
-#include "Common.hh"
+TEST(Link, T1) {
+  char buffer[1024];
 
-namespace quarkdb {
+  Link link;
+  ASSERT_EQ(link.Send("1234"), 4);
+  ASSERT_EQ(link.Recv(buffer, 100, 0), 4);
+  ASSERT_EQ("1234", std::string(buffer, 4));
 
-#define SSTR(message) static_cast<std::ostringstream&>(std::ostringstream().flush() << message).str()
-#define quotes(message) SSTR("'" << message << "'")
+  ASSERT_EQ(link.Send("random_contents"), 15);
+  ASSERT_EQ(link.Recv(buffer, 1, 0), 1);
+  ASSERT_EQ("r", std::string(buffer, 1));
 
-#define DBG(message) std::cerr << __FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message << std::endl;
+  ASSERT_EQ(link.Recv(buffer, 3, 0), 3);
+  ASSERT_EQ("and", std::string(buffer, 3));
 
-// temporary solution for now
-#define qdb_log(message) std::cerr << message << std::endl;
-#define qdb_critical(message) std::cerr << message << std::endl;
-#define qdb_debug(message) if(false) { std::cerr << message << std::endl; }
+  ASSERT_EQ(link.Recv(buffer, 200, 0), 11);
+  ASSERT_EQ("om_contents", std::string(buffer, 11));
 
-bool my_strtoll(const std::string &str, int64_t &ret);
-std::vector<std::string> split(std::string data, std::string token);
-bool parseServer(const std::string &str, RaftServer &srv);
-bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
+  ASSERT_EQ(link.Recv(buffer, 1, 0), 0);
 
-// given a vector, checks whether all elements are unique
-template<class T>
-bool checkUnique(std::vector<T> &v) {
-  for(size_t i = 0; i < v.size(); i++) {
-    for(size_t j = 0; j < v.size(); j++) {
-      if(i != j && v[i] == v[j]) {
-        return false;
-      }
-    }
-  }
-  return true;
+  ASSERT_EQ(link.Close(), 0);
+  ASSERT_LT(link.Recv(buffer, 100, 0), 0);
+  ASSERT_LT(link.Send("test"), 0);
 }
 
-}
+TEST(Link, T2) {
+  char buffer[1024];
 
-#endif
+  Link link;
+  ASSERT_EQ(link.Send("adfadfaF"), 8);
+  ASSERT_EQ(link.Recv(buffer, 2, 0), 2);
+  ASSERT_EQ("ad", std::string(buffer, 2));
+}

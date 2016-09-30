@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Utils.hh
+// File: Link.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,46 +21,58 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_UTILS_H__
-#define __QUARKDB_UTILS_H__
-
 #include <iostream>
-#include <sstream>
-#include <vector>
-#include <set>
+#include <limits>
 
+#include "Link.hh"
 #include "Common.hh"
+#include "Utils.hh"
 
-namespace quarkdb {
+using namespace quarkdb;
 
-#define SSTR(message) static_cast<std::ostringstream&>(std::ostringstream().flush() << message).str()
-#define quotes(message) SSTR("'" << message << "'")
+int Link::Recv(char *buff, int blen, int timeout) {
+  if(link) return link->Recv(buff, blen, timeout);
+  return streamRecv(buff, blen, timeout);
+}
 
-#define DBG(message) std::cerr << __FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message << std::endl;
+int Link::Close(int defer) {
+  if(link) return link->Close(defer);
+  return streamClose(defer);
+}
 
-// temporary solution for now
-#define qdb_log(message) std::cerr << message << std::endl;
-#define qdb_critical(message) std::cerr << message << std::endl;
-#define qdb_debug(message) if(false) { std::cerr << message << std::endl; }
+int Link::Send(const char *buff, int blen) {
+  if(link) return link->Send(buff, blen);
+  return streamSend(buff, blen);
+}
 
-bool my_strtoll(const std::string &str, int64_t &ret);
-std::vector<std::string> split(std::string data, std::string token);
-bool parseServer(const std::string &str, RaftServer &srv);
-bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
+int Link::Send(const std::string &str) {
+  return Send(str.c_str(), str.size());
+}
 
-// given a vector, checks whether all elements are unique
-template<class T>
-bool checkUnique(std::vector<T> &v) {
-  for(size_t i = 0; i < v.size(); i++) {
-    for(size_t j = 0; j < v.size(); j++) {
-      if(i != j && v[i] == v[j]) {
-        return false;
-      }
-    }
+int Link::streamSend(const char *buff, int blen) {
+  if(stream.eof()) return -1;
+  stream.write(buff, blen);
+  return blen;
+}
+
+int Link::streamClose(int defer) {
+  stream.ignore(std::numeric_limits<std::streamsize>::max());
+  return 0;
+}
+
+int Link::streamRecv(char *buff, int blen, int timeout) {
+  if(stream.eof()) return -1;
+
+  int totalRead = 0;
+  while(true) {
+    int rc = stream.readsome(buff, blen);
+    totalRead += rc;
+
+    blen -= rc;
+    buff += rc;
+
+    if(rc == 0 || blen == 0) break;
   }
-  return true;
-}
 
+  return totalRead;
 }
-
-#endif

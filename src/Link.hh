@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Utils.hh
+// File: Link.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,46 +21,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_UTILS_H__
-#define __QUARKDB_UTILS_H__
+#ifndef __QUARKDB_LINK_H__
+#define __QUARKDB_LINK_H__
 
-#include <iostream>
 #include <sstream>
-#include <vector>
-#include <set>
-
-#include "Common.hh"
+#include "Xrd/XrdLink.hh"
 
 namespace quarkdb {
 
-#define SSTR(message) static_cast<std::ostringstream&>(std::ostringstream().flush() << message).str()
-#define quotes(message) SSTR("'" << message << "'")
+//------------------------------------------------------------------------------
+// Our link class either directly maps to an XrdLink, or to an internal buffer.
+// Needed for unit tests.
+//------------------------------------------------------------------------------
 
-#define DBG(message) std::cerr << __FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message << std::endl;
+class Link {
+public:
+  Link(XrdLink *lp) : link(lp) {}
+  Link() {}
 
-// temporary solution for now
-#define qdb_log(message) std::cerr << message << std::endl;
-#define qdb_critical(message) std::cerr << message << std::endl;
-#define qdb_debug(message) if(false) { std::cerr << message << std::endl; }
+  int Recv(char *buff, int blen, int timeout);
+  int Send(const char *buff, int blen);
+  int Close(int defer = 0);
 
-bool my_strtoll(const std::string &str, int64_t &ret);
-std::vector<std::string> split(std::string data, std::string token);
-bool parseServer(const std::string &str, RaftServer &srv);
-bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
+  // not present in XrdLink, but convenient
+  int Send(const std::string &str);
+private:
+  std::stringstream stream;
+  XrdLink *link = nullptr;
 
-// given a vector, checks whether all elements are unique
-template<class T>
-bool checkUnique(std::vector<T> &v) {
-  for(size_t i = 0; i < v.size(); i++) {
-    for(size_t j = 0; j < v.size(); j++) {
-      if(i != j && v[i] == v[j]) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
+  int streamRecv(char *buff, int blen, int timeout);
+  int streamSend(const char *buff, int blen);
+  int streamClose(int defer = 0);
+};
 
 }
-
 #endif

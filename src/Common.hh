@@ -24,6 +24,9 @@
 #ifndef __QUARKDB_COMMON_H__
 #define __QUARKDB_COMMON_H__
 
+#include <vector>
+#include <string>
+
 namespace quarkdb {
 
 enum class TraceLevel {
@@ -81,8 +84,6 @@ private:
   std::string error_;
 };
 
-using RaftClusterID = std::string;
-
 struct RaftServer {
   std::string hostname;
   int port;
@@ -107,6 +108,9 @@ public:
 private:
   std::string msg;
 };
+
+using RaftClusterID = std::string;
+using RedisRequest = std::vector<std::string>;
 
 }
 

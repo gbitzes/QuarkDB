@@ -16,6 +16,7 @@ add_library(XrdRedis SHARED
                       RedisConnection.hh
   Utils.cc            Utils.hh
                       Common.hh
+  Link.cc             Link.hh
   ${BACKWARD_ENABLE}
 )
 
