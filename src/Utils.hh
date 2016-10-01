@@ -49,10 +49,14 @@ namespace quarkdb {
 #define qdb_info(message) std::cerr << message << std::endl;
 #define qdb_debug(message) if(false) { std::cerr << message << std::endl; }
 
+// a serious error has occured signifying a bug in the program logic
+#define qdb_throw(message) throw FatalException(SSTR(message))
+
 bool my_strtoll(const std::string &str, int64_t &ret);
 std::vector<std::string> split(std::string data, std::string token);
 bool parseServer(const std::string &str, RaftServer &srv);
 bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
+std::string serializeNodes(const std::vector<RaftServer> &nodes);
 
 // given a vector, checks whether all elements are unique
 template<class T>

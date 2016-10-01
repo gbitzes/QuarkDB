@@ -71,6 +71,15 @@ bool parseServers(const std::string &str, std::vector<RaftServer> &servers) {
   return true;
 }
 
+std::string serializeNodes(const std::vector<RaftServer> &nodes) {
+  std::stringstream ss;
+  for(size_t i = 0; i < nodes.size(); i++) {
+    ss << nodes[i].toString();
+    if(i != nodes.size()-1) ss << ",";
+  }
+  return ss.str();
+}
+
 /* Glob-style pattern matching. */
 int stringmatchlen(const char *pattern, int patternLen,
         const char *string, int stringLen, int nocase)

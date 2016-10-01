@@ -441,3 +441,30 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
 rocksdb::Status RocksDB::flushall() {
   return remove_all_with_prefix("");
 }
+
+void RocksDB::set_or_die(const std::string &key, const std::string &value) {
+  rocksdb::Status st = this->set(key, value);
+  if(!st.ok()) {
+    throw FatalException(SSTR("unable to set key " << key << " to " << value << ". Error: " << st.ToString()));
+  }
+}
+
+std::string RocksDB::get_or_die(const std::string &key) {
+  std::string tmp;
+  rocksdb::Status st = this->get(key, tmp);
+  if(!st.ok()) {
+    throw FatalException(SSTR("unable to get key " << key << ". Error: " << st.ToString()));
+  }
+  return tmp;
+}
+
+int64_t RocksDB::get_int_or_die(const std::string &key) {
+  std::string tmp = this->get_or_die(key);
+
+  int64_t value;
+  if(!my_strtoll(tmp, value)) {
+    throw FatalException(SSTR("db corruption, unable to parse integer key " << key << ". Received " << value));
+  }
+
+  return value;
+}

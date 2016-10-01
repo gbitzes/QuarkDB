@@ -36,6 +36,10 @@ public:
   virtual ~RocksDB();
   DISALLOW_COPY_AND_ASSIGN(RocksDB);
 
+  //------------------------------------------------------------------------------
+  // Main API
+  //------------------------------------------------------------------------------
+
   rocksdb::Status hget(const std::string &key, const std::string &field, std::string &value);
   rocksdb::Status hexists(const std::string &key, const std::string &field);
   rocksdb::Status hkeys(const std::string &key, std::vector<std::string> &keys);
@@ -56,6 +60,15 @@ public:
   rocksdb::Status exists(const std::string &key);
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status flushall();
+
+  //------------------------------------------------------------------------------
+  // Convenience functions
+  //------------------------------------------------------------------------------
+
+  void set_or_die(const std::string &key, const std::string &value);
+  std::string get_or_die(const std::string &key);
+  int64_t get_int_or_die(const std::string &key);
+
 private:
   rocksdb::Status remove_all_with_prefix(const std::string &prefix);
 

@@ -21,6 +21,7 @@ add_library(XrdRedis SHARED
   BufferedReader.cc   BufferedReader.hh
   RedisParser.cc      RedisParser.hh
   RocksDB.cc          RocksDB.hh
+  raft/RaftJournal.cc raft/RaftJournal.hh
   ${BACKWARD_ENABLE}
 )
 

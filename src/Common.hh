@@ -86,13 +86,22 @@ private:
 
 struct RaftServer {
   std::string hostname;
-  int port;
+  int port = 0;
 
   RaftServer() {}
   RaftServer(const std::string &h, int p) : hostname(h), port(p) {}
 
   bool operator==(const RaftServer& rhs) const {
     return hostname == rhs.hostname && port == rhs.port;
+  }
+
+  std::string toString() const {
+    if(hostname.empty()) return "";
+    return hostname + ":" + std::to_string(port);
+  }
+
+  bool empty() const {
+    return hostname.empty();
   }
 };
 
@@ -111,6 +120,9 @@ private:
 
 using RaftClusterID = std::string;
 using RedisRequest = std::vector<std::string>;
+using RaftTerm = int64_t;
+using LogIndex = int64_t;
+
 
 }
 
