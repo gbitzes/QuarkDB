@@ -33,6 +33,10 @@
 
 namespace quarkdb {
 
+#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
+  TypeName(const TypeName&) = delete;   \
+  void operator=(const TypeName&) = delete
+
 #define SSTR(message) static_cast<std::ostringstream&>(std::ostringstream().flush() << message).str()
 #define quotes(message) SSTR("'" << message << "'")
 
@@ -62,6 +66,9 @@ bool checkUnique(std::vector<T> &v) {
   }
   return true;
 }
+
+int stringmatchlen(const char *pattern, int patternLen,
+  const char *string, int stringLen, int nocase);
 
 }
 
