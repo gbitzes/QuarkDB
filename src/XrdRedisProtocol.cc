@@ -62,7 +62,7 @@ int XrdRedisProtocol::Process(XrdLink *lp) {
     if(status == 0) return 1;     // slow link
     if(status < 0) return status; // error
 
-    dispatcher->dispatchRedis(link, currentRequest);
+    dispatcher->dispatch(link, currentRequest);
   }
 }
 
@@ -103,7 +103,7 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
   if(!success) return 0;
 
   rocksdb = new RocksDB(configuration.getDB());
-  dispatcher = new Dispatcher(*rocksdb);
+  dispatcher = new RedisDispatcher(*rocksdb);
 
   return 1;
 }

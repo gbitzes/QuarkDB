@@ -27,17 +27,17 @@
 
 using namespace quarkdb;
 
-Dispatcher::Dispatcher(RocksDB &rocksdb) : store(rocksdb) {
+RedisDispatcher::RedisDispatcher(RocksDB &rocksdb) : store(rocksdb) {
 }
 
-LinkStatus Dispatcher::dispatchRedis(Link *link, RedisRequest &req) {
+LinkStatus RedisDispatcher::dispatch(Link *link, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
   if(it != redis_cmd_map.end()) return dispatch(link, req, it->second.first);
 
   return Response::err(link, SSTR("unknown command " << quotes(req[0])));
 }
 
-LinkStatus Dispatcher::dispatch(Link *link, RedisRequest &request, RedisCommand cmd) {
+LinkStatus RedisDispatcher::dispatch(Link *link, RedisRequest &request, RedisCommand cmd) {
   switch(cmd) {
     case RedisCommand::PING: {
       if(request.size() > 2) return Response::errArgs(link, request[0]);

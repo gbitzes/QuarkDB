@@ -33,9 +33,14 @@ namespace quarkdb {
 
 class Dispatcher {
 public:
-  Dispatcher(RocksDB &rocksdb);
+  virtual LinkStatus dispatch(Link *link, RedisRequest &req) = 0;
+};
 
-  LinkStatus dispatchRedis(Link *link, RedisRequest &req);
+class RedisDispatcher : public Dispatcher {
+public:
+  RedisDispatcher(RocksDB &rocksdb);
+
+  virtual LinkStatus dispatch(Link *link, RedisRequest &req);
 private:
   RocksDB &store;
   LinkStatus dispatch(Link *link, RedisRequest &request, RedisCommand command);

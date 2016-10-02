@@ -42,7 +42,7 @@ protected:
   }
 
   void assert_reply(RedisRequest &&request, const std::string &reply) {
-    EXPECT_EQ(dispatcher.dispatchRedis(&link, request), (int) reply.size());
+    EXPECT_EQ(dispatcher.dispatch(&link, request), (int) reply.size());
     std::string tmp;
     ASSERT_EQ(reader.consume(reply.size(), tmp), (int) reply.size());
     ASSERT_EQ(tmp, reply);
@@ -52,7 +52,7 @@ protected:
   Link link;
   XrdBuffManager bufferManager;
   BufferedReader reader;
-  Dispatcher dispatcher;
+  RedisDispatcher dispatcher;
   std::string buffer;
 };
 
