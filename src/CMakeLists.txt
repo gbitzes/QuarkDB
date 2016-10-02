@@ -12,16 +12,17 @@ include_directories(
 
 add_library(XrdRedis SHARED
   XrdPlugin.cc
-  XrdRedisProtocol.cc XrdRedisProtocol.hh
-  Configuration.cc    Configuration.hh
-                      RedisConnection.hh
-  Utils.cc            Utils.hh
-                      Common.hh
-  Link.cc             Link.hh
-  BufferedReader.cc   BufferedReader.hh
-  RedisParser.cc      RedisParser.hh
-  RocksDB.cc          RocksDB.hh
-  raft/RaftJournal.cc raft/RaftJournal.hh
+  XrdRedisProtocol.cc   XrdRedisProtocol.hh
+  Configuration.cc      Configuration.hh
+                        RedisConnection.hh
+  Utils.cc              Utils.hh
+                        Common.hh
+  Link.cc               Link.hh
+  BufferedReader.cc     BufferedReader.hh
+  RedisParser.cc        RedisParser.hh
+  RocksDB.cc            RocksDB.hh
+  Commands.cc           Commands.hh
+  raft/RaftJournal.cc   raft/RaftJournal.hh
   ${BACKWARD_ENABLE}
 )
 
