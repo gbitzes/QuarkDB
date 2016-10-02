@@ -22,6 +22,7 @@ add_library(XrdRedis SHARED
   RedisParser.cc        RedisParser.hh
   RocksDB.cc            RocksDB.hh
   Commands.cc           Commands.hh
+  Response.cc           Response.hh
   raft/RaftJournal.cc   raft/RaftJournal.hh
   ${BACKWARD_ENABLE}
 )
