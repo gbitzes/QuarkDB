@@ -40,6 +40,9 @@ XrdSysError XrdRedisProtocol::eDest(0, "redis");
 
 const char *XrdRedisTraceID = "XrdRedis";
 XrdOucTrace *XrdRedisTrace = 0;
+XrdBuffManager *XrdRedisProtocol::bufferManager = 0;
+RocksDB *XrdRedisProtocol::rocksdb = 0;
+Dispatcher *XrdRedisProtocol::dispatcher = 0;
 
 //------------------------------------------------------------------------------
 // XrdRedisProtocol class
@@ -51,17 +54,32 @@ XrdRedisProtocol::XrdRedisProtocol()
 }
 
 int XrdRedisProtocol::Process(XrdLink *lp) {
-  return 0;
+  if(!link) link = new Link(lp);
+  if(!parser) parser = new RedisParser(link, bufferManager);
+
+  while(true) {
+    LinkStatus status = parser->fetch(currentRequest);
+    if(status == 0) return 1;     // slow link
+    if(status < 0) return status; // error
+
+    dispatcher->dispatchRedis(link, currentRequest);
+  }
 }
 
 XrdProtocol* XrdRedisProtocol::Match(XrdLink *lp) {
   XrdRedisProtocol *rp = new XrdRedisProtocol();
-  rp->Link = lp;
   return rp;
 }
 
 void XrdRedisProtocol::Reset() {
-
+  if(parser) {
+    delete parser;
+    parser = nullptr;
+  }
+  if(link) {
+    delete link;
+    link = nullptr;
+  }
 }
 
 void XrdRedisProtocol::Recycle(XrdLink *lp,int consec,const char *reason) {
@@ -77,14 +95,19 @@ void XrdRedisProtocol::DoIt() {
 }
 
 int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
+  bufferManager = pi->BPool;
   eDest.logger(pi->eDest->logger());
 
   char* rdf = (parms && *parms ? parms : pi->ConfigFN);
   bool success = Configuration::fromFile(rdf, configuration);
-  if(success) return 1;
-  return 0;
+  if(!success) return 0;
+
+  rocksdb = new RocksDB(configuration.getDB());
+  dispatcher = new Dispatcher(*rocksdb);
+
+  return 1;
 }
 
 XrdRedisProtocol::~XrdRedisProtocol() {
-
+  Reset();
 }

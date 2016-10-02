@@ -23,6 +23,7 @@ add_library(XrdRedis SHARED
   RocksDB.cc            RocksDB.hh
   Commands.cc           Commands.hh
   Response.cc           Response.hh
+  Dispatcher.cc         Dispatcher.hh
   raft/RaftJournal.cc   raft/RaftJournal.hh
   ${BACKWARD_ENABLE}
 )

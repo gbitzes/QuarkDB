@@ -1,5 +1,5 @@
-// ----------------------------------------------------------------------
-// File: XrdRedisProtocol.hh
+//-----------------------------------------------------------------------
+// File: Dispatcher.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,64 +21,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_XRDREDIS_PROTOCOL_H__
-#define __QUARKDB_XRDREDIS_PROTOCOL_H__
+#ifndef __QUARKDB_DISPATCHER_H__
+#define __QUARKDB_DISPATCHER_H__
 
-#include "Xrd/XrdProtocol.hh"
-#include "XrdSys/XrdSysError.hh"
-#include "XrdSys/XrdSysPthread.hh"
-#include "Xrd/XrdLink.hh"
-#include "Xrd/XrdBuffer.hh"
-#include "XrdOuc/XrdOucString.hh"
-#include "XrdOuc/XrdOucStream.hh"
-
-#include "Configuration.hh"
-#include "RedisParser.hh"
+#include "Common.hh"
+#include "Link.hh"
+#include "Commands.hh"
 #include "RocksDB.hh"
-#include "Dispatcher.hh"
 
 namespace quarkdb {
 
-
-
-class XrdRedisProtocol : public XrdProtocol {
+class Dispatcher {
 public:
-  /// Read and apply the configuration
-  static int Configure(char *parms, XrdProtocol_Config *pi);
+  Dispatcher(RocksDB &rocksdb);
 
-  /// Implementation of XrdProtocol interface
-  XrdProtocol *Match(XrdLink *lp);
-  int Process(XrdLink *lp);
-  void Recycle(XrdLink *lp=0,int consec=0,const char *reason=0);
-  int Stats(char *buff, int blen, int do_sync=0);
-
-  /// Implementation of XrdJob interface
-  void DoIt();
-
-  /// Construction / destruction
-  XrdRedisProtocol();
-  virtual ~XrdRedisProtocol();
-
-  /// globally accessible error handler
-  static XrdSysError eDest;
+  LinkStatus dispatchRedis(Link *link, RedisRequest &req);
 private:
-  /// The link we are bound to
-  Link *link = nullptr;
-  RedisParser *parser = nullptr;
-
-  RedisRequest currentRequest;
-
-
-
-  void Reset();
-protected:
-  static Configuration configuration;
-  static XrdBuffManager *bufferManager;
-  static RocksDB *rocksdb;
-  static Dispatcher *dispatcher;
+  RocksDB &store;
+  LinkStatus dispatch(Link *link, RedisRequest &request, RedisCommand command);
 };
 
 }
-
 
 #endif
