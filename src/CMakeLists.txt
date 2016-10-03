@@ -4,6 +4,7 @@ include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${BACKWARD_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIRS}
+  ${HIREDIS_INCLUDE_DIRS}
 )
 
 #-------------------------------------------------------------------------------
@@ -24,6 +25,7 @@ add_library(XrdRedis SHARED
   Commands.cc           Commands.hh
   Response.cc           Response.hh
   Dispatcher.cc         Dispatcher.hh
+  Tunnel.cc             Tunnel.hh
   raft/RaftJournal.cc   raft/RaftJournal.hh
   ${BACKWARD_ENABLE}
 )
@@ -34,4 +36,5 @@ target_link_libraries(
   ${XROOTD_UTILS_LIBRARY}
   ${ROCKSDB_LIBRARY}
   ${BACKWARD_LIBRARIES}
+  ${HIREDIS_LIBRARIES}
 )
