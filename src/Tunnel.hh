@@ -50,7 +50,7 @@ private:
   std::string host;
   int port;
   std::string unixSocket;
-  std::atomic<int64_t> shutdown { 0 };
+  std::atomic<int64_t> shutdown {0};
 
   void startEventLoop();
   void eventLoop();

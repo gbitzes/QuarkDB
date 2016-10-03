@@ -155,7 +155,7 @@ void Tunnel::eventLoop() {
     polls[1].fd = asyncContext->c.fd;
     polls[1].events = POLLIN;
 
-    while(true) {
+    while(true && !asyncContext->err) {
       poll(polls, 2, -1);
 
       if(shutdown > 0) {
