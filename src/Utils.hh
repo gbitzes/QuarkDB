@@ -44,6 +44,9 @@ namespace quarkdb {
 
 // temporary solution for now
 #define qdb_log(message) std::cerr << message << std::endl;
+#define qdb_event(message) std::cerr << message << std::endl;
+#define qdb_critical(message) std::cerr << message << std::endl;
+
 #define qdb_warn(message) std::cerr << message << std::endl;
 #define qdb_error(message) std::cerr << message << std::endl;
 #define qdb_info(message) std::cerr << message << std::endl;
@@ -60,7 +63,7 @@ std::string serializeNodes(const std::vector<RaftServer> &nodes);
 
 // given a vector, checks whether all elements are unique
 template<class T>
-bool checkUnique(std::vector<T> &v) {
+bool checkUnique(const std::vector<T> &v) {
   for(size_t i = 0; i < v.size(); i++) {
     for(size_t j = 0; j < v.size(); j++) {
       if(i != j && v[i] == v[j]) {
@@ -69,6 +72,14 @@ bool checkUnique(std::vector<T> &v) {
     }
   }
   return true;
+}
+
+template<class T>
+bool contains(const std::vector<T> &v, const T& element) {
+  for(size_t i = 0; i <  v.size(); i++) {
+    if(v[i] == element) return true;
+  }
+  return false;
 }
 
 int stringmatchlen(const char *pattern, int patternLen,

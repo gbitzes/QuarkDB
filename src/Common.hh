@@ -95,6 +95,10 @@ struct RaftServer {
     return hostname == rhs.hostname && port == rhs.port;
   }
 
+  bool operator!=(const RaftServer& rhs) const {
+    return !(*this == rhs);
+  }
+
   std::string toString() const {
     if(hostname.empty()) return "";
     return hostname + ":" + std::to_string(port);
@@ -102,6 +106,11 @@ struct RaftServer {
 
   bool empty() const {
     return hostname.empty();
+  }
+
+  void clear() {
+    hostname.clear();
+    port = 0;
   }
 };
 

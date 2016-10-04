@@ -27,6 +27,7 @@ add_library(XrdRedis SHARED
   Dispatcher.cc         Dispatcher.hh
   Tunnel.cc             Tunnel.hh
   raft/RaftJournal.cc   raft/RaftJournal.hh
+  raft/RaftState.cc     raft/RaftState.hh
   ${BACKWARD_ENABLE}
 )
 

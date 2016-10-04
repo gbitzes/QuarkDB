@@ -24,6 +24,7 @@
 #include "RaftJournal.hh"
 #include "../Common.hh"
 #include "../Utils.hh"
+#include "RaftState.hh"
 
 using namespace quarkdb;
 
@@ -137,7 +138,7 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   // Just in case we crash in the middle, make sure votedFor becomes invalid first
   //------------------------------------------------------------------------------
 
-  store.set_or_die("RAFT_VOTED_FOR", "invalid_server_name!@#$&*():12345");
+  store.set_or_die("RAFT_VOTED_FOR", RaftState::BLOCKED_VOTE.toString());
   store.set_or_die("RAFT_CURRENT_TERM", std::to_string(term));
   store.set_or_die("RAFT_VOTED_FOR", vote.toString());
 
