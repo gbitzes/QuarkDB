@@ -58,8 +58,8 @@ void Tunnel::startEventLoop() {
   th.detach();
 }
 
-Tunnel::Tunnel(const std::string &host_, const int port_)
-: host(host_), port(port_) {
+Tunnel::Tunnel(const std::string &host_, const int port_, RedisRequest handshake)
+: host(host_), port(port_), handshakeCommand(handshake) {
 
   //----------------------------------------------------------------------------
   // If this (host, port) pair is being intercepted, connect to the designated
@@ -212,7 +212,7 @@ void Tunnel::eventLoop() {
   }
 }
 
-std::future<redisReplyPtr> Tunnel::execute(RedisRequest &req) {
+std::future<redisReplyPtr> Tunnel::execute(const RedisRequest &req) {
   const char *cstr[req.size()];
   size_t sizes[req.size()];
 
@@ -221,11 +221,15 @@ std::future<redisReplyPtr> Tunnel::execute(RedisRequest &req) {
     sizes[i] = req[i].size();
   }
 
-  std::unique_lock<std::mutex> lock(asyncMutex);
+  return execute(req.size(), cstr, sizes);
+}
+
+std::future<redisReplyPtr> Tunnel::execute(size_t nchunks, const char **chunks, const size_t *sizes) {
+  std::lock_guard<std::mutex> lock(asyncMutex);
 
   if(asyncContext && !asyncContext->err) {
     std::promise<redisReplyPtr>* prom = new std::promise<redisReplyPtr>();
-    redisAsyncCommandArgv(asyncContext, async_future_callback, prom, req.size(), cstr, sizes);
+    redisAsyncCommandArgv(asyncContext, async_future_callback, prom, nchunks, chunks, sizes);
     return prom->get_future();
   }
 

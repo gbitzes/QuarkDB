@@ -37,7 +37,7 @@ typedef std::shared_ptr<redisReply> redisReplyPtr;
 
 class Tunnel {
 public:
-  Tunnel(const std::string &host, const int port);
+  Tunnel(const std::string &host, const int port, RedisRequest handshake = {});
   ~Tunnel();
   DISALLOW_COPY_AND_ASSIGN(Tunnel);
 
@@ -45,7 +45,8 @@ public:
   void removeWriteNotification();
   void notifyWrite();
 
-  std::future<redisReplyPtr> execute(RedisRequest &req);
+  std::future<redisReplyPtr> execute(const RedisRequest &req);
+  std::future<redisReplyPtr> execute(size_t nchunks, const char **chunks, const size_t *sizes);
 
   //----------------------------------------------------------------------------
   // Slight hack needed for unit tests. After an intercept has been added, any
