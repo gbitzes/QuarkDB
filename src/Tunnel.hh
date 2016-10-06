@@ -27,6 +27,7 @@
 #include "Utils.hh"
 #include <mutex>
 #include <future>
+#include <map>
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
 
@@ -37,7 +38,6 @@ typedef std::shared_ptr<redisReply> redisReplyPtr;
 class Tunnel {
 public:
   Tunnel(const std::string &host, const int port);
-  Tunnel(const std::string &unixSocket);
   ~Tunnel();
   DISALLOW_COPY_AND_ASSIGN(Tunnel);
 
@@ -46,6 +46,14 @@ public:
   void notifyWrite();
 
   std::future<redisReplyPtr> execute(RedisRequest &req);
+
+  //----------------------------------------------------------------------------
+  // Slight hack needed for unit tests. After an intercept has been added, any
+  // connections to (hostname, ip) will use the designated unix socket, without
+  // trying to open a TCP connection.
+  //----------------------------------------------------------------------------
+  static void addIntercept(const std::string &host, const int port, const std::string &unixSocket);
+  static void clearIntercepts();
 private:
   std::string host;
   int port;
@@ -60,6 +68,12 @@ private:
   int write_event_fd;
 
   RedisRequest handshakeCommand;
+
+  //----------------------------------------------------------------------------
+  // We consult this map each time a new connection is to be opened
+  //----------------------------------------------------------------------------
+  static std::map<std::pair<std::string, int>, std::string> intercepts;
+  static std::mutex interceptsMutex;
 };
 
 

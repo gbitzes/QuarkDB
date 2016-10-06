@@ -47,7 +47,8 @@ static std::string str_from_reply(redisReplyPtr &reply) {
 
 TEST(Tunnel, T1) {
   unlink(UNIX_SOCKET_PATH);
-  Tunnel tunnel(UNIX_SOCKET_PATH);
+  Tunnel::addIntercept("server1", 1234, UNIX_SOCKET_PATH);
+  Tunnel tunnel("server1", 1234);
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);

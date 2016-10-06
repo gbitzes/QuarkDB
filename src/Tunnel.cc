@@ -29,6 +29,27 @@
 
 using namespace quarkdb;
 
+//------------------------------------------------------------------------------
+// The intercepts machinery
+//------------------------------------------------------------------------------
+
+std::map<std::pair<std::string, int>, std::string> Tunnel::intercepts;
+std::mutex Tunnel::interceptsMutex;
+
+void Tunnel::addIntercept(const std::string &hostname, int port, const std::string &unixSocket) {
+  std::lock_guard<std::mutex> lock(interceptsMutex);
+  intercepts[std::make_pair(hostname, port)] = unixSocket;
+}
+
+void Tunnel::clearIntercepts() {
+  std::lock_guard<std::mutex> lock(interceptsMutex);
+  intercepts.clear();
+}
+
+//------------------------------------------------------------------------------
+// Tunnel class implementation
+//------------------------------------------------------------------------------
+
 void Tunnel::startEventLoop() {
   asyncContext = nullptr;
   write_event_fd = eventfd(0, EFD_NONBLOCK);
@@ -39,11 +60,19 @@ void Tunnel::startEventLoop() {
 
 Tunnel::Tunnel(const std::string &host_, const int port_)
 : host(host_), port(port_) {
-  startEventLoop();
+
+  //----------------------------------------------------------------------------
+  // If this (host, port) pair is being intercepted, connect to the designated
+  // unix socket instead.
+  //----------------------------------------------------------------------------
+{
+  std::lock_guard<std::mutex> lock(interceptsMutex);
+  auto it = intercepts.find(std::make_pair(host, port));
+  if(it != intercepts.end()) {
+    unixSocket = it->second;
+  }
 }
 
-Tunnel::Tunnel(const std::string &unixSocket_)
-: unixSocket(unixSocket_) {
   startEventLoop();
 }
 
