@@ -116,8 +116,8 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       else if(!strcmp("db", option)) {
         success = fetchSingle(stream, out.db);
       }
-      else if(!strcmp("nodes", option)) {
-        success = fetchSingle(stream, buffer) && parseServers(buffer, out.nodes);
+      else if(!strcmp("raftlog", option)) {
+        success = fetchSingle(stream, out.raftLog);
       }
       else if(!strcmp("myself", option)) {
         success = fetchSingle(stream, buffer) && parseServer(buffer, out.myself);
@@ -169,8 +169,8 @@ bool Configuration::isValid() {
 
   bool raft = (mode == Mode::raft);
 
-  if(raft == nodes.empty()) {
-    qdb_log("redis.nodes is required when using raft and is incompatible with rocksdb");
+  if(raft == raftLog.empty()) {
+    qdb_log("redis.raftlog is required when using raft and is incompatible with rocksdb");
     return false;
   }
 
@@ -184,17 +184,14 @@ bool Configuration::isValid() {
     return false;
   }
 
-  // check that I'm part of the nodes
-  if(raft) {
-    if(std::find(nodes.begin(), nodes.end(), myself) == nodes.end()) {
-      qdb_log("redis.nodes does not contain redis.myself");
-      return false;
-    }
+  if(raftLog == db) {
+    qdb_log("redis.db and redis.raftlog must be different");
+    return false;
+  }
 
-    if(!checkUnique(nodes)) {
-      qdb_log("redis.nodes contains duplicate entries.");
-      return false;
-    }
+  if(raftLog[raftLog.size()-1] == '/' || db[db.size()-1] == '/') {
+    qdb_log("redis.db and redis.raftlog cannot contain trailing slashes");
+    return false;
   }
 
   return true;

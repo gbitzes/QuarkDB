@@ -49,7 +49,7 @@ public:
   std::string getDB() { return db; }
   TraceLevel getTraceLevel() { return trace; }
 
-  std::vector<RaftServer> getNodes() { return nodes; }
+  std::string getRaftLog() { return raftLog; }
   RaftServer getMyself() { return myself; }
   std::string getClusterID() { return clusterID; }
 private:
@@ -58,7 +58,7 @@ private:
   TraceLevel trace = TraceLevel::info;
 
   // raft options
-  std::vector<RaftServer> nodes;
+  std::string raftLog;
   RaftServer myself;
   RaftClusterID clusterID;
 };

@@ -44,7 +44,7 @@ TEST(Configuration, T2) {
       "xrd.protocol redis:7776 libXrdRedis.so\n"
       "redis.mode raft\n"
       "redis.db /home/user/mydb\n"
-      "redis.nodes server1:7776,server2:7777,server3:7778\n"
+      "redis.raftlog /home/user/mylog\n"
       "redis.myself server1:7776\n"
       "redis.cluster_id 992453f4-378d-4dc2-9648-c8ce347e22ce\n"
       "redis.trace debug\n"
@@ -53,6 +53,7 @@ TEST(Configuration, T2) {
   ASSERT_TRUE(Configuration::fromString(c, config));
   ASSERT_EQ(config.getMode(), Mode::raft);
   ASSERT_EQ(config.getDB(), "/home/user/mydb");
+  ASSERT_EQ(config.getRaftLog(), "/home/user/mylog");
   ASSERT_EQ(config.getClusterID(), "992453f4-378d-4dc2-9648-c8ce347e22ce");
   ASSERT_EQ(config.getMyself(), RaftServer("server1", 7776) );
   ASSERT_EQ(config.getTraceLevel(), TraceLevel::debug);
@@ -94,12 +95,12 @@ TEST(Configuration, T5) {
   Configuration config;
   std::string c;
 
-  // I am not part of the nodes, should error
+  // raftlog == db, should error
   c = "if exec xrootd\n"
       "xrd.protocol redis:7779 libXrdRedis.so\n"
       "redis.mode raft\n"
       "redis.db /home/user/mydb\n"
-      "redis.nodes server1:7776,server2:7777,server3:7778\n"
+      "redis.raftlog /home/user/mydb\n"
       "redis.myself server3:7779\n"
       "redis.cluster_id 992453f4-378d-4dc2-9648-c8ce347e22ce\n"
       "fi\n";
@@ -153,14 +154,12 @@ TEST(Configuration, T9) {
   Configuration config;
   std::string c;
 
-  // duplicate nodes
+  // unknown trace level
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
-      "redis.mode raft\n"
+      "redis.mode rocksdb\n"
       "redis.db /home/user/mydb\n"
-      "redis.nodes server1:7776,server2:7777,server2:7777\n"
-      "redis.myself server1:7776\n"
-      "redis.cluster_id 992453f4-378d-4dc2-9648-c8ce347e22ce\n"
+      "redis.trace wrong\n"
       "fi\n";
 
   ASSERT_FALSE(Configuration::fromString(c, config));
@@ -170,13 +169,31 @@ TEST(Configuration, T10) {
   Configuration config;
   std::string c;
 
-  // unknown trace level
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
       "redis.mode rocksdb\n"
-      "redis.db /home/user/mydb\n"
-      "redis.trace wrong\n"
+      "redis.db /home/user/mydb/\n"
+      "redis.trace info\n"
       "fi\n";
 
+  // no trailing slashes in redis.db
+  ASSERT_FALSE(Configuration::fromString(c, config));
+}
+
+TEST(Configuration, T11) {
+  Configuration config;
+  std::string c;
+
+  c = "if exec xrootd\n"
+      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "redis.mode raft\n"
+      "redis.db /home/user/mydb\n"
+      "redis.raftlog /home/user/mylog/\n"
+      "redis.myself server1:7776\n"
+      "redis.cluster_id 992453f4-378d-4dc2-9648-c8ce347e22ce\n"
+      "redis.trace debug\n"
+      "fi\n";
+
+  // no trailing slashes in redis.raftlog
   ASSERT_FALSE(Configuration::fromString(c, config));
 }
