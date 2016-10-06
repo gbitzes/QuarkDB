@@ -22,9 +22,11 @@
  ************************************************************************/
 
 #include "Tunnel.hh"
+#include "test-utils.hh"
 #include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+
 
 using namespace quarkdb;
 
@@ -54,16 +56,8 @@ TEST(Tunnel, T1) {
   std::future<redisReplyPtr> fut = tunnel.execute(req);
   ASSERT_EQ(fut.get(), nullptr);
 
-  struct sockaddr_un local, remote;
-  unsigned int s = socket(AF_UNIX, SOCK_STREAM, 0);
-  local.sun_family = AF_UNIX;
-  strcpy(local.sun_path, UNIX_SOCKET_PATH);
-  size_t len = strlen(local.sun_path) + sizeof(local.sun_family);
-  ASSERT_EQ(bind(s, (struct sockaddr *)&local, len), 0);
-  ASSERT_EQ(listen(s, 1), 0);
-
-  socklen_t t = sizeof(remote);
-  int s2 = accept(s, (struct sockaddr *)&remote, &t);
+  UnixSocketListener listener(UNIX_SOCKET_PATH);
+  int s2 = listener.accept();
   ASSERT_GT(s2, 0);
 
   // connected

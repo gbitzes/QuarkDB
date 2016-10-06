@@ -47,18 +47,18 @@ protected:
   RedisRequest req2;
   RaftServer srv;
   RaftTerm term;
-  RaftServer myself;
+  RaftServer myself = {"server2", 7777};
 };
 
 TEST_F(Raft_State, T1) {
 {
   RaftJournal journal(dbpath);
-  myself =  { "server2", 7777 };
 
   RaftState state(journal, myself);
   ASSERT_EQ(state.getCurrentTerm(), 0);
   ASSERT_TRUE(state.observed(1, {}));
   ASSERT_FALSE(state.observed(0, {}));
+  ASSERT_EQ(myself, state.getMyself());
 
   RaftStateSnapshot snapshot = {1, RaftStatus::FOLLOWER, {}, {} };
   ASSERT_EQ(state.getSnapshot(), snapshot);
@@ -113,7 +113,6 @@ TEST_F(Raft_State, T1) {
 
 {
   RaftJournal journal(dbpath);
-  myself =  { "server2", 7777 };
 
   RaftState state(journal, myself);
   RaftStateSnapshot snapshot = {6, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE };
@@ -165,7 +164,6 @@ TEST_F(Raft_State, T1) {
 }
 {
   RaftJournal journal(dbpath);
-  myself =  { "server2", 7777 };
 
   RaftState state(journal, myself);
   RaftStateSnapshot snapshot = {7, RaftStatus::OBSERVER, {}, RaftState::BLOCKED_VOTE};
@@ -183,7 +181,6 @@ TEST_F(Raft_State, T1) {
 }
 {
   RaftJournal journal(dbpath);
-  myself =  { "server2", 7777 };
 
   RaftState state(journal, myself);
   RaftStateSnapshot snapshot = {8, RaftStatus::FOLLOWER, {}, nodes[1]};

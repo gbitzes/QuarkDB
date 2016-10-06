@@ -47,6 +47,7 @@ class Link {
 public:
   Link(XrdLink *lp) : link(lp) {}
   Link() {}
+  Link(int fd_) : fd(fd_) {}
 
   LinkStatus Recv(char *buff, int blen, int timeout);
   LinkStatus Send(const char *buff, int blen);
@@ -57,10 +58,15 @@ public:
 private:
   std::stringstream stream;
   XrdLink *link = nullptr;
+  int fd = -1;
 
   LinkStatus streamRecv(char *buff, int blen, int timeout);
   LinkStatus streamSend(const char *buff, int blen);
   LinkStatus streamClose(int defer = 0);
+
+  LinkStatus fdRecv(char *buff, int blen, int timeout);
+  LinkStatus fdSend(const char *buff, int blen);
+  LinkStatus fdClose(int defer = 0);
 };
 
 }

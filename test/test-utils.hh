@@ -1,5 +1,5 @@
-//-----------------------------------------------------------------------
-// File: Dispatcher.hh
+// ----------------------------------------------------------------------
+// File: test-utils.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,30 +21,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_DISPATCHER_H__
-#define __QUARKDB_DISPATCHER_H__
+#ifndef __QUARKDB_TEST_UTILS_H__
+#define __QUARKDB_TEST_UTILS_H__
 
-#include "Common.hh"
-#include "Link.hh"
-#include "Commands.hh"
-#include "RocksDB.hh"
+#include <sys/socket.h>
+#include <sys/un.h>
 
 namespace quarkdb {
 
-class Dispatcher {
-public:
-  virtual LinkStatus dispatch(Link *link, RedisRequest &req) = 0;
-};
-
-class RedisDispatcher : public Dispatcher {
-public:
-  RedisDispatcher(RocksDB &rocksdb);
-
-  virtual LinkStatus dispatch(Link *link, RedisRequest &req);
-  LinkStatus dispatch(Link *link, RedisRequest &request, RedisCommand command);
+class UnixSocketListener {
 private:
-  RocksDB &store;
+  struct sockaddr_un local, remote;
+  unsigned int s;
+  size_t len;
+  socklen_t t;
+public:
+  UnixSocketListener(const std::string path) {
+    s = socket(AF_UNIX, SOCK_STREAM, 0);
+    local.sun_family = AF_UNIX;
+    strcpy(local.sun_path, path.c_str());
+    len = strlen(local.sun_path) + sizeof(local.sun_family);
+    bind(s, (struct sockaddr *)&local, len);
+    listen(s, 1);
+    t = sizeof(remote);
+  }
+
+  ~UnixSocketListener() {
+
+  }
+
+  int accept() {
+    return ::accept(s, (struct sockaddr *)&remote, &t);
+  }
 };
+
+
 
 }
 

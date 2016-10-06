@@ -39,10 +39,10 @@ public:
   void setNodes(const std::vector<RaftServer> &newNodes);
   void setObservers(const std::vector<RaftServer> &obs);
 
-  RaftTerm getCurrentTerm() { return currentTerm; }
-  LogIndex getLogSize() { return logSize; }
-  RaftClusterID getClusterID() { return clusterID; }
-  LogIndex getLastApplied() { return lastApplied; }
+  RaftTerm getCurrentTerm() const { return currentTerm; }
+  LogIndex getLogSize() const { return logSize; }
+  RaftClusterID getClusterID() const { return clusterID; }
+  LogIndex getLastApplied() const { return lastApplied; }
   std::vector<RaftServer> getNodes();
   RaftServer getVotedFor();
   std::vector<RaftServer> getObservers();

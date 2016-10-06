@@ -68,6 +68,7 @@ public:
 
   RaftTerm getCurrentTerm();
   RaftStateSnapshot getSnapshot();
+  RaftServer getMyself();
 
   static RaftServer BLOCKED_VOTE;
 private:
@@ -79,7 +80,7 @@ private:
   RaftStatus status;
   RaftServer leader;
   RaftServer votedFor;
-  RaftServer myself;
+  const RaftServer myself;
 
   void updateJournal();
   void declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader);

@@ -37,7 +37,6 @@ RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
 
   term = journal.getCurrentTerm();
   votedFor = journal.getVotedFor();
-  std::cout << "votedFor: " << votedFor.toString() << std::endl;
 }
 
 //------------------------------------------------------------------------------
@@ -62,6 +61,10 @@ RaftTerm RaftState::getCurrentTerm() {
 RaftStateSnapshot RaftState::getSnapshot() {
   std::lock_guard<std::mutex> lock(update);
   return {term, status, leader, votedFor};
+}
+
+RaftServer RaftState::getMyself() {
+  return myself;
 }
 
 void RaftState::declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader) {
