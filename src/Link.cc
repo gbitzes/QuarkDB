@@ -30,6 +30,11 @@
 
 using namespace quarkdb;
 
+Link::Link(int fd_)
+: fd(fd_) {
+  fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+}
+
 LinkStatus Link::Recv(char *buff, int blen, int timeout) {
   if(link) return link->Recv(buff, blen, timeout);
   if(fd >= 0) return fdRecv(buff, blen, timeout);
@@ -81,7 +86,9 @@ LinkStatus Link::streamRecv(char *buff, int blen, int timeout) {
 }
 
 LinkStatus Link::fdRecv(char *buff, int blen, int timeout) {
-  return recv(fd, buff, blen, 0);
+  int rc = recv(fd, buff, blen, 0);
+  if(rc == -1 && (errno == EAGAIN || errno == EWOULDBLOCK)) return 0;
+  return rc;
 }
 
 LinkStatus Link::fdSend(const char *buff, int blen) {

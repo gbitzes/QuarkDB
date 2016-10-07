@@ -48,8 +48,10 @@ TEST(RaftTalker, T1) {
   RedisParser parser(&link, &bufferManager);
 
   RedisRequest req;
-  ASSERT_EQ(parser.fetch(req), 1);
-  // ASSERT_EQ(parser.fetch(req), 0);
+
+  int rc;
+  while( (rc = parser.fetch(req)) == 0) ;
+  ASSERT_EQ(rc, 1);
 
   RedisRequest tmp = {"RAFT_HANDSHAKE", clusterID};
   ASSERT_EQ(req, tmp);
@@ -91,11 +93,12 @@ TEST(RaftTalker, T1) {
                requests, terms // payload
              );
 
-  ASSERT_EQ(parser.fetch(req), 1);
+  while( (rc = parser.fetch(req)) == 0) ;
+  ASSERT_EQ(rc, 1);
   tmp = {"RAFT_APPEND_ENTRIES", "12", "its_me_ur_leader:1337", "7", "11", "3", "3",
          "3", "3", "SET", "abc", "asdf", // entry #1
          "3", "12", "SET", "abcd", "1234", // entry #2
-         "4", "12", "HSET", "myhash", "key", "value"
+         "4", "12", "HSET", "myhash", "key", "value" // entry #3
   };
 
   ASSERT_EQ(req, tmp);

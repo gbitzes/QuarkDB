@@ -47,7 +47,7 @@ class Link {
 public:
   Link(XrdLink *lp) : link(lp) {}
   Link() {}
-  Link(int fd_) : fd(fd_) {}
+  Link(int fd_);
 
   LinkStatus Recv(char *buff, int blen, int timeout);
   LinkStatus Send(const char *buff, int blen);
