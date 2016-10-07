@@ -237,6 +237,22 @@ void RaftJournal::waitForUpdates(LogIndex currentSize, const std::chrono::millis
   logUpdated.wait_for(lock, timeout);
 }
 
+bool RaftJournal::removeEntries(LogIndex from) {
+  std::unique_lock<std::mutex> lock(contentMutex);
+  if(logSize <= from) return false;
+
+  if(from <= lastApplied) qdb_throw("attempted to remove committed entries. lastApplied: " << lastApplied << ", from: " << from);
+  qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize << "]");
+
+  for(LogIndex i = from; i < logSize; i++) {
+    rocksdb::Status st = store.del(SSTR("RAFT_ENTRY_" << i));
+    if(!st.ok()) qdb_critical("Error when deleting RAFT_ENTRY_" << i << ": " << st.ToString());
+  }
+
+  this->setLogSize(from);
+  return true;
+}
+
 bool RaftJournal::matchEntries(LogIndex index, RaftTerm term) {
   std::unique_lock<std::mutex> lock(contentMutex);
 

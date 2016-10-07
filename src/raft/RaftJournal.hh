@@ -55,6 +55,7 @@ public:
   void fetch_or_die(LogIndex index, RaftTerm &term);
 
   bool matchEntries(LogIndex index, RaftTerm term);
+  bool removeEntries(LogIndex start);
 
   void waitForUpdates(LogIndex currentSize, const std::chrono::milliseconds &timeout);
   void notifyWaitingThreads();

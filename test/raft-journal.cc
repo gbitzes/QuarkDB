@@ -26,6 +26,7 @@
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
+#define ASSERT_NOTFOUND(msg) ASSERT_TRUE(msg.IsNotFound())
 
 class Raft_Journal : public ::testing::Test {
 protected:
@@ -123,5 +124,22 @@ TEST_F(Raft_Journal, T1) {
 
   ASSERT_THROW(journal.append(3, req), FatalException);
   ASSERT_EQ(journal.getLogSize(), 4);
+
+  // try to remove applied entry
+  ASSERT_THROW(journal.removeEntries(2), FatalException);
+
+  ASSERT_FALSE(journal.removeEntries(5));
+  ASSERT_TRUE(journal.removeEntries(3));
+  ASSERT_FALSE(journal.removeEntries(3));
+
+  ASSERT_EQ(journal.getLogSize(), 3);
+  ASSERT_NOTFOUND(journal.fetch(3, term, req2));
+  ASSERT_NOTFOUND(journal.fetch(4, term, req2));
+
+  req = { "set", "qwerty", "asdf" };
+  journal.fetch_or_die(2, term, req2);
+  ASSERT_EQ(term, 2);
+  ASSERT_EQ(req, req2);
+
 }
 }
