@@ -162,27 +162,33 @@ void RaftJournal::setLastApplied(LogIndex index) {
   lastApplied = index;
 }
 
-LogIndex RaftJournal::append(RaftTerm term, RedisRequest &req) {
+bool RaftJournal::append(LogIndex index, RaftTerm term, RedisRequest &req) {
   std::lock_guard<std::mutex> lock(contentMutex);
 
+  if(index != logSize) {
+    qdb_warn("attempted to insert journal entry at an invalid position. index = " << index << ", logSize = " << logSize);
+    return false;
+  }
+
   if(term > currentTerm) {
-    qdb_throw("tried to insert entry to the log with a higher term than the current one: " << term << " vs " << currentTerm);
+    qdb_warn("attempted to insert journal entry with a higher term than the current one: " << term << " vs " << currentTerm);
+    return false;
   }
 
   if(term < termOfLastEntry) {
-    qdb_throw("attempted to insert log entry with lower term " << term << ", while last one is " << termOfLastEntry);
+    qdb_warn("attempted to insert journal entry with lower term " << term << ", while last one is " << termOfLastEntry);
+    return false;
   }
 
-  LogIndex index = logSize;
-  rawAppend(term, index, req);
+  rawAppend(index, term, req);
   setLogSize(logSize+1);
 
   termOfLastEntry = term;
   logUpdated.notify_all();
-  return index;
+  return true;
 }
 
-void RaftJournal::rawAppend(RaftTerm term, LogIndex index, const RedisRequest &cmd) {
+void RaftJournal::rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd) {
   store.set_or_die(SSTR("RAFT_ENTRY_" << index), serializeRedisRequest(term, cmd));
 }
 
@@ -249,6 +255,7 @@ bool RaftJournal::removeEntries(LogIndex from) {
     if(!st.ok()) qdb_critical("Error when deleting RAFT_ENTRY_" << i << ": " << st.ToString());
   }
 
+  fetch_or_die(from-1, termOfLastEntry);
   this->setLogSize(from);
   return true;
 }

@@ -48,7 +48,7 @@ public:
   RaftServer getVotedFor();
   std::vector<RaftServer> getObservers();
 
-  LogIndex append(RaftTerm term, RedisRequest &req);
+  bool append(LogIndex index, RaftTerm term, RedisRequest &req);
   rocksdb::Status fetch(LogIndex index, RaftTerm &term, RedisRequest &cmd);
   rocksdb::Status fetch(LogIndex index, RaftTerm &term);
   void fetch_or_die(LogIndex index, RaftTerm &term, RedisRequest &cmd);
@@ -93,7 +93,7 @@ private:
   // Helper functions
   //----------------------------------------------------------------------------
 
-  void rawAppend(RaftTerm term, LogIndex index, const RedisRequest &cmd);
+  void rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd);
   void setLogSize(LogIndex index);
 };
 
