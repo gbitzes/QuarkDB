@@ -29,6 +29,7 @@ add_library(XrdRedis SHARED
   raft/RaftJournal.cc      raft/RaftJournal.hh
   raft/RaftState.cc        raft/RaftState.hh
   raft/RaftTalker.cc       raft/RaftTalker.hh
+  raft/RaftParser.cc       raft/RaftParser.hh
   ${BACKWARD_ENABLE}
 )
 

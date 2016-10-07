@@ -1,5 +1,5 @@
-//-----------------------------------------------------------------------
-// File: Commands.hh
+// ----------------------------------------------------------------------
+// File: RaftCommon.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,71 +21,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_COMMANDS_H__
-#define __QUARKDB_COMMANDS_H__
+#ifndef __QUARKDB_RAFT_COMMON_H__
+#define __QUARKDB_RAFT_COMMON_H__
 
-#include <map>
+#include "../Common.hh"
 
 namespace quarkdb {
 
-enum class RedisCommand {
-  PING,
-  FLUSHALL,
-
-  GET,
-  SET,
-  EXISTS,
-  DEL,
-  KEYS,
-
-  HGET,
-  HSET,
-  HEXISTS,
-  HKEYS,
-  HGETALL,
-  HINCRBY,
-  HDEL,
-  HLEN,
-  HVALS,
-  HSCAN,
-
-  SADD,
-  SISMEMBER,
-  SREM,
-  SMEMBERS,
-  SCARD,
-  SSCAN,
-
-  RAFT_HANDSHAKE,
-  RAFT_APPEND_ENTRIES,
-  RAFT_INFO,
-  RAFT_REQUEST_VOTE,
-  RAFT_PANIC,
-  RAFT_FETCH
+struct RaftEntry {
+  RaftTerm term;
+  RedisRequest request;
 };
 
-enum class CommandType {
-  READ,
-  WRITE,
-  CONTROL,
-  RAFT
+struct RaftAppendEntriesRequest {
+  RaftTerm term;
+  RaftServer leader;
+  LogIndex prevIndex;
+  RaftTerm prevTerm;
+  LogIndex commitIndex;
+
+  std::vector<RaftEntry> entries;
 };
 
-struct caseInsensitiveComparator {
-    bool operator() (const std::string& lhs, const std::string& rhs) const {
-        for(size_t i = 0; i < std::min(lhs.size(), rhs.size()); i++) {
-          if(tolower(lhs[i]) != tolower(rhs[i])) {
-            return tolower(lhs[i] < tolower(rhs[i]));
-          }
-        }
-        return lhs.size() < rhs.size();
-    }
-};
-
-extern std::map<std::string,
-                std::pair<RedisCommand, CommandType>,
-                caseInsensitiveComparator>
-                redis_cmd_map;
 }
 
 #endif
