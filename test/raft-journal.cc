@@ -84,17 +84,20 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(journal.append(2, req), 1);
   ASSERT_OK(journal.fetch(1, term, req2));
   ASSERT_EQ(req, req2);
+  ASSERT_TRUE(journal.matchEntries(1, 2));
 
   ASSERT_THROW(journal.setLastApplied(2), FatalException);
   req = { "set", "qwerty", "asdf" };
   ASSERT_THROW(journal.append(4, req), FatalException);
   ASSERT_EQ(journal.append(2, req), 2);
+  ASSERT_TRUE(journal.matchEntries(2, 2));
   journal.setLastApplied(2);
 
   req = { "set", "123", "456"};
   ASSERT_THROW(journal.append(1, req), FatalException);
   ASSERT_TRUE(journal.setCurrentTerm(4, srv));
   ASSERT_EQ(journal.append(4, req), 3);
+  ASSERT_TRUE(journal.matchEntries(3, 4));
   ASSERT_EQ(journal.getLogSize(), 4);
 
 

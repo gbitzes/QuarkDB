@@ -178,6 +178,7 @@ LogIndex RaftJournal::append(RaftTerm term, RedisRequest &req) {
   setLogSize(logSize+1);
 
   termOfLastEntry = term;
+  logUpdated.notify_all();
   return index;
 }
 
@@ -221,6 +222,36 @@ void RaftJournal::setObservers(const std::vector<RaftServer> &obs) {
 std::vector<RaftServer> RaftJournal::getObservers() {
   std::lock_guard<std::mutex> lock(observersMutex);
   return observers;
+}
+
+void RaftJournal::notifyWaitingThreads() {
+  logUpdated.notify_all();
+}
+
+void RaftJournal::waitForUpdates(LogIndex currentSize, const std::chrono::milliseconds &timeout) {
+  std::unique_lock<std::mutex> lock(contentMutex);
+
+  // race, there's an update already
+  if(currentSize < logSize) return;
+
+  logUpdated.wait_for(lock, timeout);
+}
+
+bool RaftJournal::matchEntries(LogIndex index, RaftTerm term) {
+  std::unique_lock<std::mutex> lock(contentMutex);
+
+  if(logSize <= index) {
+    return false;
+  }
+
+  RaftTerm tr;
+  rocksdb::Status status = this->fetch(index, tr);
+
+  if(!status.ok() && !status.IsNotFound()) {
+    qdb_throw("rocksdb error: " << status.ToString());
+  }
+
+  return status.ok() && tr == term;
 }
 
 //------------------------------------------------------------------------------

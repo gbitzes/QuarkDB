@@ -26,6 +26,7 @@
 
 #include "../RocksDB.hh"
 #include <mutex>
+#include <condition_variable>
 
 namespace quarkdb {
 
@@ -52,6 +53,11 @@ public:
   rocksdb::Status fetch(LogIndex index, RaftTerm &term);
   void fetch_or_die(LogIndex index, RaftTerm &term, RedisRequest &cmd);
   void fetch_or_die(LogIndex index, RaftTerm &term);
+
+  bool matchEntries(LogIndex index, RaftTerm term);
+
+  void waitForUpdates(LogIndex currentSize, const std::chrono::milliseconds &timeout);
+  void notifyWaitingThreads();
 private:
   RocksDB store;
 
@@ -73,6 +79,8 @@ private:
   std::mutex nodesMutex;
   std::mutex observersMutex;
   std::mutex votedForMutex;
+
+  std::condition_variable logUpdated;
 
   //----------------------------------------------------------------------------
   // Transient values, can always be inferred from stable storage
