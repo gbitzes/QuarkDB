@@ -174,6 +174,7 @@ void Tunnel::connect() {
 }
 
 void Tunnel::eventLoop() {
+  std::chrono::milliseconds backoff(1);
   while(true) {
     this->connect();
 
@@ -198,6 +199,9 @@ void Tunnel::eventLoop() {
         break;
       }
 
+      // legit connection, reset backoff
+      backoff = std::chrono::milliseconds(1);
+
       if(polls[0].revents != 0) {
         redisAsyncHandleWrite(asyncContext);
       }
@@ -206,9 +210,11 @@ void Tunnel::eventLoop() {
       }
     }
 
-    // dropped connection, wait before retrying
-    std::chrono::milliseconds backoff(1000);
+    // dropped connection, wait before retrying with an exponential backoff
     std::this_thread::sleep_for(backoff);
+    if(backoff < std::chrono::milliseconds(1024)) {
+      backoff *= 2;
+    }
   }
 }
 
