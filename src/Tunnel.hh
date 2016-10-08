@@ -30,6 +30,7 @@
 #include <map>
 #include <hiredis/hiredis.h>
 #include <hiredis/async.h>
+#include "EventFD.hh"
 
 namespace quarkdb {
 
@@ -66,7 +67,7 @@ private:
   void connect();
   std::mutex asyncMutex;
   redisAsyncContext *asyncContext;
-  int write_event_fd;
+  EventFD writeEventFD;
 
   RedisRequest handshakeCommand;
 

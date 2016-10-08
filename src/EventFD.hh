@@ -33,7 +33,6 @@ class EventFD {
 public:
   EventFD() {
     fd = eventfd(0, EFD_NONBLOCK);
-    reset();
   }
 
   ~EventFD() {
@@ -43,12 +42,18 @@ public:
   }
 
   void notify(int64_t val = 1) {
-    write(fd, &val, sizeof(val));
+    int rc = write(fd, &val, sizeof(val));
+    if(rc != sizeof(val)) {
+      qdb_critical("could not notify eventfd, write rc: " << rc);
+    }
   }
 
   int64_t reset() {
-    int tmp;
-    ::read(fd, &tmp, sizeof(tmp));
+    int64_t tmp;
+    int rc = read(fd, &tmp, sizeof(tmp));
+    if(rc != sizeof(tmp)) {
+      qdb_critical("could not reset eventfd, read rc: " << rc);
+    }
     return tmp;
   }
 

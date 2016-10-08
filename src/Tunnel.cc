@@ -52,7 +52,7 @@ void Tunnel::clearIntercepts() {
 
 void Tunnel::startEventLoop() {
   asyncContext = nullptr;
-  write_event_fd = eventfd(0, EFD_NONBLOCK);
+  writeEventFD.reset();
 
   std::thread th(&Tunnel::eventLoop, this);
   th.detach();
@@ -81,8 +81,6 @@ Tunnel::~Tunnel() {
   while(shutdown != 2) {
     notifyWrite();
   }
-
-  close(write_event_fd);
 }
 
 static void add_write_callback(void *privdata) {
@@ -138,17 +136,11 @@ static void async_future_callback(redisAsyncContext *c, void *reply, void *privd
 }
 
 void Tunnel::notifyWrite() {
-  int64_t tmp = 1;
-  if(write(write_event_fd, &tmp, sizeof(tmp)) != sizeof(tmp)) {
-    qdb_error("could not notify write");
-  }
+  writeEventFD.notify();
 }
 
 void Tunnel::removeWriteNotification() {
-  int64_t tmp;
-  if(read(write_event_fd, &tmp, sizeof(tmp)) != sizeof(tmp)) {
-    qdb_error("could not remove write notification");
-  }
+  writeEventFD.reset();
 }
 
 void Tunnel::connect() {
@@ -179,7 +171,7 @@ void Tunnel::eventLoop() {
     this->connect();
 
     struct pollfd polls[2];
-    polls[0].fd = write_event_fd;
+    polls[0].fd = writeEventFD.getFD();
     polls[0].events = POLLIN;
 
     polls[1].fd = asyncContext->c.fd;
