@@ -51,7 +51,7 @@ public:
   int64_t reset() {
     int64_t tmp;
     int rc = read(fd, &tmp, sizeof(tmp));
-    if(rc != sizeof(tmp)) {
+    if(rc != sizeof(tmp) && !(rc == -1 && errno == EAGAIN)) {
       qdb_critical("could not reset eventfd, read rc: " << rc);
     }
     return tmp;
