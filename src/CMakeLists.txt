@@ -26,6 +26,7 @@ add_library(XrdRedis SHARED
   Response.cc              Response.hh
   Dispatcher.cc            Dispatcher.hh
   Tunnel.cc                Tunnel.hh
+  Poller.cc                Poller.hh
   raft/RaftJournal.cc      raft/RaftJournal.hh
   raft/RaftState.cc        raft/RaftState.hh
   raft/RaftTalker.cc       raft/RaftTalker.hh
