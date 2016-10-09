@@ -65,7 +65,9 @@ private:
   void startEventLoop();
   void eventLoop();
   void connect();
-  std::mutex asyncMutex;
+  void disconnect();
+
+  std::recursive_mutex asyncMutex;
   redisAsyncContext *asyncContext;
   EventFD writeEventFD;
 

@@ -26,8 +26,31 @@
 
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <vector>
+#include "Common.hh"
 
 namespace quarkdb {
+
+extern std::vector<RedisRequest> testreqs;
+extern std::vector<RaftServer> testnodes;
+extern std::vector<RaftServer> testnodes3;
+extern std::vector<RaftClusterID> test_clusterIDs;
+extern std::vector<std::string> test_unixsockets;
+extern std::vector<std::string> test_journals;
+extern std::vector<std::string> test_statemachines;
+
+// necessary because C macros are dumb and don't undestand
+// universal initialization with brackets {}
+template<typename... Args>
+RedisRequest make_req(Args... args) {
+  return RedisRequest { args... };
+}
+
+class TestsCommonState {
+public:
+  TestsCommonState();
+};
+extern TestsCommonState commonState;
 
 class UnixSocketListener {
 private:

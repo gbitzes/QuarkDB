@@ -36,6 +36,7 @@
 #include "RedisParser.hh"
 #include "RocksDB.hh"
 #include "Dispatcher.hh"
+#include "raft/RaftJournal.hh"
 
 namespace quarkdb {
 
@@ -76,6 +77,7 @@ protected:
   static XrdBuffManager *bufferManager;
   static RocksDB *rocksdb;
   static Dispatcher *dispatcher;
+  static RaftJournal *journal;
 };
 
 }

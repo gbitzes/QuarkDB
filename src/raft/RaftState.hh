@@ -25,20 +25,13 @@
 #define __QUARKDB_RAFT_STATE_H__
 
 #include "../Common.hh"
+#include "RaftCommon.hh"
 #include "RaftJournal.hh"
 #include <mutex>
 
 namespace quarkdb {
 
-enum class RaftStatus {
-  LEADER,
-  FOLLOWER,
-  CANDIDATE,
-  OBSERVER,
-  SHUTDOWN
-};
 
-std::string statusToString(RaftStatus st);
 
 struct RaftStateSnapshot {
   RaftTerm term;
@@ -65,6 +58,8 @@ public:
   bool becomeCandidate(RaftTerm term);
   bool joinCluster(RaftTerm term);
   bool becomeObserver(RaftTerm forTerm);
+
+  void shutdown();
 
   RaftTerm getCurrentTerm();
   RaftStateSnapshot getSnapshot();

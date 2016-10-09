@@ -31,6 +31,8 @@ add_library(XrdRedis SHARED
   raft/RaftState.cc        raft/RaftState.hh
   raft/RaftTalker.cc       raft/RaftTalker.hh
   raft/RaftParser.cc       raft/RaftParser.hh
+  raft/Raft.cc             raft/Raft.hh
+  raft/RaftReplicator.cc   raft/RaftReplicator.hh
   ${BACKWARD_ENABLE}
 )
 

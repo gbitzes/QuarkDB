@@ -25,8 +25,18 @@
 #define __QUARKDB_RAFT_COMMON_H__
 
 #include "../Common.hh"
+#include "../Utils.hh"
 
 namespace quarkdb {
+
+enum class RaftStatus {
+  LEADER,
+  FOLLOWER,
+  CANDIDATE,
+  OBSERVER,
+  SHUTDOWN
+};
+std::string statusToString(RaftStatus st);
 
 struct RaftEntry {
   RaftTerm term;
@@ -41,6 +51,45 @@ struct RaftAppendEntriesRequest {
   LogIndex commitIndex;
 
   std::vector<RaftEntry> entries;
+};
+
+struct RaftAppendEntriesResponse {
+  RaftAppendEntriesResponse(RaftTerm tr, LogIndex ind, bool out, const std::string &er)
+  : term(tr), logSize(ind), outcome(out), err(er) {}
+
+  RaftAppendEntriesResponse() {}
+
+  RaftTerm term = -1;
+  LogIndex logSize = -1;
+  bool outcome = false;
+  std::string err;
+
+  std::vector<std::string> toVector() {
+    std::vector<std::string> ret;
+    ret.push_back(std::to_string(term));
+    ret.push_back(std::to_string(logSize));
+    ret.push_back(std::to_string(outcome));
+    ret.push_back(err);
+    return ret;
+  }
+};
+
+struct RaftInfo {
+  RaftClusterID clusterID;
+  RaftServer myself;
+  RaftTerm term;
+  LogIndex logSize;
+  RaftStatus status;
+
+  std::vector<std::string> toVector() {
+    std::vector<std::string> ret;
+    ret.push_back(SSTR("TERM " << term));
+    ret.push_back(SSTR("LOG-SIZE " << logSize));
+    ret.push_back(SSTR("MYSELF " << myself.toString()));
+    ret.push_back(SSTR("CLUSTER-ID " << clusterID));
+    ret.push_back(SSTR("STATUS " << statusToString(status)));
+    return ret;
+  }
 };
 
 }

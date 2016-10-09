@@ -81,6 +81,7 @@ Tunnel::~Tunnel() {
   while(shutdown != 2) {
     notifyWrite();
   }
+  disconnect();
 }
 
 static void add_write_callback(void *privdata) {
@@ -143,9 +144,16 @@ void Tunnel::removeWriteNotification() {
   writeEventFD.reset();
 }
 
+void Tunnel::disconnect() {
+  if(asyncContext) {
+    redisAsyncDisconnect(asyncContext);
+    asyncContext = nullptr;
+  }
+}
+
 void Tunnel::connect() {
-  std::unique_lock<std::mutex> lock(asyncMutex);
-  // if(async) redisAsyncFree(async);
+  std::unique_lock<std::recursive_mutex> lock(asyncMutex);
+  disconnect();
   // TODO: figure out what I have to do to free the async context
 
   if(unixSocket.empty()) {
@@ -159,10 +167,14 @@ void Tunnel::connect() {
   asyncContext->ev.delWrite = del_write_callback;
   asyncContext->ev.data = this;
 
-  lock.unlock();
   if(!handshakeCommand.empty()) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     execute(handshakeCommand);
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
+
+  lock.unlock();
+
 }
 
 void Tunnel::eventLoop() {
@@ -177,7 +189,7 @@ void Tunnel::eventLoop() {
     polls[1].fd = asyncContext->c.fd;
     polls[1].events = POLLIN;
 
-    while(true && !asyncContext->err) {
+    while(!asyncContext->err) {
       poll(polls, 2, -1);
 
       if(shutdown > 0) {
@@ -185,7 +197,7 @@ void Tunnel::eventLoop() {
         return;
       }
 
-      std::unique_lock<std::mutex> lock(asyncMutex);
+      std::unique_lock<std::recursive_mutex> lock(asyncMutex);
 
       if(asyncContext->err) {
         break;
@@ -223,11 +235,14 @@ std::future<redisReplyPtr> Tunnel::execute(const RedisRequest &req) {
 }
 
 std::future<redisReplyPtr> Tunnel::execute(size_t nchunks, const char **chunks, const size_t *sizes) {
-  std::lock_guard<std::mutex> lock(asyncMutex);
+  std::lock_guard<std::recursive_mutex> lock(asyncMutex);
 
   if(asyncContext && !asyncContext->err) {
     std::promise<redisReplyPtr>* prom = new std::promise<redisReplyPtr>();
-    redisAsyncCommandArgv(asyncContext, async_future_callback, prom, nchunks, chunks, sizes);
+    if(redisAsyncCommandArgv(asyncContext, async_future_callback, prom, nchunks, chunks, sizes) != REDIS_OK) {
+      prom->set_value(redisReplyPtr());
+      delete prom;
+    }
     return prom->get_future();
   }
 

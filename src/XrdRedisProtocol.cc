@@ -24,6 +24,7 @@
 #include "XrdVersion.hh"
 #include "XrdRedisProtocol.hh"
 #include "XrdOuc/XrdOucEnv.hh"
+#include "raft/Raft.hh"
 
 #include <stdlib.h>
 #include <algorithm>
@@ -43,6 +44,7 @@ XrdOucTrace *XrdRedisTrace = 0;
 XrdBuffManager *XrdRedisProtocol::bufferManager = 0;
 RocksDB *XrdRedisProtocol::rocksdb = 0;
 Dispatcher *XrdRedisProtocol::dispatcher = 0;
+RaftJournal *XrdRedisProtocol::journal = 0;
 
 //------------------------------------------------------------------------------
 // XrdRedisProtocol class
@@ -103,7 +105,22 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
   if(!success) return 0;
 
   rocksdb = new RocksDB(configuration.getDB());
-  dispatcher = new RedisDispatcher(*rocksdb);
+
+  if(configuration.getMode() == Mode::rocksdb) {
+    dispatcher = new RedisDispatcher(*rocksdb);
+  }
+  else if(configuration.getMode() == Mode::raft) {
+    if(pi->Port != configuration.getMyself().port) {
+      std::cerr << "configuration error: xrootd listening port doesn't match redis.myself" << std::endl;
+      return 0;
+    }
+
+    journal = new RaftJournal(configuration.getRaftLog());
+    dispatcher = new Raft(*journal, *rocksdb, configuration.getMyself());
+  }
+  else {
+    qdb_throw("cannot determine configuration mode"); // should never happen
+  }
 
   return 1;
 }

@@ -88,3 +88,26 @@ TEST(Tunnel, T1) {
   ASSERT_EQ(reply->type, REDIS_REPLY_STRING);
   ASSERT_EQ(str_from_reply(reply), "1234567");
 }
+
+TEST(Tunnel, T2) {
+  // with handshake
+  unlink(UNIX_SOCKET_PATH);
+  Tunnel::addIntercept("server1", 1234, UNIX_SOCKET_PATH);
+  Tunnel tunnel("server1", 1234, {"RAFT_HANDSHAKE", "some-cluster-id"});
+
+  RedisRequest req { "set", "abc", "123" };
+  std::future<redisReplyPtr> fut = tunnel.execute(req);
+  ASSERT_EQ(fut.get(), nullptr);
+
+  UnixSocketListener listener(UNIX_SOCKET_PATH);
+  int s2 = listener.accept();
+  ASSERT_GT(s2, 0);
+
+  // connected
+  fut = tunnel.execute(req);
+  assert_receive(s2, "*2\r\n$14\r\nRAFT_HANDSHAKE\r\n$15\r\nsome-cluster-id\r\n");
+  socket_send(s2, "+OK\r\n");
+
+  assert_receive(s2, "*3\r\n$3\r\nset\r\n$3\r\nabc\r\n$3\r\n123\r\n");
+  socket_send(s2, "+OK\r\n");
+}

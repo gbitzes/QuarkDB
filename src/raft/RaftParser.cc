@@ -62,3 +62,29 @@ bool RaftParser::appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &
   if(index != (int64_t) source.size()) return false;
   return true;
 }
+
+bool RaftParser::appendEntriesResponse(const redisReplyPtr &source, RaftAppendEntriesResponse &dest) {
+  if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements != 4) {
+    return false;
+  }
+
+  for(size_t i = 0; i < source->elements; i++) {
+    if(source->element[i]->type != REDIS_REPLY_STRING) {
+      return false;
+    }
+  }
+
+  std::string tmp(source->element[0]->str, source->element[0]->len);
+  if(!my_strtoll(tmp, dest.term)) return false;
+
+  tmp = std::string(source->element[1]->str, source->element[1]->len);
+  if(!my_strtoll(tmp, dest.logSize)) return false;
+
+  tmp = std::string(source->element[2]->str, source->element[2]->len);
+  if(tmp == "0") dest.outcome = false;
+  else if(tmp == "1") dest.outcome = true;
+  else return false;
+
+  dest.err = std::string(source->element[3]->str, source->element[3]->len);
+  return true;
+}

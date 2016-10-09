@@ -69,7 +69,7 @@ RaftServer RaftState::getMyself() {
 
 void RaftState::declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader) {
   if(observedTerm > term) {
-    qdb_event("Progressing raft state: " << term << " ==> " << observedTerm);
+    qdb_event("Progressing raft term: " << term << " ==> " << observedTerm);
   }
   if(!observedLeader.empty()) {
     qdb_event("Recognizing as leader for term " << observedTerm << ": " << observedLeader.toString());
@@ -216,6 +216,10 @@ bool RaftState::becomeObserver(RaftTerm forTerm) {
 
   status = RaftStatus::OBSERVER;
   return true;
+}
+
+void RaftState::shutdown() {
+  status = RaftStatus::SHUTDOWN;
 }
 
 //------------------------------------------------------------------------------

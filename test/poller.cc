@@ -23,23 +23,24 @@
 
 #include "Poller.hh"
 #include "Tunnel.hh"
+#include "test-utils.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
 
 TEST(Poller, T1) {
-  RocksDB store("/tmp/rocksdb");
+  RocksDB store(test_statemachines[0]);
   RedisDispatcher dispatcher(store);
 
-  unlink("/tmp/my-unix-socket");
-  Tunnel::addIntercept("server1", 1234, "/tmp/my-unix-socket");
-  Tunnel tunnel("server1", 1234);
-
-  Poller poller("/tmp/my-unix-socket", &dispatcher);
+  Tunnel tunnel(testnodes[0].hostname, testnodes[0].port);
+  Poller poller(test_unixsockets[0], &dispatcher);
+  std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
   redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
+  ASSERT_NE(reply, nullptr);
   ASSERT_EQ(std::string(reply->str, reply->len), "OK");
 
   reply = tunnel.execute({"get", "abc"}).get();
+  ASSERT_NE(reply, nullptr);
   ASSERT_EQ(std::string(reply->str, reply->len), "1234");
 }

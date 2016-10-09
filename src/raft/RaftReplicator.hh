@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftParser.hh
+// File: RaftReplicator.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,19 +21,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_PARSER_H__
-#define __QUARKDB_RAFT_PARSER_H__
+#ifndef __QUARKDB_RAFT_REPLICATOR_H__
+#define __QUARKDB_RAFT_REPLICATOR_H__
 
-#include "../Tunnel.hh"
-#include "RaftCommon.hh"
-#include "../Common.hh"
+#include "../RocksDB.hh"
+#include "RaftJournal.hh"
+#include "RaftState.hh"
+#include <mutex>
 
 namespace quarkdb {
 
-class RaftParser {
+//------------------------------------------------------------------------------
+// A class that is given a number of target raft machine of the cluster, and
+// ensures that their journals match my own.
+//------------------------------------------------------------------------------
+class RaftReplicator {
 public:
-  static bool appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &dest);
-  static bool appendEntriesResponse(const redisReplyPtr &source, RaftAppendEntriesResponse &dest);
+  RaftReplicator(RaftJournal &journal, RaftState &state);
+  ~RaftReplicator();
+
+  bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
+  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
+private:
+  bool buildPayload(LogIndex nextIndex, size_t messageLength,
+    std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms);
+
+  RaftJournal &journal;
+  RaftState &state;
+
+  std::atomic<int64_t> threadsAlive {0};
+  std::atomic<bool> shutdown {0};
 };
 
 }
