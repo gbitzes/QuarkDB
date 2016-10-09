@@ -33,9 +33,9 @@ using namespace quarkdb;
 //------------------------------------------------------------------------------
 
 static void append_int_to_string(int64_t source, std::ostringstream &target) {
-  std::string tmp(sizeof(source), '0');
-  memcpy(&tmp[0], &source, sizeof(source));
-  target << tmp;
+  char buff[sizeof(source)];
+  memcpy(&buff, &source, sizeof(source));
+  target.write(buff, sizeof(source));
 }
 
 static int64_t fetch_int_from_string(const char *pos) {
@@ -162,7 +162,7 @@ void RaftJournal::setLastApplied(LogIndex index) {
   lastApplied = index;
 }
 
-bool RaftJournal::append(LogIndex index, RaftTerm term, RedisRequest &req) {
+bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req) {
   std::lock_guard<std::mutex> lock(contentMutex);
 
   if(index != logSize) {
@@ -248,7 +248,7 @@ bool RaftJournal::removeEntries(LogIndex from) {
   if(logSize <= from) return false;
 
   if(from <= lastApplied) qdb_throw("attempted to remove committed entries. lastApplied: " << lastApplied << ", from: " << from);
-  qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize << "]");
+  qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize-1 << "]");
 
   for(LogIndex i = from; i < logSize; i++) {
     rocksdb::Status st = store.del(SSTR("RAFT_ENTRY_" << i));
