@@ -33,7 +33,18 @@ namespace quarkdb {
 class RaftJournal {
 public:
   static void ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes);
+  static void ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID clusterID, std::vector<RaftServer> nodes);
+
+  // opens an existing journal
   RaftJournal(const std::string &path);
+
+  // re-initializes a journal, obliterates the contents of the old one, if it exists
+  RaftJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+
+  // should never have to be called during normal operation, only in the tests
+  // assumes there's no other concurrent access to the journal
+  void obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  void initialize();
 
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
   void setLastApplied(LogIndex index);

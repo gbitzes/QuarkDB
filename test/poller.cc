@@ -28,12 +28,13 @@
 
 using namespace quarkdb;
 
-TEST(Poller, T1) {
-  RocksDB store(test_statemachines[0]);
-  RedisDispatcher dispatcher(store);
+class tPoller : public TestCluster3Nodes {};
 
-  Tunnel tunnel(testnodes[0].hostname, testnodes[0].port);
-  Poller poller(test_unixsockets[0], &dispatcher);
+TEST_F(tPoller, T1) {
+  RedisDispatcher dispatcher(*rocksdb());
+
+  Poller rocksdbPoller(unixsocket(), &dispatcher);
+  Tunnel tunnel(myself().hostname, myself().port);
   std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
   redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();

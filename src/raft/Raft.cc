@@ -33,6 +33,10 @@ Raft::Raft(RaftJournal &jour, RocksDB &sm, const RaftServer &me)
 : journal(jour), stateMachine(sm), state(journal, me), redisDispatcher(stateMachine), myself(me) {
 }
 
+RaftState* Raft::getState() {
+  return &state;
+}
+
 Raft::~Raft() {
   state.shutdown();
 }

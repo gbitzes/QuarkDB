@@ -28,16 +28,14 @@
 #include <sys/un.h>
 #include <vector>
 #include "Common.hh"
+#include "raft/Raft.hh"
+#include "raft/RaftReplicator.hh"
+#include "Poller.hh"
+#include <gtest/gtest.h>
 
 namespace quarkdb {
 
 extern std::vector<RedisRequest> testreqs;
-extern std::vector<RaftServer> testnodes;
-extern std::vector<RaftServer> testnodes3;
-extern std::vector<RaftClusterID> test_clusterIDs;
-extern std::vector<std::string> test_unixsockets;
-extern std::vector<std::string> test_journals;
-extern std::vector<std::string> test_statemachines;
 
 // necessary because C macros are dumb and don't undestand
 // universal initialization with brackets {}
@@ -46,11 +44,97 @@ RedisRequest make_req(Args... args) {
   return RedisRequest { args... };
 }
 
-class TestsCommonState {
+class GlobalEnv : public testing::Environment {
 public:
-  TestsCommonState();
+  virtual void SetUp() override;
+  virtual void TearDown() override;
+
+  // initialize a clean rocksdb database or journal. The connection is cached,
+  // because even if rocksdb is local, it takes a long time to open one.
+  // (often 50+ ms)
+  RocksDB *getRocksDB(const std::string &path);
+  RaftJournal *getJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  const std::string testdir = "/tmp/quarkdb-tests";
+private:
+  std::map<std::string, RocksDB*> rocksdbCache;
+  std::map<std::string, RaftJournal*> journalCache;
 };
-extern TestsCommonState commonState;
+extern GlobalEnv &commonState;
+
+// Includes everything needed to simulate a single raft-enabled server.
+// Everything is initialized lazily, so if you only want to test the journal for example,
+// this is possible, too. Just don't call eg raft(), and you won't have to worry
+// about raft messing up your variables and terms due to timeouts.
+class TestNode {
+public:
+  TestNode(int id, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  ~TestNode();
+
+  RocksDB *rocksdb();
+  RaftJournal *journal();
+  Raft *raft();
+  RaftState *state();
+  RaftReplicator *replicator();
+  Poller *poller();
+
+  RaftServer myself();
+  std::vector<RaftServer> nodes();
+  std::string unixsocket();
+private:
+  int id;
+  RaftClusterID clusterID;
+  std::vector<RaftServer> initialNodes;
+  RaftServer myselfSrv;
+
+  RocksDB *rocksdbptr = nullptr;
+  RaftJournal *journalptr = nullptr;
+  Raft *raftptr = nullptr;
+  RaftReplicator *replicatorptr = nullptr;
+  Poller *pollerptr = nullptr;
+
+  std::string unixsocketpath;
+};
+
+// Contains everything needed to simulate a cluster with an arbitrary number of nodes.
+// Everything is initialized lazily, including the nodes of the cluster themselves.
+class TestCluster : public ::testing::Test {
+public:
+  TestCluster(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  ~TestCluster();
+
+  RocksDB* rocksdb(int id = 0);
+  RaftJournal* journal(int id = 0);
+  Raft *raft(int id = 0);
+  RaftState *state(int id = 0);
+  RaftReplicator *replicator(int id = 0);
+  Poller *poller(int id = 0);
+  RaftServer myself(int id = 0);
+
+  TestNode* node(int id = 0);
+  std::vector<RaftServer> nodes(int id = 0);
+  std::string unixsocket(int id = 0);
+  RaftClusterID clusterID();
+private:
+  std::string rocksdbPath(int id = 0);
+
+  RaftClusterID clusterid;
+  std::vector<RaftServer> initialNodes;
+
+  std::map<int, TestNode*> testnodes;
+};
+
+// Convenience class. Want to run tests on a simulated cluster of 3 nodes?
+// Inherit your test fixture from here.
+class TestCluster3Nodes : public TestCluster {
+public:
+  TestCluster3Nodes() : TestCluster("a9b9e979-5428-42e9-8a52-f675c39fdf80", {
+    {"server0", 7775},
+    {"server1", 7776},
+    {"server2", 7777},
+  } ) {
+    Tunnel::clearIntercepts();
+  };
+};
 
 class UnixSocketListener {
 private:

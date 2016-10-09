@@ -26,6 +26,7 @@
 #include "Tunnel.hh"
 #include <vector>
 #include <string>
+#include <gtest/gtest.h>
 
 namespace quarkdb {
 
@@ -39,46 +40,176 @@ std::vector<RedisRequest> testreqs = {
   {"sadd", "myset", "d"}
 };
 
-std::vector<RaftServer> testnodes3;
-
-std::vector<RaftServer> testnodes = {
-  {"server0", 7775},
-  {"server1", 7776},
-  {"server2", 7777},
-  {"server3", 7778},
-  {"server4", 7779}
-};
-
-std::vector<RaftClusterID> test_clusterIDs {
-  "8b4651de-b37c-4f6f-9738-1125998c680e",
-  "a9b9e979-5428-42e9-8a52-f675c39fdf80",
-  "6d114e5f-5e19-4a01-b200-a837bc972ad2",
-  "5c29d090-c56e-4b7a-991c-3ba41a4e094b",
-  "e91e9315-a0dc-4498-8edf-209abd2ef8e2"
-};
-
-std::vector<std::string> test_unixsockets;
-std::vector<std::string> test_journals;
-std::vector<std::string> test_statemachines;
-
-TestsCommonState::TestsCommonState() {
-  system("rm -r /tmp/quarkdb-tests");
-  system("mkdir /tmp/quarkdb-tests");
-
-  for(size_t i = 0; i < 3; i++) {
-    testnodes3.push_back(testnodes[i]);
+void GlobalEnv::TearDown() {
+  for(auto& kv : rocksdbCache) {
+    delete kv.second;
   }
 
-  for(size_t i = 0; i < testnodes.size(); i++) {
-    test_unixsockets.push_back(SSTR("/tmp/quarkdb-tests/unix-socket-" << testnodes[i].hostname << "-" << testnodes[i].port));
-    Tunnel::addIntercept(testnodes[i].hostname, testnodes[i].port, test_unixsockets[i]);
-
-    test_journals.push_back(SSTR("/tmp/quarkdb-tests/journal-" << testnodes[i].hostname << "-" << testnodes[i].port));
-    test_statemachines.push_back(SSTR("/tmp/quarkdb-tests/statemachine-" << testnodes[i].hostname << "-" << testnodes[i].port));
+  for(auto& kv : journalCache) {
+    delete kv.second;
   }
 }
-TestsCommonState commonState;
 
+RocksDB* GlobalEnv::getRocksDB(const std::string &path) {
+  RocksDB *ret = rocksdbCache[path];
+  if(ret == nullptr) {
+    ret = new RocksDB(path);
+    rocksdbCache[path] = ret;
+  }
 
+  ret->flushall();
+  return ret;
+}
+
+RaftJournal* GlobalEnv::getJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
+  RaftJournal *ret = journalCache[path];
+  if(ret == nullptr) {
+    ret = new RaftJournal(path, clusterID, nodes);
+    journalCache[path] = ret;
+  }
+
+  ret->obliterate(clusterID, nodes);
+  return ret;
+}
+
+void GlobalEnv::SetUp() {
+  if(!testdir.empty()) {
+    system(SSTR("rm -r " << testdir).c_str());
+    system(SSTR("mkdir " << testdir).c_str());
+  }
+}
+
+::testing::Environment* const commonStatePtr = ::testing::AddGlobalTestEnvironment(new GlobalEnv);
+GlobalEnv &commonState(*(GlobalEnv*)commonStatePtr);
+
+TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd)
+: clusterid(clust), initialNodes(nd) {
+}
+
+TestCluster::~TestCluster() {
+  for(auto &kv : testnodes) {
+    delete kv.second;
+  }
+}
+
+RaftClusterID TestCluster::clusterID() {
+  return clusterid;
+}
+
+RocksDB* TestCluster::rocksdb(int id) {
+  return node(id)->rocksdb();
+}
+
+RaftJournal* TestCluster::journal(int id) {
+  return node(id)->journal();
+}
+
+Raft* TestCluster::raft(int id) {
+  return node(id)->raft();
+}
+
+RaftState* TestCluster::state(int id) {
+  return node(id)->state();
+}
+
+RaftReplicator* TestCluster::replicator(int id) {
+  return node(id)->replicator();
+}
+
+Poller* TestCluster::poller(int id) {
+  return node(id)->poller();
+}
+
+RaftServer TestCluster::myself(int id) {
+  return node(id)->myself();
+}
+
+std::vector<RaftServer> TestCluster::nodes(int id) {
+  return node(id)->nodes();
+}
+
+std::string TestCluster::unixsocket(int id) {
+  return node(id)->unixsocket();
+}
+
+TestNode* TestCluster::node(int id) {
+  TestNode *ret = testnodes[id];
+  if(ret == nullptr) {
+    ret = new TestNode(id, clusterID(), initialNodes);
+    testnodes[id] = ret;
+  }
+  return ret;
+}
+
+TestNode::TestNode(int myid, RaftClusterID clust, const std::vector<RaftServer> &nd)
+: id(myid), clusterID(clust), initialNodes(nd), myselfSrv(initialNodes[id]) {
+
+}
+
+TestNode::~TestNode() {
+  if(raftptr) delete raftptr;
+  if(replicatorptr) delete replicatorptr;
+  if(pollerptr) delete pollerptr;
+}
+
+RocksDB* TestNode::rocksdb() {
+  // must be cached locally, because with every call to getRocksDB()
+  // the contents are reset
+  // NOT deleted by ~TestNode - ownership is retained by commonState for caching.
+  if(rocksdbptr == nullptr) {
+    rocksdbptr = commonState.getRocksDB(SSTR(commonState.testdir << "/rocksdb-" << id));
+  }
+  return rocksdbptr;
+}
+
+RaftJournal* TestNode::journal() {
+  // see TestNode::rocksdb()
+  if(journalptr == nullptr) {
+    journalptr = commonState.getJournal(SSTR(commonState.testdir << "/journal-" << id), clusterID, initialNodes);
+  }
+  return journalptr;
+}
+
+RaftServer TestNode::myself() {
+  return myselfSrv;
+}
+
+std::vector<RaftServer> TestNode::nodes() {
+  return journal()->getNodes();
+}
+
+std::string TestNode::unixsocket() {
+  if(unixsocketpath.empty()) {
+    unixsocketpath = SSTR(commonState.testdir << "/socket-" << id);
+    unlink(unixsocketpath.c_str());
+    Tunnel::addIntercept(myself().hostname, myself().port, unixsocketpath);
+  }
+  return unixsocketpath;
+}
+
+Poller* TestNode::poller() {
+  if(pollerptr == nullptr) {
+    pollerptr = new Poller(unixsocket(), raft());
+  }
+  return pollerptr;
+}
+
+Raft* TestNode::raft() {
+  if(raftptr == nullptr) {
+    raftptr = new Raft(*journal(), *rocksdb(), myself());
+  }
+  return raftptr;
+}
+
+RaftState* TestNode::state() {
+  return this->raft()->getState();
+}
+
+RaftReplicator* TestNode::replicator() {
+  if(replicatorptr == nullptr) {
+    replicatorptr = new RaftReplicator(*journal(), *state());
+  }
+  return replicatorptr;
+}
 
 }

@@ -69,6 +69,7 @@ bool parseServer(const std::string &str, RaftServer &srv) {
 }
 
 bool parseServers(const std::string &str, std::vector<RaftServer> &servers) {
+  servers = {};
   std::vector<std::string> parts = split(str, ",");
 
   for(size_t i = 0; i < parts.size(); i++) {

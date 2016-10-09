@@ -74,6 +74,18 @@ struct RaftAppendEntriesResponse {
   }
 };
 
+struct RaftVoteRequest {
+  RaftTerm term;
+  RaftServer candidate;
+  LogIndex lastIndex;
+  RaftTerm lastTerm;
+};
+
+struct RaftVoteResponse {
+  RaftTerm term;
+  bool granted;
+};
+
 struct RaftInfo {
   RaftClusterID clusterID;
   RaftServer myself;

@@ -78,6 +78,10 @@ static void deserializeRedisRequest(const std::string &data, RaftTerm &term, Red
 
 void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes) {
   RocksDB store(path);
+  return ObliterateAndReinitializeJournal(store, clusterID, nodes);
+}
+
+void RaftJournal::ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID clusterID, std::vector<RaftServer> nodes) {
   store.flushall();
 
   store.set_or_die("RAFT_CURRENT_TERM", "0");
@@ -92,7 +96,13 @@ void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, Raft
   store.set_or_die("RAFT_OBSERVERS", "");
 }
 
-RaftJournal::RaftJournal(const std::string &filename) : store(filename) {
+
+void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftServer> &newNodes) {
+  ObliterateAndReinitializeJournal(store, newClusterID, newNodes);
+  initialize();
+}
+
+void RaftJournal::initialize() {
   currentTerm = store.get_int_or_die("RAFT_CURRENT_TERM");
   logSize = store.get_int_or_die("RAFT_LOG_SIZE");
   clusterID = store.get_or_die("RAFT_CLUSTER_ID");
@@ -113,6 +123,16 @@ RaftJournal::RaftJournal(const std::string &filename) : store(filename) {
   if(!vote.empty() && !parseServer(vote, votedFor)) {
     qdb_throw("journal corruption, cannot parse RAFT_VOTED_FOR: " << vote);
   }
+}
+
+RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes)
+: store(filename) {
+  ObliterateAndReinitializeJournal(store, clusterID, nodes);
+  initialize();
+}
+
+RaftJournal::RaftJournal(const std::string &filename) : store(filename) {
+  initialize();
 }
 
 bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {

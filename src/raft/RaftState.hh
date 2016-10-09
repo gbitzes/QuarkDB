@@ -51,6 +51,7 @@ struct RaftStateSnapshot {
 class RaftState {
 public:
   RaftState(RaftJournal &journal, const RaftServer &me);
+  DISALLOW_COPY_AND_ASSIGN(RaftState);
 
   bool observed(RaftTerm term, const RaftServer &leader);
   bool grantVote(RaftTerm term, const RaftServer &vote);

@@ -34,6 +34,7 @@ namespace quarkdb {
 class Dispatcher {
 public:
   virtual LinkStatus dispatch(Link *link, RedisRequest &req) = 0;
+  virtual ~Dispatcher() {}
 };
 
 class RedisDispatcher : public Dispatcher {
