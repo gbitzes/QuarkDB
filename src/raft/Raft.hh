@@ -44,6 +44,7 @@ public:
   bool fetch(LogIndex index, RaftEntry &entry);
 
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
+  RaftVoteResponse requestVote(RaftVoteRequest &req);
 
   //----------------------------------------------------------------------------
   // Only used for testing

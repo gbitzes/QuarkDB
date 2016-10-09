@@ -34,6 +34,7 @@ using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
 
 class Raft_Replicator : public TestCluster3Nodes {};
+class Raft_Voting : public TestCluster3Nodes {};
 class tRaft : public TestCluster3Nodes {};
 
 TEST_F(Raft_Replicator, no_replication_on_myself) {
@@ -193,4 +194,78 @@ TEST_F(tRaft, add_entries) {
   ASSERT_TRUE(raft()->fetch(2, entry));
   ASSERT_EQ(entry.term, 3);
   ASSERT_EQ(entry.request, make_req("sadd", "myset", "a"));
+}
+
+TEST_F(Raft_Voting, throws_with_requestvote_to_myself) {
+  RaftVoteRequest req;
+  req.term = 1;
+  req.candidate = myself();
+  req.lastTerm = 0;
+  req.lastIndex = 2;
+
+  ASSERT_THROW(raft()->requestVote(req), FatalException);
+}
+
+TEST_F(Raft_Voting, no_double_voting_on_same_term) {
+  RaftVoteRequest req;
+  req.term = 1;
+  req.candidate = myself(1);
+  req.lastTerm = 0;
+  req.lastIndex = 2;
+
+  RaftVoteResponse resp = raft()->requestVote(req);
+  ASSERT_TRUE(resp.granted);
+
+  req.candidate = myself(2);
+  resp = raft()->requestVote(req);
+  ASSERT_FALSE(resp.granted);
+}
+
+TEST_F(Raft_Voting, no_votes_for_previous_terms) {
+  RaftVoteRequest req;
+  req.term = 1;
+  req.candidate = myself(1);
+  req.lastTerm = 0;
+  req.lastIndex = 2;
+
+  RaftVoteResponse resp =  raft()->requestVote(req);
+  ASSERT_TRUE(resp.granted);
+
+  req.term = 0;
+  resp = raft()->requestVote(req);
+  ASSERT_FALSE(resp.granted);
+}
+
+TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
+  RaftVoteRequest req;
+  req.term = 5;
+  req.candidate =  myself(1);
+  req.lastTerm = 0;
+  req.lastIndex = 1;
+
+  RaftVoteResponse resp = raft()->requestVote(req);
+  ASSERT_TRUE(resp.granted);
+
+  // add a few requests to the log
+  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
+  ASSERT_TRUE(journal()->append(2, 4, testreqs[1]));
+  ASSERT_TRUE(journal()->append(3, 5, testreqs[2]));
+
+  req.term = 6;
+  req.candidate = myself(2);
+  req.lastTerm = 4;
+  req.lastIndex = 30;
+
+  resp = raft()->requestVote(req);
+  ASSERT_FALSE(resp.granted);
+
+  req.lastTerm = 5;
+  req.lastIndex = 2;
+
+  resp = raft()->requestVote(req);
+  ASSERT_FALSE(resp.granted);
+
+  req.lastIndex = 4;
+  resp = raft()->requestVote(req);
+  ASSERT_TRUE(resp.granted);
 }

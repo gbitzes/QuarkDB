@@ -108,6 +108,48 @@ RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
   return {snapshot.term, journal.getLogSize(), true, ""};
 }
 
+RaftVoteResponse Raft::requestVote(RaftVoteRequest &req) {
+  std::lock_guard<std::mutex> lock(raftCommand);
+  if(req.candidate == myself) {
+    qdb_throw("received request vote from myself");
+  }
+
+  state.observed(req.term, {});
+  RaftStateSnapshot snapshot = state.getSnapshot();
+
+  if(snapshot.term != req.term) {
+    qdb_event("Rejecting vote request from " << req.candidate.toString() << " because of a term mismatch: " << snapshot.term << " vs " << req.term);
+    return {snapshot.term, false};
+  }
+
+  if(!snapshot.votedFor.empty() && snapshot.votedFor != req.candidate) {
+    qdb_event("Rejecting vote request from " << req.candidate.toString() << " since I've voted already in this term (" << snapshot.term << ") for " << snapshot.votedFor.toString());
+    return {snapshot.term, false};
+  }
+
+  LogIndex myLastIndex = journal.getLogSize()-1;
+  RaftTerm myLastTerm;
+  journal.fetch(myLastIndex, myLastTerm);
+
+  if(req.lastTerm < myLastTerm) {
+    qdb_event("Rejecting vote request from " << req.candidate.toString() << " since my log is more up-to-date, based on last term: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
+    return {snapshot.term, false};
+  }
+
+  if(req.lastIndex < myLastIndex) {
+    qdb_event("Rejecting vote request from " << req.candidate.toString() << " since my log is more up-to-date, based on last index: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
+    return {snapshot.term, false};
+  }
+
+  // grant vote
+  bool granted = state.grantVote(req.term, req.candidate);
+  if(!granted) {
+    qdb_event("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term);
+  }
+
+  return {snapshot.term, granted};
+}
+
 RaftInfo Raft::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
