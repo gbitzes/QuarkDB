@@ -162,16 +162,6 @@ rocksdb::Status RocksDB::hexists(const std::string &key, const std::string &fiel
   return db->Get(rocksdb::ReadOptions(), tkey, &value);
 }
 
-// strncmp should NOT be used as the strings can contain embedded null bytes
-bool startswith(const std::string &str, const std::string &prefix) {
-  if(prefix.size() > str.size()) return false;
-
-  for(size_t i = 0; i < prefix.size(); i++) {
-    if(str[i] != prefix[i]) return false;
-  }
-  return true;
-}
-
 rocksdb::Status RocksDB::hkeys(const std::string &key, std::vector<std::string> &keys) {
   std::string tkey = translate_key(kHash, key) + "#";
   keys.clear();

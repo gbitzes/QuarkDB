@@ -47,6 +47,15 @@ std::vector<std::string> split(std::string data, std::string token) {
     return output;
 }
 
+bool startswith(const std::string &str, const std::string &prefix) {
+  if(prefix.size() > str.size()) return false;
+
+  for(size_t i = 0; i < prefix.size(); i++) {
+    if(str[i] != prefix[i]) return false;
+  }
+  return true;
+}
+
 bool parseServer(const std::string &str, RaftServer &srv) {
   std::vector<std::string> parts = split(str, ":");
 
@@ -68,7 +77,7 @@ bool parseServers(const std::string &str, std::vector<RaftServer> &servers) {
     servers.push_back(srv);
   }
 
-  return true;
+  return checkUnique(servers);
 }
 
 std::string serializeNodes(const std::vector<RaftServer> &nodes) {

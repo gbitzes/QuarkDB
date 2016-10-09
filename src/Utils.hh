@@ -28,6 +28,7 @@
 #include <sstream>
 #include <vector>
 #include <set>
+#include <atomic>
 
 #include "Common.hh"
 
@@ -57,6 +58,7 @@ namespace quarkdb {
 
 bool my_strtoll(const std::string &str, int64_t &ret);
 std::vector<std::string> split(std::string data, std::string token);
+bool startswith(const std::string &str, const std::string &prefix);
 bool parseServer(const std::string &str, RaftServer &srv);
 bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
 std::string serializeNodes(const std::vector<RaftServer> &nodes);
@@ -81,6 +83,22 @@ bool contains(const std::vector<T> &v, const T& element) {
   }
   return false;
 }
+
+template<class T>
+class ScopedAdder {
+public:
+  ScopedAdder(std::atomic<T> &target_, T value_ = 1) : target(target_), value(value_) {
+    target += value;
+  }
+
+  ~ScopedAdder() {
+    target -= value;
+  }
+
+private:
+  std::atomic<T> &target;
+  T value;
+};
 
 int stringmatchlen(const char *pattern, int patternLen,
   const char *string, int stringLen, int nocase);
