@@ -54,6 +54,7 @@ void Tunnel::startEventLoop() {
   asyncContext = nullptr;
   writeEventFD.reset();
 
+  this->connect();
   std::thread th(&Tunnel::eventLoop, this);
   th.detach();
 }
@@ -168,9 +169,7 @@ void Tunnel::connect() {
   asyncContext->ev.data = this;
 
   if(!handshakeCommand.empty()) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
     execute(handshakeCommand);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 
   lock.unlock();
@@ -180,8 +179,6 @@ void Tunnel::connect() {
 void Tunnel::eventLoop() {
   std::chrono::milliseconds backoff(1);
   while(true) {
-    this->connect();
-
     struct pollfd polls[2];
     polls[0].fd = writeEventFD.getFD();
     polls[0].events = POLLIN;
@@ -219,6 +216,7 @@ void Tunnel::eventLoop() {
     if(backoff < std::chrono::milliseconds(1024)) {
       backoff *= 2;
     }
+    this->connect();
   }
 }
 

@@ -77,8 +77,6 @@ static bool retrieve_response(std::future<redisReplyPtr> &fut, RaftAppendEntries
 void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &snapshot) {
   ScopedAdder<int64_t> adder(threadsAlive);
   RaftTalker talker(target, journal.getClusterID());
-  std::this_thread::sleep_for(std::chrono::milliseconds(4));
-
   LogIndex nextIndex = journal.getLogSize();
 
   bool online = false;
@@ -94,7 +92,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     std::vector<RaftTerm> terms;
 
     if(!buildPayload(nextIndex, messageLength, reqs, terms)) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      std::this_thread::sleep_for(timeouts.getHeartbeatInterval());
       continue;
     }
 

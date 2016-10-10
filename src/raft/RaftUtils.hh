@@ -36,6 +36,13 @@ class RaftParser {
 public:
   static bool appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &dest);
   static bool appendEntriesResponse(const redisReplyPtr &source, RaftAppendEntriesResponse &dest);
+  static bool voteRequest(RedisRequest &source, RaftVoteRequest &dest);
+  static bool voteResponse(const redisReplyPtr &source, RaftVoteResponse &dest);
+};
+
+class RaftElection {
+public:
+  static bool perform(RaftVoteRequest votereq, RaftState &state, const RaftTimeouts timeouts = defaultTimeouts);
 };
 
 }

@@ -26,6 +26,7 @@
 
 #include "../Common.hh"
 #include "../Tunnel.hh"
+#include "RaftCommon.hh"
 #include <mutex>
 
 namespace quarkdb {
@@ -38,6 +39,7 @@ public:
                                            const std::vector<RedisRequest> &reqs,
                                            const std::vector<RaftTerm> &entryTerms);
 
+  std::future<redisReplyPtr> requestVote(const RaftVoteRequest &req);
 private:
   const RaftClusterID clusterID;
   Tunnel tunnel;

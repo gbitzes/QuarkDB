@@ -63,9 +63,20 @@ LinkStatus Raft::dispatch(Link *link, RedisRequest &req) {
     }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
       RaftAppendEntriesRequest dest;
-      RaftParser::appendEntries(std::move(req), dest);
+      if(!RaftParser::appendEntries(std::move(req), dest)) {
+        return Response::err(link, "malformed request");
+      }
 
       RaftAppendEntriesResponse resp = appendEntries(std::move(dest));
+      return Response::vector(link, resp.toVector());
+    }
+    case RedisCommand::RAFT_REQUEST_VOTE: {
+      RaftVoteRequest votereq;
+      if(!RaftParser::voteRequest(req, votereq)) {
+        return Response::err(link, "malformed request");
+      }
+
+      RaftVoteResponse resp = requestVote(votereq);
       return Response::vector(link, resp.toVector());
     }
     case RedisCommand::RAFT_HANDSHAKE: {

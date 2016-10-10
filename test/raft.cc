@@ -37,6 +37,7 @@ using namespace quarkdb;
 class Raft_Replicator : public TestCluster3Nodes {};
 class Raft_Voting : public TestCluster3Nodes {};
 class tRaft : public TestCluster3Nodes {};
+class Raft_Election : public TestCluster3Nodes {};
 
 TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));
@@ -79,7 +80,6 @@ TEST_F(Raft_Replicator, do_simple_replication) {
   poller(1);
 
   // launch!
-  std::this_thread::sleep_for(std::chrono::milliseconds(2));
   ASSERT_TRUE(replicator(0)->launch(myself(1), state(0)->getSnapshot()));
 
   // populate #0's journal
@@ -285,4 +285,135 @@ TEST(RaftTimeouts, basic_sanity) {
     ASSERT_LE(random.count(), 200);
     ASSERT_GE(random.count(), 100);
   }
+}
+
+TEST_F(Raft_Election, basic_sanity) {
+  ASSERT_TRUE(state()->observed(2, {}));
+
+  // term mismatch, can't perform election
+  RaftVoteRequest votereq;
+  votereq.term = 1;
+  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+
+  // we have a leader already, can't do election
+  ASSERT_TRUE(state()->observed(2, myself(1)));
+  votereq.term = 2;
+  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+
+  // votereq.candidate must be empty
+  votereq.candidate = myself(1);
+  votereq.term = 3;
+  ASSERT_TRUE(state()->observed(3, {}));
+  ASSERT_THROW(RaftElection::perform(votereq, *state()), FatalException);
+}
+
+TEST_F(Raft_Election, leader_cannot_call_election) {
+  ASSERT_TRUE(state()->observed(2, {}));
+  ASSERT_TRUE(state()->becomeCandidate(2));
+  ASSERT_TRUE(state()->ascend(2));
+
+  RaftVoteRequest votereq;
+  votereq.term = 2;
+  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+}
+
+TEST_F(Raft_Election, observer_cannot_call_election) {
+  // initialize node #0 not to be part of the cluster, thus an observer
+  node(0, GlobalEnv::server(3));
+
+  RaftStateSnapshot snapshot = state()->getSnapshot();
+  ASSERT_EQ(snapshot.status, RaftStatus::OBSERVER);
+
+  ASSERT_TRUE(state()->observed(1, {}));
+
+  RaftVoteRequest votereq;
+  votereq.term = 1;
+
+  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+}
+
+TEST_F(Raft_Election, complete_simple_election) {
+  // initialize our raft cluster ..
+  poller(0); poller(1); poller(2);
+
+  state(0)->observed(2, {});
+
+  RaftVoteRequest votereq;
+  votereq.term = 2;
+  votereq.lastIndex = 0;
+  votereq.lastTerm = 0;
+
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0)));
+
+  RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
+  ASSERT_EQ(snapshot0.term, 2);
+  ASSERT_EQ(snapshot0.leader, myself(0));
+  ASSERT_EQ(snapshot0.status, RaftStatus::LEADER);
+
+  // the rest of the nodes have not recognized the leadership yet, would need to
+  // send heartbeats
+}
+
+TEST_F(Raft_Election, unsuccessful_election_not_enough_votes) {
+  // #0 is alone in the cluster, its election rounds should always fail
+  poller();
+
+  state()->observed(2, {});
+
+  RaftVoteRequest votereq;
+  votereq.term = 2;
+  votereq.lastIndex = 0;
+  votereq.lastTerm = 0;
+
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0)));
+}
+
+TEST_F(Raft_Election, split_votes_successful_election) {
+  // let's have some more fun - have #1 already vote for term 2 for itself,
+  // so it rejects any further requests
+  // still possible to achieve quorum with #0 and #2
+  poller(0); poller(1); poller(2);
+
+  ASSERT_TRUE(state(0)->observed(2, {}));
+  ASSERT_TRUE(state(1)->observed(2, {}));
+
+  // #1 has already voted in term 2
+  ASSERT_TRUE(state(1)->grantVote(2, myself(1)));
+
+  RaftVoteRequest votereq;
+  votereq.term = 2;
+  votereq.lastIndex = 0;
+  votereq.lastTerm = 0;
+
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0)));
+
+  RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
+  ASSERT_EQ(snapshot0.term, 2);
+  ASSERT_EQ(snapshot0.leader, myself(0));
+  ASSERT_EQ(snapshot0.status, RaftStatus::LEADER);
+}
+
+TEST_F(Raft_Election, split_votes_unsuccessful_election) {
+  // this time both #1 and #2 have voted for themselves, should not be possible to
+  // get a quorum
+  poller(0); poller(1); poller(2);
+
+  ASSERT_TRUE(state(0)->observed(2, {}));
+  ASSERT_TRUE(state(1)->observed(2, {}));
+  ASSERT_TRUE(state(2)->observed(2, {}));
+
+  ASSERT_TRUE(state(1)->grantVote(2, myself(1)));
+  ASSERT_TRUE(state(2)->grantVote(2, myself(2)));
+
+  RaftVoteRequest votereq;
+  votereq.term = 2;
+  votereq.lastIndex = 0;
+  votereq.lastTerm = 0;
+
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0)));
+
+  RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
+  ASSERT_EQ(snapshot0.term, 2);
+  ASSERT_TRUE(snapshot0.leader.empty());
+  ASSERT_EQ(snapshot0.status, RaftStatus::CANDIDATE);
 }

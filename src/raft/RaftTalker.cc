@@ -98,3 +98,15 @@ std::future<redisReplyPtr> RaftTalker::appendEntries(
 
   return tunnel.execute(payloadSize, payload, sizes);
 }
+
+std::future<redisReplyPtr> RaftTalker::requestVote(const RaftVoteRequest &req) {
+  RedisRequest payload;
+
+  payload.emplace_back("RAFT_REQUEST_VOTE");
+  payload.emplace_back(std::to_string(req.term));
+  payload.emplace_back(req.candidate.toString());
+  payload.emplace_back(std::to_string(req.lastIndex));
+  payload.emplace_back(std::to_string(req.lastTerm));
+
+  return tunnel.execute(payload);
+}

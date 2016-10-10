@@ -67,6 +67,14 @@ RaftServer RaftState::getMyself() {
   return myself;
 }
 
+std::vector<RaftServer> RaftState::getNodes() {
+  return journal.getNodes();
+}
+
+RaftClusterID RaftState::getClusterID() {
+  return journal.getClusterID();
+}
+
 void RaftState::declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader) {
   if(observedTerm > term) {
     qdb_event("Progressing raft term: " << term << " ==> " << observedTerm);

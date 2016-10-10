@@ -84,6 +84,14 @@ struct RaftVoteRequest {
 struct RaftVoteResponse {
   RaftTerm term;
   bool granted;
+
+  std::vector<std::string> toVector() {
+    std::vector<std::string> ret;
+    ret.push_back(std::to_string(term));
+    ret.push_back(std::to_string(granted));
+    return ret;
+  }
+
 };
 
 struct RaftInfo {

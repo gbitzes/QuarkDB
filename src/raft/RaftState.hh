@@ -65,6 +65,8 @@ public:
   RaftTerm getCurrentTerm();
   RaftStateSnapshot getSnapshot();
   RaftServer getMyself();
+  std::vector<RaftServer> getNodes();
+  RaftClusterID getClusterID();
 
   static RaftServer BLOCKED_VOTE;
 private:

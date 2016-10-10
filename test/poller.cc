@@ -35,7 +35,6 @@ TEST_F(tPoller, T1) {
 
   Poller rocksdbPoller(unixsocket(), &dispatcher);
   Tunnel tunnel(myself().hostname, myself().port);
-  std::this_thread::sleep_for(std::chrono::milliseconds(2));
 
   redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
   ASSERT_NE(reply, nullptr);
