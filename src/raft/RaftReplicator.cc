@@ -40,11 +40,11 @@ RaftReplicator::~RaftReplicator() {
   }
 }
 
-bool RaftReplicator::buildPayload(LogIndex nextIndex, size_t messageLength,
-  std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms) {
+bool RaftReplicator::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
+  std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize) {
 
-  int64_t length = std::min( (int64_t) messageLength, journal.getLogSize() - nextIndex);
-  for(int64_t i = nextIndex; i < nextIndex+length; i++) {
+  payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
+  for(int64_t i = nextIndex; i < nextIndex+payloadSize; i++) {
     RaftTerm entryTerm;
     RedisRequest entry;
 
@@ -80,8 +80,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
   LogIndex nextIndex = journal.getLogSize();
 
   bool online = false;
-  size_t messageLength = 1;
-
+  int64_t payloadLimit = 1;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm()) {
     RaftTerm prevTerm;
     RedisRequest tmp;
@@ -91,7 +90,8 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     std::vector<RedisRequest> reqs;
     std::vector<RaftTerm> terms;
 
-    if(!buildPayload(nextIndex, messageLength, reqs, terms)) {
+    int64_t payloadSize = 0;
+    if(!buildPayload(nextIndex, payloadLimit, reqs, terms, payloadSize)) {
       std::this_thread::sleep_for(timeouts.getHeartbeatInterval());
       continue;
     }
@@ -114,18 +114,18 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
       }
 
       if(resp.outcome) {
-        if(nextIndex+(int64_t)messageLength != resp.logSize) {
-          qdb_critical("mismatch in expected logSize. nextIndex = " << nextIndex << ", messageLength = " << messageLength << ", logSize: " << resp.logSize);
+        if(nextIndex+payloadSize != resp.logSize) {
+          qdb_critical("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize);
         }
 
         nextIndex = resp.logSize;
-        if(messageLength < 1024) {
-          messageLength *= 2;
+        if(payloadLimit < 1024) {
+          payloadLimit *= 2;
         }
       }
     }
     else if(online) {
-        messageLength = 1;
+        payloadLimit = 1;
         qdb_event("Replication target " << target.toString() << " went offline.");
         online = false;
     }
