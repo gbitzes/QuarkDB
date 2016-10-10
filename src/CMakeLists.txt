@@ -33,6 +33,7 @@ add_library(XrdRedis SHARED
   raft/RaftParser.cc       raft/RaftParser.hh
   raft/Raft.cc             raft/Raft.hh
   raft/RaftReplicator.cc   raft/RaftReplicator.hh
+  raft/RaftTimeouts.cc     raft/RaftTimeouts.hh
   ${BACKWARD_ENABLE}
 )
 

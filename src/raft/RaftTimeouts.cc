@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftReplicator.hh
+// File: RaftTimeouts.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,41 +21,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_REPLICATOR_H__
-#define __QUARKDB_RAFT_REPLICATOR_H__
-
-#include "../RocksDB.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
 #include "RaftTimeouts.hh"
-#include <mutex>
+#include <random>
 
-namespace quarkdb {
+using namespace quarkdb;
 
-//------------------------------------------------------------------------------
-// A class that is given a number of target raft machine of the cluster, and
-// ensures that their journals match my own.
-//------------------------------------------------------------------------------
-class RaftReplicator {
-public:
-  RaftReplicator(RaftJournal &journal, RaftState &state, const RaftTimeouts t = defaultTimeouts);
-  ~RaftReplicator();
+RaftTimeouts quarkdb::defaultTimeouts(
+  std::chrono::milliseconds(1000),
+  std::chrono::milliseconds(1500),
+  std::chrono::milliseconds(750));
 
-  bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
-private:
-  bool buildPayload(LogIndex nextIndex, size_t messageLength,
-    std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms);
+RaftTimeouts quarkdb::tightTimeouts(
+  std::chrono::milliseconds(100),
+  std::chrono::milliseconds(150),
+  std::chrono::milliseconds(75));
 
-  RaftJournal &journal;
-  RaftState &state;
+RaftTimeouts quarkdb::aggressiveTimeouts(
+  std::chrono::milliseconds(5),
+  std::chrono::milliseconds(10),
+  std::chrono::milliseconds(1));
 
-  std::atomic<int64_t> threadsAlive {0};
-  std::atomic<bool> shutdown {0};
-
-  const RaftTimeouts timeouts;
-};
+RaftTimeouts::RaftTimeouts(const std::chrono::milliseconds &low,
+  const std::chrono::milliseconds &high,
+  const std::chrono::milliseconds &heartbeat)
+: timeoutLow(low), timeoutHigh(high), heartbeatInterval(heartbeat) {
 
 }
 
-#endif
+std::chrono::milliseconds RaftTimeouts::getLow() const {
+  return timeoutLow;
+}
+
+std::chrono::milliseconds RaftTimeouts::getHigh() const {
+  return timeoutHigh;
+}
+
+std::chrono::milliseconds RaftTimeouts::getRandom() const {
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dist(timeoutLow.count(), timeoutHigh.count());
+  return std::chrono::milliseconds(dist(gen));
+}
+
+std::chrono::milliseconds RaftTimeouts::getHeartbeatInterval() const {
+  return heartbeatInterval;
+}

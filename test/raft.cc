@@ -24,6 +24,7 @@
 #include "raft/Raft.hh"
 #include "raft/RaftReplicator.hh"
 #include "raft/RaftTalker.hh"
+#include "raft/RaftTimeouts.hh"
 #include "Tunnel.hh"
 #include "Poller.hh"
 #include "test-utils.hh"
@@ -268,4 +269,20 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   req.lastIndex = 4;
   resp = raft()->requestVote(req);
   ASSERT_TRUE(resp.granted);
+}
+
+TEST(RaftTimeouts, basic_sanity) {
+  RaftTimeouts timeouts(std::chrono::milliseconds(100),
+    std::chrono::milliseconds(200),
+    std::chrono::milliseconds(50));
+
+  ASSERT_EQ(timeouts.getLow(), std::chrono::milliseconds(100));
+  ASSERT_EQ(timeouts.getHigh(), std::chrono::milliseconds(200));
+  ASSERT_EQ(timeouts.getHeartbeatInterval(), std::chrono::milliseconds(50));
+
+  for(size_t i = 0; i < 10; i++) {
+    std::chrono::milliseconds random = timeouts.getRandom();
+    ASSERT_LE(random.count(), 200);
+    ASSERT_GE(random.count(), 100);
+  }
 }

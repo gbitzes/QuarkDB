@@ -28,13 +28,14 @@
 #include "RaftJournal.hh"
 #include "RaftState.hh"
 #include "RaftParser.hh"
+#include "RaftTimeouts.hh"
 #include <thread>
 
 namespace quarkdb {
 
 class Raft : public Dispatcher {
 public:
-  Raft(RaftJournal &journal, RocksDB &sm, const RaftServer &me);
+  Raft(RaftJournal &journal, RocksDB &sm, const RaftServer &me, const RaftTimeouts t = defaultTimeouts);
   virtual ~Raft();
   DISALLOW_COPY_AND_ASSIGN(Raft);
 
@@ -70,13 +71,10 @@ private:
   // Misc
   //----------------------------------------------------------------------------
   RaftServer myself;
+  const RaftTimeouts timeouts;
 
-  std::chrono::milliseconds heartbeatInterval{400};
-  std::chrono::milliseconds timeoutLow{800};
-  std::chrono::milliseconds timeoutHigh{1000};
-  std::chrono::milliseconds randomTimeout;
+  std::thread mainThread;
 
-  void updateRandomTimeout();
 };
 
 }

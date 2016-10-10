@@ -25,12 +25,13 @@
 #include "../Response.hh"
 #include "RaftParser.hh"
 
-#include <random>
 
+#include <random>
 using namespace quarkdb;
 
-Raft::Raft(RaftJournal &jour, RocksDB &sm, const RaftServer &me)
-: journal(jour), stateMachine(sm), state(journal, me), redisDispatcher(stateMachine), myself(me) {
+Raft::Raft(RaftJournal &jour, RocksDB &sm, const RaftServer &me, const RaftTimeouts t)
+: journal(jour), stateMachine(sm), state(journal, me),
+  redisDispatcher(stateMachine), myself(me), timeouts(t) {
 }
 
 RaftState* Raft::getState() {
@@ -160,12 +161,4 @@ bool Raft::fetch(LogIndex index, RaftEntry &entry) {
   entry = {};
   rocksdb::Status st = journal.fetch(index, entry.term, entry.request);
   return st.ok();
-}
-
-void Raft::updateRandomTimeout() {
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<> dist(timeoutLow.count(), timeoutHigh.count());
-  randomTimeout = std::chrono::milliseconds(dist(gen));
-  qdb_event("setting random timeout to " << randomTimeout.count() << "ms" << std::endl);
 }

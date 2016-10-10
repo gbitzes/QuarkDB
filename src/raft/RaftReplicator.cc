@@ -28,8 +28,8 @@
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_)
-: journal(journal_), state(state_) {
+RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_, const RaftTimeouts t)
+: journal(journal_), state(state_), timeouts(t) {
 
 }
 
@@ -133,10 +133,10 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     }
 
     if(!online) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(500));
+      std::this_thread::sleep_for(timeouts.getHeartbeatInterval());
     }
     else if(online && nextIndex >= journal.getLogSize()) {
-      journal.waitForUpdates(nextIndex, std::chrono::milliseconds(500));
+      journal.waitForUpdates(nextIndex, timeouts.getHeartbeatInterval());
     }
     else {
       // don't wait, fire next round of updates

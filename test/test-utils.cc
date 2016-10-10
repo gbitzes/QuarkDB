@@ -196,7 +196,7 @@ Poller* TestNode::poller() {
 
 Raft* TestNode::raft() {
   if(raftptr == nullptr) {
-    raftptr = new Raft(*journal(), *rocksdb(), myself());
+    raftptr = new Raft(*journal(), *rocksdb(), myself(), aggressiveTimeouts);
   }
   return raftptr;
 }
@@ -207,7 +207,7 @@ RaftState* TestNode::state() {
 
 RaftReplicator* TestNode::replicator() {
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *state());
+    replicatorptr = new RaftReplicator(*journal(), *state(), aggressiveTimeouts);
   }
   return replicatorptr;
 }

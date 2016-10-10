@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftReplicator.hh
+// File: RaftTimeouts.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,40 +21,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_REPLICATOR_H__
-#define __QUARKDB_RAFT_REPLICATOR_H__
+#ifndef __QUARKDB_RAFT_TIMEOUT_H__
+#define __QUARKDB_RAFT_TIMEOUT_H__
 
-#include "../RocksDB.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
-#include "RaftTimeouts.hh"
-#include <mutex>
+#include <chrono>
 
 namespace quarkdb {
 
-//------------------------------------------------------------------------------
-// A class that is given a number of target raft machine of the cluster, and
-// ensures that their journals match my own.
-//------------------------------------------------------------------------------
-class RaftReplicator {
+class RaftTimeouts {
 public:
-  RaftReplicator(RaftJournal &journal, RaftState &state, const RaftTimeouts t = defaultTimeouts);
-  ~RaftReplicator();
+  RaftTimeouts(const std::chrono::milliseconds &low,
+    const std::chrono::milliseconds &high,
+    const std::chrono::milliseconds &heartbeat);
 
-  bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
+  std::chrono::milliseconds getLow() const;
+  std::chrono::milliseconds getHigh() const;
+  std::chrono::milliseconds getRandom() const;
+
+  std::chrono::milliseconds getHeartbeatInterval() const;
 private:
-  bool buildPayload(LogIndex nextIndex, size_t messageLength,
-    std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms);
-
-  RaftJournal &journal;
-  RaftState &state;
-
-  std::atomic<int64_t> threadsAlive {0};
-  std::atomic<bool> shutdown {0};
-
-  const RaftTimeouts timeouts;
+  std::chrono::milliseconds timeoutLow;
+  std::chrono::milliseconds timeoutHigh;
+  std::chrono::milliseconds heartbeatInterval;
 };
+
+extern RaftTimeouts relaxedTimeouts;
+extern RaftTimeouts defaultTimeouts;
+extern RaftTimeouts tightTimeouts;
+extern RaftTimeouts aggressiveTimeouts;
 
 }
 
