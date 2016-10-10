@@ -156,9 +156,9 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
 }
 
 TestNode::~TestNode() {
+  if(pollerptr) delete pollerptr;
   if(raftptr) delete raftptr;
   if(replicatorptr) delete replicatorptr;
-  if(pollerptr) delete pollerptr;
 }
 
 RocksDB* TestNode::rocksdb() {

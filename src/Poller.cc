@@ -29,7 +29,7 @@
 
 using namespace quarkdb;
 
-Poller::Poller(const std::string &path, Dispatcher *dispatcher) {
+Poller::Poller(const std::string &p, Dispatcher *dispatcher) : path(p) {
   s = socket(AF_UNIX, SOCK_STREAM, 0);
   local.sun_family = AF_UNIX;
   strcpy(local.sun_path, path.c_str());
@@ -39,16 +39,22 @@ Poller::Poller(const std::string &path, Dispatcher *dispatcher) {
   t = sizeof(remote);
 
   shutdown = false;
+  threadsAlive = 0;
   mainThread = std::thread(&Poller::main, this, dispatcher);
 }
 
 Poller::~Poller() {
   shutdown = true;
-  shutdownFD.notify();
+  ::shutdown(s, SHUT_RDWR); // kill the socket, un-block if stuck on accept
+  while(threadsAlive != 0) {
+    shutdownFD.notify();
+  }
   mainThread.join();
 }
 
 void Poller::main(Dispatcher *dispatcher) {
+  ScopedAdder<int64_t> adder(threadsAlive);
+
   int fd = accept(s, (struct sockaddr *)&remote, &t);
   XrdBuffManager bufferManager(NULL, NULL);
   Link link(fd);
@@ -64,11 +70,13 @@ void Poller::main(Dispatcher *dispatcher) {
   RedisRequest currentRequest;
 
   while(!shutdown) {
-    poll(polls, 2, 1000);
-    LinkStatus status = parser.fetch(currentRequest);
-    if(status <= 0) continue;
+    poll(polls, 2, -1);
 
-    dispatcher->dispatch(&link, currentRequest);
+    while(true) {
+      LinkStatus status = parser.fetch(currentRequest);
+      if(status <= 0) break;
+      dispatcher->dispatch(&link, currentRequest);
+    }
   }
 
 }

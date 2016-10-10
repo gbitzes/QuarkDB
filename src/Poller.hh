@@ -39,11 +39,14 @@ public:
 
 private:
   std::atomic<bool> shutdown;
+  std::atomic<int64_t> threadsAlive;
+
   EventFD shutdownFD;
 
   void main(Dispatcher *dispatcher);
   std::thread mainThread;
 
+  std::string path;
   struct sockaddr_un local, remote;
   unsigned int s;
   size_t len;
