@@ -24,7 +24,7 @@
 #include <thread>
 #include "RaftReplicator.hh"
 #include "RaftTalker.hh"
-#include "RaftParser.hh"
+#include "RaftUtils.hh"
 
 using namespace quarkdb;
 

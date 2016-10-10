@@ -23,7 +23,7 @@
 
 #include "Raft.hh"
 #include "../Response.hh"
-#include "RaftParser.hh"
+#include "RaftUtils.hh"
 
 
 #include <random>
@@ -32,6 +32,8 @@ using namespace quarkdb;
 Raft::Raft(RaftJournal &jour, RocksDB &sm, const RaftServer &me, const RaftTimeouts t)
 : journal(jour), stateMachine(sm), state(journal, me),
   redisDispatcher(stateMachine), myself(me), timeouts(t) {
+
+  mainThread = std::thread(&Raft::main, this);
 }
 
 RaftState* Raft::getState() {
@@ -40,6 +42,11 @@ RaftState* Raft::getState() {
 
 Raft::~Raft() {
   state.shutdown();
+  mainThread.join();
+}
+
+void Raft::main() {
+
 }
 
 LinkStatus Raft::dispatch(Link *link, RedisRequest &req) {

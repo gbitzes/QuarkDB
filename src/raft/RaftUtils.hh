@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftParser.hh
+// File: RaftUtils.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -27,6 +27,8 @@
 #include "../Tunnel.hh"
 #include "RaftCommon.hh"
 #include "../Common.hh"
+#include "RaftState.hh"
+#include "RaftTimeouts.hh"
 
 namespace quarkdb {
 

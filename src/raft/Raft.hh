@@ -27,7 +27,7 @@
 #include "../Dispatcher.hh"
 #include "RaftJournal.hh"
 #include "RaftState.hh"
-#include "RaftParser.hh"
+#include "RaftUtils.hh"
 #include "RaftTimeouts.hh"
 #include <thread>
 
@@ -52,6 +52,7 @@ public:
   //----------------------------------------------------------------------------
   RaftState *getState();
 private:
+  void main();
   LinkStatus service(Link *link, RedisRequest &req, RedisCommand &cmd, CommandType &type);
 
   //----------------------------------------------------------------------------
@@ -74,7 +75,6 @@ private:
   const RaftTimeouts timeouts;
 
   std::thread mainThread;
-
 };
 
 }

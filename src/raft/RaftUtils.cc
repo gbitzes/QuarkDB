@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftParser.cc
+// File: RaftUtils.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftParser.hh"
+#include "RaftUtils.hh"
 #include "../Utils.hh"
 using namespace quarkdb;
 
