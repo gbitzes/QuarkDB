@@ -79,6 +79,13 @@ void GlobalEnv::SetUp() {
   }
 }
 
+RaftServer GlobalEnv::server(int id) {
+  RaftServer srv;
+  srv.hostname = SSTR("server" << id);
+  srv.port = 7776 + id;
+  return srv;
+}
+
 ::testing::Environment* const commonStatePtr = ::testing::AddGlobalTestEnvironment(new GlobalEnv);
 GlobalEnv &commonState(*(GlobalEnv*)commonStatePtr);
 
@@ -132,17 +139,19 @@ std::string TestCluster::unixsocket(int id) {
   return node(id)->unixsocket();
 }
 
-TestNode* TestCluster::node(int id) {
+TestNode* TestCluster::node(int id, const RaftServer &srv) {
   TestNode *ret = testnodes[id];
   if(ret == nullptr) {
-    ret = new TestNode(id, clusterID(), initialNodes);
+    RaftServer newserver = srv;
+    if(newserver.empty()) newserver = initialNodes[id];
+    ret = new TestNode(newserver, clusterID(), initialNodes);
     testnodes[id] = ret;
   }
   return ret;
 }
 
-TestNode::TestNode(int myid, RaftClusterID clust, const std::vector<RaftServer> &nd)
-: id(myid), clusterID(clust), initialNodes(nd), myselfSrv(initialNodes[id]) {
+TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)
+: myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
 }
 
@@ -157,7 +166,7 @@ RocksDB* TestNode::rocksdb() {
   // the contents are reset
   // NOT deleted by ~TestNode - ownership is retained by commonState for caching.
   if(rocksdbptr == nullptr) {
-    rocksdbptr = commonState.getRocksDB(SSTR(commonState.testdir << "/rocksdb-" << id));
+    rocksdbptr = commonState.getRocksDB(SSTR(commonState.testdir << "/rocksdb-" << myself().hostname << "-" << myself().port));
   }
   return rocksdbptr;
 }
@@ -165,7 +174,7 @@ RocksDB* TestNode::rocksdb() {
 RaftJournal* TestNode::journal() {
   // see TestNode::rocksdb()
   if(journalptr == nullptr) {
-    journalptr = commonState.getJournal(SSTR(commonState.testdir << "/journal-" << id), clusterID, initialNodes);
+    journalptr = commonState.getJournal(SSTR(commonState.testdir << "/journal-" << myself().hostname << "-" << myself().port), clusterID, initialNodes);
   }
   return journalptr;
 }
@@ -180,7 +189,7 @@ std::vector<RaftServer> TestNode::nodes() {
 
 std::string TestNode::unixsocket() {
   if(unixsocketpath.empty()) {
-    unixsocketpath = SSTR(commonState.testdir << "/socket-" << id);
+    unixsocketpath = SSTR(commonState.testdir << "/socket-" << myself().hostname << "-" << myself().port);
     unlink(unixsocketpath.c_str());
     Tunnel::addIntercept(myself().hostname, myself().port, unixsocketpath);
   }

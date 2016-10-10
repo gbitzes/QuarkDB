@@ -55,6 +55,7 @@ public:
   RocksDB *getRocksDB(const std::string &path);
   RaftJournal *getJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   const std::string testdir = "/tmp/quarkdb-tests";
+  static RaftServer server(int id);
 private:
   std::map<std::string, RocksDB*> rocksdbCache;
   std::map<std::string, RaftJournal*> journalCache;
@@ -67,7 +68,7 @@ extern GlobalEnv &commonState;
 // about raft messing up your variables and terms due to timeouts.
 class TestNode {
 public:
-  TestNode(int id, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  TestNode(RaftServer myself, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   ~TestNode();
 
   RocksDB *rocksdb();
@@ -81,10 +82,9 @@ public:
   std::vector<RaftServer> nodes();
   std::string unixsocket();
 private:
-  int id;
+  RaftServer myselfSrv;
   RaftClusterID clusterID;
   std::vector<RaftServer> initialNodes;
-  RaftServer myselfSrv;
 
   RocksDB *rocksdbptr = nullptr;
   RaftJournal *journalptr = nullptr;
@@ -110,7 +110,8 @@ public:
   Poller *poller(int id = 0);
   RaftServer myself(int id = 0);
 
-  TestNode* node(int id = 0);
+  // initialize nodes using information passed on the nodes variable, except if srv is set
+  TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);
   std::string unixsocket(int id = 0);
   RaftClusterID clusterID();
@@ -128,10 +129,10 @@ private:
 class TestCluster3Nodes : public TestCluster {
 public:
   TestCluster3Nodes() : TestCluster("a9b9e979-5428-42e9-8a52-f675c39fdf80", {
-    {"server0", 7775},
-    {"server1", 7776},
-    {"server2", 7777},
-  } ) {
+    GlobalEnv::server(0),
+    GlobalEnv::server(1),
+    GlobalEnv::server(2)
+  }) {
     Tunnel::clearIntercepts();
   };
 };
