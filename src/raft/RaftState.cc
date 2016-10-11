@@ -227,7 +227,18 @@ bool RaftState::becomeObserver(RaftTerm forTerm) {
 }
 
 void RaftState::shutdown() {
+  std::unique_lock<std::mutex> lock(update);
   status = RaftStatus::SHUTDOWN;
+  notifier.notify_all();
+}
+
+//------------------------------------------------------------------------------
+// Wait until the timeout expires, or we enter shutdown mode.
+//------------------------------------------------------------------------------
+void RaftState::wait(const std::chrono::milliseconds &t) {
+  std::unique_lock<std::mutex> lock(update);
+  if(status == RaftStatus::SHUTDOWN) return;
+  notifier.wait_for(lock, t);
 }
 
 //------------------------------------------------------------------------------

@@ -61,6 +61,7 @@ public:
   bool becomeObserver(RaftTerm forTerm);
 
   void shutdown();
+  void wait(const std::chrono::milliseconds &t);
 
   RaftTerm getCurrentTerm();
   RaftStateSnapshot getSnapshot();
@@ -73,6 +74,7 @@ private:
   RaftJournal &journal;
 
   std::mutex update;
+  std::condition_variable notifier;
 
   std::atomic<RaftTerm> term;
   RaftStatus status;
