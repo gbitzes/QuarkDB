@@ -35,8 +35,7 @@ namespace quarkdb {
 
 class Raft : public Dispatcher {
 public:
-  Raft(RaftJournal &journal, RocksDB &sm, const RaftServer &me, const RaftTimeouts t = defaultTimeouts);
-  virtual ~Raft();
+  Raft(RaftJournal &jour, RocksDB &sm, RaftState &st);
   DISALLOW_COPY_AND_ASSIGN(Raft);
 
   virtual LinkStatus dispatch(Link *link, RedisRequest &req) override;
@@ -52,7 +51,6 @@ public:
   //----------------------------------------------------------------------------
   RaftState *getState();
 private:
-  void main();
   LinkStatus service(Link *link, RedisRequest &req, RedisCommand &cmd, CommandType &type);
 
   //----------------------------------------------------------------------------
@@ -65,16 +63,13 @@ private:
   //----------------------------------------------------------------------------
   RaftJournal &journal;
   RocksDB &stateMachine;
-  RaftState state;
-  RedisDispatcher redisDispatcher;
+  RaftState &state;
 
   //----------------------------------------------------------------------------
   // Misc
   //----------------------------------------------------------------------------
-  RaftServer myself;
-  const RaftTimeouts timeouts;
+  std::chrono::steady_clock::time_point lastAppend;
 
-  std::thread mainThread;
 };
 
 }

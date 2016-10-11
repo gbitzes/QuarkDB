@@ -37,6 +37,7 @@
 #include "RocksDB.hh"
 #include "Dispatcher.hh"
 #include "raft/RaftJournal.hh"
+#include "raft/RaftState.hh"
 
 namespace quarkdb {
 
@@ -78,6 +79,7 @@ protected:
   static RocksDB *rocksdb;
   static Dispatcher *dispatcher;
   static RaftJournal *journal;
+  static RaftState *state;
 };
 
 }

@@ -159,6 +159,7 @@ TestNode::~TestNode() {
   if(pollerptr) delete pollerptr;
   if(raftptr) delete raftptr;
   if(replicatorptr) delete replicatorptr;
+  if(raftstateptr) delete raftstateptr;
 }
 
 RocksDB* TestNode::rocksdb() {
@@ -205,18 +206,21 @@ Poller* TestNode::poller() {
 
 Raft* TestNode::raft() {
   if(raftptr == nullptr) {
-    raftptr = new Raft(*journal(), *rocksdb(), myself(), aggressiveTimeouts);
+    raftptr = new Raft(*journal(), *rocksdb(), *state());
   }
   return raftptr;
 }
 
 RaftState* TestNode::state() {
-  return this->raft()->getState();
+  if(raftstateptr == nullptr) {
+    raftstateptr = new RaftState(*journal(), myself());
+  }
+  return raftstateptr;
 }
 
 RaftReplicator* TestNode::replicator() {
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *state(), aggressiveTimeouts);
+    replicatorptr = new RaftReplicator(*journal(), *state(), defaultTimeouts);
   }
   return replicatorptr;
 }

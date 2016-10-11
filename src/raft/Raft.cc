@@ -25,28 +25,15 @@
 #include "../Response.hh"
 #include "RaftUtils.hh"
 
-
 #include <random>
 using namespace quarkdb;
 
-Raft::Raft(RaftJournal &jour, RocksDB &sm, const RaftServer &me, const RaftTimeouts t)
-: journal(jour), stateMachine(sm), state(journal, me),
-  redisDispatcher(stateMachine), myself(me), timeouts(t) {
-
-  mainThread = std::thread(&Raft::main, this);
+Raft::Raft(RaftJournal &jour, RocksDB &sm, RaftState &st)
+: journal(jour), stateMachine(sm), state(st) {
 }
 
 RaftState* Raft::getState() {
   return &state;
-}
-
-Raft::~Raft() {
-  state.shutdown();
-  mainThread.join();
-}
-
-void Raft::main() {
-
 }
 
 LinkStatus Raft::dispatch(Link *link, RedisRequest &req) {
@@ -91,7 +78,7 @@ LinkStatus Raft::service(Link *link, RedisRequest &req, RedisCommand &cmd, Comma
 
 RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
   std::lock_guard<std::mutex> lock(raftCommand);
-  if(req.leader == myself) {
+  if(req.leader == state.getMyself()) {
     qdb_throw("received appendEntries from myself");
   }
 
@@ -112,6 +99,8 @@ RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
     return {snapshot.term, journal.getLogSize(), false, "Log entry mismatch"};
   }
 
+  lastAppend = std::chrono::steady_clock::now();
+
   // entry already exists?
   if(req.prevIndex+1 < journal.getLogSize()) {
     journal.removeEntries(req.prevIndex+1);
@@ -129,7 +118,7 @@ RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
 
 RaftVoteResponse Raft::requestVote(RaftVoteRequest &req) {
   std::lock_guard<std::mutex> lock(raftCommand);
-  if(req.candidate == myself) {
+  if(req.candidate == state.getMyself()) {
     qdb_throw("received request vote from myself");
   }
 
@@ -172,7 +161,7 @@ RaftVoteResponse Raft::requestVote(RaftVoteRequest &req) {
 RaftInfo Raft::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
-  return {journal.getClusterID(), myself, snapshot.term, journal.getLogSize(), snapshot.status};
+  return {journal.getClusterID(), state.getMyself(), snapshot.term, journal.getLogSize(), snapshot.status};
 }
 
 bool Raft::fetch(LogIndex index, RaftEntry &entry) {

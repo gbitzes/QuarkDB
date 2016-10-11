@@ -91,6 +91,7 @@ private:
   Raft *raftptr = nullptr;
   RaftReplicator *replicatorptr = nullptr;
   Poller *pollerptr = nullptr;
+  RaftState *raftstateptr = nullptr;
 
   std::string unixsocketpath;
 };
