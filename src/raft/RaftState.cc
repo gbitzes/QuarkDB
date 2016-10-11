@@ -241,6 +241,11 @@ void RaftState::updateJournal() {
 bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader) {
   std::lock_guard<std::mutex> lock(update);
 
+  // reject any changes if we're in shutdown mode
+  if(status == RaftStatus::SHUTDOWN) {
+    return false;
+  }
+
   // observed a newer term, step down if leader / candidate
   if(observedTerm > term) {
     if(status != RaftStatus::OBSERVER) {
