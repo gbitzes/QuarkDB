@@ -336,7 +336,8 @@ TEST_F(Raft_Election, complete_simple_election) {
   // initialize our raft cluster ..
   poller(0); poller(1); poller(2);
 
-  state(0)->observed(2, {});
+  ASSERT_TRUE(state(0)->observed(2, {}));
+  ASSERT_TRUE(state(0)->becomeCandidate(2));
 
   RaftVoteRequest votereq;
   votereq.term = 2;
@@ -358,7 +359,8 @@ TEST_F(Raft_Election, unsuccessful_election_not_enough_votes) {
   // #0 is alone in the cluster, its election rounds should always fail
   poller();
 
-  state()->observed(2, {});
+  ASSERT_TRUE(state()->observed(2, {}));
+  ASSERT_TRUE(state()->becomeCandidate(2));
 
   RaftVoteRequest votereq;
   votereq.term = 2;
@@ -375,6 +377,8 @@ TEST_F(Raft_Election, split_votes_successful_election) {
   poller(0); poller(1); poller(2);
 
   ASSERT_TRUE(state(0)->observed(2, {}));
+  ASSERT_TRUE(state(0)->becomeCandidate(2));
+
   ASSERT_TRUE(state(1)->observed(2, {}));
 
   // #1 has already voted in term 2
@@ -399,6 +403,7 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
   poller(0); poller(1); poller(2);
 
   ASSERT_TRUE(state(0)->observed(2, {}));
+  ASSERT_TRUE(state(0)->becomeCandidate(2));
   ASSERT_TRUE(state(1)->observed(2, {}));
   ASSERT_TRUE(state(2)->observed(2, {}));
 

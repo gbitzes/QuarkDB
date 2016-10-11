@@ -44,13 +44,8 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
     return false;
   }
 
-  if(snapshot.status != RaftStatus::FOLLOWER) {
-    qdb_warn("Aborting election, I am not a follower for " << snapshot.term << ", but in status " << statusToString(snapshot.status));
-    return false;
-  }
-
-  if(!state.becomeCandidate(votereq.term)) {
-    qdb_warn("Aborting election, raft state won't let me become a candidate.");
+  if(snapshot.status != RaftStatus::CANDIDATE) {
+    qdb_warn("Aborting election, I am not a candidate for " << snapshot.term << ", but in status " << statusToString(snapshot.status));
     return false;
   }
 
@@ -83,6 +78,10 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
     }
 
     if(resp.granted) tally++;
+  }
+
+  for(RaftTalker* talker : talkers) {
+    delete talker;
   }
 
   std::string description = SSTR("Contacted " << futures.size() << " nodes, received a reply from " <<
