@@ -28,19 +28,37 @@
 
 using namespace quarkdb;
 
+#define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
+
+
+
 class tPoller : public TestCluster3Nodes {};
 
 TEST_F(tPoller, T1) {
   RedisDispatcher dispatcher(*rocksdb());
 
   Poller rocksdbPoller(unixsocket(), &dispatcher);
+
+  // start first connection
   Tunnel tunnel(myself().hostname, myself().port);
 
   redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
-  ASSERT_NE(reply, nullptr);
-  ASSERT_EQ(std::string(reply->str, reply->len), "OK");
+  ASSERT_REPLY(reply, "OK");
 
   reply = tunnel.execute({"get", "abc"}).get();
-  ASSERT_NE(reply, nullptr);
-  ASSERT_EQ(std::string(reply->str, reply->len), "1234");
+  ASSERT_REPLY(reply, "1234");
+
+  // start second connection, ensure the poller can handle them concurrently
+  Tunnel tunnel2(myself().hostname, myself().port);
+
+  reply = tunnel2.execute({"get", "abc"}).get();
+  ASSERT_REPLY(reply, "1234");
+
+  reply = tunnel2.execute({"set", "qwert", "asdf"}).get();
+  ASSERT_REPLY(reply, "OK");
+
+  // now try a third
+  Tunnel tunnel3(myself().hostname, myself().port);
+  reply = tunnel3.execute({"get", "qwert"}).get();
+  ASSERT_REPLY(reply, "asdf");
 }

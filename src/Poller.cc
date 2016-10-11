@@ -52,10 +52,9 @@ Poller::~Poller() {
   mainThread.join();
 }
 
-void Poller::main(Dispatcher *dispatcher) {
+void Poller::worker(int fd, Dispatcher *dispatcher) {
   ScopedAdder<int64_t> adder(threadsAlive);
 
-  int fd = accept(s, (struct sockaddr *)&remote, &t);
   XrdBuffManager bufferManager(NULL, NULL);
   Link link(fd);
   RedisParser parser(&link, &bufferManager);
@@ -72,11 +71,24 @@ void Poller::main(Dispatcher *dispatcher) {
   while(!shutdown) {
     poll(polls, 2, -1);
 
+    // time to quit?
+    if(polls[1].revents & POLLIN || polls[0].revents & POLLERR) break;
+
     while(true) {
       LinkStatus status = parser.fetch(currentRequest);
       if(status <= 0) break;
       dispatcher->dispatch(&link, currentRequest);
     }
   }
+}
 
+void Poller::main(Dispatcher *dispatcher) {
+  ScopedAdder<int64_t> adder(threadsAlive);
+  while(true) {
+    int fd = accept(s, (struct sockaddr *)&remote, &t);
+    if(fd < 0) break;
+
+    std::thread wrk(&Poller::worker, this, fd, dispatcher);
+    wrk.detach();
+  }
 }

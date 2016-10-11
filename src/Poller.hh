@@ -44,6 +44,8 @@ private:
   EventFD shutdownFD;
 
   void main(Dispatcher *dispatcher);
+  void worker(int fd, Dispatcher *dispatcher);
+
   std::thread mainThread;
 
   std::string path;
