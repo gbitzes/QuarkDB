@@ -204,9 +204,16 @@ Poller* TestNode::poller() {
   return pollerptr;
 }
 
+RaftClock* TestNode::raftClock() {
+  if(raftclockptr == nullptr) {
+    raftclockptr = new RaftClock(defaultTimeouts);
+  }
+  return raftclockptr;
+}
+
 Raft* TestNode::raft() {
   if(raftptr == nullptr) {
-    raftptr = new Raft(*journal(), *rocksdb(), *state());
+    raftptr = new Raft(*journal(), *rocksdb(), *state(), *raftClock());
   }
   return raftptr;
 }

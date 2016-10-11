@@ -38,6 +38,7 @@
 #include "Dispatcher.hh"
 #include "raft/RaftJournal.hh"
 #include "raft/RaftState.hh"
+#include "raft/RaftTimeouts.hh"
 
 namespace quarkdb {
 
@@ -80,6 +81,7 @@ protected:
   static Dispatcher *dispatcher;
   static RaftJournal *journal;
   static RaftState *state;
+  static RaftClock *raftClock;
 };
 
 }

@@ -35,7 +35,7 @@ namespace quarkdb {
 
 class Raft : public Dispatcher {
 public:
-  Raft(RaftJournal &jour, RocksDB &sm, RaftState &st);
+  Raft(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc);
   DISALLOW_COPY_AND_ASSIGN(Raft);
 
   virtual LinkStatus dispatch(Link *link, RedisRequest &req) override;
@@ -68,7 +68,7 @@ private:
   //----------------------------------------------------------------------------
   // Misc
   //----------------------------------------------------------------------------
-  std::chrono::steady_clock::time_point lastAppend;
+  RaftClock &raftClock;
 
 };
 

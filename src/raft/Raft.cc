@@ -28,8 +28,8 @@
 #include <random>
 using namespace quarkdb;
 
-Raft::Raft(RaftJournal &jour, RocksDB &sm, RaftState &st)
-: journal(jour), stateMachine(sm), state(st) {
+Raft::Raft(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
+: journal(jour), stateMachine(sm), state(st), raftClock(rc) {
 }
 
 RaftState* Raft::getState() {
@@ -99,7 +99,7 @@ RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
     return {snapshot.term, journal.getLogSize(), false, "Log entry mismatch"};
   }
 
-  lastAppend = std::chrono::steady_clock::now();
+  raftClock.heartbeat();
 
   // entry already exists?
   if(req.prevIndex+1 < journal.getLogSize()) {

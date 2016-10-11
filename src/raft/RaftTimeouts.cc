@@ -26,43 +26,58 @@
 
 using namespace quarkdb;
 
-RaftTimeouts quarkdb::defaultTimeouts(
-  std::chrono::milliseconds(1000),
-  std::chrono::milliseconds(1500),
-  std::chrono::milliseconds(750));
+std::random_device RaftTimeouts::rd;
+std::mt19937 RaftTimeouts::gen(rd());
 
-RaftTimeouts quarkdb::tightTimeouts(
-  std::chrono::milliseconds(100),
-  std::chrono::milliseconds(150),
-  std::chrono::milliseconds(75));
 
-RaftTimeouts quarkdb::aggressiveTimeouts(
-  std::chrono::milliseconds(5),
-  std::chrono::milliseconds(10),
-  std::chrono::milliseconds(1));
+RaftTimeouts quarkdb::defaultTimeouts {milliseconds(1000), milliseconds(1500),
+  milliseconds(750)};
 
-RaftTimeouts::RaftTimeouts(const std::chrono::milliseconds &low,
-  const std::chrono::milliseconds &high,
-  const std::chrono::milliseconds &heartbeat)
-: timeoutLow(low), timeoutHigh(high), heartbeatInterval(heartbeat) {
+RaftTimeouts quarkdb::tightTimeouts {milliseconds(100), milliseconds(150),
+  milliseconds(75)};
+
+RaftTimeouts quarkdb::aggressiveTimeouts {milliseconds(5), milliseconds(10),
+  milliseconds(1)};
+
+RaftTimeouts::RaftTimeouts(const milliseconds &low, const milliseconds &high,
+  const milliseconds &heartbeat)
+: timeoutLow(low), timeoutHigh(high), heartbeatInterval(heartbeat), dist(low.count(), high.count()) {
 
 }
 
-std::chrono::milliseconds RaftTimeouts::getLow() const {
+milliseconds RaftTimeouts::getLow() const {
   return timeoutLow;
 }
 
-std::chrono::milliseconds RaftTimeouts::getHigh() const {
+milliseconds RaftTimeouts::getHigh() const {
   return timeoutHigh;
 }
 
-std::chrono::milliseconds RaftTimeouts::getRandom() const {
-  std::random_device rd;
-  std::mt19937 gen(rd());
-  std::uniform_int_distribution<> dist(timeoutLow.count(), timeoutHigh.count());
+milliseconds RaftTimeouts::getRandom() const {
   return std::chrono::milliseconds(dist(gen));
 }
 
-std::chrono::milliseconds RaftTimeouts::getHeartbeatInterval() const {
+milliseconds RaftTimeouts::getHeartbeatInterval() const {
   return heartbeatInterval;
+}
+
+RaftClock::RaftClock(const RaftTimeouts t)
+: timeouts(t) {
+  refreshRandomTimeout();
+}
+
+void RaftClock::heartbeat() {
+  std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
+  lastHeartbeat = std::chrono::steady_clock::now();
+}
+
+bool RaftClock::timeout() {
+  std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
+  return std::chrono::steady_clock::now() - lastHeartbeat > randomTimeout;
+}
+
+milliseconds RaftClock::refreshRandomTimeout() {
+  std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
+  randomTimeout = timeouts.getRandom();
+  return randomTimeout;
 }

@@ -77,6 +77,7 @@ public:
   RaftState *state();
   RaftReplicator *replicator();
   Poller *poller();
+  RaftClock *raftClock();
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
@@ -92,6 +93,7 @@ private:
   RaftReplicator *replicatorptr = nullptr;
   Poller *pollerptr = nullptr;
   RaftState *raftstateptr = nullptr;
+  RaftClock *raftclockptr = nullptr;
 
   std::string unixsocketpath;
 };

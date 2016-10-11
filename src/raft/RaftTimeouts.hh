@@ -25,27 +25,49 @@
 #define __QUARKDB_RAFT_TIMEOUT_H__
 
 #include <chrono>
+#include <random>
+#include <mutex>
+#include "../Utils.hh"
 
 namespace quarkdb {
+using std::chrono::milliseconds;
 
 class RaftTimeouts {
 public:
-  RaftTimeouts(const std::chrono::milliseconds &low,
-    const std::chrono::milliseconds &high,
-    const std::chrono::milliseconds &heartbeat);
+  RaftTimeouts(const milliseconds &low, const milliseconds &high,
+    const milliseconds &heartbeat);
 
-  std::chrono::milliseconds getLow() const;
-  std::chrono::milliseconds getHigh() const;
-  std::chrono::milliseconds getRandom() const;
+  milliseconds getLow() const;
+  milliseconds getHigh() const;
+  milliseconds getRandom() const;
 
-  std::chrono::milliseconds getHeartbeatInterval() const;
+  milliseconds getHeartbeatInterval() const;
 private:
-  std::chrono::milliseconds timeoutLow;
-  std::chrono::milliseconds timeoutHigh;
-  std::chrono::milliseconds heartbeatInterval;
+  milliseconds timeoutLow;
+  milliseconds timeoutHigh;
+  milliseconds heartbeatInterval;
+
+  static std::random_device rd;
+  static std::mt19937 gen;
+  mutable std::uniform_int_distribution<> dist;
 };
 
-extern RaftTimeouts relaxedTimeouts;
+class RaftClock {
+public:
+  RaftClock(const RaftTimeouts timeouts);
+  DISALLOW_COPY_AND_ASSIGN(RaftClock);
+
+  milliseconds refreshRandomTimeout();
+  void heartbeat();
+  bool timeout();
+private:
+  std::mutex lastHeartbeatMutex;
+  std::chrono::steady_clock::time_point lastHeartbeat;
+  milliseconds randomTimeout;
+
+  RaftTimeouts timeouts;
+};
+
 extern RaftTimeouts defaultTimeouts;
 extern RaftTimeouts tightTimeouts;
 extern RaftTimeouts aggressiveTimeouts;
