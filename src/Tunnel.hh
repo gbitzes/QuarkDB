@@ -67,6 +67,7 @@ private:
   void eventLoop();
   void connect();
   void disconnect();
+  void discoverIntercept();
 
   std::recursive_mutex asyncMutex;
   redisAsyncContext *asyncContext;

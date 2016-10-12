@@ -61,19 +61,20 @@ void Tunnel::startEventLoop() {
 Tunnel::Tunnel(const std::string &host_, const int port_, RedisRequest handshake)
 : host(host_), port(port_), handshakeCommand(handshake) {
 
+  startEventLoop();
+}
+
+void Tunnel::discoverIntercept() {
   //----------------------------------------------------------------------------
   // If this (host, port) pair is being intercepted, connect to the designated
   // unix socket instead.
   //----------------------------------------------------------------------------
-{
   std::lock_guard<std::mutex> lock(interceptsMutex);
   auto it = intercepts.find(std::make_pair(host, port));
+  unixSocket.clear();
   if(it != intercepts.end()) {
     unixSocket = it->second;
   }
-}
-
-  startEventLoop();
 }
 
 Tunnel::~Tunnel() {
@@ -157,6 +158,7 @@ void Tunnel::connect() {
   disconnect();
   // TODO: figure out what I have to do to free the async context
 
+  discoverIntercept();
   if(unixSocket.empty()) {
     asyncContext = redisAsyncConnect(host.c_str(), port);
   }
