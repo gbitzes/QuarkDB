@@ -60,7 +60,8 @@ private:
   std::string host;
   int port;
   std::string unixSocket;
-  std::atomic<int64_t> shutdown {0};
+  std::atomic<int64_t> shutdown {false};
+  std::atomic<int64_t> threadsAlive {0};
 
   void startEventLoop();
   void eventLoop();
@@ -72,6 +73,7 @@ private:
   EventFD writeEventFD;
 
   RedisRequest handshakeCommand;
+  std::thread eventLoopThread;
 
   //----------------------------------------------------------------------------
   // We consult this map each time a new connection is to be opened

@@ -55,8 +55,7 @@ void Tunnel::startEventLoop() {
   writeEventFD.reset();
 
   this->connect();
-  std::thread th(&Tunnel::eventLoop, this);
-  th.detach();
+  eventLoopThread = std::thread(&Tunnel::eventLoop, this);
 }
 
 Tunnel::Tunnel(const std::string &host_, const int port_, RedisRequest handshake)
@@ -78,10 +77,11 @@ Tunnel::Tunnel(const std::string &host_, const int port_, RedisRequest handshake
 }
 
 Tunnel::~Tunnel() {
-  shutdown = 1;
-  while(shutdown != 2) {
+  shutdown = true;
+  while(threadsAlive != 0) {
     notifyWrite();
   }
+  eventLoopThread.join();
   disconnect();
 }
 
@@ -177,6 +177,8 @@ void Tunnel::connect() {
 }
 
 void Tunnel::eventLoop() {
+  ScopedAdder<int64_t> adder(threadsAlive);
+
   std::chrono::milliseconds backoff(1);
   while(true) {
     struct pollfd polls[2];
@@ -188,11 +190,7 @@ void Tunnel::eventLoop() {
 
     while(!asyncContext->err) {
       poll(polls, 2, -1);
-
-      if(shutdown > 0) {
-        shutdown++;
-        return;
-      }
+      if(shutdown) return;
 
       std::unique_lock<std::recursive_mutex> lock(asyncMutex);
 
@@ -211,6 +209,7 @@ void Tunnel::eventLoop() {
       }
     }
 
+    if(shutdown) return;
     // dropped connection, wait before retrying with an exponential backoff
     std::this_thread::sleep_for(backoff);
     if(backoff < std::chrono::milliseconds(1024)) {
