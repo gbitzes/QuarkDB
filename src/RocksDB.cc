@@ -166,7 +166,7 @@ rocksdb::Status RocksDB::hkeys(const std::string &key, std::vector<std::string> 
   std::string tkey = translate_key(kHash, key) + "#";
   keys.clear();
 
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -179,7 +179,7 @@ rocksdb::Status RocksDB::hgetall(const std::string &key, std::vector<std::string
   std::string tkey = translate_key(kHash, key) + "#";
   res.clear();
 
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -250,12 +250,11 @@ rocksdb::Status RocksDB::hlen(const std::string &key, size_t &len) {
   len = 0;
 
   std::string tkey = translate_key(kHash, key) + "#";
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     if(!startswith(iter->key().ToString(), tkey)) break;
     len++;
   }
-
   return rocksdb::Status::OK();
 }
 
@@ -263,7 +262,7 @@ rocksdb::Status RocksDB::hvals(const std::string &key, std::vector<std::string> 
   std::string tkey = translate_key(kHash, key) + "#";
   vals.clear();
 
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -307,7 +306,7 @@ rocksdb::Status RocksDB::smembers(const std::string &key, std::vector<std::strin
   std::string tkey = translate_key(kSet, key) + "#";
   members.clear();
 
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -320,7 +319,7 @@ rocksdb::Status RocksDB::scard(const std::string &key, size_t &count) {
   std::string tkey = translate_key(kSet, key) + "#";
   count = 0;
 
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     if(!startswith(iter->key().ToString(), tkey)) break;
     count++;
@@ -342,7 +341,7 @@ rocksdb::Status RocksDB::get(const std::string &key, std::string &value) {
 rocksdb::Status RocksDB::remove_all_with_prefix(const std::string &prefix) {
   std::string tmp;
 
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
     if(!startswith(key, prefix)) break;
@@ -362,7 +361,7 @@ rocksdb::Status RocksDB::del(const std::string &key) {
 
   // is it a hash?
   std::string hash_key = translate_key(kHash, key) + "#";
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   iter->Seek(hash_key);
   if(iter->Valid() && startswith(iter->key().ToString(), hash_key)) {
     return remove_all_with_prefix(hash_key);
@@ -370,12 +369,11 @@ rocksdb::Status RocksDB::del(const std::string &key) {
 
   // is it a set?
   std::string set_key = translate_key(kSet, key) + "#";
-  iter = db->NewIterator(rocksdb::ReadOptions());
+  iter = IteratorPtr(db->NewIterator(rocksdb::ReadOptions()));
   iter->Seek(set_key);
   if(iter->Valid() && startswith(iter->key().ToString(), set_key)) {
     return remove_all_with_prefix(set_key);
   }
-
   return rocksdb::Status::NotFound();
 }
 
@@ -389,7 +387,7 @@ rocksdb::Status RocksDB::exists(const std::string &key) {
 
   // is it a hash?
   std::string hash_key = translate_key(kHash, key) + "#";
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   iter->Seek(hash_key);
   if(iter->Valid() && startswith(iter->key().ToString(), hash_key)) {
     return rocksdb::Status::OK();
@@ -397,12 +395,11 @@ rocksdb::Status RocksDB::exists(const std::string &key) {
 
   // is it a set?
   std::string set_key = translate_key(kSet, key) + "#";
-  iter = db->NewIterator(rocksdb::ReadOptions());
+  iter = IteratorPtr(db->NewIterator(rocksdb::ReadOptions()));
   iter->Seek(set_key);
   if(iter->Valid() && startswith(iter->key().ToString(), set_key)) {
     return rocksdb::Status::OK();
   }
-
   return rocksdb::Status::NotFound();
 }
 
@@ -410,7 +407,7 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
   result.clear();
 
   bool allkeys = (pattern.length() == 1 && pattern[0] == '*');
-  auto iter = db->NewIterator(rocksdb::ReadOptions());
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   std::string previous;
   for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
@@ -424,7 +421,6 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
     }
     previous = redis_key;
   }
-
   return rocksdb::Status::OK();
 }
 

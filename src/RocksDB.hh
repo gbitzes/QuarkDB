@@ -36,6 +36,8 @@ public:
   virtual ~RocksDB();
   DISALLOW_COPY_AND_ASSIGN(RocksDB);
 
+  using IteratorPtr = std::shared_ptr<rocksdb::Iterator>;
+
   //------------------------------------------------------------------------------
   // Main API
   //------------------------------------------------------------------------------
