@@ -36,8 +36,13 @@ public:
   }
 
   ~EventFD() {
+    close();
+  }
+
+  void close() {
     if(fd >= 0) {
-      close(fd);
+      ::close(fd);
+      fd = -1;
     }
   }
 
