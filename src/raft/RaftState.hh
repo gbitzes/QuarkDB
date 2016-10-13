@@ -84,6 +84,7 @@ private:
 
   void updateJournal();
   void declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader);
+  void updateStatus(RaftStatus newstatus);
 };
 
 }

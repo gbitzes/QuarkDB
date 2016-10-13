@@ -80,7 +80,14 @@ void RaftState::declareEvent(RaftTerm observedTerm, const RaftServer &observedLe
     qdb_event("Progressing raft term: " << term << " ==> " << observedTerm);
   }
   if(!observedLeader.empty()) {
-    qdb_event("Recognizing as leader for term " << observedTerm << ": " << observedLeader.toString());
+    qdb_event("Recognizing leader " << observedLeader.toString() << " for term " << observedTerm);
+  }
+}
+
+void RaftState::updateStatus(RaftStatus newstatus) {
+  if(status != newstatus) {
+    qdb_event("Status transition: " << statusToString(status) << " ==> " << statusToString(newstatus));
+    status = newstatus;
   }
 }
 
@@ -110,7 +117,7 @@ bool RaftState::becomeCandidate(RaftTerm forTerm) {
 
   votedFor = myself;
   this->updateJournal();
-  status = RaftStatus::CANDIDATE;
+  updateStatus(RaftStatus::CANDIDATE);
   return true;
 }
 
@@ -141,7 +148,7 @@ bool RaftState::ascend(RaftTerm forTerm) {
   }
 
   leader = myself;
-  status = RaftStatus::LEADER;
+  updateStatus(RaftStatus::LEADER);
   qdb_event("Ascending as leader for term " << forTerm << ". Long may I reign.");
   return true;
 }
@@ -202,7 +209,7 @@ bool RaftState::joinCluster(RaftTerm forTerm) {
     return false;
   }
 
-  status = RaftStatus::FOLLOWER;
+  updateStatus(RaftStatus::FOLLOWER);
   return true;
 }
 
@@ -222,13 +229,13 @@ bool RaftState::becomeObserver(RaftTerm forTerm) {
     return false;
   }
 
-  status = RaftStatus::OBSERVER;
+  updateStatus(RaftStatus::OBSERVER);
   return true;
 }
 
 void RaftState::shutdown() {
   std::unique_lock<std::mutex> lock(update);
-  status = RaftStatus::SHUTDOWN;
+  updateStatus(RaftStatus::SHUTDOWN);
   notifier.notify_all();
 }
 
@@ -260,7 +267,7 @@ bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader
   // observed a newer term, step down if leader / candidate
   if(observedTerm > term) {
     if(status != RaftStatus::OBSERVER) {
-      status = RaftStatus::FOLLOWER;
+      updateStatus(RaftStatus::FOLLOWER);
     }
     declareEvent(observedTerm, observedLeader);
 
