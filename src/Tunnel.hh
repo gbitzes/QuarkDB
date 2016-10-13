@@ -46,6 +46,9 @@ public:
   void removeWriteNotification();
   void notifyWrite();
 
+  void receivedDisconnect();
+  void freeContext();
+
   std::future<redisReplyPtr> execute(const RedisRequest &req);
   std::future<redisReplyPtr> execute(size_t nchunks, const char **chunks, const size_t *sizes);
 
@@ -61,7 +64,6 @@ private:
   int port;
   std::string unixSocket;
   std::atomic<int64_t> shutdown {false};
-  std::atomic<int64_t> threadsAlive {0};
 
   void startEventLoop();
   void eventLoop();

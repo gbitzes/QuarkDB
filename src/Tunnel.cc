@@ -26,6 +26,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <poll.h>
+#include <signal.h>
 
 using namespace quarkdb;
 
@@ -79,11 +80,23 @@ void Tunnel::discoverIntercept() {
 
 Tunnel::~Tunnel() {
   shutdown = true;
-  while(threadsAlive != 0) {
-    notifyWrite();
-  }
+  notifyWrite();
   eventLoopThread.join();
-  disconnect();
+  freeContext();
+}
+
+void Tunnel::freeContext() {
+  if(asyncContext) {
+    redisAsyncFree(asyncContext);
+    asyncContext = nullptr;
+  }
+}
+
+void Tunnel::receivedDisconnect() {
+  // once this function exits, the async context is automatically free'd
+  // by hiredis
+  std::unique_lock<std::recursive_mutex> lock(asyncMutex);
+  asyncContext = nullptr;
 }
 
 static void add_write_callback(void *privdata) {
@@ -146,17 +159,13 @@ void Tunnel::removeWriteNotification() {
   writeEventFD.reset();
 }
 
-void Tunnel::disconnect() {
-  if(asyncContext) {
-    redisAsyncDisconnect(asyncContext);
-    asyncContext = nullptr;
-  }
+void disconnectCallback(const redisAsyncContext *asyncContext, int status) {
+  ((Tunnel*) asyncContext->ev.data)->receivedDisconnect();
 }
 
 void Tunnel::connect() {
   std::unique_lock<std::recursive_mutex> lock(asyncMutex);
-  disconnect();
-  // TODO: figure out what I have to do to free the async context
+  freeContext();
 
   discoverIntercept();
   if(unixSocket.empty()) {
@@ -165,6 +174,8 @@ void Tunnel::connect() {
   else {
     asyncContext = redisAsyncConnectUnix(unixSocket.c_str());
   }
+
+  redisAsyncSetDisconnectCallback(asyncContext, disconnectCallback);
 
   asyncContext->ev.addWrite = add_write_callback;
   asyncContext->ev.delWrite = del_write_callback;
@@ -179,10 +190,14 @@ void Tunnel::connect() {
 }
 
 void Tunnel::eventLoop() {
-  ScopedAdder<int64_t> adder(threadsAlive);
+  if(!unixSocket.empty()) {
+    signal(SIGPIPE, SIG_IGN);
+  }
 
   std::chrono::milliseconds backoff(1);
   while(true) {
+    std::unique_lock<std::recursive_mutex> lock(asyncMutex);
+
     struct pollfd polls[2];
     polls[0].fd = writeEventFD.getFD();
     polls[0].events = POLLIN;
@@ -190,15 +205,12 @@ void Tunnel::eventLoop() {
     polls[1].fd = asyncContext->c.fd;
     polls[1].events = POLLIN;
 
-    while(!asyncContext->err) {
+    while(asyncContext && !asyncContext->err) {
+      lock.unlock();
       poll(polls, 2, -1);
+      lock.lock();
+
       if(shutdown) return;
-
-      std::unique_lock<std::recursive_mutex> lock(asyncMutex);
-
-      if(asyncContext->err) {
-        break;
-      }
 
       // legit connection, reset backoff
       backoff = std::chrono::milliseconds(1);
@@ -210,12 +222,13 @@ void Tunnel::eventLoop() {
         redisAsyncHandleRead(asyncContext);
       }
     }
+    lock.unlock();
 
     if(shutdown) return;
-    // dropped connection, wait before retrying with an exponential backoff
+    // dropped connection, wait before retrying with an increasing backoff
     std::this_thread::sleep_for(backoff);
     if(backoff < std::chrono::milliseconds(1024)) {
-      backoff *= 2;
+      backoff++;
     }
     this->connect();
   }
