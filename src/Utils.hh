@@ -29,6 +29,8 @@
 #include <vector>
 #include <set>
 #include <atomic>
+#include <chrono>
+#include <mutex>
 
 #include "Common.hh"
 
@@ -41,17 +43,22 @@ namespace quarkdb {
 #define SSTR(message) static_cast<std::ostringstream&>(std::ostringstream().flush() << message).str()
 #define quotes(message) SSTR("'" << message << "'")
 
-#define DBG(message) std::cerr << __FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message << std::endl;
+extern std::mutex logMutex;
+#define TIME_NOW std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()
+#define ___log(message) { std::lock_guard<std::mutex> logLock(logMutex); \
+  std::cerr << "[" << TIME_NOW << "] " << message << std::endl; }
+
+#define DBG(message) ___log(__FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message)
 
 // temporary solution for now
-#define qdb_log(message) std::cerr << message << std::endl;
-#define qdb_event(message) std::cerr << message << std::endl;
-#define qdb_critical(message) std::cerr << message << std::endl;
+#define qdb_log(message) ___log(message)
+#define qdb_event(message) ___log("EVENT: " << message)
+#define qdb_critical(message) ___log("CRITICAL: " << message)
 
-#define qdb_warn(message) std::cerr << message << std::endl;
-#define qdb_error(message) std::cerr << message << std::endl;
-#define qdb_info(message) std::cerr << message << std::endl;
-#define qdb_debug(message) if(false) { std::cerr << message << std::endl; }
+#define qdb_warn(message) ___log("WARNING: " << message)
+#define qdb_error(message) ___log("ERROR: " << message)
+#define qdb_info(message) ___log("INFO: " << message)
+#define qdb_debug(message) if(false) { ___log(message); }
 
 // a serious error has occured signifying a bug in the program logic
 #define qdb_throw(message) throw FatalException(SSTR(message))

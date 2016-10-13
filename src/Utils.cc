@@ -26,6 +26,8 @@
 
 namespace quarkdb {
 
+std::mutex logMutex;
+
 bool my_strtoll(const std::string &str, int64_t &ret) {
   char *endptr = NULL;
   ret = strtoll(str.c_str(), &endptr, 10);
