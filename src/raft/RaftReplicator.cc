@@ -38,6 +38,7 @@ RaftReplicator::~RaftReplicator() {
   while(threadsAlive > 0) {
     journal.notifyWaitingThreads();
   }
+  for(std::thread &th : threads) th.join();
 }
 
 bool RaftReplicator::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
@@ -66,6 +67,8 @@ static bool retrieve_response(std::future<redisReplyPtr> &fut, RaftAppendEntries
   }
 
   redisReplyPtr rep = fut.get();
+  if(rep == nullptr) return false;
+
   if(!RaftParser::appendEntriesResponse(rep, resp)) {
     qdb_critical("cannot parse response from append entries");
     return false;
@@ -92,7 +95,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
 
     int64_t payloadSize = 0;
     if(!buildPayload(nextIndex, payloadLimit, reqs, terms, payloadSize)) {
-      std::this_thread::sleep_for(timeouts.getHeartbeatInterval());
+      state.wait(timeouts.getHeartbeatInterval());
       continue;
     }
 
@@ -102,11 +105,12 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     if(retrieve_response(fut, resp)) {
       if(!online) {
         online = true;
-        qdb_event("Replication target " << target.toString() << " came back online.");
+        qdb_event("Replication target " << target.toString() << " came back online. Outcome: " << resp.outcome << ", logsize: " << resp.logSize);
       }
 
       if(!resp.outcome) {
-        if(nextIndex <= resp.logSize) {
+        // never try to touch entry #0
+        if(nextIndex >= 1 && nextIndex <= resp.logSize) {
           nextIndex--;
         } else if(resp.logSize > 0) {
           nextIndex = resp.logSize;
@@ -131,7 +135,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     }
 
     if(!online) {
-      std::this_thread::sleep_for(timeouts.getHeartbeatInterval());
+      state.wait(timeouts.getHeartbeatInterval());
     }
     else if(online && nextIndex >= journal.getLogSize()) {
       journal.waitForUpdates(nextIndex, timeouts.getHeartbeatInterval());
@@ -156,11 +160,11 @@ bool RaftReplicator::launch(const RaftServer &target, const RaftStateSnapshot &s
     return false;
   }
 
-  if(current.status != RaftStatus::LEADER) {
+  if(current.status != RaftStatus::LEADER && current.status != RaftStatus::SHUTDOWN) {
     qdb_throw("bug, attempted to initiate replication for a term in which I'm not a leader");
   }
 
-  std::thread th(&RaftReplicator::tracker, this, target, snapshot);
-  th.detach();
+  std::lock_guard<std::mutex> lock(threadsMutex);
+  threads.emplace_back(&RaftReplicator::tracker, this, target, snapshot);
   return true;
 }

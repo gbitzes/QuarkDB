@@ -52,6 +52,8 @@ private:
 
   std::atomic<int64_t> threadsAlive {0};
   std::atomic<bool> shutdown {0};
+  std::vector<std::thread> threads;
+  std::mutex threadsMutex;
 
   const RaftTimeouts timeouts;
 };
