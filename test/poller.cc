@@ -62,3 +62,28 @@ TEST_F(tPoller, T1) {
   reply = tunnel3.execute({"get", "qwert"}).get();
   ASSERT_REPLY(reply, "asdf");
 }
+
+TEST_F(tPoller, test_reconnect) {
+  RedisDispatcher dispatcher(*rocksdb());
+
+  Tunnel tunnel(myself().hostname, myself().port);
+
+  for(size_t reconnects = 0; reconnects < 5; reconnects++) {
+    Poller rocksdbpoller(unixsocket(), &dispatcher);
+
+    bool success = false;
+    for(size_t i = 0; i < 10; i++) {
+      redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
+      if(reply != nullptr) {
+        ASSERT_REPLY(reply, "OK");
+        success = true;
+      }
+      else {
+        ASSERT_FALSE(success);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+    }
+
+    ASSERT_TRUE(success);
+  }
+}

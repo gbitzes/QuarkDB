@@ -30,31 +30,33 @@
 using namespace quarkdb;
 
 Poller::Poller(const std::string &p, Dispatcher *dispatcher) : path(p) {
-  s = socket(AF_UNIX, SOCK_STREAM, 0);
+  unlink(p.c_str());
+  if( (s = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+    perror("Poller, error opening socket");
+  }
   local.sun_family = AF_UNIX;
   strcpy(local.sun_path, path.c_str());
   len = strlen(local.sun_path) + sizeof(local.sun_family);
-  bind(s, (struct sockaddr *)&local, len);
+  if(bind(s, (struct sockaddr *)&local, len) < 0) {
+    perror("Poller, error when binding");
+  }
   listen(s, 1);
   t = sizeof(remote);
 
   shutdown = false;
-  threadsAlive = 0;
   mainThread = std::thread(&Poller::main, this, dispatcher);
 }
 
 Poller::~Poller() {
   shutdown = true;
-  ::shutdown(s, SHUT_RDWR); // kill the socket, un-block if stuck on accept
-  while(threadsAlive != 0) {
-    shutdownFD.notify();
-  }
+  shutdownFD.notify();
+  ::shutdown(s, SHUT_RDWR); // kill the socket
   mainThread.join();
+  close(s);
+  unlink(path.c_str());
 }
 
 void Poller::worker(int fd, Dispatcher *dispatcher) {
-  ScopedAdder<int64_t> adder(threadsAlive);
-
   XrdBuffManager bufferManager(NULL, NULL);
   Link link(fd);
   RedisParser parser(&link, &bufferManager);
@@ -62,9 +64,11 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
   struct pollfd polls[2];
   polls[0].fd = fd;
   polls[0].events = POLLIN;
+  polls[0].revents = 0;
 
   polls[1].fd = shutdownFD.getFD();
   polls[1].events = POLLIN;
+  polls[1].revents = 0;
 
   RedisRequest currentRequest;
 
@@ -72,23 +76,32 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
     poll(polls, 2, -1);
 
     // time to quit?
-    if(polls[1].revents & POLLIN || polls[0].revents & POLLERR) break;
+    if(shutdown) break;
 
     while(true) {
       LinkStatus status = parser.fetch(currentRequest);
       if(status <= 0) break;
       dispatcher->dispatch(&link, currentRequest);
     }
+
+    if( (polls[0].revents & POLLERR) || (polls[0].revents & POLLHUP) ) {
+      break;
+    }
   }
+  close(fd);
 }
 
 void Poller::main(Dispatcher *dispatcher) {
-  ScopedAdder<int64_t> adder(threadsAlive);
+  std::vector<std::thread> spawned;
+
   while(true) {
     int fd = accept(s, (struct sockaddr *)&remote, &t);
     if(fd < 0) break;
 
-    std::thread wrk(&Poller::worker, this, fd, dispatcher);
-    wrk.detach();
+    spawned.emplace_back(&Poller::worker, this, fd, dispatcher);
+  }
+
+  for(std::thread &th : spawned) {
+    th.join();
   }
 }

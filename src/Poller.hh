@@ -27,6 +27,7 @@
 #include <sstream>
 #include <thread>
 #include <atomic>
+#include "Utils.hh"
 #include "Dispatcher.hh"
 #include "EventFD.hh"
 
@@ -36,10 +37,10 @@ class Poller {
 public:
   Poller(const std::string &path, Dispatcher *dispatcher);
   ~Poller();
+  DISALLOW_COPY_AND_ASSIGN(Poller);
 
 private:
   std::atomic<bool> shutdown;
-  std::atomic<int64_t> threadsAlive;
 
   EventFD shutdownFD;
 
@@ -50,13 +51,10 @@ private:
 
   std::string path;
   struct sockaddr_un local, remote;
-  unsigned int s;
+  int s;
   size_t len;
   socklen_t t;
 };
-
-
-
 
 }
 
