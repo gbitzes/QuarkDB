@@ -54,8 +54,8 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
   std::vector<std::future<redisReplyPtr>> futures;
   for(const RaftServer &node : state.getNodes()) {
     if(node != state.getMyself()) {
-      RaftTalker *talker = new RaftTalker(node, state.getClusterID());
-      futures.push_back(talker->requestVote(votereq));
+      talkers.push_back(new RaftTalker(node, state.getClusterID()));
+      futures.push_back(talkers.back()->requestVote(votereq));
     }
   }
 
@@ -84,8 +84,8 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
     delete talker;
   }
 
-  std::string description = SSTR("Contacted " << futures.size() << " nodes, received a reply from " <<
-    replies.size() << " of them, of which " << tally << " contained a positive vote for me.");
+  std::string description = SSTR("Contacted " << futures.size() << " nodes, received "
+    << replies.size() << " replies with a tally of " << tally << " positive votes.");
 
   if(tally+1 >= (state.getNodes().size() / 2)+1 ) {
     qdb_event("Election round successful for term " << votereq.term << ". " << description);
