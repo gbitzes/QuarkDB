@@ -85,6 +85,12 @@ TEST_F(Raft_State, T1) {
   snapshot = {3, RaftStatus::CANDIDATE, {}, myself};
   ASSERT_EQ(state.getSnapshot(), snapshot);
 
+  // drop out from candidacy, make sure I can't try again in the same term
+  ASSERT_TRUE(state.dropOut(3));
+  snapshot = {3, RaftStatus::FOLLOWER, {}, myself};
+  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_FALSE(state.becomeCandidate(3));
+
   // observed new term, no longer a candidate
   ASSERT_TRUE(state.observed(4, {}));
   snapshot = {4, RaftStatus::FOLLOWER, {}, {}};
@@ -104,6 +110,8 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(state.ascend(5));
 
   snapshot = {5, RaftStatus::LEADER, myself, myself};
+  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_FALSE(state.dropOut(5));
   ASSERT_EQ(state.getSnapshot(), snapshot);
 
   ASSERT_TRUE(state.observed(6, nodes[0]));

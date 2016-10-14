@@ -91,6 +91,21 @@ void RaftState::updateStatus(RaftStatus newstatus) {
   }
 }
 
+bool RaftState::dropOut(RaftTerm forTerm) {
+  std::lock_guard<std::mutex> lock(update);
+
+  if(status != RaftStatus::CANDIDATE) {
+    return false;
+  }
+
+  if(forTerm != term) {
+    return false;
+  }
+
+  updateStatus(RaftStatus::FOLLOWER);
+  return true;
+}
+
 bool RaftState::becomeCandidate(RaftTerm forTerm) {
   std::lock_guard<std::mutex> lock(update);
 

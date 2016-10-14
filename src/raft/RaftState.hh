@@ -57,6 +57,7 @@ public:
   bool grantVote(RaftTerm term, const RaftServer &vote);
   bool ascend(RaftTerm term);
   bool becomeCandidate(RaftTerm term);
+  bool dropOut(RaftTerm term);
   bool joinCluster(RaftTerm term);
   bool becomeObserver(RaftTerm forTerm);
 
