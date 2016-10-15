@@ -36,8 +36,8 @@ RaftTimeouts quarkdb::defaultTimeouts {milliseconds(1000), milliseconds(1500),
 RaftTimeouts quarkdb::tightTimeouts {milliseconds(100), milliseconds(150),
   milliseconds(75)};
 
-RaftTimeouts quarkdb::aggressiveTimeouts {milliseconds(5), milliseconds(10),
-  milliseconds(1)};
+RaftTimeouts quarkdb::aggressiveTimeouts {milliseconds(20), milliseconds(50),
+  milliseconds(5)};
 
 RaftTimeouts::RaftTimeouts(const milliseconds &low, const milliseconds &high,
   const milliseconds &heartbeat)
@@ -74,6 +74,11 @@ void RaftClock::heartbeat() {
 bool RaftClock::timeout() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
   return std::chrono::steady_clock::now() - lastHeartbeat > randomTimeout;
+}
+
+milliseconds RaftClock::getRandomTimeout() {
+  std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
+  return randomTimeout;
 }
 
 milliseconds RaftClock::refreshRandomTimeout() {

@@ -44,10 +44,12 @@ void GlobalEnv::TearDown() {
   for(auto& kv : rocksdbCache) {
     delete kv.second;
   }
+  rocksdbCache.clear();
 
   for(auto& kv : journalCache) {
     delete kv.second;
   }
+  journalCache.clear();
 }
 
 RocksDB* GlobalEnv::getRocksDB(const std::string &path) {
@@ -127,6 +129,10 @@ Poller* TestCluster::poller(int id) {
   return node(id)->poller();
 }
 
+RaftDirector* TestCluster::director(int id) {
+  return node(id)->director();
+}
+
 RaftServer TestCluster::myself(int id) {
   return node(id)->myself();
 }
@@ -150,16 +156,39 @@ TestNode* TestCluster::node(int id, const RaftServer &srv) {
   return ret;
 }
 
+void TestCluster::prepare(int id) {
+  qdb_info("Preparing node #" << id);
+  journal(id);
+  rocksdb(id);
+  unixsocket(id);
+}
+
+void TestCluster::spinup(int id) {
+  qdb_info("Spinning up node #" << id)
+  poller(id);
+  director(id);
+}
+
+int TestCluster::getServerID(const RaftServer &srv) {
+  for(size_t i = 0; i < initialNodes.size(); i++) {
+    if(myself(i) == srv) return i;
+  }
+  return -1;
+}
+
+
 TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)
 : myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
 }
 
 TestNode::~TestNode() {
+  if(raftdirectorptr) delete raftdirectorptr;
   if(pollerptr) delete pollerptr;
   if(raftptr) delete raftptr;
   if(replicatorptr) delete replicatorptr;
   if(raftstateptr) delete raftstateptr;
+  if(raftclockptr) delete raftclockptr;
 }
 
 RocksDB* TestNode::rocksdb() {
@@ -206,9 +235,16 @@ Poller* TestNode::poller() {
 
 RaftClock* TestNode::raftClock() {
   if(raftclockptr == nullptr) {
-    raftclockptr = new RaftClock(defaultTimeouts);
+    raftclockptr = new RaftClock(aggressiveTimeouts);
   }
   return raftclockptr;
+}
+
+RaftDirector* TestNode::director() {
+  if(raftdirectorptr == nullptr) {
+    raftdirectorptr = new RaftDirector(*rocksdb(), *journal(), *state(), *raftClock());
+  }
+  return raftdirectorptr;
 }
 
 Raft* TestNode::raft() {
@@ -227,7 +263,7 @@ RaftState* TestNode::state() {
 
 RaftReplicator* TestNode::replicator() {
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *state(), defaultTimeouts);
+    replicatorptr = new RaftReplicator(*journal(), *state(), raftClock()->getTimeouts());
   }
   return replicatorptr;
 }

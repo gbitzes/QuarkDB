@@ -144,6 +144,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
       // don't wait, fire next round of updates
     }
   }
+  qdb_event("Shutting down replicator tracker for " << target.toString());
 }
 
 bool RaftReplicator::launch(const RaftServer &target, const RaftStateSnapshot &snapshot) {

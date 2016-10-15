@@ -38,6 +38,7 @@ class Raft_Replicator : public TestCluster3Nodes {};
 class Raft_Voting : public TestCluster3Nodes {};
 class tRaft : public TestCluster3Nodes {};
 class Raft_Election : public TestCluster3Nodes {};
+class Raft_Director : public TestCluster3Nodes {};
 
 TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));
@@ -102,6 +103,29 @@ TEST_F(Raft_Replicator, do_simple_replication) {
     ASSERT_EQ(entry.term, 2);
     ASSERT_EQ(entry.request, testreqs[i]);
   }
+}
+
+TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
+  // node #0 will do replication to #1, but with a journal that only contains
+  // 1 entry.
+
+  ASSERT_TRUE(state(0)->observed(2, {}));
+  ASSERT_TRUE(state(0)->becomeCandidate(2));
+  ASSERT_TRUE(state(0)->ascend(2));
+
+  // active poller for #1
+  poller(1);
+
+  // launch
+  ASSERT_TRUE(replicator(0)->launch(myself(1), state(0)->getSnapshot()));
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  // verify everything's sane
+  RaftStateSnapshot snapshot = state(1)->getSnapshot();
+  ASSERT_EQ(snapshot.term, 2);
+  ASSERT_EQ(snapshot.leader, myself(0));
+  ASSERT_EQ(journal(1)->getLogSize(), 1);
 }
 
 TEST_F(tRaft, validate_initial_state) {
@@ -421,4 +445,99 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
   ASSERT_EQ(snapshot0.term, 2);
   ASSERT_TRUE(snapshot0.leader.empty());
   ASSERT_EQ(snapshot0.status, RaftStatus::CANDIDATE);
+}
+
+TEST_F(Raft_Director, achieve_natural_election) {
+  prepare(0); prepare(1); prepare(2);
+
+  // spin up the directors and pollers - this fully simulates a 3-node cluster
+  spinup(0); spinup(1); spinup(2);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+  std::vector<RaftStateSnapshot> snapshots;
+  snapshots.push_back(state(0)->getSnapshot());
+  snapshots.push_back(state(1)->getSnapshot());
+  snapshots.push_back(state(2)->getSnapshot());
+
+  // verify all have agreed on the same term
+  ASSERT_EQ(snapshots[0].term, snapshots[1].term);
+  ASSERT_EQ(snapshots[1].term, snapshots[2].term);
+
+  // verify all have agreed on the same leader
+  ASSERT_FALSE(snapshots[0].leader.empty());
+  ASSERT_EQ(snapshots[0].leader, snapshots[1].leader);
+  ASSERT_EQ(snapshots[1].leader, snapshots[2].leader);
+
+  int leaderID = getServerID(snapshots[0].leader);
+  ASSERT_GE(leaderID, 0);
+  ASSERT_LE(leaderID, 2);
+
+  ASSERT_EQ(snapshots[leaderID].status, RaftStatus::LEADER);
+  for(int i = 0; i < 3; i++) {
+    if(i != leaderID) ASSERT_EQ(snapshots[i].status, RaftStatus::FOLLOWER) << i;
+  }
+}
+
+TEST_F(Raft_Director, late_arrival_in_established_cluster) {
+  prepare(0); prepare(1); prepare(2);
+
+  // spin up only two nodes
+  spinup(0); spinup(1);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+  // verify they reached consensus
+  std::vector<RaftStateSnapshot> snapshots;
+  snapshots.push_back(state(0)->getSnapshot());
+  snapshots.push_back(state(1)->getSnapshot());
+
+  ASSERT_EQ(snapshots[0].term, snapshots[1].term);
+  ASSERT_FALSE(snapshots[0].leader.empty());
+  ASSERT_EQ(snapshots[0].leader, snapshots[1].leader);
+
+  // spin up node #2, make sure it joins the cluster and doesn't disrupt the current leader
+  spinup(2);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  RaftStateSnapshot late_arrival = state(2)->getSnapshot();
+  ASSERT_EQ(late_arrival.term, snapshots[0].term);
+  ASSERT_EQ(late_arrival.leader, snapshots[1].leader);
+}
+
+TEST_F(Raft_Director, late_consensus) {
+  prepare(0); prepare(1); prepare(2);
+
+  // at first, node #0 is all alone and should not be able to ascend
+  spinup(0);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  // verify the node tried to ascend, and failed
+  RaftStateSnapshot snapshot = state(0)->getSnapshot();
+  ASSERT_GE(snapshot.term, 1);
+  ASSERT_TRUE(snapshot.leader.empty());
+  ASSERT_TRUE( (snapshot.status == RaftStatus::FOLLOWER) || (snapshot.status == RaftStatus::CANDIDATE) );
+
+  spinup(1);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  // verify consensus reached
+  std::vector<RaftStateSnapshot> snapshots;
+  snapshots.push_back(state(0)->getSnapshot());
+  snapshots.push_back(state(1)->getSnapshot());
+
+  ASSERT_EQ(snapshots[0].term, snapshots[1].term);
+  ASSERT_FALSE(snapshots[0].leader.empty());
+  ASSERT_EQ(snapshots[0].leader, snapshots[1].leader);
+
+  // spin up node #2, ensure it doesn't disrupt current leader
+  spinup(2);
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  RaftStateSnapshot late_arrival = state(2)->getSnapshot();
+  ASSERT_EQ(late_arrival.term, snapshots[0].term);
+  ASSERT_EQ(late_arrival.leader, snapshots[0].leader);
+  ASSERT_EQ(late_arrival.status, RaftStatus::FOLLOWER);
 }

@@ -72,11 +72,12 @@ TEST_F(tPoller, test_reconnect) {
     Poller rocksdbpoller(unixsocket(), &dispatcher);
 
     bool success = false;
-    for(size_t i = 0; i < 10; i++) {
+    for(size_t i = 0; i < 30; i++) {
       redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
       if(reply != nullptr) {
         ASSERT_REPLY(reply, "OK");
         success = true;
+        break;
       }
       else {
         ASSERT_FALSE(success);

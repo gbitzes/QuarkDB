@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftTimeouts.hh
+// File: RaftDirector.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,59 +21,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_TIMEOUT_H__
-#define __QUARKDB_RAFT_TIMEOUT_H__
+#ifndef __QUARKDB_RAFT_DIRECTOR_H__
+#define __QUARKDB_RAFT_DIRECTOR_H__
 
-#include <chrono>
-#include <random>
-#include <mutex>
-#include "../Utils.hh"
+#include "../RocksDB.hh"
+#include "RaftJournal.hh"
+#include "RaftState.hh"
+#include "RaftTimeouts.hh"
+#include <thread>
 
 namespace quarkdb {
-using std::chrono::milliseconds;
 
-class RaftTimeouts {
+class RaftDirector {
 public:
-  RaftTimeouts(const milliseconds &low, const milliseconds &high,
-    const milliseconds &heartbeat);
-
-  milliseconds getLow() const;
-  milliseconds getHigh() const;
-  milliseconds getRandom() const;
-
-  milliseconds getHeartbeatInterval() const;
+  RaftDirector(RocksDB &sm, RaftJournal &journal, RaftState &state, RaftClock &rc);
+  ~RaftDirector();
+  DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
-  milliseconds timeoutLow;
-  milliseconds timeoutHigh;
-  milliseconds heartbeatInterval;
+  void main();
+  void actAsFollower(RaftStateSnapshot &snapshot);
+  void runForLeader(RaftStateSnapshot &snapshot);
 
-  static std::random_device rd;
-  static std::mt19937 gen;
-  mutable std::uniform_int_distribution<> dist;
+  RocksDB &stateMachine;
+  RaftJournal &journal;
+  RaftState &state;
+  RaftClock &raftClock;
+
+  std::thread mainThread;
+
 };
-
-class RaftClock {
-public:
-  RaftClock(const RaftTimeouts timeouts);
-  DISALLOW_COPY_AND_ASSIGN(RaftClock);
-
-  milliseconds refreshRandomTimeout();
-  void heartbeat();
-  bool timeout();
-
-  RaftTimeouts getTimeouts() { return timeouts; }
-  milliseconds getRandomTimeout();
-private:
-  std::mutex lastHeartbeatMutex;
-  std::chrono::steady_clock::time_point lastHeartbeat;
-  milliseconds randomTimeout;
-
-  RaftTimeouts timeouts;
-};
-
-extern RaftTimeouts defaultTimeouts;
-extern RaftTimeouts tightTimeouts;
-extern RaftTimeouts aggressiveTimeouts;
 
 }
 

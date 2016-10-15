@@ -90,16 +90,16 @@ RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
   }
 
   if(req.term == snapshot.term && req.leader != snapshot.leader) {
-    qdb_critical("Received append entries from " << req.leader.toString() << ", while I believe leader for term " << snapshot.term << " is " << req.leader.toString());
+    qdb_throw("Received append entries from " << req.leader.toString() << ", while I believe leader for term " << snapshot.term << " is " << snapshot.leader.toString());
     // TODO trigger panic?
     return {snapshot.term, journal.getLogSize(), false, "You are not the current leader"};
   }
 
+  raftClock.heartbeat();
+
   if(!journal.matchEntries(req.prevIndex, req.prevTerm)) {
     return {snapshot.term, journal.getLogSize(), false, "Log entry mismatch"};
   }
-
-  raftClock.heartbeat();
 
   // entry already exists?
   if(req.prevIndex+1 < journal.getLogSize()) {
@@ -137,7 +137,10 @@ RaftVoteResponse Raft::requestVote(RaftVoteRequest &req) {
 
   LogIndex myLastIndex = journal.getLogSize()-1;
   RaftTerm myLastTerm;
-  journal.fetch(myLastIndex, myLastTerm);
+  if(!journal.fetch(myLastIndex, myLastTerm).ok()) {
+    qdb_critical("Error when reading journal entry " << myLastIndex << " when processing request vote.");
+    return {snapshot.term, false};
+  }
 
   if(req.lastTerm < myLastTerm) {
     qdb_event("Rejecting vote request from " << req.candidate.toString() << " since my log is more up-to-date, based on last term: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
@@ -153,6 +156,9 @@ RaftVoteResponse Raft::requestVote(RaftVoteRequest &req) {
   bool granted = state.grantVote(req.term, req.candidate);
   if(!granted) {
     qdb_event("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term);
+  }
+  else {
+    raftClock.heartbeat();
   }
 
   return {snapshot.term, granted};

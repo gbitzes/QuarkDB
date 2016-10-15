@@ -30,6 +30,7 @@
 #include "Common.hh"
 #include "raft/Raft.hh"
 #include "raft/RaftReplicator.hh"
+#include "raft/RaftDirector.hh"
 #include "Poller.hh"
 #include <gtest/gtest.h>
 
@@ -78,6 +79,7 @@ public:
   RaftReplicator *replicator();
   Poller *poller();
   RaftClock *raftClock();
+  RaftDirector *director();
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
@@ -94,6 +96,7 @@ private:
   Poller *pollerptr = nullptr;
   RaftState *raftstateptr = nullptr;
   RaftClock *raftclockptr = nullptr;
+  RaftDirector *raftdirectorptr = nullptr;
 
   std::string unixsocketpath;
 };
@@ -112,12 +115,23 @@ public:
   RaftReplicator *replicator(int id = 0);
   Poller *poller(int id = 0);
   RaftServer myself(int id = 0);
+  RaftDirector *director(int id = 0);
+
+  // In some tests, the latency of opening rocksdb can kill us, since by the
+  // time the db is open raft starts timing out.
+  // This function will prepare a node, so that spinning it up later is instant.
+  void prepare(int id);
+
+  // spin up a node,
+  void spinup(int id);
 
   // initialize nodes using information passed on the nodes variable, except if srv is set
   TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);
   std::string unixsocket(int id = 0);
   RaftClusterID clusterID();
+
+  int getServerID(const RaftServer &srv);
 private:
   std::string rocksdbPath(int id = 0);
 

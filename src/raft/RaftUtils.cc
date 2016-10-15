@@ -49,6 +49,7 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
     return false;
   }
 
+  qdb_info(state.getMyself().toString() << ": Starting election round for term " << votereq.term);
   std::vector<RaftTalker*> talkers;
 
   std::vector<std::future<redisReplyPtr>> futures;
@@ -61,7 +62,10 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
 
   std::vector<redisReplyPtr> replies;
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-  std::chrono::steady_clock::time_point deadline = now + timeouts.getLow();
+  std::chrono::steady_clock::time_point deadline = now + timeouts.getHeartbeatInterval()*2;
+
+  qdb_info(state.getMyself().toString() <<  ": Vote requests have been sent off, will allow a window of "
+    << timeouts.getHeartbeatInterval().count()*2 << "ms to receive replies.");
 
   for(size_t i = 0; i < futures.size(); i++) {
     if(futures[i].wait_until(deadline) == std::future_status::ready) {
@@ -70,14 +74,18 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
     }
   }
 
+  qdb_info("No longer accepting replies to vote requests, time to make a tally.");
+
   size_t tally = 0;
   for(size_t i = 0; i < replies.size(); i++) {
     RaftVoteResponse resp;
     if(!RaftParser::voteResponse(replies[i], resp)) {
       qdb_critical("unable to parse a vote response, ignoring");
     }
-
-    if(resp.granted) tally++;
+    else {
+      if(resp.granted) tally++;
+      state.observed(resp.term, {});
+    }
   }
 
   for(RaftTalker* talker : talkers) {
