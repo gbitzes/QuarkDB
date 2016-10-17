@@ -37,7 +37,16 @@ std::vector<RedisRequest> testreqs = {
   {"sadd", "myset", "a"},
   {"sadd", "myset", "b"},
   {"sadd", "myset", "c"},
-  {"sadd", "myset", "d"}
+  {"sadd", "myset", "d"},
+  {"hset", "myhash", "key1", "val1"},
+  {"hset", "myhash", "key2", "val2"},
+  {"hset", "myhash", "key3", "val3"},
+  {"hset", "myhash", "key4", "val4"},
+  {"hset", "myhash", "key5", "val5"},
+  {"hset", "myhash", "key6", "val6"},
+  {"hset", "myhash", "key7", "val7"},
+  {"hset", "myhash", "key8", "val8"},
+  {"hset", "myhash", "key9", "val9"}
 };
 
 void GlobalEnv::TearDown() {

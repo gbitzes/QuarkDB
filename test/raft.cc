@@ -25,6 +25,7 @@
 #include "raft/RaftReplicator.hh"
 #include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
+#include "raft/RaftCommitTracker.hh"
 #include "Tunnel.hh"
 #include "Poller.hh"
 #include "test-utils.hh"
@@ -39,6 +40,7 @@ class Raft_Voting : public TestCluster3Nodes {};
 class tRaft : public TestCluster3Nodes {};
 class Raft_Election : public TestCluster3Nodes {};
 class Raft_Director : public TestCluster3Nodes {};
+class Raft_CommitTracker : public TestCluster3Nodes {};
 
 TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));
@@ -540,4 +542,53 @@ TEST_F(Raft_Director, late_consensus) {
   ASSERT_EQ(late_arrival.term, snapshots[0].term);
   ASSERT_EQ(late_arrival.leader, snapshots[0].leader);
   ASSERT_EQ(late_arrival.status, RaftStatus::FOLLOWER);
+}
+
+TEST_F(Raft_CommitTracker, basic_sanity) {
+  ASSERT_THROW(RaftCommitTracker(*state(0), 1), FatalException);
+  ASSERT_THROW(RaftCommitTracker(*state(0), 0), FatalException);
+
+  RaftCommitTracker tracker(*state(0), 2);
+  ASSERT_EQ(state(0)->getCommitIndex(), 0);
+
+  // populate #0's journal
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    ASSERT_TRUE(journal(0)->append(i+1, 0, testreqs[i]));
+  }
+
+  RaftMatchIndexTracker matchIndex1(tracker.registration(myself(1)));
+  RaftMatchIndexTracker matchIndex2(tracker.registration(myself(2)));
+
+  matchIndex1.update(1);
+  ASSERT_EQ(state(0)->getCommitIndex(), 1);
+  ASSERT_THROW(matchIndex1.update(0), FatalException);
+
+  matchIndex2.update(1);
+  ASSERT_EQ(state(0)->getCommitIndex(), 1);
+
+  matchIndex2.update(2);
+  ASSERT_EQ(state(0)->getCommitIndex(), 2);
+
+  matchIndex1.update(3);
+  ASSERT_EQ(state(0)->getCommitIndex(), 3);
+
+  tracker.updateQuorum(3);
+  matchIndex1.update(4);
+  ASSERT_EQ(state(0)->getCommitIndex(), 3);
+
+  matchIndex2.update(4);
+  ASSERT_EQ(state(0)->getCommitIndex(), 4);
+
+  matchIndex1.update(10);
+  ASSERT_EQ(state(0)->getCommitIndex(), 4);
+
+  RaftMatchIndexTracker matchIndex3(tracker.registration(RaftServer {"some_server", 1234}));
+  matchIndex3.update(15); // now we have 10, 4, 15
+  ASSERT_EQ(state(0)->getCommitIndex(), 10);
+
+  matchIndex2.update(11); // now we have 10, 11, 15
+  ASSERT_EQ(state(0)->getCommitIndex(), 11);
+
+  matchIndex1.update(16); // now we have 16, 11, 15
+  ASSERT_EQ(state(0)->getCommitIndex(), 15);
 }

@@ -13,28 +13,29 @@ include_directories(
 
 add_library(XrdRedis SHARED
   XrdPlugin.cc
-  XrdRedisProtocol.cc      XrdRedisProtocol.hh
-  Configuration.cc         Configuration.hh
-                           RedisConnection.hh
-  Utils.cc                 Utils.hh
-                           Common.hh
-  Link.cc                  Link.hh
-  BufferedReader.cc        BufferedReader.hh
-  RedisParser.cc           RedisParser.hh
-  RocksDB.cc               RocksDB.hh
-  Commands.cc              Commands.hh
-  Response.cc              Response.hh
-  Dispatcher.cc            Dispatcher.hh
-  Tunnel.cc                Tunnel.hh
-  Poller.cc                Poller.hh
-  raft/RaftJournal.cc      raft/RaftJournal.hh
-  raft/RaftState.cc        raft/RaftState.hh
-  raft/RaftTalker.cc       raft/RaftTalker.hh
-  raft/RaftUtils.cc        raft/RaftUtils.hh
-  raft/Raft.cc             raft/Raft.hh
-  raft/RaftReplicator.cc   raft/RaftReplicator.hh
-  raft/RaftTimeouts.cc     raft/RaftTimeouts.hh
-  raft/RaftDirector.cc     raft/RaftDirector.hh
+  XrdRedisProtocol.cc        XrdRedisProtocol.hh
+  Configuration.cc           Configuration.hh
+                             RedisConnection.hh
+  Utils.cc                   Utils.hh
+                             Common.hh
+  Link.cc                    Link.hh
+  BufferedReader.cc          BufferedReader.hh
+  RedisParser.cc             RedisParser.hh
+  RocksDB.cc                 RocksDB.hh
+  Commands.cc                Commands.hh
+  Response.cc                Response.hh
+  Dispatcher.cc              Dispatcher.hh
+  Tunnel.cc                  Tunnel.hh
+  Poller.cc                  Poller.hh
+  raft/RaftJournal.cc        raft/RaftJournal.hh
+  raft/RaftState.cc          raft/RaftState.hh
+  raft/RaftTalker.cc         raft/RaftTalker.hh
+  raft/RaftUtils.cc          raft/RaftUtils.hh
+  raft/Raft.cc               raft/Raft.hh
+  raft/RaftReplicator.cc     raft/RaftReplicator.hh
+  raft/RaftTimeouts.cc       raft/RaftTimeouts.hh
+  raft/RaftDirector.cc       raft/RaftDirector.hh
+  raft/RaftCommitTracker.cc  raft/RaftCommitTracker.hh
   ${BACKWARD_ENABLE}
 )
 
