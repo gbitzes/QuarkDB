@@ -113,6 +113,7 @@ RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
     }
   }
 
+  state.setCommitIndex(std::min(journal.getLogSize(), req.commitIndex));
   return {snapshot.term, journal.getLogSize(), true, ""};
 }
 

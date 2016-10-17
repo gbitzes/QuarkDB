@@ -60,6 +60,8 @@ public:
   bool dropOut(RaftTerm term);
   bool joinCluster(RaftTerm term);
   bool becomeObserver(RaftTerm forTerm);
+  bool setCommitIndex(LogIndex newIndex);
+  LogIndex getCommitIndex();
 
   void shutdown();
   void wait(const std::chrono::milliseconds &t);
@@ -82,6 +84,7 @@ private:
   RaftServer leader;
   RaftServer votedFor;
   const RaftServer myself;
+  std::atomic<LogIndex> commitIndex;
 
   void updateJournal();
   void declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader);

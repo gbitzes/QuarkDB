@@ -166,6 +166,19 @@ TEST_F(Raft_State, T1) {
 
   ASSERT_FALSE(state.becomeObserver(7));
 
+  // push two changes to the log
+  // mark the first as applied, the other as committed
+  RedisRequest req = { "set", "qwerty", "asdf" };
+  ASSERT_TRUE(journal.append(1, 7, req));
+  req = { "set", "1234", "9876" };
+  ASSERT_TRUE(journal.append(2, 7, req));
+  journal.setLastApplied(1);
+  ASSERT_THROW(journal.setLastApplied(3), FatalException);
+  ASSERT_TRUE(state.setCommitIndex(1));
+  ASSERT_FALSE(state.setCommitIndex(0));
+  ASSERT_THROW(state.setCommitIndex(3), FatalException);
+  ASSERT_TRUE(state.setCommitIndex(2));
+
   // exit again..
   nodes.erase(nodes.begin()+2);
   journal.setNodes(nodes);
@@ -181,6 +194,10 @@ TEST_F(Raft_State, T1) {
   ASSERT_EQ(state.getSnapshot(), snapshot);
   ASSERT_EQ(journal.getCurrentTerm(), 7);
   ASSERT_EQ(journal.getVotedFor(), RaftState::BLOCKED_VOTE);
+
+  // verify we remember last applied, and that commit index is re-initialized
+  ASSERT_EQ(state.getCommitIndex(), 1);
+  ASSERT_EQ(journal.getLastApplied(), 1);
 
   // re-enter cluster
   nodes.push_back(myself);

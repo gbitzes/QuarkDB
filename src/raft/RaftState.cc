@@ -37,6 +37,7 @@ RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
 
   term = journal.getCurrentTerm();
   votedFor = journal.getVotedFor();
+  commitIndex = journal.getLastApplied();
 }
 
 //------------------------------------------------------------------------------
@@ -166,6 +167,26 @@ bool RaftState::ascend(RaftTerm forTerm) {
   updateStatus(RaftStatus::LEADER);
   qdb_event("Ascending as leader for term " << forTerm << ". Long may I reign.");
   return true;
+}
+
+bool RaftState::setCommitIndex(LogIndex newIndex) {
+  std::lock_guard<std::mutex> lock(update);
+  if(newIndex < commitIndex) {
+    qdb_critical("attempted to set commit index in the past, from " << commitIndex << " ==> " << newIndex);
+    return false;
+  }
+
+  if(journal.getLogSize() <= newIndex) {
+    qdb_throw("attempted to mark as committed a non-existing entry. Journal size: " << journal.getLogSize() << ", new index: " << newIndex);
+    return false;
+  }
+
+  commitIndex = newIndex;
+  return true;
+}
+
+LogIndex RaftState::getCommitIndex() {
+  return commitIndex;
 }
 
 //------------------------------------------------------------------------------

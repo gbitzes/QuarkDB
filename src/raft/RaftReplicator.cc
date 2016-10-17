@@ -99,7 +99,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
       continue;
     }
 
-    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, 0, reqs, terms);
+    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, state.getCommitIndex(), reqs, terms);
     RaftAppendEntriesResponse resp;
 
     if(retrieve_response(fut, resp)) {
