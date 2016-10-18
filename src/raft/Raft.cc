@@ -45,6 +45,7 @@ LinkStatus Raft::dispatch(Connection *conn, RedisRequest &req) {
       return conn->vector(this->info().toVector());
     }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
+      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftAppendEntriesRequest dest;
       if(!RaftParser::appendEntries(std::move(req), dest)) {
         return conn->err("malformed request");
@@ -54,6 +55,7 @@ LinkStatus Raft::dispatch(Connection *conn, RedisRequest &req) {
       return conn->vector(resp.toVector());
     }
     case RedisCommand::RAFT_REQUEST_VOTE: {
+      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftVoteRequest votereq;
       if(!RaftParser::voteRequest(req, votereq)) {
         return conn->err("malformed request");
@@ -63,6 +65,14 @@ LinkStatus Raft::dispatch(Connection *conn, RedisRequest &req) {
       return conn->vector(resp.toVector());
     }
     case RedisCommand::RAFT_HANDSHAKE: {
+      conn->raftAuthorization = false;
+      if(req.size() != 2) return conn->errArgs(req[0]);
+      if(req[1] != journal.getClusterID()) {
+        qdb_critical("received handshake with wrong cluster id: " << req[1] << " (mine is " << journal.getClusterID() << ")");
+        return conn->err("wrong cluster id");
+      }
+
+      conn->raftAuthorization = true;
       return conn->ok();
     }
   }

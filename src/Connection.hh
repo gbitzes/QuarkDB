@@ -81,11 +81,11 @@ public:
   LinkStatus integer(int64_t number);
   LinkStatus vector(const std::vector<std::string> &vec);
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
-private:
-  Link *link;
 
   bool raftAuthorization = false;
   std::queue<PendingRequest> pending;
+private:
+  Link *link;
 
 };
 

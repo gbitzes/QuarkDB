@@ -34,10 +34,11 @@
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
+#define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
 
 class Raft_Replicator : public TestCluster3Nodes {};
 class Raft_Voting : public TestCluster3Nodes {};
-class tRaft : public TestCluster3Nodes {};
+class Raft_Dispatcher : public TestCluster3Nodes {};
 class Raft_Election : public TestCluster3Nodes {};
 class Raft_Director : public TestCluster3Nodes {};
 class Raft_CommitTracker : public TestCluster3Nodes {};
@@ -130,7 +131,7 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   ASSERT_EQ(journal(1)->getLogSize(), 1);
 }
 
-TEST_F(tRaft, validate_initial_state) {
+TEST_F(Raft_Dispatcher, validate_initial_state) {
   RaftInfo info = raft()->info();
   ASSERT_EQ(info.clusterID, clusterID());
   ASSERT_EQ(info.myself, myself());
@@ -143,7 +144,7 @@ TEST_F(tRaft, validate_initial_state) {
   ASSERT_EQ(entry.request, make_req("UPDATE_RAFT_NODES", serializeNodes(nodes())));
 }
 
-TEST_F(tRaft, send_first_heartbeat) {
+TEST_F(Raft_Dispatcher, send_first_heartbeat) {
   // simulate heartbeat from #1 to #0
   RaftAppendEntriesRequest req;
   req.term = 1;
@@ -158,7 +159,7 @@ TEST_F(tRaft, send_first_heartbeat) {
   ASSERT_EQ(resp.logSize, 1);
 }
 
-TEST_F(tRaft, throw_on_append_entries_from_myself) {
+TEST_F(Raft_Dispatcher, throw_on_append_entries_from_myself) {
   RaftAppendEntriesRequest req;
   req.term = 2;
   req.leader = myself(0);
@@ -169,7 +170,7 @@ TEST_F(tRaft, throw_on_append_entries_from_myself) {
   ASSERT_THROW(raft()->appendEntries(std::move(req)), FatalException);
 }
 
-TEST_F(tRaft, add_entries) {
+TEST_F(Raft_Dispatcher, add_entries) {
   RaftAppendEntriesRequest req;
   req.term = 2;
   req.leader = myself(1);
@@ -221,6 +222,28 @@ TEST_F(tRaft, add_entries) {
   ASSERT_TRUE(raft()->fetch(2, entry));
   ASSERT_EQ(entry.term, 3);
   ASSERT_EQ(entry.request, make_req("sadd", "myset", "a"));
+}
+
+TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
+  // try to talk to a raft server while providing the wrong
+  // cluster id, verify it sends us to hell
+
+  poller(0);
+  RaftTalker talker(myself(0), "random_cluster_id");
+
+  RaftVoteRequest votereq;
+  votereq.term = 1337;
+  votereq.candidate = {"its_me_ur_leader", 1234};
+  votereq.lastIndex = 35000000;
+  votereq.lastTerm = 1000;
+
+  ASSERT_REPLY(talker.requestVote(votereq).get(), "ERR not authorized to issue raft commands");
+
+  std::vector<RedisRequest> reqs;
+  std::vector<RaftTerm> terms;
+
+  redisReplyPtr reply = talker.appendEntries(13737, myself(1), 3000, 100, 500, reqs, terms).get();
+  ASSERT_REPLY(reply, "ERR not authorized to issue raft commands");
 }
 
 TEST_F(Raft_Voting, throws_with_requestvote_to_myself) {
