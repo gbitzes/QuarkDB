@@ -1,5 +1,5 @@
-----------------------------------------------------------------------
-// File: RedisConnection.hh
+//----------------------------------------------------------------------
+// File: Connection.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,23 +21,53 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_REDIS_CONNECTION_H__
-#define __QUARKDB_REDIS_CONNECTION_H__
+#include "Connection.hh"
+using namespace quarkdb;
 
-namespace quarkdb {
-
-class RedisConnection {
-public:
-  RedisConnection();
-  ~RedisConnection();
-private:
-
-};
-
-
-
-
-
+Connection::Connection(Link *l)
+: link(l) {
 }
 
-#endif
+Connection::~Connection() {
+}
+
+
+LinkStatus Connection::err(const std::string &msg) {
+  return Response::err(link, msg);
+}
+
+LinkStatus Connection::errArgs(const std::string &cmd) {
+  return Response::errArgs(link, cmd);
+}
+
+LinkStatus Connection::pong() {
+  return Response::pong(link);
+}
+
+LinkStatus Connection::string(const std::string &str) {
+  return Response::string(link, str);
+}
+
+LinkStatus Connection::fromStatus(const rocksdb::Status &status) {
+  return Response::fromStatus(link, status);
+}
+
+LinkStatus Connection::ok() {
+  return Response::ok(link);
+}
+
+LinkStatus Connection::null() {
+  return Response::null(link);
+}
+
+LinkStatus Connection::integer(int64_t number) {
+  return Response::integer(link, number);
+}
+
+LinkStatus Connection::vector(const std::vector<std::string> &vec) {
+  return Response::vector(link, vec);
+}
+
+LinkStatus Connection::scan(const std::string &marker, const std::vector<std::string> &vec) {
+  return Response::scan(link, marker, vec);
+}

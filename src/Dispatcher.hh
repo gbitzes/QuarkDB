@@ -28,12 +28,13 @@
 #include "Link.hh"
 #include "Commands.hh"
 #include "RocksDB.hh"
+#include "Connection.hh"
 
 namespace quarkdb {
 
 class Dispatcher {
 public:
-  virtual LinkStatus dispatch(Link *link, RedisRequest &req) = 0;
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
   virtual ~Dispatcher() {}
 };
 
@@ -41,8 +42,8 @@ class RedisDispatcher : public Dispatcher {
 public:
   RedisDispatcher(RocksDB &rocksdb);
 
-  virtual LinkStatus dispatch(Link *link, RedisRequest &req);
-  LinkStatus dispatch(Link *link, RedisRequest &request, RedisCommand command);
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req);
+  LinkStatus dispatch(Connection *conn, RedisRequest &request, RedisCommand command);
 private:
   RocksDB &store;
 };

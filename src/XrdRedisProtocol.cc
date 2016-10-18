@@ -60,13 +60,14 @@ XrdRedisProtocol::XrdRedisProtocol()
 int XrdRedisProtocol::Process(XrdLink *lp) {
   if(!link) link = new Link(lp);
   if(!parser) parser = new RedisParser(link, bufferManager);
+  if(!conn) conn = new Connection(link);
 
   while(true) {
     LinkStatus status = parser->fetch(currentRequest);
     if(status == 0) return 1;     // slow link
     if(status < 0) return status; // error
 
-    dispatcher->dispatch(link, currentRequest);
+    dispatcher->dispatch(conn, currentRequest);
   }
 }
 
@@ -79,6 +80,10 @@ void XrdRedisProtocol::Reset() {
   if(parser) {
     delete parser;
     parser = nullptr;
+  }
+  if(conn) {
+    delete conn;
+    conn = nullptr;
   }
   if(link) {
     delete link;

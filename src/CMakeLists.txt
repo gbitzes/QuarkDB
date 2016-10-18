@@ -15,7 +15,6 @@ add_library(XrdRedis SHARED
   XrdPlugin.cc
   XrdRedisProtocol.cc        XrdRedisProtocol.hh
   Configuration.cc           Configuration.hh
-                             RedisConnection.hh
   Utils.cc                   Utils.hh
                              Common.hh
   Link.cc                    Link.hh
@@ -27,6 +26,7 @@ add_library(XrdRedis SHARED
   Dispatcher.cc              Dispatcher.hh
   Tunnel.cc                  Tunnel.hh
   Poller.cc                  Poller.hh
+  Connection.cc              Connection.hh
   raft/RaftJournal.cc        raft/RaftJournal.hh
   raft/RaftState.cc          raft/RaftState.hh
   raft/RaftTalker.cc         raft/RaftTalker.hh
@@ -41,6 +41,7 @@ add_library(XrdRedis SHARED
 
 target_link_libraries(
   XrdRedis
+  # libasan.a
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${ROCKSDB_LIBRARY}

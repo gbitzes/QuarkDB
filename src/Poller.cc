@@ -60,6 +60,7 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
   XrdBuffManager bufferManager(NULL, NULL);
   Link link(fd);
   RedisParser parser(&link, &bufferManager);
+  Connection conn(&link);
 
   struct pollfd polls[2];
   polls[0].fd = fd;
@@ -81,7 +82,7 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
     while(true) {
       LinkStatus status = parser.fetch(currentRequest);
       if(status <= 0) break;
-      dispatcher->dispatch(&link, currentRequest);
+      dispatcher->dispatch(&conn, currentRequest);
     }
 
     if( (polls[0].revents & POLLERR) || (polls[0].revents & POLLHUP) ) {

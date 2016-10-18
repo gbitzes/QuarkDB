@@ -32,43 +32,43 @@ Raft::Raft(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
 : journal(jour), stateMachine(sm), state(st), raftClock(rc) {
 }
 
-LinkStatus Raft::dispatch(Link *link, RedisRequest &req) {
+LinkStatus Raft::dispatch(Connection *conn, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
-  if(it == redis_cmd_map.end()) return Response::err(link, SSTR("unknown command " << quotes(req[0])));
+  if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
 
   RedisCommand cmd = it->second.first;
   switch(cmd) {
     default: {
-      return this->service(link, req, cmd, it->second.second);
+      return this->service(conn, req, cmd, it->second.second);
     }
     case RedisCommand::RAFT_INFO: {
-      return Response::vector(link, this->info().toVector());
+      return conn->vector(this->info().toVector());
     }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
       RaftAppendEntriesRequest dest;
       if(!RaftParser::appendEntries(std::move(req), dest)) {
-        return Response::err(link, "malformed request");
+        return conn->err("malformed request");
       }
 
       RaftAppendEntriesResponse resp = appendEntries(std::move(dest));
-      return Response::vector(link, resp.toVector());
+      return conn->vector(resp.toVector());
     }
     case RedisCommand::RAFT_REQUEST_VOTE: {
       RaftVoteRequest votereq;
       if(!RaftParser::voteRequest(req, votereq)) {
-        return Response::err(link, "malformed request");
+        return conn->err("malformed request");
       }
 
       RaftVoteResponse resp = requestVote(votereq);
-      return Response::vector(link, resp.toVector());
+      return conn->vector(resp.toVector());
     }
     case RedisCommand::RAFT_HANDSHAKE: {
-      return Response::ok(link);
+      return conn->ok();
     }
   }
 }
 
-LinkStatus Raft::service(Link *link, RedisRequest &req, RedisCommand &cmd, CommandType &type) {
+LinkStatus Raft::service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type) {
   return 0;
 }
 

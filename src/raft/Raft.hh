@@ -33,19 +33,13 @@
 
 namespace quarkdb {
 
-struct PendingRequest {
-  bool write; // this is a write request that must go through the raft log
-  RedisRequest req; // the contents of the request
-  LogIndex index; // the index of the *last* write request that we've observed.
-  Link *link;
-};
 
 class Raft : public Dispatcher {
 public:
   Raft(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc);
   DISALLOW_COPY_AND_ASSIGN(Raft);
 
-  virtual LinkStatus dispatch(Link *link, RedisRequest &req) override;
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override;
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);
@@ -53,7 +47,7 @@ public:
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
   RaftVoteResponse requestVote(RaftVoteRequest &req);
 private:
-  LinkStatus service(Link *link, RedisRequest &req, RedisCommand &cmd, CommandType &type);
+  LinkStatus service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type);
   std::multimap<LogIndex, PendingRequest> pending;
 
   //----------------------------------------------------------------------------

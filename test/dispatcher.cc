@@ -34,6 +34,7 @@ class Dispatcher_ : public ::testing::Test {
 protected:
   Dispatcher_()
   : store("/tmp/rocksdb-testdb"),
+    conn(&link),
     bufferManager(NULL, NULL),
     reader(&link, &bufferManager),
     dispatcher(store) {
@@ -42,7 +43,7 @@ protected:
   }
 
   void assert_reply(RedisRequest &&request, const std::string &reply) {
-    EXPECT_EQ(dispatcher.dispatch(&link, request), (int) reply.size());
+    EXPECT_EQ(dispatcher.dispatch(&conn, request), (int) reply.size());
     std::string tmp;
     ASSERT_EQ(reader.consume(reply.size(), tmp), (int) reply.size());
     ASSERT_EQ(tmp, reply);
@@ -50,6 +51,7 @@ protected:
 
   RocksDB store;
   Link link;
+  Connection conn;
   XrdBuffManager bufferManager;
   BufferedReader reader;
   RedisDispatcher dispatcher;
