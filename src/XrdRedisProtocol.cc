@@ -24,7 +24,7 @@
 #include "XrdVersion.hh"
 #include "XrdRedisProtocol.hh"
 #include "XrdOuc/XrdOucEnv.hh"
-#include "raft/Raft.hh"
+#include "raft/RaftDispatcher.hh"
 
 #include <stdlib.h>
 #include <algorithm>
@@ -125,7 +125,7 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
     journal = new RaftJournal(configuration.getRaftLog());
     state = new RaftState(*journal, configuration.getMyself());
     raftClock = new RaftClock(defaultTimeouts);
-    dispatcher = new Raft(*journal, *rocksdb, *state, *raftClock);
+    dispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);
   }
   else {
     qdb_throw("cannot determine configuration mode"); // should never happen

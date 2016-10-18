@@ -31,7 +31,7 @@ add_library(XrdRedis SHARED
   raft/RaftState.cc          raft/RaftState.hh
   raft/RaftTalker.cc         raft/RaftTalker.hh
   raft/RaftUtils.cc          raft/RaftUtils.hh
-  raft/Raft.cc               raft/Raft.hh
+  raft/RaftDispatcher.cc     raft/RaftDispatcher.hh
   raft/RaftReplicator.cc     raft/RaftReplicator.hh
   raft/RaftTimeouts.cc       raft/RaftTimeouts.hh
   raft/RaftDirector.cc       raft/RaftDirector.hh

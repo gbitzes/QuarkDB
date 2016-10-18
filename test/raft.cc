@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "raft/Raft.hh"
+#include "raft/RaftDispatcher.hh"
 #include "raft/RaftReplicator.hh"
 #include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
@@ -102,7 +102,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
 
   for(size_t i = 0; i < testreqs.size(); i++) {
     RaftEntry entry;
-    ASSERT_TRUE(raft(1)->fetch(i+1, entry));
+    ASSERT_TRUE(dispatcher(1)->fetch(i+1, entry));
     ASSERT_EQ(entry.term, 2);
     ASSERT_EQ(entry.request, testreqs[i]);
   }
@@ -132,14 +132,14 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
 }
 
 TEST_F(Raft_Dispatcher, validate_initial_state) {
-  RaftInfo info = raft()->info();
+  RaftInfo info = dispatcher()->info();
   ASSERT_EQ(info.clusterID, clusterID());
   ASSERT_EQ(info.myself, myself());
   ASSERT_EQ(info.term, 0);
   ASSERT_EQ(info.logSize, 1);
 
   RaftEntry entry;
-  ASSERT_TRUE(raft()->fetch(0, entry));
+  ASSERT_TRUE(dispatcher()->fetch(0, entry));
   ASSERT_EQ(entry.term, 0);
   ASSERT_EQ(entry.request, make_req("UPDATE_RAFT_NODES", serializeNodes(nodes())));
 }
@@ -153,7 +153,7 @@ TEST_F(Raft_Dispatcher, send_first_heartbeat) {
   req.prevTerm = 0;
   req.commitIndex = 0;
 
-  RaftAppendEntriesResponse resp = raft()->appendEntries(std::move(req));
+  RaftAppendEntriesResponse resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 1);
   ASSERT_TRUE(resp.outcome);
   ASSERT_EQ(resp.logSize, 1);
@@ -167,7 +167,7 @@ TEST_F(Raft_Dispatcher, throw_on_append_entries_from_myself) {
   req.prevTerm = 0;
   req.commitIndex = 0;
 
-  ASSERT_THROW(raft()->appendEntries(std::move(req)), FatalException);
+  ASSERT_THROW(dispatcher()->appendEntries(std::move(req)), FatalException);
 }
 
 TEST_F(Raft_Dispatcher, add_entries) {
@@ -181,7 +181,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.entries.push_back(RaftEntry {1, {"set", "qwerty", "123"}});
   req.entries.push_back(RaftEntry {1, {"hset", "abc", "123", "234"}});
 
-  RaftAppendEntriesResponse resp = raft()->appendEntries(std::move(req));
+  RaftAppendEntriesResponse resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 2);
   ASSERT_TRUE(resp.outcome);
   ASSERT_EQ(resp.logSize, 3);
@@ -194,7 +194,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.prevTerm = 0;
   req.commitIndex = 0;
 
-  resp = raft()->appendEntries(std::move(req));
+  resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 3);
   ASSERT_FALSE(resp.outcome);
   ASSERT_EQ(resp.logSize, 3);
@@ -213,13 +213,13 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.entries.push_back(RaftEntry {3, {"sadd", "myset", "b"}});
   req.entries.push_back(RaftEntry {3, {"sadd", "myset", "c"}});
 
-  resp = raft()->appendEntries(std::move(req));
+  resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 5);
   ASSERT_TRUE(resp.outcome) << resp.err;
   ASSERT_EQ(resp.logSize, 5);
 
   RaftEntry entry;
-  ASSERT_TRUE(raft()->fetch(2, entry));
+  ASSERT_TRUE(dispatcher()->fetch(2, entry));
   ASSERT_EQ(entry.term, 3);
   ASSERT_EQ(entry.request, make_req("sadd", "myset", "a"));
 }
@@ -253,7 +253,7 @@ TEST_F(Raft_Voting, throws_with_requestvote_to_myself) {
   req.lastTerm = 0;
   req.lastIndex = 2;
 
-  ASSERT_THROW(raft()->requestVote(req), FatalException);
+  ASSERT_THROW(dispatcher()->requestVote(req), FatalException);
 }
 
 TEST_F(Raft_Voting, no_double_voting_on_same_term) {
@@ -263,11 +263,11 @@ TEST_F(Raft_Voting, no_double_voting_on_same_term) {
   req.lastTerm = 0;
   req.lastIndex = 2;
 
-  RaftVoteResponse resp = raft()->requestVote(req);
+  RaftVoteResponse resp = dispatcher()->requestVote(req);
   ASSERT_TRUE(resp.granted);
 
   req.candidate = myself(2);
-  resp = raft()->requestVote(req);
+  resp = dispatcher()->requestVote(req);
   ASSERT_FALSE(resp.granted);
 }
 
@@ -278,11 +278,11 @@ TEST_F(Raft_Voting, no_votes_for_previous_terms) {
   req.lastTerm = 0;
   req.lastIndex = 2;
 
-  RaftVoteResponse resp =  raft()->requestVote(req);
+  RaftVoteResponse resp = dispatcher()->requestVote(req);
   ASSERT_TRUE(resp.granted);
 
   req.term = 0;
-  resp = raft()->requestVote(req);
+  resp = dispatcher()->requestVote(req);
   ASSERT_FALSE(resp.granted);
 }
 
@@ -293,7 +293,7 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   req.lastTerm = 0;
   req.lastIndex = 1;
 
-  RaftVoteResponse resp = raft()->requestVote(req);
+  RaftVoteResponse resp = dispatcher()->requestVote(req);
   ASSERT_TRUE(resp.granted);
 
   // add a few requests to the log
@@ -306,17 +306,17 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   req.lastTerm = 4;
   req.lastIndex = 30;
 
-  resp = raft()->requestVote(req);
+  resp = dispatcher()->requestVote(req);
   ASSERT_FALSE(resp.granted);
 
   req.lastTerm = 5;
   req.lastIndex = 2;
 
-  resp = raft()->requestVote(req);
+  resp = dispatcher()->requestVote(req);
   ASSERT_FALSE(resp.granted);
 
   req.lastIndex = 4;
-  resp = raft()->requestVote(req);
+  resp = dispatcher()->requestVote(req);
   ASSERT_TRUE(resp.granted);
 }
 

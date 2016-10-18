@@ -28,7 +28,7 @@
 #include <sys/un.h>
 #include <vector>
 #include "Common.hh"
-#include "raft/Raft.hh"
+#include "raft/RaftDispatcher.hh"
 #include "raft/RaftReplicator.hh"
 #include "raft/RaftDirector.hh"
 #include "Poller.hh"
@@ -74,7 +74,7 @@ public:
 
   RocksDB *rocksdb();
   RaftJournal *journal();
-  Raft *raft();
+  RaftDispatcher *dispatcher();
   RaftState *state();
   RaftReplicator *replicator();
   Poller *poller();
@@ -91,7 +91,7 @@ private:
 
   RocksDB *rocksdbptr = nullptr;
   RaftJournal *journalptr = nullptr;
-  Raft *raftptr = nullptr;
+  RaftDispatcher *raftdispatcherptr = nullptr;
   RaftReplicator *replicatorptr = nullptr;
   Poller *pollerptr = nullptr;
   RaftState *raftstateptr = nullptr;
@@ -110,7 +110,7 @@ public:
 
   RocksDB* rocksdb(int id = 0);
   RaftJournal* journal(int id = 0);
-  Raft *raft(int id = 0);
+  RaftDispatcher *dispatcher(int id = 0);
   RaftState *state(int id = 0);
   RaftReplicator *replicator(int id = 0);
   Poller *poller(int id = 0);

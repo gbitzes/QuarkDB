@@ -34,10 +34,10 @@
 namespace quarkdb {
 
 
-class Raft : public Dispatcher {
+class RaftDispatcher : public Dispatcher {
 public:
-  Raft(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc);
-  DISALLOW_COPY_AND_ASSIGN(Raft);
+  RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc);
+  DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override;
 
@@ -66,7 +66,6 @@ private:
   // Misc
   //----------------------------------------------------------------------------
   RaftClock &raftClock;
-
 };
 
 }

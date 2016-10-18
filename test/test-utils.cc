@@ -122,8 +122,8 @@ RaftJournal* TestCluster::journal(int id) {
   return node(id)->journal();
 }
 
-Raft* TestCluster::raft(int id) {
-  return node(id)->raft();
+RaftDispatcher* TestCluster::dispatcher(int id) {
+  return node(id)->dispatcher();
 }
 
 RaftState* TestCluster::state(int id) {
@@ -194,7 +194,7 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
 TestNode::~TestNode() {
   if(raftdirectorptr) delete raftdirectorptr;
   if(pollerptr) delete pollerptr;
-  if(raftptr) delete raftptr;
+  if(raftdispatcherptr) delete raftdispatcherptr;
   if(replicatorptr) delete replicatorptr;
   if(raftstateptr) delete raftstateptr;
   if(raftclockptr) delete raftclockptr;
@@ -237,7 +237,7 @@ std::string TestNode::unixsocket() {
 
 Poller* TestNode::poller() {
   if(pollerptr == nullptr) {
-    pollerptr = new Poller(unixsocket(), raft());
+    pollerptr = new Poller(unixsocket(), dispatcher());
   }
   return pollerptr;
 }
@@ -256,11 +256,11 @@ RaftDirector* TestNode::director() {
   return raftdirectorptr;
 }
 
-Raft* TestNode::raft() {
-  if(raftptr == nullptr) {
-    raftptr = new Raft(*journal(), *rocksdb(), *state(), *raftClock());
+RaftDispatcher* TestNode::dispatcher() {
+  if(raftdispatcherptr == nullptr) {
+    raftdispatcherptr = new RaftDispatcher(*journal(), *rocksdb(), *state(), *raftClock());
   }
-  return raftptr;
+  return raftdispatcherptr;
 }
 
 RaftState* TestNode::state() {

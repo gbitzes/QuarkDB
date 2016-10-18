@@ -21,18 +21,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "Raft.hh"
+#include "RaftDispatcher.hh"
 #include "../Response.hh"
 #include "RaftUtils.hh"
 
 #include <random>
 using namespace quarkdb;
 
-Raft::Raft(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
+RaftDispatcher::RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
 : journal(jour), stateMachine(sm), state(st), raftClock(rc) {
 }
 
-LinkStatus Raft::dispatch(Connection *conn, RedisRequest &req) {
+LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
   if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
 
@@ -78,11 +78,11 @@ LinkStatus Raft::dispatch(Connection *conn, RedisRequest &req) {
   }
 }
 
-LinkStatus Raft::service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type) {
+LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type) {
   return 0;
 }
 
-RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
+RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest &&req) {
   std::lock_guard<std::mutex> lock(raftCommand);
   if(req.leader == state.getMyself()) {
     qdb_throw("received appendEntries from myself");
@@ -123,7 +123,7 @@ RaftAppendEntriesResponse Raft::appendEntries(RaftAppendEntriesRequest &&req) {
   return {snapshot.term, journal.getLogSize(), true, ""};
 }
 
-RaftVoteResponse Raft::requestVote(RaftVoteRequest &req) {
+RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   std::lock_guard<std::mutex> lock(raftCommand);
   if(req.candidate == state.getMyself()) {
     qdb_throw("received request vote from myself");
@@ -171,13 +171,13 @@ RaftVoteResponse Raft::requestVote(RaftVoteRequest &req) {
   return {snapshot.term, granted};
 }
 
-RaftInfo Raft::info() {
+RaftInfo RaftDispatcher::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
   return {journal.getClusterID(), state.getMyself(), snapshot.term, journal.getLogSize(), snapshot.status};
 }
 
-bool Raft::fetch(LogIndex index, RaftEntry &entry) {
+bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {
   entry = {};
   rocksdb::Status st = journal.fetch(index, entry.term, entry.request);
   return st.ok();
