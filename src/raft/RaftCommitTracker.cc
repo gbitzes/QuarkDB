@@ -26,18 +26,36 @@
 #include <algorithm>
 using namespace quarkdb;
 
-RaftMatchIndexTracker::RaftMatchIndexTracker(RaftCommitTracker &tr, std::map<RaftServer, LogIndex>::iterator iter)
-: tracker(tr), it(iter) {
+RaftMatchIndexTracker::RaftMatchIndexTracker(RaftCommitTracker &tr, const RaftServer &srv) {
+  reset(tr, srv);
 }
 
+void RaftMatchIndexTracker::reset() {
+  if(tracker) {
+    tracker->deregister(*this);
+    tracker = nullptr;
+    it = std::map<RaftServer, LogIndex>::iterator();
+  }
+}
+
+void RaftMatchIndexTracker::reset(RaftCommitTracker &tr, const RaftServer &srv) {
+  reset();
+  tracker = &tr;
+  it = tracker->registration(srv);
+}
+
+RaftMatchIndexTracker::RaftMatchIndexTracker() { }
+
 RaftMatchIndexTracker::~RaftMatchIndexTracker() {
-  tracker.deregister(*this);
+  reset();
 }
 
 void RaftMatchIndexTracker::update(LogIndex newMatchIndex) {
-  if(newMatchIndex < it->second) qdb_throw("attempted to reduce matchIndex: " << it->second << " ==> " << newMatchIndex);
-  it->second = newMatchIndex;
-  tracker.updated(newMatchIndex);
+  if(tracker) {
+    if(newMatchIndex < it->second) qdb_throw("attempted to reduce matchIndex: " << it->second << " ==> " << newMatchIndex);
+    it->second = newMatchIndex;
+    tracker->updated(newMatchIndex);
+  }
 }
 
 RaftCommitTracker::RaftCommitTracker(RaftState &st, size_t quorumSize)
@@ -45,15 +63,14 @@ RaftCommitTracker::RaftCommitTracker(RaftState &st, size_t quorumSize)
   updateQuorum(quorumSize);
 }
 
-RaftCommitTracker::~RaftCommitTracker() {}
+RaftCommitTracker::~RaftCommitTracker() { }
 
-RaftMatchIndexTracker RaftCommitTracker::registration(const RaftServer &srv) {
+std::map<RaftServer, LogIndex>::iterator RaftCommitTracker::registration(const RaftServer &srv) {
   std::lock_guard<std::mutex> lock(mtx);
 
   if(matchIndex.count(srv) > 0) qdb_throw(srv.toString() << " is already being tracked");
   matchIndex[srv] = 0;
-
-  return {*this, matchIndex.find(srv)};
+  return matchIndex.find(srv);
 }
 
 void RaftCommitTracker::deregister(RaftMatchIndexTracker &tracker) {
@@ -64,6 +81,7 @@ void RaftCommitTracker::deregister(RaftMatchIndexTracker &tracker) {
 void RaftCommitTracker::updateQuorum(size_t newQuorum) {
   std::lock_guard<std::mutex> lock(mtx);
   if(newQuorum < 2) qdb_throw("quorum cannot be smaller than 2");
+  qdb_info("Updaing commit tracker quorum size: " << quorum << " ==> " << newQuorum);
   quorum = newQuorum;
 }
 

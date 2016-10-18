@@ -65,6 +65,7 @@ public:
 
   void shutdown();
   void wait(const std::chrono::milliseconds &t);
+  bool waitForCommits(const LogIndex currentCommit);
 
   RaftTerm getCurrentTerm();
   RaftStateSnapshot getSnapshot();
@@ -78,6 +79,7 @@ private:
 
   std::mutex update;
   std::condition_variable notifier;
+  std::condition_variable commitNotifier;
 
   std::atomic<RaftTerm> term;
   RaftStatus status;

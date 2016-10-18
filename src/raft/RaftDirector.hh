@@ -41,6 +41,7 @@ private:
   void main();
   void actAsFollower(RaftStateSnapshot &snapshot);
   void runForLeader(RaftStateSnapshot &snapshot);
+  void applyCommits();
 
   RocksDB &stateMachine;
   RaftJournal &journal;
@@ -48,6 +49,7 @@ private:
   RaftClock &raftClock;
 
   std::thread mainThread;
+  std::thread commitApplier;
 
 };
 

@@ -479,6 +479,28 @@ TEST_F(Raft_Director, achieve_natural_election) {
   for(int i = 0; i < 3; i++) {
     if(i != leaderID) ASSERT_EQ(snapshots[i].status, RaftStatus::FOLLOWER) << i;
   }
+
+  // let's push a bunch of entries to the leader, and verify they get committed
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    ASSERT_TRUE(journal(leaderID)->append(i+1, 0, testreqs[i]));
+  }
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  ASSERT_EQ(state(0)->getCommitIndex(), (int64_t)testreqs.size());
+  ASSERT_EQ(state(1)->getCommitIndex(), (int64_t)testreqs.size());
+  ASSERT_EQ(state(2)->getCommitIndex(), (int64_t)testreqs.size());
+
+  // verify entries one by one, for all three journals
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    for(size_t j = 0; j < 3; j++) {
+      RedisRequest req;
+      RaftTerm trm;
+
+      ASSERT_TRUE(journal(j)->fetch(i+1, trm, req).ok());
+      ASSERT_EQ(req, testreqs[i]);
+    }
+  }
 }
 
 TEST_F(Raft_Director, late_arrival_in_established_cluster) {
@@ -556,8 +578,12 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
     ASSERT_TRUE(journal(0)->append(i+1, 0, testreqs[i]));
   }
 
-  RaftMatchIndexTracker matchIndex1(tracker.registration(myself(1)));
-  RaftMatchIndexTracker matchIndex2(tracker.registration(myself(2)));
+  RaftMatchIndexTracker emptyTracker;
+  emptyTracker.update(300);
+  ASSERT_EQ(state(0)->getCommitIndex(), 0);
+
+  RaftMatchIndexTracker matchIndex1(tracker, myself(1));
+  RaftMatchIndexTracker matchIndex2(tracker, myself(2));
 
   matchIndex1.update(1);
   ASSERT_EQ(state(0)->getCommitIndex(), 1);
@@ -582,7 +608,7 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
   matchIndex1.update(10);
   ASSERT_EQ(state(0)->getCommitIndex(), 4);
 
-  RaftMatchIndexTracker matchIndex3(tracker.registration(RaftServer {"some_server", 1234}));
+  RaftMatchIndexTracker matchIndex3(tracker, RaftServer("some_server", 1234));
   matchIndex3.update(15); // now we have 10, 4, 15
   ASSERT_EQ(state(0)->getCommitIndex(), 10);
 

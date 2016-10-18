@@ -273,6 +273,7 @@ void RaftState::shutdown() {
   std::unique_lock<std::mutex> lock(update);
   updateStatus(RaftStatus::SHUTDOWN);
   notifier.notify_all();
+  commitNotifier.notify_all();
 }
 
 //------------------------------------------------------------------------------
@@ -282,6 +283,15 @@ void RaftState::wait(const std::chrono::milliseconds &t) {
   std::unique_lock<std::mutex> lock(update);
   if(status == RaftStatus::SHUTDOWN) return;
   notifier.wait_for(lock, t);
+}
+
+bool RaftState::waitForCommits(const LogIndex currentCommit) {
+  std::unique_lock<std::mutex> lock(update);
+  if(status == RaftStatus::SHUTDOWN) return false;
+  if(currentCommit < commitIndex) return true;
+
+  commitNotifier.wait(lock);
+  return true;
 }
 
 //------------------------------------------------------------------------------

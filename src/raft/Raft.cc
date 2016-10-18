@@ -32,10 +32,6 @@ Raft::Raft(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
 : journal(jour), stateMachine(sm), state(st), raftClock(rc) {
 }
 
-RaftState* Raft::getState() {
-  return &state;
-}
-
 LinkStatus Raft::dispatch(Link *link, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
   if(it == redis_cmd_map.end()) return Response::err(link, SSTR("unknown command " << quotes(req[0])));

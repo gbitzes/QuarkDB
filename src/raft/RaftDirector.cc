@@ -24,17 +24,40 @@
 #include "RaftDirector.hh"
 #include "RaftUtils.hh"
 #include "RaftReplicator.hh"
+#include "../Dispatcher.hh"
 using namespace quarkdb;
 
 RaftDirector::RaftDirector(RocksDB &sm, RaftJournal &jour, RaftState &st, RaftClock &rc)
 : stateMachine(sm), journal(jour), state(st), raftClock(rc) {
 
   mainThread = std::thread(&RaftDirector::main, this);
+  commitApplier = std::thread(&RaftDirector::applyCommits, this);
 }
 
 RaftDirector::~RaftDirector() {
   state.shutdown();
   mainThread.join();
+  commitApplier.join();
+}
+
+void RaftDirector::applyCommits() {
+  RedisDispatcher dispatcher(stateMachine);
+  LogIndex commitIndex = state.getCommitIndex(); // local cached value
+  while(state.waitForCommits(commitIndex)) {
+    commitIndex = state.getCommitIndex();
+    RedisRequest req;
+
+    for(LogIndex index = journal.getLastApplied()+1; index < commitIndex; index++) {
+      RaftTerm tmp;
+      if(!journal.fetch(index, tmp, req).ok()) {
+        qdb_critical("error when trying to fetch journal entry " << index << " for the purpose of applying it to the state machine");
+        break; // try again, I guess?
+      }
+
+      // TODO!! also, make applying a journal entry atomic?
+      journal.setLastApplied(index);
+    }
+  }
 }
 
 void RaftDirector::main() {

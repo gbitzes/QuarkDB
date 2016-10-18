@@ -45,14 +45,17 @@ class RaftCommitTracker;
 
 class RaftMatchIndexTracker {
 public:
-  RaftMatchIndexTracker(RaftMatchIndexTracker&&) = default;
+  RaftMatchIndexTracker(RaftCommitTracker &tr, const RaftServer &srv);
+  RaftMatchIndexTracker();
   ~RaftMatchIndexTracker();
+
   DISALLOW_COPY_AND_ASSIGN(RaftMatchIndexTracker);
 
   void update(LogIndex newMatchIndex);
+  void reset(RaftCommitTracker &tr, const RaftServer &srv);
+  void reset();
 private:
-  RaftMatchIndexTracker(RaftCommitTracker &tracker, std::map<RaftServer, LogIndex>::iterator it);
-  RaftCommitTracker &tracker;
+  RaftCommitTracker *tracker = nullptr;
   std::map<RaftServer, LogIndex>::iterator it;
   friend class RaftCommitTracker;
 };
@@ -63,7 +66,8 @@ public:
   ~RaftCommitTracker();
 
   DISALLOW_COPY_AND_ASSIGN(RaftCommitTracker);
-  RaftMatchIndexTracker registration(const RaftServer &srv);
+  std::map<RaftServer, LogIndex>::iterator registration(const RaftServer &srv);
+  // RaftMatchIndexTracker registration(const RaftServer &srv);
   void updateQuorum(size_t newQuorum);
 private:
   std::mutex mtx;

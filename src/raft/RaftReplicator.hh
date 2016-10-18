@@ -28,6 +28,7 @@
 #include "RaftJournal.hh"
 #include "RaftState.hh"
 #include "RaftTimeouts.hh"
+#include "RaftCommitTracker.hh"
 #include <mutex>
 
 namespace quarkdb {
@@ -49,6 +50,8 @@ private:
 
   RaftJournal &journal;
   RaftState &state;
+
+  RaftCommitTracker commitTracker;
 
   std::atomic<int64_t> threadsAlive {0};
   std::atomic<bool> shutdown {0};

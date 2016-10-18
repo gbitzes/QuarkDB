@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include <thread>
+#include <algorithm>
 #include "RaftReplicator.hh"
 #include "RaftTalker.hh"
 #include "RaftUtils.hh"
@@ -29,7 +30,7 @@
 using namespace quarkdb;
 
 RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_, const RaftTimeouts t)
-: journal(journal_), state(state_), timeouts(t) {
+: journal(journal_), state(state_), commitTracker(state, (journal.getNodes().size()/2)+1), timeouts(t) {
 
 }
 
@@ -82,13 +83,26 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
   RaftTalker talker(target, journal.getClusterID());
   LogIndex nextIndex = journal.getLogSize();
 
+  RaftMatchIndexTracker matchIndex;
+  std::vector<RaftServer> nodes = journal.getNodes();
+  if(contains(nodes, target)) {
+    // not an observer, must keep track of its matchIndex
+    matchIndex.reset(commitTracker, target);
+  }
+
   bool online = false;
   int64_t payloadLimit = 1;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm()) {
+    // TODO: check if configuration epoch has changed
+
     RaftTerm prevTerm;
     RedisRequest tmp;
 
-    journal.fetch(nextIndex-1, prevTerm, tmp);
+    if(!journal.fetch(nextIndex-1, prevTerm, tmp).ok()) {
+      qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString());
+      state.wait(timeouts.getHeartbeatInterval());
+      continue;
+    }
 
     std::vector<RedisRequest> reqs;
     std::vector<RaftTerm> terms;
@@ -122,6 +136,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
           qdb_critical("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize);
         }
 
+        matchIndex.update(resp.logSize-1);
         nextIndex = resp.logSize;
         if(payloadLimit < 1024) {
           payloadLimit *= 2;
