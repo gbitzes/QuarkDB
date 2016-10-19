@@ -45,6 +45,14 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
 
       return conn->string(request[1]);
     }
+    case RedisCommand::DEBUG: {
+      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request[1] == "segfault" || request[1] == "SEGFAULT") {
+        *( (int*) nullptr) = 5; // bye bye
+      }
+
+      return conn->err(SSTR("unknown argument '" << request[1] << "'"));
+    }
     case RedisCommand::FLUSHALL: {
       if(request.size() != 1) return conn->errArgs(request[0]);
       rocksdb::Status st = store.flushall();

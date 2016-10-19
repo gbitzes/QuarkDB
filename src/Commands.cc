@@ -32,6 +32,7 @@ std::map<std::string,
 struct cmdMapInit {
   cmdMapInit() {
     redis_cmd_map["ping"] = {RedisCommand::PING, CommandType::CONTROL};
+    redis_cmd_map["debug"] = {RedisCommand::DEBUG, CommandType::CONTROL};
 
     redis_cmd_map["get"] = {RedisCommand::GET, CommandType::READ};
     redis_cmd_map["exists"] = {RedisCommand::EXISTS, CommandType::READ};

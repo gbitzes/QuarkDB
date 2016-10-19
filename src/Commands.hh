@@ -30,6 +30,8 @@ namespace quarkdb {
 
 enum class RedisCommand {
   PING,
+  DEBUG,
+
   FLUSHALL,
 
   GET,
