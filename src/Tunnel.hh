@@ -53,6 +53,19 @@ public:
   std::future<redisReplyPtr> execute(size_t nchunks, const char **chunks, const size_t *sizes);
 
   //----------------------------------------------------------------------------
+  // Convenience function, used mainly in tests.
+  // This makes it possible to call exec("get", "key") instead of having to
+  // build a vector.
+  //
+  // Extremely useful in macros, which don't support universal initialization.
+  //----------------------------------------------------------------------------
+
+  template<typename... Args>
+  std::future<redisReplyPtr> exec(const Args... args) {
+    return this->execute(RedisRequest {args...});
+  }
+
+  //----------------------------------------------------------------------------
   // Slight hack needed for unit tests. After an intercept has been added, any
   // connections to (hostname, ip) will use the designated unix socket, without
   // trying to open a TCP connection.
