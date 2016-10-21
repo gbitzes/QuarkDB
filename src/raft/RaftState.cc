@@ -181,7 +181,10 @@ bool RaftState::setCommitIndex(LogIndex newIndex) {
     return false;
   }
 
-  commitIndex = newIndex;
+  if(commitIndex < newIndex) {
+    commitIndex = newIndex;
+    commitNotifier.notify_all();
+  }
   return true;
 }
 

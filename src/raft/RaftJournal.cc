@@ -178,7 +178,7 @@ void RaftJournal::setLastApplied(LogIndex index) {
     throw FatalException(SSTR("attempted to set lastApplied to non-existent entry. index: " << index << ", logSize " << logSize));
   }
 
-  store.set_or_die("RAFT_LAST_APPLIED", std::to_string(index));\
+  store.set_or_die("RAFT_LAST_APPLIED", std::to_string(index));
   lastApplied = index;
 }
 
