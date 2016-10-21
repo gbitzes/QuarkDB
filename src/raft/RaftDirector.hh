@@ -40,7 +40,7 @@ public:
 private:
   void main();
   void actAsFollower(RaftStateSnapshot &snapshot);
-  void runForLeader(RaftStateSnapshot &snapshot);
+  void runForLeader();
   void applyCommits();
 
   RocksDB &stateMachine;
@@ -50,7 +50,6 @@ private:
 
   std::thread mainThread;
   std::thread commitApplier;
-
 };
 
 }

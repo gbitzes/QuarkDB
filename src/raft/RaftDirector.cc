@@ -86,14 +86,21 @@ void RaftDirector::main() {
         state.wait(raftClock.getTimeouts().getHeartbeatInterval());
       }
     }
+    else if(snapshot.status == RaftStatus::OBSERVER) {
+      state.wait(raftClock.getRandomTimeout());
+    }
     else if(snapshot.status == RaftStatus::CANDIDATE) {
       qdb_throw("should never happen");
     }
   }
 }
 
-void RaftDirector::runForLeader(RaftStateSnapshot &snapshot) {
-  // advance the term by one, become a candidate
+void RaftDirector::runForLeader() {
+  // don't reuse the snapshot from the main loop,
+  // it could have changed in-between
+  RaftStateSnapshot snapshot = state.getSnapshot();
+
+  // advance the term by one, become a candidate.
   if(!state.observed(snapshot.term+1, {})) return;
   if(!state.becomeCandidate(snapshot.term+1)) return;
 
@@ -121,7 +128,7 @@ void RaftDirector::actAsFollower(RaftStateSnapshot &snapshot) {
     state.wait(randomTimeout);
     if(raftClock.timeout()) {
       qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, leader is not sending heartbeats. Attempting to start election.");
-      runForLeader(snapshot);
+      runForLeader();
       return;
     }
   }

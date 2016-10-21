@@ -589,6 +589,29 @@ TEST_F(Raft_Director, late_consensus) {
   ASSERT_EQ(late_arrival.status, RaftStatus::FOLLOWER);
 }
 
+TEST_F(Raft_Director, election_with_different_journals) {
+  // start an election between #0 and #1 where #1 is guaranteed to win due
+  // to more up-to-date journal
+
+  RedisRequest req = {"set", "asdf", "abc"};
+  ASSERT_TRUE(journal(1)->append(1, 0, req));
+
+  prepare(0); prepare(1);
+  spinup(0);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  spinup(1);
+  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+  RaftStateSnapshot snapshot = state(0)->getSnapshot();
+  ASSERT_EQ(snapshot.leader, myself(1));
+  ASSERT_EQ(snapshot.status, RaftStatus::FOLLOWER);
+
+  snapshot = state(1)->getSnapshot();
+  ASSERT_EQ(snapshot.leader, myself(1));
+  ASSERT_EQ(snapshot.status, RaftStatus::LEADER);
+}
+
 TEST_F(Raft_CommitTracker, basic_sanity) {
   ASSERT_THROW(RaftCommitTracker(*state(0), 1), FatalException);
   ASSERT_THROW(RaftCommitTracker(*state(0), 0), FatalException);
