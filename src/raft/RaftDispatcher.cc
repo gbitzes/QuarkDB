@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Raft.cc
+// File: RaftDispatcher.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -38,11 +38,28 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
   RedisCommand cmd = it->second.first;
   switch(cmd) {
-    default: {
-      return this->service(conn, req, cmd, it->second.second);
-    }
     case RedisCommand::RAFT_INFO: {
+      // safe, read-only request, does not need authorization
       return conn->vector(this->info().toVector());
+    }
+    case RedisCommand::RAFT_FETCH: {
+      // safe, read-only request, does not need authorization
+      if(req.size() != 2) return conn->errArgs(req[0]);
+
+      LogIndex index;
+      if(!my_strtoll(req[1], index)) return conn->err(SSTR("could not parse " << req[1]));
+
+      RaftEntry entry;
+      std::vector<std::string> ret;
+
+      if(this->fetch(index, entry)) {
+        ret.emplace_back(std::to_string(entry.term));
+        for(size_t i = 0; i < entry.request.size(); i++) {
+          ret.emplace_back(entry.request[i]);
+        }
+      }
+
+      return conn->vector(ret);
     }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
@@ -74,6 +91,9 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
       conn->raftAuthorization = true;
       return conn->ok();
+    }
+    default: {
+      return this->service(conn, req, cmd, it->second.second);
     }
   }
 }
