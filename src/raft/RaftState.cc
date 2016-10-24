@@ -272,6 +272,10 @@ bool RaftState::becomeObserver(RaftTerm forTerm) {
   return true;
 }
 
+bool RaftState::inShutdown() {
+  return status == RaftStatus::SHUTDOWN;
+}
+
 void RaftState::shutdown() {
   std::unique_lock<std::mutex> lock(update);
   updateStatus(RaftStatus::SHUTDOWN);

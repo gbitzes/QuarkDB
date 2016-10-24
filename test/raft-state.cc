@@ -118,8 +118,10 @@ TEST_F(Raft_State, T1) {
   snapshot = {6, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE };
   ASSERT_EQ(state.getSnapshot(), snapshot);
 
+  ASSERT_FALSE(state.inShutdown());
   state.shutdown();
   ASSERT_FALSE(state.observed(200, nodes[0]));
+  ASSERT_TRUE(state.inShutdown());
 }
 
 {

@@ -64,6 +64,8 @@ public:
   LogIndex getCommitIndex();
 
   void shutdown();
+  bool inShutdown();
+
   void wait(const std::chrono::milliseconds &t);
   bool waitForCommits(const LogIndex currentCommit);
 
