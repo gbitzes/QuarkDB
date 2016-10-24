@@ -126,7 +126,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
 
       if(!resp.outcome) {
         // never try to touch entry #0
-        if(nextIndex >= 1 && nextIndex <= resp.logSize) {
+        if(nextIndex >= 2 && nextIndex <= resp.logSize) {
           nextIndex--;
         } else if(resp.logSize > 0) {
           nextIndex = resp.logSize;

@@ -81,26 +81,17 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   futures.emplace_back(tunnel(leaderID)->execute({"set", "asdf", "1234"}));
   futures.emplace_back(tunnel(leaderID)->execute({"get", "asdf"}));
 
-  DBG("here");
-
   ASSERT_REPLY(futures[0], "");
-  DBG("here");
   ASSERT_REPLY(futures[1], "PONG");
-  DBG("here");
   ASSERT_REPLY(futures[2], "OK");
-  DBG("here");
   ASSERT_REPLY(futures[3], "1234");
-  DBG("here");
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->execute({"set", "asdf", "3456"}));
   futures.emplace_back(tunnel(leaderID)->execute({"get", "asdf"}));
 
-  DBG("here");
   ASSERT_REPLY(futures[0], "OK");
-  DBG("here");
   ASSERT_REPLY(futures[1], "3456");
-  DBG("here");
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
