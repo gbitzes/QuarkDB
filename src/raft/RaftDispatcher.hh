@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Raft.hh
+// File: RaftDispatcher.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -48,7 +48,6 @@ public:
   RaftVoteResponse requestVote(RaftVoteRequest &req);
 private:
   LinkStatus service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type);
-  std::multimap<LogIndex, PendingRequest> pending;
 
   //----------------------------------------------------------------------------
   // Raft commands should not be run in parallel, but be serialized

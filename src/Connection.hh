@@ -1,5 +1,5 @@
 //----------------------------------------------------------------------
-// File: RedisConnection.hh
+// File: Connection.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -32,31 +32,6 @@
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
-// Information about a pending request, which can be either a read or a write.
-// Every write corresponds to exactly one entry in the raft journal. Naturally,
-// we have to wait until it's committed before responding to the client.
-//
-// But why do reads need to wait, too? If a read request is made right after a
-// write with pipelining, we have to give the responses in the correct order,
-// so a read has to be queued until the write that's blocking us has finished.
-//
-// The queue will usually look like this:
-// write2, read2, read2, read2, write3, read3, read3, read3, write4, write5
-//
-// All readN requests are being blocked by one or more writes, and all writes
-// correspond to a single raft journal entry.
-//
-// Reads will be processed as soon as they aren't being blocked by a write. If
-// all a client does is read, the queue will not be used.
-//------------------------------------------------------------------------------
-
-struct PendingRequest {
-  bool write; // this is a write request that must go through the raft log
-  RedisRequest req; // the contents of the request
-  LogIndex index; // the index of the *last* write request that we've observed.
-};
-
-//------------------------------------------------------------------------------
 // Keeps track of connection-specific state.
 //
 // The proper OOP solution would be to separate the raft-specific parts into
@@ -66,9 +41,11 @@ struct PendingRequest {
 // case.
 //------------------------------------------------------------------------------
 
+class Dispatcher;
 class Connection {
 public:
   Connection(Link *link);
+  Connection();
   ~Connection();
 
   LinkStatus err(const std::string &msg);
@@ -82,13 +59,44 @@ public:
   LinkStatus vector(const std::vector<std::string> &vec);
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
 
+  LinkStatus flushPending(const std::string &msg);
+  LinkStatus appendError(const std::string &msg);
+  LinkStatus appendReq(Dispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
+  LogIndex dispatchPending(Dispatcher *dispatcher, LogIndex commitIndex);
+
   bool raftAuthorization = false;
-  std::queue<PendingRequest> pending;
 private:
-  Link *link;
+  Link *link = nullptr;
+  std::mutex mtx;
 
+  //----------------------------------------------------------------------------
+  // Information about a pending request, which can be either a read or a write.
+  // Every write corresponds to exactly one entry in the raft journal. Naturally,
+  // we have to wait until it's committed before responding to the client.
+  //
+  // But why do reads need to wait, too? If a read request is made right after a
+  // write with pipelining, we have to give the responses in the correct order,
+  // so a read has to be queued until the write that's blocking us has finished.
+  //
+  // The queue will usually look like this:
+  // write, read, read, read, write, read, read, read, write, write
+  //
+  // All read requests are being blocked by one or more writes, and each write
+  // corresponds to a unique raft journal entry.
+  //
+  // Reads will be processed as soon as they aren't being blocked by a write. If
+  // all a client does is read, the queue will not be used.
+  //----------------------------------------------------------------------------
+
+  struct PendingRequest {
+    RedisRequest req;
+    std::string error; // if not empty, we're just storing an error message for the client
+    LogIndex index = -1; // the corresponding entry in the raft journal - only relevant for write requests
+  };
+
+  LogIndex lastIndex = -1;
+  std::queue<PendingRequest> pending;
 };
-
 
 }
 
