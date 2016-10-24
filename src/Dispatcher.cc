@@ -48,7 +48,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     case RedisCommand::DEBUG: {
       if(request.size() != 2) return conn->errArgs(request[0]);
       if(request[1] == "segfault" || request[1] == "SEGFAULT") {
-        *( (int*) nullptr) = 5; // bye bye
+        *( (int*) nullptr) = 5; // bye bye, commit seppuku
       }
 
       return conn->err(SSTR("unknown argument '" << request[1] << "'"));

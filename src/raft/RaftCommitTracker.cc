@@ -81,7 +81,7 @@ void RaftCommitTracker::deregister(RaftMatchIndexTracker &tracker) {
 void RaftCommitTracker::updateQuorum(size_t newQuorum) {
   std::lock_guard<std::mutex> lock(mtx);
   if(newQuorum < 2) qdb_throw("quorum cannot be smaller than 2");
-  qdb_info("Updaing commit tracker quorum size: " << quorum << " ==> " << newQuorum);
+  qdb_info("Updating commit tracker quorum size: " << quorum << " ==> " << newQuorum);
   quorum = newQuorum;
 }
 
@@ -105,7 +105,7 @@ void RaftCommitTracker::recalculateCommitIndex() {
 
   LogIndex stateCommitIndex = state.getCommitIndex();
   if(sortedVector[threshold] < stateCommitIndex) {
-    qdb_critical("calculated a commitIndex which is smaller than state.commitIndex: " << sortedVector[threshold] << ", " << stateCommitIndex << ". Will be unable to commit new entries until this is resolved.");
+    qdb_warn("calculated a commitIndex which is smaller than state.commitIndex: " << sortedVector[threshold] << ", " << stateCommitIndex << ". Will be unable to commit new entries until this is resolved.");
   }
   else {
     commitIndex = sortedVector[threshold];

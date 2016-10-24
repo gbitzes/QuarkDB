@@ -97,9 +97,12 @@ struct RaftVoteResponse {
 struct RaftInfo {
   RaftClusterID clusterID;
   RaftServer myself;
+  std::vector<RaftServer> nodes;
   RaftTerm term;
   LogIndex logSize;
   RaftStatus status;
+  LogIndex commitIndex;
+  LogIndex lastApplied;
   size_t blockedWrites;
 
   std::vector<std::string> toVector() {
@@ -107,8 +110,11 @@ struct RaftInfo {
     ret.push_back(SSTR("TERM " << term));
     ret.push_back(SSTR("LOG-SIZE " << logSize));
     ret.push_back(SSTR("MYSELF " << myself.toString()));
+    ret.push_back(SSTR("NODES " << serializeNodes(nodes)));
     ret.push_back(SSTR("CLUSTER-ID " << clusterID));
     ret.push_back(SSTR("STATUS " << statusToString(status)));
+    ret.push_back(SSTR("COMMIT-INDEX " << commitIndex));
+    ret.push_back(SSTR("LAST-APPLIED " << lastApplied));
     ret.push_back(SSTR("BLOCKED-WRITES " << blockedWrites));
     return ret;
   }
