@@ -154,6 +154,10 @@ std::string TestCluster::unixsocket(int id) {
   return node(id)->unixsocket();
 }
 
+Tunnel* TestCluster::tunnel(int id) {
+  return node(id)->tunnel();
+}
+
 TestNode* TestCluster::node(int id, const RaftServer &srv) {
   TestNode *ret = testnodes[id];
   if(ret == nullptr) {
@@ -198,6 +202,7 @@ TestNode::~TestNode() {
   if(replicatorptr) delete replicatorptr;
   if(raftstateptr) delete raftstateptr;
   if(raftclockptr) delete raftclockptr;
+  if(tunnelptr) delete tunnelptr;
 }
 
 RocksDB* TestNode::rocksdb() {
@@ -251,7 +256,7 @@ RaftClock* TestNode::raftClock() {
 
 RaftDirector* TestNode::director() {
   if(raftdirectorptr == nullptr) {
-    raftdirectorptr = new RaftDirector(*rocksdb(), *journal(), *state(), *raftClock());
+    raftdirectorptr = new RaftDirector(*dispatcher(), *journal(), *state(), *raftClock());
   }
   return raftdirectorptr;
 }
@@ -275,6 +280,13 @@ RaftReplicator* TestNode::replicator() {
     replicatorptr = new RaftReplicator(*journal(), *state(), raftClock()->getTimeouts());
   }
   return replicatorptr;
+}
+
+Tunnel* TestNode::tunnel() {
+  if(tunnelptr == nullptr) {
+    tunnelptr = new Tunnel(myself().hostname, myself().port);
+  }
+  return tunnelptr;
 }
 
 }

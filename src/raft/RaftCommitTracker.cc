@@ -105,7 +105,7 @@ void RaftCommitTracker::recalculateCommitIndex() {
 
   LogIndex stateCommitIndex = state.getCommitIndex();
   if(sortedVector[threshold] < stateCommitIndex) {
-    qdb_critical("calculated a commitIndex which is smaller than state.commitIndex: " << sortedVector[threshold] << ", " << stateCommitIndex << ". Did the quorum change recently?");
+    qdb_critical("calculated a commitIndex which is smaller than state.commitIndex: " << sortedVector[threshold] << ", " << stateCommitIndex << ". Will be unable to commit new entries until this is resolved.");
   }
   else {
     commitIndex = sortedVector[threshold];

@@ -80,6 +80,7 @@ public:
   Poller *poller();
   RaftClock *raftClock();
   RaftDirector *director();
+  Tunnel *tunnel();
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
@@ -97,6 +98,7 @@ private:
   RaftState *raftstateptr = nullptr;
   RaftClock *raftclockptr = nullptr;
   RaftDirector *raftdirectorptr = nullptr;
+  Tunnel *tunnelptr = nullptr;
 
   std::string unixsocketpath;
 };
@@ -116,6 +118,7 @@ public:
   Poller *poller(int id = 0);
   RaftServer myself(int id = 0);
   RaftDirector *director(int id = 0);
+  Tunnel *tunnel(int id = 0);
 
   // In some tests, the latency of opening rocksdb can kill us, since by the
   // time the db is open raft starts timing out.

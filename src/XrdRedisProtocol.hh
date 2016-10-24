@@ -39,6 +39,7 @@
 #include "raft/RaftJournal.hh"
 #include "raft/RaftState.hh"
 #include "raft/RaftTimeouts.hh"
+#include "raft/RaftDirector.hh"
 
 namespace quarkdb {
 
@@ -83,6 +84,7 @@ protected:
   static RaftJournal *journal;
   static RaftState *state;
   static RaftClock *raftClock;
+  static RaftDirector *director;
 };
 
 }

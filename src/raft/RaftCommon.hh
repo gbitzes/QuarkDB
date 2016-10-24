@@ -100,6 +100,7 @@ struct RaftInfo {
   RaftTerm term;
   LogIndex logSize;
   RaftStatus status;
+  size_t blockedWrites;
 
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
@@ -108,6 +109,7 @@ struct RaftInfo {
     ret.push_back(SSTR("MYSELF " << myself.toString()));
     ret.push_back(SSTR("CLUSTER-ID " << clusterID));
     ret.push_back(SSTR("STATUS " << statusToString(status)));
+    ret.push_back(SSTR("BLOCKED-WRITES " << blockedWrites));
     return ret;
   }
 };

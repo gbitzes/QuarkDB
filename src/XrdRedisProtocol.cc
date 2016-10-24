@@ -47,6 +47,7 @@ Dispatcher *XrdRedisProtocol::dispatcher = 0;
 RaftJournal *XrdRedisProtocol::journal = 0;
 RaftState *XrdRedisProtocol::state = 0;
 RaftClock *XrdRedisProtocol::raftClock = 0;
+RaftDirector *XrdRedisProtocol::director = 0;
 
 //------------------------------------------------------------------------------
 // XrdRedisProtocol class
@@ -125,7 +126,9 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
     journal = new RaftJournal(configuration.getRaftLog());
     state = new RaftState(*journal, configuration.getMyself());
     raftClock = new RaftClock(defaultTimeouts);
-    dispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);
+    RaftDispatcher *raftdispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);
+    dispatcher = raftdispatcher;
+    director = new RaftDirector(*raftdispatcher, *journal, *state, *raftClock);
   }
   else {
     qdb_throw("cannot determine configuration mode"); // should never happen

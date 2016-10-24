@@ -29,7 +29,7 @@
 using namespace quarkdb;
 
 RaftDispatcher::RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc) {
+: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm) {
 }
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
@@ -99,7 +99,79 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type) {
-  return 0;
+  // control command, service even if unavailable
+  if(type == CommandType::CONTROL) {
+    return conn->appendReq(&redisDispatcher, std::move(req));
+    // return serviceRead(conn, req, cmd, type);
+  }
+
+  // if not leader, redirect
+  RaftStateSnapshot snapshot = state.getSnapshot();
+  if(snapshot.status != RaftStatus::LEADER) {
+    if(snapshot.leader.empty()) {
+      return conn->appendError("unavailable");
+    }
+    return conn->appendError(SSTR("MOVED 0 " << snapshot.leader.toString()));
+  }
+
+  // read request, easy case
+  if(type == CommandType::READ || type == CommandType::CONTROL) {
+    return conn->appendReq(&redisDispatcher, std::move(req));
+    // return serviceRead(conn, req, cmd, type);
+  }
+
+  // write request, must append to raft log
+  std::lock_guard<std::mutex> lock(raftCommand);
+
+  LogIndex index = journal.getLogSize();
+  if(!journal.append(index, snapshot.term, req)) {
+    qdb_critical("appending to journal failed for index = " << index <<
+    " and term " << snapshot.term << " when servicing client request");
+    return conn->appendError("unknown error");
+  }
+
+  conn->appendReq(&redisDispatcher, std::move(req), index);
+  blockedWrites[index] = conn;
+  return 1;
+}
+
+void RaftDispatcher::flushQueues(const std::string &msg) {
+  for(auto it = blockedWrites.begin(); it != blockedWrites.end(); it++) {
+    it->second->flushPending(msg);
+  }
+  blockedWrites.clear();
+}
+
+LinkStatus RaftDispatcher::applyCommits(LogIndex index) {
+  std::lock_guard<std::mutex> lock(raftCommand);
+
+  auto it = blockedWrites.find(index);
+  if(it == blockedWrites.end()) {
+    // this journal entry is not related to any connection,
+    // let's just apply it manually from the journal
+    // This happens in followers.
+
+    RedisRequest req;
+    RaftTerm term;
+
+    if(!journal.fetch(index, term, req).ok()) {
+      // serious error, threatens consistency. Bail out
+      qdb_throw("failed to fetch log entry " << index << " when applying commits");
+    }
+
+    Connection devnull;
+    redisDispatcher.dispatch(&devnull, req);
+    return 1;
+  }
+
+  Connection *conn = it->second;
+
+  LogIndex newBlockingIndex = conn->dispatchPending(&redisDispatcher, index);
+  if(newBlockingIndex > 0) {
+    blockedWrites[newBlockingIndex] = conn;
+  }
+  blockedWrites.erase(it);
+  return 1;
 }
 
 RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest &&req) {
@@ -111,6 +183,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
   state.observed(req.term, req.leader);
   RaftStateSnapshot snapshot = state.getSnapshot();
 
+  if(state.inShutdown()) return {snapshot.term, journal.getLogSize(), false, "in shutdown"};
   if(req.term < snapshot.term) {
     return {snapshot.term, journal.getLogSize(), false, "My raft term is newer"};
   }
@@ -121,6 +194,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     return {snapshot.term, journal.getLogSize(), false, "You are not the current leader"};
   }
 
+  flushQueues(SSTR("MOVED 0 " << snapshot.leader.toString()));
   raftClock.heartbeat();
 
   if(!journal.matchEntries(req.prevIndex, req.prevTerm)) {
@@ -139,7 +213,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     }
   }
 
-  state.setCommitIndex(std::min(journal.getLogSize(), req.commitIndex));
+  state.setCommitIndex(std::min(journal.getLogSize()-1, req.commitIndex));
   return {snapshot.term, journal.getLogSize(), true, ""};
 }
 
@@ -194,7 +268,8 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
 RaftInfo RaftDispatcher::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
-  return {journal.getClusterID(), state.getMyself(), snapshot.term, journal.getLogSize(), snapshot.status};
+  return {journal.getClusterID(), state.getMyself(), snapshot.term,
+          journal.getLogSize(), snapshot.status, blockedWrites.size()};
 }
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {

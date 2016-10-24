@@ -46,7 +46,9 @@ public:
 
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
   RaftVoteResponse requestVote(RaftVoteRequest &req);
+  LinkStatus applyCommits(LogIndex index);
 private:
+  void flushQueues(const std::string &msg);
   LinkStatus service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type);
 
   //----------------------------------------------------------------------------
@@ -62,9 +64,16 @@ private:
   RaftState &state;
 
   //----------------------------------------------------------------------------
+  // The request queues live inside the connections, but we need to know *which*
+  // connection is being blocked by *which* journal entry.
+  //----------------------------------------------------------------------------
+  std::map<LogIndex, Connection*> blockedWrites;
+
+  //----------------------------------------------------------------------------
   // Misc
   //----------------------------------------------------------------------------
   RaftClock &raftClock;
+  RedisDispatcher redisDispatcher;
 };
 
 }

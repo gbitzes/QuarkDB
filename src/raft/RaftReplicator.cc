@@ -92,7 +92,9 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
 
   bool online = false;
   int64_t payloadLimit = 1;
-  while(shutdown == 0 && snapshot.term == state.getCurrentTerm()) {
+  while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+    if(nextIndex <= 0) std::terminate();
+
     // TODO: check if configuration epoch has changed
 
     RaftTerm prevTerm;

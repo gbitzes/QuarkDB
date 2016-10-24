@@ -28,13 +28,14 @@
 #include "RaftJournal.hh"
 #include "RaftState.hh"
 #include "RaftTimeouts.hh"
+#include "RaftDispatcher.hh"
 #include <thread>
 
 namespace quarkdb {
 
 class RaftDirector {
 public:
-  RaftDirector(RocksDB &sm, RaftJournal &journal, RaftState &state, RaftClock &rc);
+  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, RaftState &state, RaftClock &rc);
   ~RaftDirector();
   DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
@@ -43,7 +44,8 @@ private:
   void runForLeader();
   void applyCommits();
 
-  RocksDB &stateMachine;
+  RaftDispatcher &dispatcher;
+  // RocksDB &stateMachine;
   RaftJournal &journal;
   RaftState &state;
   RaftClock &raftClock;

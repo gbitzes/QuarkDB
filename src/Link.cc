@@ -35,6 +35,10 @@ Link::Link(int fd_)
   fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 }
 
+Link::~Link() {
+  Close();
+}
+
 LinkStatus Link::Recv(char *buff, int blen, int timeout) {
   if(link) return link->Recv(buff, blen, timeout);
   if(fd >= 0) return fdRecv(buff, blen, timeout);
