@@ -29,17 +29,14 @@
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
-#define UNIX_SOCKET_PATH "/tmp/tunnel-unix-socket-2"
 
 TEST(RaftTalker, T1) {
-  unlink(UNIX_SOCKET_PATH);
   std::string clusterID = "b50da34e-ac15-4c02-b5a7-296454e5f779";
-  RaftServer node = {"server3", 1234};
+  RaftServer node = {"localhost", 12344};
   RaftServer myself = {"its_me_ur_leader", 1337};
-  Tunnel::addIntercept(node.hostname, node.port, UNIX_SOCKET_PATH);
   RaftTalker talker(node, clusterID);
 
-  UnixSocketListener listener(UNIX_SOCKET_PATH);
+  SocketListener listener(12344);
   int s2 = listener.accept();
   ASSERT_GT(s2, 0);
 

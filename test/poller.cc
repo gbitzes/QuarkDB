@@ -30,14 +30,12 @@ using namespace quarkdb;
 
 #define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
 
-
-
 class tPoller : public TestCluster3Nodes {};
 
 TEST_F(tPoller, T1) {
   RedisDispatcher dispatcher(*rocksdb());
 
-  Poller rocksdbPoller(unixsocket(), &dispatcher);
+  Poller rocksdbPoller(myself().port, &dispatcher);
 
   // start first connection
   Tunnel tunnel(myself().hostname, myself().port);
@@ -69,7 +67,7 @@ TEST_F(tPoller, test_reconnect) {
   Tunnel tunnel(myself().hostname, myself().port);
 
   for(size_t reconnects = 0; reconnects < 5; reconnects++) {
-    Poller rocksdbpoller(unixsocket(), &dispatcher);
+    Poller rocksdbpoller(myself().port, &dispatcher);
 
     bool success = false;
     for(size_t i = 0; i < 30; i++) {

@@ -30,8 +30,6 @@
 
 using namespace quarkdb;
 
-#define UNIX_SOCKET_PATH "/tmp/tunnel-unix-socket"
-
 static void assert_receive(int fd, const std::string &contents) {
   char buffer[contents.size()];
   int len = recv(fd, buffer, contents.size(), 0);
@@ -48,15 +46,13 @@ static std::string str_from_reply(redisReplyPtr &reply) {
 }
 
 TEST(Tunnel, T1) {
-  unlink(UNIX_SOCKET_PATH);
-  Tunnel::addIntercept("server1", 1234, UNIX_SOCKET_PATH);
-  Tunnel tunnel("server1", 1234);
+  Tunnel tunnel("localhost", 1234);
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
   ASSERT_EQ(fut.get(), nullptr);
 
-  UnixSocketListener listener(UNIX_SOCKET_PATH);
+  SocketListener listener(1234);
   int s2 = listener.accept();
   ASSERT_GT(s2, 0);
 
@@ -91,15 +87,13 @@ TEST(Tunnel, T1) {
 
 TEST(Tunnel, T2) {
   // with handshake
-  unlink(UNIX_SOCKET_PATH);
-  Tunnel::addIntercept("server1", 1234, UNIX_SOCKET_PATH);
-  Tunnel tunnel("server1", 1234, {"RAFT_HANDSHAKE", "some-cluster-id"});
+  Tunnel tunnel("localhost", 1234, {"RAFT_HANDSHAKE", "some-cluster-id"});
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
   ASSERT_EQ(fut.get(), nullptr);
 
-  UnixSocketListener listener(UNIX_SOCKET_PATH);
+  SocketListener listener(1234);
   int s2 = listener.accept();
   ASSERT_GT(s2, 0);
 

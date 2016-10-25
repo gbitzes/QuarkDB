@@ -67,15 +67,19 @@ public:
 
   //----------------------------------------------------------------------------
   // Slight hack needed for unit tests. After an intercept has been added, any
-  // connections to (hostname, ip) will use the designated unix socket, without
-  // trying to open a TCP connection.
+  // connections to (host, ip) will be redirected to (host2, ip2) - usually
+  // localhost.
   //----------------------------------------------------------------------------
-  static void addIntercept(const std::string &host, const int port, const std::string &unixSocket);
+  static void addIntercept(const std::string &host, const int port,
+                           const std::string &host2, const int port2);
   static void clearIntercepts();
 private:
   std::string host;
   int port;
-  std::string unixSocket;
+
+  std::string targetHost;
+  int targetPort;
+
   std::atomic<int64_t> shutdown {false};
 
   void startEventLoop();
@@ -94,7 +98,7 @@ private:
   //----------------------------------------------------------------------------
   // We consult this map each time a new connection is to be opened
   //----------------------------------------------------------------------------
-  static std::map<std::pair<std::string, int>, std::string> intercepts;
+  static std::map<std::pair<std::string, int>, std::pair<std::string, int>> intercepts;
   static std::mutex interceptsMutex;
 };
 

@@ -34,12 +34,12 @@ using namespace quarkdb;
 // The intercepts machinery
 //------------------------------------------------------------------------------
 
-std::map<std::pair<std::string, int>, std::string> Tunnel::intercepts;
+std::map<std::pair<std::string, int>, std::pair<std::string, int>> Tunnel::intercepts;
 std::mutex Tunnel::interceptsMutex;
 
-void Tunnel::addIntercept(const std::string &hostname, int port, const std::string &unixSocket) {
+void Tunnel::addIntercept(const std::string &hostname, int port, const std::string &host2, int port2) {
   std::lock_guard<std::mutex> lock(interceptsMutex);
-  intercepts[std::make_pair(hostname, port)] = unixSocket;
+  intercepts[std::make_pair(hostname, port)] = std::make_pair(host2, port2);
 }
 
 void Tunnel::clearIntercepts() {
@@ -67,14 +67,18 @@ Tunnel::Tunnel(const std::string &host_, const int port_, RedisRequest handshake
 
 void Tunnel::discoverIntercept() {
   //----------------------------------------------------------------------------
-  // If this (host, port) pair is being intercepted, connect to the designated
-  // unix socket instead.
+  // If this (host, port) pair is being intercepted, redirect to a different
+  // (host, port) pair instead.
   //----------------------------------------------------------------------------
   std::lock_guard<std::mutex> lock(interceptsMutex);
+
+  targetHost = host;
+  targetPort = port;
+
   auto it = intercepts.find(std::make_pair(host, port));
-  unixSocket.clear();
   if(it != intercepts.end()) {
-    unixSocket = it->second;
+    targetHost = it->second.first;
+    targetPort = it->second.second;
   }
 }
 
@@ -87,7 +91,7 @@ Tunnel::~Tunnel() {
 
 void Tunnel::freeContext() {
   if(asyncContext) {
-    redisAsyncFree(asyncContext);
+    // redisAsyncFree(asyncContext);
     asyncContext = nullptr;
   }
 }
@@ -168,12 +172,7 @@ void Tunnel::connect() {
   freeContext();
 
   discoverIntercept();
-  if(unixSocket.empty()) {
-    asyncContext = redisAsyncConnect(host.c_str(), port);
-  }
-  else {
-    asyncContext = redisAsyncConnectUnix(unixSocket.c_str());
-  }
+  asyncContext = redisAsyncConnect(targetHost.c_str(), targetPort);
 
   redisAsyncSetDisconnectCallback(asyncContext, disconnectCallback);
 
@@ -190,9 +189,7 @@ void Tunnel::connect() {
 }
 
 void Tunnel::eventLoop() {
-  if(!unixSocket.empty()) {
-    signal(SIGPIPE, SIG_IGN);
-  }
+  signal(SIGPIPE, SIG_IGN);
 
   std::chrono::milliseconds backoff(1);
   while(true) {

@@ -35,7 +35,7 @@ namespace quarkdb {
 
 class Poller {
 public:
-  Poller(const std::string &path, Dispatcher *dispatcher);
+  Poller(int port, Dispatcher *dispatcher);
   ~Poller();
   DISALLOW_COPY_AND_ASSIGN(Poller);
 
@@ -50,10 +50,9 @@ private:
   std::thread mainThread;
 
   std::string path;
-  struct sockaddr_un local, remote;
+  struct sockaddr_in local, remote;
   int s;
   size_t len;
-  socklen_t t;
 };
 
 }

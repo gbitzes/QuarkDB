@@ -34,6 +34,13 @@
 #include "Poller.hh"
 #include <gtest/gtest.h>
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
 namespace quarkdb {
 
 extern std::vector<RedisRequest> testreqs;
@@ -84,7 +91,7 @@ public:
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
-  std::string unixsocket();
+  // std::string unixsocket();
 private:
   RaftServer myselfSrv;
   RaftClusterID clusterID;
@@ -100,7 +107,7 @@ private:
   RaftDirector *raftdirectorptr = nullptr;
   Tunnel *tunnelptr = nullptr;
 
-  std::string unixsocketpath;
+  // std::string unixsocketpath;
 };
 
 // Contains everything needed to simulate a cluster with an arbitrary number of nodes.
@@ -131,7 +138,7 @@ public:
   // initialize nodes using information passed on the nodes variable, except if srv is set
   TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);
-  std::string unixsocket(int id = 0);
+  // std::string unixsocket(int id = 0);
   RaftClusterID clusterID();
 
   int getServerID(const RaftServer &srv);
@@ -153,33 +160,93 @@ public:
     GlobalEnv::server(1),
     GlobalEnv::server(2)
   }) {
-    Tunnel::clearIntercepts();
+    // Tunnel::clearIntercepts();
   };
 };
 
-class UnixSocketListener {
+// class UnixSocketListener {
+// private:
+//   struct sockaddr_un local, remote;
+//   unsigned int s;
+//   size_t len;
+//   socklen_t t;
+// public:
+//   UnixSocketListener(const std::string path) {
+//     s = socket(AF_UNIX, SOCK_STREAM, 0);
+//     local.sun_family = AF_UNIX;
+//     strcpy(local.sun_path, path.c_str());
+//     len = strlen(local.sun_path) + sizeof(local.sun_family);
+//     bind(s, (struct sockaddr *)&local, len);
+//     listen(s, 1);
+//     t = sizeof(remote);
+//   }
+//
+//   ~UnixSocketListener() {
+//
+//   }
+//
+//   int accept() {
+//     return ::accept(s, (struct sockaddr *)&remote, &t);
+//   }
+// };
+
+class SocketListener {
 private:
-  struct sockaddr_un local, remote;
-  unsigned int s;
-  size_t len;
-  socklen_t t;
+  int s;
+  struct sockaddr_in remote;
 public:
-  UnixSocketListener(const std::string path) {
-    s = socket(AF_UNIX, SOCK_STREAM, 0);
-    local.sun_family = AF_UNIX;
-    strcpy(local.sun_path, path.c_str());
-    len = strlen(local.sun_path) + sizeof(local.sun_family);
-    bind(s, (struct sockaddr *)&local, len);
-    listen(s, 1);
-    t = sizeof(remote);
+  SocketListener(int port) {
+    struct addrinfo hints, *servinfo, *p;
+    int rv, yes = 1;
+
+    memset(&hints, 0, sizeof hints);
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_flags = AI_PASSIVE;
+
+    if ((rv = getaddrinfo(NULL, std::to_string(port).c_str(), &hints, &servinfo)) != 0) {
+      fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
+      exit(1);
+    }
+
+    // loop through all the results and bind to the first we can
+    for(p = servinfo; p != NULL; p = p->ai_next) {
+      if ((s = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+        perror("server: socket");
+        continue;
+      }
+      if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1) {
+        perror("setsockopt");
+        exit(1);
+      }
+      if (bind(s, p->ai_addr, p->ai_addrlen) == -1) {
+        close(s);
+        perror("server: bind");
+        continue;
+      }
+      break;
+    }
+
+    freeaddrinfo(servinfo); // all done with this structure
+
+    if (p == NULL) {
+      fprintf(stderr, "server: failed to bind\n");
+      exit(1);
+    }
+
+    if (listen(s, 10) == -1) {
+      perror("listen");
+      exit(1);
+    }
   }
-
-  ~UnixSocketListener() {
-
+  ~SocketListener() {
+    ::shutdown(s, SHUT_RDWR);
+    close(s);
   }
 
   int accept() {
-    return ::accept(s, (struct sockaddr *)&remote, &t);
+    socklen_t remoteSize = sizeof(remote);
+    return ::accept(s, (struct sockaddr *)&remote, &remoteSize);
   }
 };
 
