@@ -139,6 +139,15 @@ using RedisRequest = std::vector<std::string>;
 using RaftTerm = int64_t;
 using LogIndex = int64_t;
 
+inline std::ostream& operator<<(std::ostream& out, const RedisRequest& req) {
+  out << std::string("[");
+  for(size_t i = 0; i < req.size(); i++) {
+    out << std::string("'") << req[i] << std::string("'");
+    if(i != req.size()-1) out << std::string(" ");
+  }
+  out << std::string("]");
+  return out;
+}
 
 }
 

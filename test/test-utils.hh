@@ -65,7 +65,7 @@ extern GlobalEnv &commonState;
 
 // Includes everything needed to simulate a single raft-enabled server.
 // Everything is initialized lazily, so if you only want to test the journal for example,
-// this is possible, too. Just don't call eg raft(), and you won't have to worry
+// this is possible, too. Just don't call eg director(), and you won't have to worry
 // about raft messing up your variables and terms due to timeouts.
 class TestNode {
 public:

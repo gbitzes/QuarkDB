@@ -201,15 +201,36 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     return {snapshot.term, journal.getLogSize(), false, "Log entry mismatch"};
   }
 
-  // entry already exists?
-  if(req.prevIndex+1 < journal.getLogSize()) {
-    journal.removeEntries(req.prevIndex+1);
-  }
+  //----------------------------------------------------------------------------
+  // Four cases.
+  // 1. All entries are new; we're grand. By far the most common case.
+  // 2. The leader is sligthly confused and is sending entries that I have
+  //    already. Perform a quick check to ensure they're identical to mine and
+  //    continue on like nothing happened.
+  // 3. Some of the entries are different than mine. This can be caused by mild
+  //    log inconsistencies when switching leaders. This is normal and expected
+  //    to happen rarely, so let's remove the inconsistent entries.
+  // 4. Some of the entries are different, AND they've already been committed
+  //    or applied. This is a major safety violation and should never happen.
+  //----------------------------------------------------------------------------
 
-  for(size_t i = 0; i < req.entries.size(); i++) {
-    if(!journal.append(req.prevIndex+1+i, req.entries[i].term, req.entries[i].request)) {
-      qdb_warn("something odd happened when adding entries to the journal.. probably a race condition, but should be harmless");
-      return {snapshot.term, journal.getLogSize(), false, "Unknown error"};
+  LogIndex firstInconsistency = journal.compareEntries(req.prevIndex+1, req.entries);
+  LogIndex appendFrom = firstInconsistency - (req.prevIndex+1);
+
+  // check if ALL entries are duplicates. If so, I don't need to do anything.
+  if(appendFrom < LogIndex(req.entries.size()) ) {
+    if(firstInconsistency <= state.getCommitIndex()) {
+      qdb_throw("detected inconsistent entries for index " << firstInconsistency << ". "
+      << " Leader attempted to overwrite a committed entry with one with different contents.");
+    }
+
+    journal.removeEntries(firstInconsistency);
+
+    for(size_t i = appendFrom; i < req.entries.size(); i++) {
+      if(!journal.append(req.prevIndex+1+i, req.entries[i].term, req.entries[i].request)) {
+        qdb_warn("something odd happened when adding entries to the journal.. probably a race condition, but should be harmless");
+        return {snapshot.term, journal.getLogSize(), false, "Unknown error"};
+      }
     }
   }
 

@@ -222,6 +222,60 @@ TEST_F(Raft_Dispatcher, add_entries) {
   ASSERT_TRUE(dispatcher()->fetch(2, entry));
   ASSERT_EQ(entry.term, 3);
   ASSERT_EQ(entry.request, make_req("sadd", "myset", "a"));
+
+  // let's commit all entries
+  req = {};
+  req.term = 5;
+  req.leader = myself(2);
+  req.prevIndex = 4;
+  req.prevTerm = 3;
+  req.commitIndex = 4;
+
+  resp = dispatcher()->appendEntries(std::move(req));
+  ASSERT_EQ(resp.term, 5);
+  ASSERT_TRUE(resp.outcome);
+  ASSERT_EQ(resp.logSize, 5);
+
+  // now let's say the new leader is a little confused, and tries to replicate the
+  // last *committed* entry once again. Ensure the follower plays along
+  req = {};
+  req.term = 5;
+  req.leader = myself(2);
+  req.prevIndex = 3;
+  req.prevTerm = 3;
+  req.commitIndex = 4;
+
+  req.entries.push_back(RaftEntry {3, {"sadd", "myset", "c"}});
+  resp = dispatcher()->appendEntries(std::move(req));
+  ASSERT_EQ(resp.term, 5);
+  ASSERT_TRUE(resp.outcome);
+  ASSERT_EQ(resp.logSize, 5);
+
+  // the leader is still confused, and is sending an even older entry
+  req = {};
+  req.term = 5;
+  req.leader = myself(2);
+  req.prevIndex = 2;
+  req.prevTerm = 3;
+  req.commitIndex = 4;
+
+  req.entries.push_back(RaftEntry {3, {"sadd", "myset", "b"}});
+  resp = dispatcher()->appendEntries(std::move(req));
+  ASSERT_EQ(resp.term, 5);
+  ASSERT_TRUE(resp.outcome);
+  ASSERT_EQ(resp.logSize, 5);
+
+  // the leader is drunk and tries to overwrite the last committed entry with
+  // a different one.
+  req = {};
+  req.term = 5;
+  req.leader = myself(2);
+  req.prevIndex = 3;
+  req.prevTerm = 3;
+  req.commitIndex = 4;
+
+  req.entries.push_back(RaftEntry {3, {"sadd", "a different set", "c"}});
+  ASSERT_THROW(dispatcher()->appendEntries(std::move(req)), FatalException);
 }
 
 TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {

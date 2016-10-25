@@ -27,6 +27,7 @@
 #include "../RocksDB.hh"
 #include <mutex>
 #include <condition_variable>
+#include "RaftCommon.hh"
 
 namespace quarkdb {
 
@@ -67,6 +68,7 @@ public:
 
   bool matchEntries(LogIndex index, RaftTerm term);
   bool removeEntries(LogIndex start);
+  LogIndex compareEntries(LogIndex start, const std::vector<RaftEntry> entries);
 
   void waitForUpdates(LogIndex currentSize, const std::chrono::milliseconds &timeout);
   void notifyWaitingThreads();

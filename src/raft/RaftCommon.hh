@@ -43,6 +43,11 @@ struct RaftEntry {
   RedisRequest request;
 };
 
+inline std::ostream& operator<<(std::ostream& out, const RaftEntry& entry) {
+  out << "term: " << entry.term << " -> " << entry.request;
+  return out;
+}
+
 struct RaftAppendEntriesRequest {
   RaftTerm term;
   RaftServer leader;

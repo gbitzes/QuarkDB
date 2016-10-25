@@ -280,6 +280,26 @@ bool RaftJournal::removeEntries(LogIndex from) {
   return true;
 }
 
+// return the first entry which is not identical to the ones in the vector
+LogIndex RaftJournal::compareEntries(LogIndex start, const std::vector<RaftEntry> entries) {
+  std::unique_lock<std::mutex> lock(contentMutex);
+
+  LogIndex endIndex = std::min(LogIndex(logSize), LogIndex(start+entries.size()));
+
+  for(LogIndex i = start; i < endIndex; i++) {
+    RaftTerm term;
+    RedisRequest req;
+
+    fetch_or_die(i, term, req);
+    if(entries[i-start].term != term || entries[i-start].request != req) {
+      qdb_warn("Detected inconsistency for entry #" << i << ". Contents of my journal: term " << term << " -> " << req << ". Contents of what the leader sent: " << entries[i-start]);
+      return i;
+    }
+  }
+
+  return endIndex;
+}
+
 bool RaftJournal::matchEntries(LogIndex index, RaftTerm term) {
   std::unique_lock<std::mutex> lock(contentMutex);
 

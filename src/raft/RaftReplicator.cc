@@ -135,7 +135,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
 
       if(resp.outcome) {
         if(nextIndex+payloadSize != resp.logSize) {
-          qdb_critical("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize);
+          qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize);
         }
 
         matchIndex.update(resp.logSize-1);
