@@ -65,6 +65,9 @@ public:
 
   /// globally accessible error handler
   static XrdSysError eDest;
+
+  static std::atomic<bool> inShutdown;
+  static EventFD shutdownFD;
 private:
   /// The link we are bound to
   Link *link = nullptr;
@@ -85,6 +88,9 @@ protected:
   static RaftState *state;
   static RaftClock *raftClock;
   static RaftDirector *director;
+
+  static void shutdownMonitor();
+  static std::atomic<int64_t> inFlight;
 };
 
 }

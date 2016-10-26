@@ -59,7 +59,7 @@ void RaftMatchIndexTracker::update(LogIndex newMatchIndex) {
 }
 
 RaftCommitTracker::RaftCommitTracker(RaftState &st, size_t quorumSize)
-: state(st) {
+: state(st), quorum(0) {
   updateQuorum(quorumSize);
 }
 

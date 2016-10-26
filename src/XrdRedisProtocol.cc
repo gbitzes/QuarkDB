@@ -48,6 +48,47 @@ RaftJournal *XrdRedisProtocol::journal = 0;
 RaftState *XrdRedisProtocol::state = 0;
 RaftClock *XrdRedisProtocol::raftClock = 0;
 RaftDirector *XrdRedisProtocol::director = 0;
+std::atomic<bool> XrdRedisProtocol::inShutdown {false};
+std::atomic<int64_t> XrdRedisProtocol::inFlight {0};
+EventFD XrdRedisProtocol::shutdownFD;
+
+//------------------------------------------------------------------------------
+// Shutdown mechanism. Here's how it works.
+// The signal handler sets inShutdown and notifies shutdownMonitor. Since we can
+// only call signal-safe functions there, using a condition variable is not
+// safe. write() is signal-safe, so let's use an eventfd.
+//
+// After inShutdown is set, all new requests are rejected, and we wait until
+// all requests currently in flight are completed before starting to delete
+// stuff.
+//------------------------------------------------------------------------------
+
+void XrdRedisProtocol::shutdownMonitor() {
+  while(!inShutdown) {
+    shutdownFD.wait();
+  }
+
+  qdb_event("Received request to shut down. Waiting until all current requests have been processed..");
+
+  while(inFlight != 0) ;
+  qdb_info("Requests inFlight: " << inFlight << ", it is now safe to shut down.");
+
+  if(state) {
+    qdb_info("Shutting down the raft machinery.");
+
+    delete director;
+    delete dispatcher;
+    delete state;
+    delete raftClock;
+    delete journal;
+  }
+
+  qdb_info("Shutting down the main rocksdb store.");
+  delete rocksdb;
+
+  qdb_event("SHUTTING DOWN");
+  std::exit(0);
+}
 
 //------------------------------------------------------------------------------
 // XrdRedisProtocol class
@@ -59,6 +100,9 @@ XrdRedisProtocol::XrdRedisProtocol()
 }
 
 int XrdRedisProtocol::Process(XrdLink *lp) {
+  if(inShutdown) { return -1; }
+  ScopedAdder<int64_t> adder(inFlight);
+
   if(!link) link = new Link(lp);
   if(!parser) parser = new RedisParser(link, bufferManager);
   if(!conn) conn = new Connection(link);
@@ -104,6 +148,11 @@ void XrdRedisProtocol::DoIt() {
 
 }
 
+static void handle_sigint(int sig) {
+  XrdRedisProtocol::inShutdown = true;
+  XrdRedisProtocol::shutdownFD.notify();
+}
+
 int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
   bufferManager = pi->BPool;
   eDest.logger(pi->eDest->logger());
@@ -134,6 +183,8 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
     qdb_throw("cannot determine configuration mode"); // should never happen
   }
 
+  std::thread(&XrdRedisProtocol::shutdownMonitor).detach();
+  signal(SIGINT, handle_sigint);
   return 1;
 }
 

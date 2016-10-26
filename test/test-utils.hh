@@ -91,7 +91,6 @@ public:
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
-  // std::string unixsocket();
 private:
   RaftServer myselfSrv;
   RaftClusterID clusterID;
@@ -106,8 +105,6 @@ private:
   RaftClock *raftclockptr = nullptr;
   RaftDirector *raftdirectorptr = nullptr;
   Tunnel *tunnelptr = nullptr;
-
-  // std::string unixsocketpath;
 };
 
 // Contains everything needed to simulate a cluster with an arbitrary number of nodes.
@@ -138,7 +135,6 @@ public:
   // initialize nodes using information passed on the nodes variable, except if srv is set
   TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);
-  // std::string unixsocket(int id = 0);
   RaftClusterID clusterID();
 
   int getServerID(const RaftServer &srv);
@@ -159,36 +155,8 @@ public:
     GlobalEnv::server(0),
     GlobalEnv::server(1),
     GlobalEnv::server(2)
-  }) {
-    // Tunnel::clearIntercepts();
-  };
+  }) { };
 };
-
-// class UnixSocketListener {
-// private:
-//   struct sockaddr_un local, remote;
-//   unsigned int s;
-//   size_t len;
-//   socklen_t t;
-// public:
-//   UnixSocketListener(const std::string path) {
-//     s = socket(AF_UNIX, SOCK_STREAM, 0);
-//     local.sun_family = AF_UNIX;
-//     strcpy(local.sun_path, path.c_str());
-//     len = strlen(local.sun_path) + sizeof(local.sun_family);
-//     bind(s, (struct sockaddr *)&local, len);
-//     listen(s, 1);
-//     t = sizeof(remote);
-//   }
-//
-//   ~UnixSocketListener() {
-//
-//   }
-//
-//   int accept() {
-//     return ::accept(s, (struct sockaddr *)&remote, &t);
-//   }
-// };
 
 class SocketListener {
 private:

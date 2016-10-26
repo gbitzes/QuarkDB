@@ -93,7 +93,7 @@ void GlobalEnv::SetUp() {
 RaftServer GlobalEnv::server(int id) {
   RaftServer srv;
   srv.hostname = SSTR("server" << id);
-  srv.port = 10000 + id;
+  srv.port = 23456 + id;
 
   Tunnel::addIntercept(srv.hostname, srv.port, "127.0.0.1", srv.port);
   return srv;
@@ -152,10 +152,6 @@ std::vector<RaftServer> TestCluster::nodes(int id) {
   return node(id)->nodes();
 }
 
-// std::string TestCluster::unixsocket(int id) {
-//   return node(id)->unixsocket();
-// }
-
 Tunnel* TestCluster::tunnel(int id) {
   return node(id)->tunnel();
 }
@@ -175,7 +171,6 @@ void TestCluster::prepare(int id) {
   qdb_info("Preparing node #" << id);
   journal(id);
   rocksdb(id);
-  // unixsocket(id);
 }
 
 void TestCluster::spinup(int id) {
@@ -233,19 +228,9 @@ std::vector<RaftServer> TestNode::nodes() {
   return journal()->getNodes();
 }
 
-// std::string TestNode::unixsocket() {
-//   if(unixsocketpath.empty()) {
-//     unixsocketpath = SSTR(commonState.testdir << "/socket-" << myself().hostname << "-" << myself().port);
-//     unlink(unixsocketpath.c_str());
-//     // Tunnel::addIntercept(myself().hostname, myself().port, unixsocketpath);
-//   }
-//   return unixsocketpath;
-// }
-
 Poller* TestNode::poller() {
   if(pollerptr == nullptr) {
     pollerptr = new Poller(myself().port, dispatcher());
-    // pollerptr = new Poller(unixsocket(), dispatcher());
   }
   return pollerptr;
 }

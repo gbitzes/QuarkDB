@@ -26,6 +26,7 @@
 
 #include <sys/eventfd.h>
 #include <unistd.h>
+#include <poll.h>
 
 namespace quarkdb {
 
@@ -44,6 +45,15 @@ public:
       ::close(fd);
       fd = -1;
     }
+  }
+
+  void wait() {
+    struct pollfd polls[1];
+    polls[0].fd = fd;
+    polls[0].events = POLLIN;
+    polls[0].revents = 0;
+
+    poll(polls, 1, -1);
   }
 
   void notify(int64_t val = 1) {
