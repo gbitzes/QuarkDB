@@ -68,10 +68,10 @@ void XrdRedisProtocol::shutdownMonitor() {
     shutdownFD.wait();
   }
 
-  qdb_event("Received request to shut down. Waiting until all current requests have been processed..");
+  qdb_event("Received request to shut down. Waiting until all requests in flight (" << inFlight << ") have been processed..");
 
   while(inFlight != 0) ;
-  qdb_info("Requests inFlight: " << inFlight << ", it is now safe to shut down.");
+  qdb_info("Requests in flight: " << inFlight << ", it is now safe to shut down.");
 
   if(state) {
     qdb_info("Shutting down the raft machinery.");
@@ -173,6 +173,11 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
     }
 
     journal = new RaftJournal(configuration.getRaftLog());
+    if(journal->getClusterID() != configuration.getClusterID()) {
+      delete journal;
+      qdb_throw("clusterID from configuration does not match the one stored in the journal");
+    }
+
     state = new RaftState(*journal, configuration.getMyself());
     raftClock = new RaftClock(defaultTimeouts);
     RaftDispatcher *raftdispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);
