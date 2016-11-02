@@ -25,6 +25,9 @@
 #include "Utils.hh"
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
+#include <rocksdb/utilities/checkpoint.h>
+
+#define RETURN_ON_ERROR(st) if(!st.ok()) return st;
 
 using namespace quarkdb;
 
@@ -430,6 +433,17 @@ void RocksDB::set_or_die(const std::string &key, const std::string &value) {
     throw FatalException(SSTR("unable to set key " << key << " to " << value << ". Error: " << st.ToString()));
   }
 }
+
+rocksdb::Status RocksDB::checkpoint(const std::string &path) {
+  rocksdb::Checkpoint *checkpoint = nullptr;
+  RETURN_ON_ERROR(rocksdb::Checkpoint::Create(db, &checkpoint));
+
+  rocksdb::Status st = checkpoint->CreateCheckpoint(path);
+  delete checkpoint;
+
+  return st;
+}
+
 
 std::string RocksDB::get_or_die(const std::string &key) {
   std::string tmp;

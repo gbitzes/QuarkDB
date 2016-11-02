@@ -348,3 +348,11 @@ void RaftJournal::fetch_or_die(LogIndex index, RaftTerm &term) {
     qdb_throw("unable to fetch entry with index " << index);
   }
 }
+
+//------------------------------------------------------------------------------
+// Checkpoint for online backup
+//------------------------------------------------------------------------------
+
+rocksdb::Status RaftJournal::checkpoint(const std::string &path) {
+  return store.checkpoint(path);
+}

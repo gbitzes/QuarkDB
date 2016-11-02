@@ -68,7 +68,7 @@ void XrdRedisProtocol::shutdownMonitor() {
     shutdownFD.wait();
   }
 
-  qdb_event("Received request to shut down. Waiting until all requests in flight (" << inFlight << ") have been processed..");
+  qdb_event("Received request to shut down. Spinning until all requests in flight (" << inFlight << ") have been processed..");
 
   while(inFlight != 0) ;
   qdb_info("Requests in flight: " << inFlight << ", it is now safe to shut down.");

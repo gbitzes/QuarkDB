@@ -72,6 +72,8 @@ public:
 
   void waitForUpdates(LogIndex currentSize, const std::chrono::milliseconds &timeout);
   void notifyWaitingThreads();
+
+  rocksdb::Status checkpoint(const std::string &path);
 private:
   RocksDB store;
 

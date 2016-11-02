@@ -140,4 +140,36 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 
   RaftInfo info = dispatcher(leaderID)->info();
   ASSERT_EQ(info.blockedWrites, 0u);
+
+  std::string err;
+  std::string checkpointPath = SSTR(commonState.testdir << "/checkpoint");
+
+  ASSERT_TRUE(dispatcher()->checkpoint(checkpointPath, err));
+  ASSERT_FALSE(dispatcher()->checkpoint(checkpointPath, err)); // exists already
+
+  // pretty expensive to open two extra databases, but necessary
+  RocksDB checkpointSM(SSTR(checkpointPath << "/state-machine"));
+
+  std::string tmp;
+  ASSERT_OK(checkpointSM.get("client3", tmp));
+  ASSERT_EQ(tmp, "myval");
+
+  ASSERT_OK(checkpointSM.get("client2", tmp));
+  ASSERT_EQ(tmp, "val");
+
+  // TODO: verify checkpointSM last applied, once atomic commits are implemented
+
+  // ensure the checkpoint journal is identical to the original
+  RaftJournal checkpointJournal(SSTR(checkpointPath << "/raft-journal"));
+  ASSERT_EQ(checkpointJournal.getLogSize(), journal()->getLogSize());
+  for(LogIndex i = 0; i < journal()->getLogSize(); i++) {
+    RaftTerm term1, term2;
+    RedisRequest entry1, entry2;
+
+    ASSERT_OK(checkpointJournal.fetch(i, term1, entry1));
+    ASSERT_OK(journal()->fetch(i, term2, entry2));
+
+    ASSERT_EQ(term1, term2);
+    ASSERT_EQ(entry1, entry2);
+  }
 }

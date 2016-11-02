@@ -43,6 +43,7 @@ public:
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);
+  bool checkpoint(const std::string &path, std::string &err);
 
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
   RaftVoteResponse requestVote(RaftVoteRequest &req);

@@ -64,5 +64,6 @@ struct cmdMapInit {
     redis_cmd_map["raft_request_vote"] = {RedisCommand::RAFT_REQUEST_VOTE, CommandType::RAFT};
     redis_cmd_map["raft_panic"] = {RedisCommand::RAFT_PANIC, CommandType::RAFT};
     redis_cmd_map["raft_fetch"] = {RedisCommand::RAFT_FETCH, CommandType::RAFT};
+    redis_cmd_map["raft_checkpoint"] = {RedisCommand::RAFT_CHECKPOINT, CommandType::RAFT};
   }
 } cmd_map_init;

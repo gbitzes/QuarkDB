@@ -38,9 +38,9 @@ public:
 
   using IteratorPtr = std::shared_ptr<rocksdb::Iterator>;
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
   // Main API
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   rocksdb::Status hget(const std::string &key, const std::string &field, std::string &value);
   rocksdb::Status hexists(const std::string &key, const std::string &field);
@@ -63,9 +63,14 @@ public:
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status flushall();
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
+  // Checkpoint for online backups
+  //----------------------------------------------------------------------------
+  rocksdb::Status checkpoint(const std::string &path);
+
+  //----------------------------------------------------------------------------
   // Convenience functions
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   void set_or_die(const std::string &key, const std::string &value);
   std::string get_or_die(const std::string &key);
