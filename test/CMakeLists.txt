@@ -12,8 +12,25 @@ add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
 # Build unit tests
 #-------------------------------------------------------------------------------
 
-file(GLOB_RECURSE sources "*.cc")
-add_executable(tests ${sources})
+add_executable(tests
+  buffered-reader.cc
+  configuration.cc
+  connection.cc
+  dispatcher.cc
+  e2e.cc
+  link.cc
+  poller.cc
+  raft-journal.cc
+  raft-parser.cc
+  raft-state.cc
+  raft-talker.cc
+  raft.cc
+  redis-parser.cc
+  response.cc
+  rocksdb.cc
+  test-utils.cc                 test-utils.hh
+  tunnel.cc
+)
 
 include_directories(
   ${XROOTD_INCLUDE_DIRS}
