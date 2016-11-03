@@ -41,6 +41,14 @@ std::string statusToString(RaftStatus st);
 struct RaftEntry {
   RaftTerm term;
   RedisRequest request;
+
+  bool operator==(const RaftEntry &rhs) const {
+    return term == rhs.term && request == rhs.request;
+  }
+
+  bool operator!=(const RaftEntry &rhs) const {
+    return !(*this == rhs);
+  }
 };
 
 inline std::ostream& operator<<(std::ostream& out, const RaftEntry& entry) {

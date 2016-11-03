@@ -43,14 +43,12 @@ void RaftDirector::applyCommits() {
   LogIndex commitIndex = state.getCommitIndex(); // local cached value
   while(state.waitForCommits(commitIndex)) {
     commitIndex = state.getCommitIndex();
-    RedisRequest req;
-
     for(LogIndex index = journal.getLastApplied()+1; index <= commitIndex; index++) {
-      RaftTerm tmp;
+      RaftEntry entry;
 
       // we're dealing with committed entries, so it _must_ be there
-      journal.fetch_or_die(index, tmp, req);
-      
+      journal.fetch_or_die(index, entry);
+
       // TODO make applying a journal entry atomic
       dispatcher.applyCommits(index);
       journal.setLastApplied(index);

@@ -44,6 +44,8 @@ protected:
   std::string dbpath = "/tmp/raft-journal";
   RaftClusterID clusterID = "55cd595d-7306-4971-b92c-4b9ba5930d40";
 
+  RaftEntry entry1, entry2;
+
   RedisRequest req;
   RedisRequest req2;
   RaftServer srv;
@@ -80,11 +82,12 @@ TEST_F(Raft_Journal, T1) {
 
   ASSERT_EQ(journal.getNodes(), nodes);
 
-  req = { "set", "abc", "123" };
+  entry1.request = { "set", "abc", "123" };
+  entry1.term = 2;
 
-  ASSERT_TRUE(journal.append(1, 2, req));
-  ASSERT_OK(journal.fetch(1, term, req2));
-  ASSERT_EQ(req, req2);
+  ASSERT_TRUE(journal.append(1, entry1.term, entry1.request));
+  ASSERT_OK(journal.fetch(1, entry2));
+  ASSERT_EQ(entry1, entry2);
   ASSERT_TRUE(journal.matchEntries(1, 2));
 
   ASSERT_THROW(journal.setLastApplied(2), FatalException);
@@ -118,9 +121,9 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(journal.getVotedFor(), srv);
   ASSERT_EQ(journal.getObservers(), observers);
 
-  journal.fetch_or_die(3, term, req2);
-  ASSERT_EQ(term, 4);
-  ASSERT_EQ(req2, req);
+  journal.fetch_or_die(3, entry1);
+  ASSERT_EQ(entry1.term, 4);
+  ASSERT_EQ(entry1.request, req);
 
   ASSERT_FALSE(journal.append(4, 3, req));
   ASSERT_EQ(journal.getLogSize(), 4);
@@ -133,13 +136,13 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_FALSE(journal.removeEntries(3));
 
   ASSERT_EQ(journal.getLogSize(), 3);
-  ASSERT_NOTFOUND(journal.fetch(3, term, req2));
-  ASSERT_NOTFOUND(journal.fetch(4, term, req2));
+  ASSERT_NOTFOUND(journal.fetch(3, entry2));
+  ASSERT_NOTFOUND(journal.fetch(4, entry2));
 
   req = { "set", "qwerty", "asdf" };
-  journal.fetch_or_die(2, term, req2);
-  ASSERT_EQ(term, 2);
-  ASSERT_EQ(req, req2);
+  journal.fetch_or_die(2, entry2);
+  ASSERT_EQ(entry2.term, 2);
+  ASSERT_EQ(entry2.request, req);
 
 }
 }

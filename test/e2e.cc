@@ -163,13 +163,11 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   RaftJournal checkpointJournal(SSTR(checkpointPath << "/raft-journal"));
   ASSERT_EQ(checkpointJournal.getLogSize(), journal()->getLogSize());
   for(LogIndex i = 0; i < journal()->getLogSize(); i++) {
-    RaftTerm term1, term2;
-    RedisRequest entry1, entry2;
+    RaftEntry entry1, entry2;
 
-    ASSERT_OK(checkpointJournal.fetch(i, term1, entry1));
-    ASSERT_OK(journal()->fetch(i, term2, entry2));
+    ASSERT_OK(checkpointJournal.fetch(i, entry1));
+    ASSERT_OK(journal()->fetch(i, entry2));
 
-    ASSERT_EQ(term1, term2);
     ASSERT_EQ(entry1, entry2);
   }
 }

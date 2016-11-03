@@ -47,16 +47,15 @@ bool RaftReplicator::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
 
   payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
   for(int64_t i = nextIndex; i < nextIndex+payloadSize; i++) {
-    RaftTerm entryTerm;
-    RedisRequest entry;
+    RaftEntry entry;
 
-    if(!journal.fetch(i, entryTerm, entry).ok()) {
+    if(!journal.fetch(i, entry).ok()) {
       qdb_critical("could not fetch entry with term " << i << " .. aborting building payload");
       return false;
     }
 
-    reqs.push_back(std::move(entry));
-    terms.push_back(entryTerm);
+    reqs.push_back(std::move(entry.request));
+    terms.push_back(entry.term);
   }
   return true;
 }
@@ -98,9 +97,8 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     // TODO: check if configuration epoch has changed
 
     RaftTerm prevTerm;
-    RedisRequest tmp;
 
-    if(!journal.fetch(nextIndex-1, prevTerm, tmp).ok()) {
+    if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
       qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString());
       state.wait(timeouts.getHeartbeatInterval());
       continue;

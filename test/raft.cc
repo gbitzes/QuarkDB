@@ -571,11 +571,10 @@ TEST_F(Raft_Director, achieve_natural_election) {
   // verify entries one by one, for all three journals
   for(size_t i = 0; i < testreqs.size(); i++) {
     for(size_t j = 0; j < 3; j++) {
-      RedisRequest req;
-      RaftTerm trm;
+      RaftEntry entry;
 
-      ASSERT_TRUE(journal(j)->fetch(i+1, trm, req).ok());
-      ASSERT_EQ(req, testreqs[i]);
+      ASSERT_TRUE(journal(j)->fetch(i+1, entry).ok());
+      ASSERT_EQ(entry.request, testreqs[i]);
     }
   }
 }

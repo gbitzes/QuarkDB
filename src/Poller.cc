@@ -52,7 +52,7 @@ Poller::Poller(int port, Dispatcher *dispatcher) {
   // loop through all the results and bind to the first we can
   for(p = servinfo; p != NULL; p = p->ai_next) {
     if ((s = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
-      perror("server: socket");
+      perror("socket");
       continue;
     }
     if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &yes,sizeof(int)) == -1) {
@@ -61,7 +61,7 @@ Poller::Poller(int port, Dispatcher *dispatcher) {
     }
     if (bind(s, p->ai_addr, p->ai_addrlen) == -1) {
       close(s);
-      perror("server: bind");
+      perror("bind");
       continue;
     }
     break;

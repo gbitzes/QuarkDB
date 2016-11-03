@@ -61,9 +61,9 @@ public:
   std::vector<RaftServer> getObservers();
 
   bool append(LogIndex index, RaftTerm term, const RedisRequest &req);
-  rocksdb::Status fetch(LogIndex index, RaftTerm &term, RedisRequest &cmd);
+  rocksdb::Status fetch(LogIndex index, RaftEntry &entry);
   rocksdb::Status fetch(LogIndex index, RaftTerm &term);
-  void fetch_or_die(LogIndex index, RaftTerm &term, RedisRequest &cmd);
+  void fetch_or_die(LogIndex index, RaftEntry &entry);
   void fetch_or_die(LogIndex index, RaftTerm &term);
 
   bool matchEntries(LogIndex index, RaftTerm term);

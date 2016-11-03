@@ -287,12 +287,10 @@ LogIndex RaftJournal::compareEntries(LogIndex start, const std::vector<RaftEntry
   LogIndex endIndex = std::min(LogIndex(logSize), LogIndex(start+entries.size()));
 
   for(LogIndex i = start; i < endIndex; i++) {
-    RaftTerm term;
-    RedisRequest req;
-
-    fetch_or_die(i, term, req);
-    if(entries[i-start].term != term || entries[i-start].request != req) {
-      qdb_warn("Detected inconsistency for entry #" << i << ". Contents of my journal: term " << term << " -> " << req << ". Contents of what the leader sent: " << entries[i-start]);
+    RaftEntry entry;
+    fetch_or_die(i, entry);
+    if(entries[i-start] != entry) {
+      qdb_warn("Detected inconsistency for entry #" << i << ". Contents of my journal: " << entry << ". Contents of what the leader sent: " << entries[i-start]);
       return i;
     }
   }
@@ -321,22 +319,24 @@ bool RaftJournal::matchEntries(LogIndex index, RaftTerm term) {
 // Log entry fetch operations
 //------------------------------------------------------------------------------
 
-rocksdb::Status RaftJournal::fetch(LogIndex index, RaftTerm &term, RedisRequest &cmd) {
+rocksdb::Status RaftJournal::fetch(LogIndex index, RaftEntry &entry) {
   std::string data;
   rocksdb::Status st = store.get(SSTR("RAFT_ENTRY_" << index), data);
   if(!st.ok()) return st;
 
-  deserializeRedisRequest(data, term, cmd);
+  deserializeRedisRequest(data, entry.term, entry.request);
   return st;
 }
 
 rocksdb::Status RaftJournal::fetch(LogIndex index, RaftTerm &term) {
-  RedisRequest unused;
-  return fetch(index, term, unused);
+  RaftEntry entry;
+  rocksdb::Status st = fetch(index, entry);
+  term = entry.term;
+  return st;
 }
 
-void RaftJournal::fetch_or_die(LogIndex index, RaftTerm &term, RedisRequest &cmd) {
-  rocksdb::Status st = fetch(index, term, cmd);
+void RaftJournal::fetch_or_die(LogIndex index, RaftEntry &entry) {
+  rocksdb::Status st = fetch(index, entry);
   if(!st.ok()) {
     throw FatalException(SSTR("unable to fetch entry with index " << index));
   }

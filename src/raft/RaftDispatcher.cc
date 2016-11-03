@@ -163,16 +163,15 @@ LinkStatus RaftDispatcher::applyCommits(LogIndex index) {
     // let's just apply it manually from the journal
     // This happens in followers.
 
-    RedisRequest req;
-    RaftTerm term;
+    RaftEntry entry;
 
-    if(!journal.fetch(index, term, req).ok()) {
+    if(!journal.fetch(index, entry).ok()) {
       // serious error, threatens consistency. Bail out
       qdb_throw("failed to fetch log entry " << index << " when applying commits");
     }
 
     Connection devnull;
-    redisDispatcher.dispatch(&devnull, req);
+    redisDispatcher.dispatch(&devnull, entry.request);
     return 1;
   }
 
@@ -307,7 +306,7 @@ RaftInfo RaftDispatcher::info() {
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {
   entry = {};
-  rocksdb::Status st = journal.fetch(index, entry.term, entry.request);
+  rocksdb::Status st = journal.fetch(index, entry);
   return st.ok();
 }
 
