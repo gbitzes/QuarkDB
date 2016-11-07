@@ -60,14 +60,11 @@ public:
   bool dropOut(RaftTerm term);
   bool joinCluster(RaftTerm term);
   bool becomeObserver(RaftTerm forTerm);
-  bool setCommitIndex(LogIndex newIndex);
-  LogIndex getCommitIndex();
 
   void shutdown();
   bool inShutdown();
 
   void wait(const std::chrono::milliseconds &t);
-  bool waitForCommits(const LogIndex currentCommit);
 
   RaftTerm getCurrentTerm();
   RaftStateSnapshot getSnapshot();
@@ -81,14 +78,12 @@ private:
 
   std::mutex update;
   std::condition_variable notifier;
-  std::condition_variable commitNotifier;
 
   std::atomic<RaftTerm> term;
   RaftStatus status;
   RaftServer leader;
   RaftServer votedFor;
   const RaftServer myself;
-  std::atomic<LogIndex> commitIndex;
 
   void updateJournal();
   void declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader);

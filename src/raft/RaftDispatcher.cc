@@ -230,7 +230,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
 
   // check if ALL entries are duplicates. If so, I don't need to do anything.
   if(appendFrom < LogIndex(req.entries.size()) ) {
-    if(firstInconsistency <= state.getCommitIndex()) {
+    if(firstInconsistency <= journal.getCommitIndex()) {
       qdb_throw("detected inconsistent entries for index " << firstInconsistency << ". "
       << " Leader attempted to overwrite a committed entry with one with different contents.");
     }
@@ -245,7 +245,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     }
   }
 
-  state.setCommitIndex(std::min(journal.getLogSize()-1, req.commitIndex));
+  journal.setCommitIndex(std::min(journal.getLogSize()-1, req.commitIndex));
   return {snapshot.term, journal.getLogSize(), true, ""};
 }
 
@@ -301,7 +301,7 @@ RaftInfo RaftDispatcher::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
   return {journal.getClusterID(), state.getMyself(), state.getNodes(), snapshot.term,
-          journal.getLogSize(), snapshot.status, state.getCommitIndex(), journal.getLastApplied(), blockedWrites.size()};
+          journal.getLogSize(), snapshot.status, journal.getCommitIndex(), journal.getLastApplied(), blockedWrites.size()};
 }
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {

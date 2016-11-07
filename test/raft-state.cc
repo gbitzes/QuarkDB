@@ -176,10 +176,10 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(journal.append(2, 7, req));
   journal.setLastApplied(1);
   ASSERT_THROW(journal.setLastApplied(3), FatalException);
-  ASSERT_TRUE(state.setCommitIndex(1));
-  ASSERT_FALSE(state.setCommitIndex(0));
-  ASSERT_THROW(state.setCommitIndex(3), FatalException);
-  ASSERT_TRUE(state.setCommitIndex(2));
+  ASSERT_TRUE(journal.setCommitIndex(1));
+  ASSERT_FALSE(journal.setCommitIndex(0));
+  ASSERT_THROW(journal.setCommitIndex(3), FatalException);
+  ASSERT_TRUE(journal.setCommitIndex(2));
 
   // exit again..
   nodes.erase(nodes.begin()+2);
@@ -197,8 +197,8 @@ TEST_F(Raft_State, T1) {
   ASSERT_EQ(journal.getCurrentTerm(), 7);
   ASSERT_EQ(journal.getVotedFor(), RaftState::BLOCKED_VOTE);
 
-  // verify we remember last applied, and that commit index is re-initialized
-  ASSERT_EQ(state.getCommitIndex(), 1);
+  // verify we remember last applied and commit index
+  ASSERT_EQ(journal.getCommitIndex(), 2);
   ASSERT_EQ(journal.getLastApplied(), 1);
 
   // re-enter cluster

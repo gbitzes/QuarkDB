@@ -564,9 +564,9 @@ TEST_F(Raft_Director, achieve_natural_election) {
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-  ASSERT_EQ(state(0)->getCommitIndex(), (int64_t)testreqs.size());
-  ASSERT_EQ(state(1)->getCommitIndex(), (int64_t)testreqs.size());
-  ASSERT_EQ(state(2)->getCommitIndex(), (int64_t)testreqs.size());
+  ASSERT_EQ(journal(0)->getCommitIndex(), (int64_t)testreqs.size());
+  ASSERT_EQ(journal(1)->getCommitIndex(), (int64_t)testreqs.size());
+  ASSERT_EQ(journal(2)->getCommitIndex(), (int64_t)testreqs.size());
 
   // verify entries one by one, for all three journals
   for(size_t i = 0; i < testreqs.size(); i++) {
@@ -666,11 +666,11 @@ TEST_F(Raft_Director, election_with_different_journals) {
 }
 
 TEST_F(Raft_CommitTracker, basic_sanity) {
-  ASSERT_THROW(RaftCommitTracker(*state(0), 1), FatalException);
-  ASSERT_THROW(RaftCommitTracker(*state(0), 0), FatalException);
+  ASSERT_THROW(RaftCommitTracker(*journal(0), 1), FatalException);
+  ASSERT_THROW(RaftCommitTracker(*journal(0), 0), FatalException);
 
-  RaftCommitTracker tracker(*state(0), 2);
-  ASSERT_EQ(state(0)->getCommitIndex(), 0);
+  RaftCommitTracker tracker(*journal(0), 2);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 0);
 
   // populate #0's journal
   for(size_t i = 0; i < testreqs.size(); i++) {
@@ -679,41 +679,41 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
 
   RaftMatchIndexTracker emptyTracker;
   emptyTracker.update(300);
-  ASSERT_EQ(state(0)->getCommitIndex(), 0);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 0);
 
   RaftMatchIndexTracker matchIndex1(tracker, myself(1));
   RaftMatchIndexTracker matchIndex2(tracker, myself(2));
 
   matchIndex1.update(1);
-  ASSERT_EQ(state(0)->getCommitIndex(), 1);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 1);
   ASSERT_THROW(matchIndex1.update(0), FatalException);
 
   matchIndex2.update(1);
-  ASSERT_EQ(state(0)->getCommitIndex(), 1);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 1);
 
   matchIndex2.update(2);
-  ASSERT_EQ(state(0)->getCommitIndex(), 2);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 2);
 
   matchIndex1.update(3);
-  ASSERT_EQ(state(0)->getCommitIndex(), 3);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 3);
 
   tracker.updateQuorum(3);
   matchIndex1.update(4);
-  ASSERT_EQ(state(0)->getCommitIndex(), 3);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 3);
 
   matchIndex2.update(4);
-  ASSERT_EQ(state(0)->getCommitIndex(), 4);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 4);
 
   matchIndex1.update(10);
-  ASSERT_EQ(state(0)->getCommitIndex(), 4);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 4);
 
   RaftMatchIndexTracker matchIndex3(tracker, RaftServer("some_server", 1234));
   matchIndex3.update(15); // now we have 10, 4, 15
-  ASSERT_EQ(state(0)->getCommitIndex(), 10);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 10);
 
   matchIndex2.update(11); // now we have 10, 11, 15
-  ASSERT_EQ(state(0)->getCommitIndex(), 11);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 11);
 
   matchIndex1.update(16); // now we have 16, 11, 15
-  ASSERT_EQ(state(0)->getCommitIndex(), 15);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 15);
 }

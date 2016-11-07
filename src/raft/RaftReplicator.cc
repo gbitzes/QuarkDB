@@ -30,7 +30,7 @@
 using namespace quarkdb;
 
 RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_, const RaftTimeouts t)
-: journal(journal_), state(state_), commitTracker(state, (journal.getNodes().size()/2)+1), timeouts(t) {
+: journal(journal_), state(state_), commitTracker(journal, (journal.getNodes().size()/2)+1), timeouts(t) {
 
 }
 
@@ -113,7 +113,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
       continue;
     }
 
-    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, state.getCommitIndex(), reqs, terms);
+    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), reqs, terms);
     RaftAppendEntriesResponse resp;
 
     if(retrieve_response(fut, resp)) {

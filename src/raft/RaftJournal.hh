@@ -49,6 +49,7 @@ public:
 
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
   void setLastApplied(LogIndex index);
+  bool setCommitIndex(LogIndex index);
   void setNodes(const std::vector<RaftServer> &newNodes);
   void setObservers(const std::vector<RaftServer> &obs);
 
@@ -56,6 +57,7 @@ public:
   LogIndex getLogSize() const { return logSize; }
   RaftClusterID getClusterID() const { return clusterID; }
   LogIndex getLastApplied() const { return lastApplied; }
+  LogIndex getCommitIndex() const { return commitIndex; }
   std::vector<RaftServer> getNodes();
   RaftServer getVotedFor();
   std::vector<RaftServer> getObservers();
@@ -71,6 +73,7 @@ public:
   LogIndex compareEntries(LogIndex start, const std::vector<RaftEntry> entries);
 
   void waitForUpdates(LogIndex currentSize, const std::chrono::milliseconds &timeout);
+  bool waitForCommits(const LogIndex currentCommit);
   void notifyWaitingThreads();
 
   rocksdb::Status checkpoint(const std::string &path);
@@ -83,6 +86,7 @@ private:
 
   std::atomic<RaftTerm> currentTerm;
   std::atomic<LogIndex> lastApplied;
+  std::atomic<LogIndex> commitIndex;
   std::atomic<LogIndex> logSize;
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;
@@ -91,11 +95,13 @@ private:
 
   std::mutex currentTermMutex;
   std::mutex lastAppliedMutex;
+  std::mutex commitIndexMutex;
   std::mutex contentMutex;
   std::mutex nodesMutex;
   std::mutex observersMutex;
   std::mutex votedForMutex;
 
+  std::condition_variable commitNotifier;
   std::condition_variable logUpdated;
 
   //----------------------------------------------------------------------------

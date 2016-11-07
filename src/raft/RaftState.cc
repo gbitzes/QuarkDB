@@ -37,7 +37,6 @@ RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
 
   term = journal.getCurrentTerm();
   votedFor = journal.getVotedFor();
-  commitIndex = journal.getLastApplied();
 }
 
 //------------------------------------------------------------------------------
@@ -169,29 +168,6 @@ bool RaftState::ascend(RaftTerm forTerm) {
   return true;
 }
 
-bool RaftState::setCommitIndex(LogIndex newIndex) {
-  std::lock_guard<std::mutex> lock(update);
-  if(newIndex < commitIndex) {
-    qdb_critical("attempted to set commit index in the past, from " << commitIndex << " ==> " << newIndex);
-    return false;
-  }
-
-  if(journal.getLogSize() <= newIndex) {
-    qdb_throw("attempted to mark as committed a non-existing entry. Journal size: " << journal.getLogSize() << ", new index: " << newIndex);
-    return false;
-  }
-
-  if(commitIndex < newIndex) {
-    commitIndex = newIndex;
-    commitNotifier.notify_all();
-  }
-  return true;
-}
-
-LogIndex RaftState::getCommitIndex() {
-  return commitIndex;
-}
-
 //------------------------------------------------------------------------------
 // This function should be called AFTER we have established that the raft log
 // of the server asking a vote is at least up-to-date as ours.
@@ -280,7 +256,6 @@ void RaftState::shutdown() {
   std::unique_lock<std::mutex> lock(update);
   updateStatus(RaftStatus::SHUTDOWN);
   notifier.notify_all();
-  commitNotifier.notify_all();
 }
 
 //------------------------------------------------------------------------------
@@ -290,15 +265,6 @@ void RaftState::wait(const std::chrono::milliseconds &t) {
   std::unique_lock<std::mutex> lock(update);
   if(status == RaftStatus::SHUTDOWN) return;
   notifier.wait_for(lock, t);
-}
-
-bool RaftState::waitForCommits(const LogIndex currentCommit) {
-  std::unique_lock<std::mutex> lock(update);
-  if(status == RaftStatus::SHUTDOWN) return false;
-  if(currentCommit < commitIndex) return true;
-
-  commitNotifier.wait(lock);
-  return true;
 }
 
 //------------------------------------------------------------------------------

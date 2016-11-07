@@ -62,17 +62,16 @@ private:
 
 class RaftCommitTracker {
 public:
-  RaftCommitTracker(RaftState &state, size_t quorum);
+  RaftCommitTracker(RaftJournal &journal, size_t quorum);
   ~RaftCommitTracker();
 
   DISALLOW_COPY_AND_ASSIGN(RaftCommitTracker);
   std::map<RaftServer, LogIndex>::iterator registration(const RaftServer &srv);
-  // RaftMatchIndexTracker registration(const RaftServer &srv);
   void updateQuorum(size_t newQuorum);
 private:
   std::mutex mtx;
 
-  RaftState &state;
+  RaftJournal &journal;
   size_t quorum;
 
   std::map<RaftServer, LogIndex> matchIndex;

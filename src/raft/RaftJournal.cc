@@ -89,6 +89,7 @@ void RaftJournal::ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID
   store.set_or_die("RAFT_CLUSTER_ID", clusterID);
   store.set_or_die("RAFT_VOTED_FOR", "");
   store.set_or_die("RAFT_LAST_APPLIED", "0");
+  store.set_or_die("RAFT_COMMIT_INDEX", "0");
 
   RedisRequest req { "UPDATE_RAFT_NODES", serializeNodes(nodes) };
   store.set_or_die("RAFT_ENTRY_0", serializeRedisRequest(0, req));
@@ -107,6 +108,7 @@ void RaftJournal::initialize() {
   logSize = store.get_int_or_die("RAFT_LOG_SIZE");
   clusterID = store.get_or_die("RAFT_CLUSTER_ID");
   lastApplied = store.get_int_or_die("RAFT_LAST_APPLIED");
+  commitIndex = store.get_int_or_die("RAFT_COMMIT_INDEX");
   std::string vote = store.get_or_die("RAFT_VOTED_FOR");
   this->fetch_or_die(logSize-1, termOfLastEntry);
 
@@ -182,6 +184,33 @@ void RaftJournal::setLastApplied(LogIndex index) {
   lastApplied = index;
 }
 
+bool RaftJournal::setCommitIndex(LogIndex newIndex) {
+  std::lock_guard<std::mutex> lock(commitIndexMutex);
+  if(newIndex < commitIndex) {
+    qdb_critical("attempted to set commit index in the past, from " << commitIndex << " ==> " << newIndex);
+    return false;
+  }
+
+  if(logSize <= newIndex) {
+    qdb_throw("attempted to mark as committed a non-existing entry. Journal size: " << logSize << ", new index: " << newIndex);
+  }
+
+  if(commitIndex < newIndex) {
+    store.set_or_die("RAFT_COMMIT_INDEX", std::to_string(newIndex));
+    commitIndex = newIndex;
+    commitNotifier.notify_all();
+  }
+  return true;
+}
+
+bool RaftJournal::waitForCommits(const LogIndex currentCommit) {
+  std::unique_lock<std::mutex> lock(commitIndexMutex);
+  if(currentCommit < commitIndex) return true;
+
+  commitNotifier.wait(lock);
+  return true;
+}
+
 bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req) {
   std::lock_guard<std::mutex> lock(contentMutex);
 
@@ -252,6 +281,7 @@ std::vector<RaftServer> RaftJournal::getObservers() {
 
 void RaftJournal::notifyWaitingThreads() {
   logUpdated.notify_all();
+  commitNotifier.notify_all();
 }
 
 void RaftJournal::waitForUpdates(LogIndex currentSize, const std::chrono::milliseconds &timeout) {

@@ -35,14 +35,17 @@ RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, RaftState &s
 
 RaftDirector::~RaftDirector() {
   state.shutdown();
+  journal.notifyWaitingThreads();
   mainThread.join();
   commitApplier.join();
 }
 
 void RaftDirector::applyCommits() {
-  LogIndex commitIndex = state.getCommitIndex(); // local cached value
-  while(state.waitForCommits(commitIndex)) {
-    commitIndex = state.getCommitIndex();
+  LogIndex commitIndex = journal.getCommitIndex(); // local cached value
+  while(journal.waitForCommits(commitIndex)) {
+    if(state.inShutdown()) break;
+
+    commitIndex = journal.getCommitIndex();
     for(LogIndex index = journal.getLastApplied()+1; index <= commitIndex; index++) {
       RaftEntry entry;
 

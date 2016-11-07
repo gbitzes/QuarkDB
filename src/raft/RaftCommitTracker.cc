@@ -58,8 +58,8 @@ void RaftMatchIndexTracker::update(LogIndex newMatchIndex) {
   }
 }
 
-RaftCommitTracker::RaftCommitTracker(RaftState &st, size_t quorumSize)
-: state(st), quorum(0) {
+RaftCommitTracker::RaftCommitTracker(RaftJournal &jr, size_t quorumSize)
+: journal(jr), quorum(0) {
   updateQuorum(quorumSize);
 }
 
@@ -103,18 +103,18 @@ void RaftCommitTracker::recalculateCommitIndex() {
   std::sort(sortedVector.begin(), sortedVector.end());
   size_t threshold = sortedVector.size() - (quorum-1);
 
-  LogIndex stateCommitIndex = state.getCommitIndex();
-  if(sortedVector[threshold] < stateCommitIndex) {
-    qdb_warn("calculated a commitIndex which is smaller than state.commitIndex: " << sortedVector[threshold] << ", " << stateCommitIndex << ". Will be unable to commit new entries until this is resolved.");
+  LogIndex journalCommitIndex = journal.getCommitIndex();
+  if(sortedVector[threshold] < journalCommitIndex) {
+    qdb_warn("calculated a commitIndex which is smaller than journal.commitIndex: " << sortedVector[threshold] << ", " << journalCommitIndex << ". Will be unable to commit new entries until this is resolved.");
   }
   else {
     commitIndex = sortedVector[threshold];
-    state.setCommitIndex(commitIndex);
+    journal.setCommitIndex(commitIndex);
   }
 }
 
 void RaftCommitTracker::updated(LogIndex val) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(val <= commitIndex) return; // nothing to do, we've already notified state of the change
+  if(val <= commitIndex) return; // nothing to do, we've already notified journal of the change
   recalculateCommitIndex();
 }
