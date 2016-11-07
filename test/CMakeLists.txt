@@ -30,6 +30,7 @@ add_executable(tests
   rocksdb.cc
   test-utils.cc                 test-utils.hh
   tunnel.cc
+  utils.cc
 )
 
 include_directories(

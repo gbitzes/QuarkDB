@@ -22,7 +22,9 @@
  ************************************************************************/
 
 #include <climits>
+#include <endian.h>
 #include "Utils.hh"
+#include <memory.h>
 
 namespace quarkdb {
 
@@ -35,6 +37,31 @@ bool my_strtoll(const std::string &str, int64_t &ret) {
     return false;
   }
   return true;
+}
+
+#if __BYTE_ORDER == __BIG_ENDIAN
+# define htole64(x) __bswap_64 (x)
+# define le64toh(x) __bswap_64 (x)
+# else
+# define htole64(x) (x)
+# define le64toh(x) (x)
+#endif
+
+int64_t binaryStringToInt(const char* buff) {
+  int64_t result;
+  memcpy(&result, buff, sizeof(result));
+  return le64toh(result);
+}
+
+void intToBinaryString(int64_t num, char* buff) {
+  int64_t be = htole64(num);
+  memcpy(buff, &be, sizeof(be));
+}
+
+std::string intToBinaryString(int64_t num) {
+  char buff[sizeof(num)];
+  intToBinaryString(num, buff);
+  return std::string(buff, sizeof(num));
 }
 
 std::vector<std::string> split(std::string data, std::string token) {

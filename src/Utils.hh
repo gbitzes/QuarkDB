@@ -63,6 +63,11 @@ extern std::mutex logMutex;
 // a serious error has occured signifying a bug in the program logic
 #define qdb_throw(message) throw FatalException(SSTR(message))
 
+// store/retrieve int64 inside a *little endian* binary string
+int64_t binaryStringToInt(const char* buff);
+void intToBinaryString(int64_t num, char* buff);
+std::string intToBinaryString(int64_t num);
+
 bool my_strtoll(const std::string &str, int64_t &ret);
 std::vector<std::string> split(std::string data, std::string token);
 bool startswith(const std::string &str, const std::string &prefix);
