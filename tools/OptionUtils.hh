@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftUtils.hh
+// File: OptionUtils.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,30 +21,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_PARSER_H__
-#define __QUARKDB_RAFT_PARSER_H__
+#ifndef __QUARKDB_OPTION_UTILS_H__
+#define __QUARKDB_OPTION_UTILS_H__
 
-#include "../Tunnel.hh"
-#include "RaftCommon.hh"
-#include "../Common.hh"
-#include "RaftState.hh"
-#include "RaftTimeouts.hh"
+#include "optionparser.h"
 
-namespace quarkdb {
+namespace Opt {
 
-class RaftParser {
-public:
-  static bool appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &dest);
-  static bool appendEntriesResponse(const redisReplyPtr &source, RaftAppendEntriesResponse &dest);
-  static bool voteRequest(RedisRequest &source, RaftVoteRequest &dest);
-  static bool voteResponse(const redisReplyPtr &source, RaftVoteResponse &dest);
-  static bool fetchResponse(const redisReplyPtr &source, RaftEntry &entry);
-};
+inline option::ArgStatus nonempty(const option::Option& option, bool msg) {
+  if (option.arg != 0 && option.arg[0] != 0)
+    return option::ARG_OK;
+  if (msg) std::cout << "Option '" << option.name << "' requires a non-empty argument" << std::endl;
+    return option::ARG_ILLEGAL;
+}
 
-class RaftElection {
-public:
-  static bool perform(RaftVoteRequest votereq, RaftState &state, const RaftTimeouts timeouts = defaultTimeouts);
-};
+inline option::ArgStatus numeric(const option::Option& option, bool msg) {
+  char* endptr = 0;
+  if (option.arg != 0 && strtol(option.arg, &endptr, 10)){};
+  if (endptr != option.arg && *endptr == 0)
+    return option::ARG_OK;
+
+  if (msg) std::cout << "Option '" << option.name << "' requires a numeric argument" << std::endl;
+    return option::ARG_ILLEGAL;
+}
 
 }
 

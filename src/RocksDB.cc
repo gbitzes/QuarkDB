@@ -71,11 +71,8 @@ void RocksDB::retrieveLastApplied() {
     lastApplied = binaryStringToInt(tmp.c_str());
   }
   else if(st.IsNotFound()) {
-    char buff[sizeof(lastApplied)];
     lastApplied = 0;
-    intToBinaryString(lastApplied, buff);
-
-    st = db->Put(rocksdb::WriteOptions(), "__last-applied", std::string(buff));
+    st = db->Put(rocksdb::WriteOptions(), "__last-applied", intToBinaryString(lastApplied));
     if(!st.ok()) qdb_throw("error when setting lastApplied: " << st.ToString());
   }
   else {

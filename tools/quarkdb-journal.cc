@@ -24,17 +24,10 @@
 #include <iostream>
 #include "raft/RaftJournal.hh"
 #include "Common.hh"
-#include "optionparser.h"
+#include "OptionUtils.hh"
 
 namespace Opt {
 enum  Type { UNKNOWN, HELP, PATH, CREATE, CLUSTERID, NODES };
-}
-
-static option::ArgStatus option_nonempty(const option::Option& option, bool msg) {
-  if (option.arg != 0 && option.arg[0] != 0)
-    return option::ARG_OK;
-  if (msg) std::cout << "Option '" << option.name << "' requires a non-empty argument" << std::endl;
-    return option::ARG_ILLEGAL;
 }
 
 bool verify_options_sane(option::Parser &parse, std::vector<option::Option> &options) {
@@ -80,10 +73,10 @@ std::vector<option::Option> parse_args(int argc, char** argv) {
     {Opt::UNKNOWN, 0, "", "", option::Arg::None, "quarkdb journal inspector. It can only create new ones right now.\n"
                                                  "USAGE: quarkdb-journal [options]\n\n" "Options:" },
     {Opt::HELP, 0, "", "help", option::Arg::None, " --help \tPrint usage and exit." },
-    {Opt::PATH, 0, "", "path", option_nonempty, " --path \tthe directory where the journal lives in."},
+    {Opt::PATH, 0, "", "path", Opt::nonempty, " --path \tthe directory where the journal lives in."},
     {Opt::CREATE, 0, "", "create", option::Arg::None, " --create \tcreate a new raft journal, used with --clusterID and --nodes"},
-    {Opt::CLUSTERID, 0, "", "clusterID", option_nonempty, " --clusterID \tspecify the clusterID of the new journal"},
-    {Opt::NODES, 0, "", "nodes", option_nonempty, " --nodes \tspecify the initial configuration of the new cluster"},
+    {Opt::CLUSTERID, 0, "", "clusterID", Opt::nonempty, " --clusterID \tspecify the clusterID of the new journal"},
+    {Opt::NODES, 0, "", "nodes", Opt::nonempty, " --nodes \tspecify the initial configuration of the new cluster"},
 
     {0,0,0,0,0,0}
   };

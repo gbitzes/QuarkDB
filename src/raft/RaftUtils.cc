@@ -204,3 +204,26 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
 
   return true;
 }
+
+bool RaftParser::fetchResponse(const redisReplyPtr &source, RaftEntry &entry) {
+  entry = {};
+
+  if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements < 2) {
+    return false;
+  }
+
+  for(size_t i = 0; i < source->elements; i++) {
+    if(source->element[i]->type != REDIS_REPLY_STRING) {
+      return false;
+    }
+  }
+
+  std::string tmp(source->element[0]->str, source->element[0]->len);
+  if(!my_strtoll(tmp, entry.term)) return false;
+
+  for(size_t i = 1; i < source->elements; i++) {
+    entry.request.emplace_back(source->element[i]->str, source->element[i]->len);
+  }
+
+  return true;
+}

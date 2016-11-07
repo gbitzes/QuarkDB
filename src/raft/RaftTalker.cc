@@ -30,6 +30,10 @@ RaftTalker::RaftTalker(const RaftServer &server, const RaftClusterID &clusterID_
 
 }
 
+RaftTalker::RaftTalker(const RaftServer &server)
+: tunnel(server.hostname, server.port) {
+}
+
 std::future<redisReplyPtr> RaftTalker::appendEntries(
   RaftTerm term, RaftServer leader, LogIndex prevIndex,
   RaftTerm prevTerm, LogIndex commit,
@@ -107,6 +111,15 @@ std::future<redisReplyPtr> RaftTalker::requestVote(const RaftVoteRequest &req) {
   payload.emplace_back(req.candidate.toString());
   payload.emplace_back(std::to_string(req.lastIndex));
   payload.emplace_back(std::to_string(req.lastTerm));
+
+  return tunnel.execute(payload);
+}
+
+std::future<redisReplyPtr> RaftTalker::fetch(LogIndex index) {
+  RedisRequest payload;
+
+  payload.emplace_back("RAFT_FETCH");
+  payload.emplace_back(std::to_string(index));
 
   return tunnel.execute(payload);
 }
