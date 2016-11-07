@@ -68,7 +68,7 @@ RocksDB* GlobalEnv::getRocksDB(const std::string &path) {
     rocksdbCache[path] = ret;
   }
 
-  ret->flushall();
+  ret->reset();
   return ret;
 }
 

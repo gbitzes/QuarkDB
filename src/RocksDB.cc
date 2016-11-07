@@ -28,75 +28,70 @@
 #include <rocksdb/utilities/checkpoint.h>
 
 #define RETURN_ON_ERROR(st) if(!st.ok()) return st;
+#define THROW_ON_ERROR(st) if(!st.ok()) qdb_throw(st.ToString())
+#define ASSERT_OK_OR_NOTFOUND(st) if(!st.ok() && !st.IsNotFound()) qdb_throw(st.ToString())
 
 using namespace quarkdb;
-
-// merge operator for additions to provide atomic incrby
-// IF YOU CHANGE THIS ALL PREVIOUS DATABASES BECOME INCOMPATIBLE !!!!!!
-class Int64AddOperator : public rocksdb::AssociativeMergeOperator {
-public:
-  virtual bool Merge(const rocksdb::Slice& key, const rocksdb::Slice* existing_value,
-                     const rocksdb::Slice& value, std::string* new_value,
-                     rocksdb::Logger* logger) const override {
-    // there's no decent way to do error reporting to the client
-    // inside a rocksdb Merge operator, partially also because
-    // the method is applied asynchronously and might not be run
-    // until the next Get on this key!!
-    //
-    // ignore all errors and return true, without modifying the value.
-    // returning false here corrupts the key entirely!
-    // all sanity checking should be done in the client code calling merge
-
-    // assuming 0 if no existing value
-    int64_t existing = 0;
-    if(existing_value) {
-      if(!my_strtoll(existing_value->ToString(), existing)) {
-        *new_value = existing_value->ToString();
-        return true;
-      }
-    }
-
-    int64_t oper;
-    if(!my_strtoll(value.ToString(), oper)) {
-      // this should not happen under any circumstances..
-      *new_value = existing_value->ToString();
-      return true;
-    }
-
-    int64_t newval = existing + oper;
-    std::stringstream ss;
-    ss << newval;
-    *new_value = ss.str();
-    return true;
-  }
-
-  virtual const char* Name() const override {
-    return "Int64AddOperator";
-  }
-};
 
 RocksDB::RocksDB(const std::string &f) : filename(f) {
   qdb_info("Openning rocksdb database " << quotes(filename));
 
   rocksdb::Options options;
-  options.merge_operator.reset(new Int64AddOperator);
   options.create_if_missing = true;
-  rocksdb::Status status = rocksdb::DB::Open(options, filename, &db);
+  rocksdb::Status status = rocksdb::TransactionDB::Open(options, rocksdb::TransactionDBOptions(), filename, &transactionDB);
   if(!status.ok()) throw FatalException(status.ToString());
+
+  db = transactionDB->GetBaseDB();
+  retrieveLastApplied();
 }
 
 RocksDB::~RocksDB() {
-  if(db) {
+  if(transactionDB) {
     qdb_info("Closing rocksdb database " << quotes(filename));
-    delete db;
+    delete transactionDB;
+    transactionDB = nullptr;
     db = nullptr;
   }
 }
 
-enum RedisCommandType {
+void RocksDB::reset() {
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+    db->Delete(rocksdb::WriteOptions(), iter->key().ToString());
+  }
+
+  retrieveLastApplied();
+}
+
+void RocksDB::retrieveLastApplied() {
+  std::string tmp;
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), "__last-applied", &tmp);
+
+  if(st.ok()) {
+    lastApplied = binaryStringToInt(tmp.c_str());
+  }
+  else if(st.IsNotFound()) {
+    char buff[sizeof(lastApplied)];
+    lastApplied = 0;
+    intToBinaryString(lastApplied, buff);
+
+    st = db->Put(rocksdb::WriteOptions(), "__last-applied", std::string(buff));
+    if(!st.ok()) qdb_throw("error when setting lastApplied: " << st.ToString());
+  }
+  else {
+    qdb_throw("error when retrieving lastApplied: " << st.ToString());
+  }
+}
+
+LogIndex RocksDB::getLastApplied() {
+  return lastApplied;
+}
+
+enum RedisKeyType {
   kString = 'a',
-  kHash,
-  kSet
+  kHash = 'b',
+  kSet = 'c',
+  kInternal = '_'
 };
 
 // it's rare to have to escape a key, most don't contain #
@@ -138,14 +133,14 @@ static std::string extract_key(std::string &tkey) {
   return key;
 }
 
-static std::string translate_key(const RedisCommandType type, const std::string &key) {
+static std::string translate_key(const RedisKeyType type, const std::string &key) {
   std::string escaped = key;
   escape(escaped);
 
   return std::string(1, type) + escaped;
 }
 
-static std::string translate_key(const RedisCommandType type, const std::string &key, const std::string &field) {
+static std::string translate_key(const RedisKeyType type, const std::string &key, const std::string &field) {
   std::string translated = translate_key(type, key) + "#" + field;
   return translated;
 }
@@ -188,61 +183,60 @@ rocksdb::Status RocksDB::hgetall(const std::string &key, std::vector<std::string
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::hset(const std::string &key, const std::string &field, const std::string &value) {
-  std::string tkey = translate_key(kHash, key, field);
-  return db->Put(rocksdb::WriteOptions(), tkey, value);
-}
-
-rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result) {
+rocksdb::Status RocksDB::hset(const std::string &key, const std::string &field, const std::string &value, LogIndex index) {
   std::string tkey = translate_key(kHash, key, field);
 
-  int64_t tmp;
-  if(!my_strtoll(incrby, tmp)) {
-    return rocksdb::Status::InvalidArgument("value is not an integer or out of range");
-  }
-
-  rocksdb::Status st = db->Merge(rocksdb::WriteOptions(), tkey, incrby);
-  if(!st.ok()) return st;
-
-  std::string value;
-  st = db->Get(rocksdb::ReadOptions(), tkey, &value);
-
-  if(!my_strtoll(value, result)) {
-    // This can occur under two circumstances: The value in tkey was not an
-    // integer in the first place, and the Merge operation had no effects on it.
-
-    // It could also happen if the Merge operation was successful, but then
-    // afterwards another request came up and set tkey to a non-integer.
-    // Even in this case the redis semantics are not violated - we just pretend
-    // this request was processed after the other thread modified the key to a
-    // non-integer.
-
-    return rocksdb::Status::InvalidArgument("hash value is not an integer");
-  }
-
-  // RACE CONDITION: An OK() can be erroneous in the following scenario:
-  // original value was "aaa"
-  // HINCRBY called to increase by 1
-  // Merge operation failed and did not modify the value at all
-  // Another thread came by and set the value to "5"
-  // Now, this thread sees an integer and thinks its merge operation was successful,
-  // happily reporting "5" to the user.
-  //
-  // Unfortunately, the semantics of rocksdb makes this very difficult to avoid
-  // without an extra layer of synchronization on top of it..
-
+  TransactionPtr tx = startTransaction();
+  THROW_ON_ERROR(tx->Put(tkey, value));
+  commitTransaction(tx, index);
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::hdel(const std::string &key, const std::string &field) {
+rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index) {
   std::string tkey = translate_key(kHash, key, field);
 
-  // race condition
-  std::string value;
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), tkey, &value);
-  if(!st.ok()) return st;
+  TransactionPtr tx = startTransaction();
 
-  return db->Delete(rocksdb::WriteOptions(), tkey);
+  int64_t incrbyInt64;
+  if(!my_strtoll(incrby, incrbyInt64)) {
+    commitTransaction(tx, index);
+    return rocksdb::Status::InvalidArgument("value is not an integer or out of range");
+  }
+
+  std::string value;
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
+  ASSERT_OK_OR_NOTFOUND(st);
+
+  result = 0;
+  if(st.ok() && !my_strtoll(value, result)) {
+    commitTransaction(tx, index);
+    return rocksdb::Status::InvalidArgument("hash value is not an integer");
+  }
+
+  result += incrbyInt64;
+
+  THROW_ON_ERROR(tx->Put(tkey, std::to_string(result)));
+  commitTransaction(tx, index);
+  return rocksdb::Status::OK();
+}
+
+rocksdb::Status RocksDB::hdel(const std::string &key, const std::string &field, LogIndex index) {
+  std::string tkey = translate_key(kHash, key, field);
+
+  TransactionPtr tx = startTransaction();
+
+  std::string value;
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
+
+  if(st.ok()) {
+    THROW_ON_ERROR(tx->Delete(tkey));
+  }
+  else if(!st.IsNotFound()) {
+    qdb_throw(st.ToString());
+  }
+
+  commitTransaction(tx, index);
+  return st;
 }
 
 rocksdb::Status RocksDB::hlen(const std::string &key, size_t &len) {
@@ -270,16 +264,21 @@ rocksdb::Status RocksDB::hvals(const std::string &key, std::vector<std::string> 
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::sadd(const std::string &key, const std::string &element, int64_t &added) {
+rocksdb::Status RocksDB::sadd(const std::string &key, const std::string &element, int64_t &added, LogIndex index) {
   std::string tkey = translate_key(kSet, key, element);
 
+  TransactionPtr tx = startTransaction();
+
   std::string tmp;
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), tkey, &tmp);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+
   if(st.IsNotFound()) {
     added++;
-    return db->Put(rocksdb::WriteOptions(), tkey, "1");
+    RETURN_ON_ERROR(tx->Put(tkey, "1"));
+    st = rocksdb::Status::OK();
   }
 
+  commitTransaction(tx, index);
   return st;
 }
 
@@ -290,15 +289,17 @@ rocksdb::Status RocksDB::sismember(const std::string &key, const std::string &el
   return db->Get(rocksdb::ReadOptions(), tkey, &tmp);
 }
 
-rocksdb::Status RocksDB::srem(const std::string &key, const std::string &element) {
+rocksdb::Status RocksDB::srem(const std::string &key, const std::string &element, LogIndex index) {
   std::string tkey = translate_key(kSet, key, element);
 
-  // race condition
-  std::string value;
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), tkey, &value);
-  if(!st.ok()) return st;
+  TransactionPtr tx = startTransaction();
 
-  return db->Delete(rocksdb::WriteOptions(), tkey);
+  std::string tmp;
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+
+  if(st.ok()) THROW_ON_ERROR(tx->Delete(tkey));
+  commitTransaction(tx, index);
+  return st;
 }
 
 rocksdb::Status RocksDB::smembers(const std::string &key, std::vector<std::string> &members) {
@@ -326,9 +327,13 @@ rocksdb::Status RocksDB::scard(const std::string &key, size_t &count) {
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::set(const std::string& key, const std::string& value) {
+rocksdb::Status RocksDB::set(const std::string& key, const std::string& value, LogIndex index) {
   std::string tkey = translate_key(kString, key);
-  return db->Put(rocksdb::WriteOptions(), tkey, value);
+
+  TransactionPtr tx = startTransaction();
+  RETURN_ON_ERROR(tx->Put(tkey, value));
+  commitTransaction(tx, index);
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status RocksDB::get(const std::string &key, std::string &value) {
@@ -337,33 +342,35 @@ rocksdb::Status RocksDB::get(const std::string &key, std::string &value) {
 }
 
 // if 0 keys are found matching prefix, we return kOk, not kNotFound
-rocksdb::Status RocksDB::remove_all_with_prefix(const std::string &prefix) {
+rocksdb::Status RocksDB::remove_all_with_prefix(const std::string &prefix, LogIndex index) {
   std::string tmp;
 
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  TransactionPtr tx = startTransaction();
+
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
     if(!startswith(key, prefix)) break;
-    rocksdb::Status st = db->Delete(rocksdb::WriteOptions(), key);
-    if(!st.ok()) return st;
+    RETURN_ON_ERROR(tx->Delete(key));
   }
+  commitTransaction(tx, index);
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::del(const std::string &key) {
+rocksdb::Status RocksDB::del(const std::string &key, LogIndex index) {
   std::string tmp;
 
   // is it a string?
   std::string str_key = translate_key(kString, key);
   rocksdb::Status st = db->Get(rocksdb::ReadOptions(), str_key, &tmp);
-  if(st.ok()) return remove_all_with_prefix(str_key);
+  if(st.ok()) return remove_all_with_prefix(str_key, index);
 
   // is it a hash?
   std::string hash_key = translate_key(kHash, key) + "#";
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   iter->Seek(hash_key);
   if(iter->Valid() && startswith(iter->key().ToString(), hash_key)) {
-    return remove_all_with_prefix(hash_key);
+    return remove_all_with_prefix(hash_key, index);
   }
 
   // is it a set?
@@ -371,8 +378,11 @@ rocksdb::Status RocksDB::del(const std::string &key) {
   iter = IteratorPtr(db->NewIterator(rocksdb::ReadOptions()));
   iter->Seek(set_key);
   if(iter->Valid() && startswith(iter->key().ToString(), set_key)) {
-    return remove_all_with_prefix(set_key);
+    return remove_all_with_prefix(set_key, index);
   }
+
+  TransactionPtr tx = startTransaction();
+  commitTransaction(tx, index);
   return rocksdb::Status::NotFound();
 }
 
@@ -412,7 +422,7 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
     std::string tmp = iter->key().ToString();
     std::string redis_key = extract_key(tmp);
 
-    if(redis_key != previous) {
+    if(redis_key != previous && redis_key[0] != kInternal) {
       if(allkeys || stringmatchlen(pattern.c_str(), pattern.length(),
                                    redis_key.c_str(), redis_key.length(), 0)) {
         result.push_back(redis_key);
@@ -423,8 +433,8 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::flushall() {
-  return remove_all_with_prefix("");
+rocksdb::Status RocksDB::flushall(LogIndex index) {
+  return remove_all_with_prefix("", index);
 }
 
 void RocksDB::set_or_die(const std::string &key, const std::string &value) {
@@ -463,4 +473,22 @@ int64_t RocksDB::get_int_or_die(const std::string &key) {
   }
 
   return value;
+}
+
+RocksDB::TransactionPtr RocksDB::startTransaction() {
+  return TransactionPtr(transactionDB->BeginTransaction(rocksdb::WriteOptions()));
+}
+
+void RocksDB::commitTransaction(TransactionPtr &tx, LogIndex index) {
+  if(index <= 0 && lastApplied > 0) qdb_throw("provided invalid index for version-tracked database: " << index << ", current last applied: " << lastApplied);
+
+  if(index > 0) {
+    if(index != lastApplied+1) qdb_throw("attempted to perform illegal lastApplied update: " << lastApplied << " ==> " << index);
+    THROW_ON_ERROR(tx->Put("__last-applied", intToBinaryString(index)));
+  }
+
+  rocksdb::Status st = tx->Commit();
+  if(index > 0 && st.ok()) lastApplied = index;
+
+  if(!st.ok()) qdb_throw("unable to commit transaction with index " << index << ": " << st.ToString());
 }

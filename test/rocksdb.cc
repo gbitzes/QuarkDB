@@ -22,134 +22,190 @@
  ************************************************************************/
 
 #include "RocksDB.hh"
+#include "test-utils.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
 
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
 #define ASSERT_NOTFOUND(msg) ASSERT_TRUE(msg.IsNotFound())
+#define ASSERT_NOT_OK(msg) ASSERT_FALSE(msg.ok())
 
-class Rocks_DB : public ::testing::Test {
-protected:
-  virtual void SetUp() {
-    store = new RocksDB("/tmp/rocksdb-testdb");
-    store->flushall();
-  }
+class Rocks_DB : public TestCluster3Nodes {};
 
-  virtual void TearDown() {
-    delete store;
-  }
+TEST_F(Rocks_DB, test_write_transactions) {
+  ASSERT_EQ(rocksdb()->getLastApplied(), 0);
 
-  RocksDB *store;
+  ASSERT_THROW(rocksdb()->set("abc", "123", 2), FatalException);
+  ASSERT_OK(rocksdb()->set("abc", "123", 1));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 1);
+  ASSERT_OK(rocksdb()->set("abc", "122", 2));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 2);
+
+  ASSERT_OK(rocksdb()->hset("myhash", "key1", "value", 3));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 3);
+
+  std::string tmp;
+  ASSERT_OK(rocksdb()->hget("myhash", "key1", tmp));
+  ASSERT_EQ(tmp, "value");
+
+  ASSERT_OK(rocksdb()->hdel("myhash", "key1", 4));
+  ASSERT_NOTFOUND(rocksdb()->hget("myhash", "key1", tmp));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 4);
+
+  ASSERT_NOTFOUND(rocksdb()->hdel("myhash", "key1", 5));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 5);
+
+  ASSERT_NOTFOUND(rocksdb()->del("not-existing", 6));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 6);
+
+  ASSERT_OK(rocksdb()->hset("hash2", "key1", "v2", 7));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 7);
+
+  ASSERT_OK(rocksdb()->del("hash2", 8));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 8);
+
+  int64_t added = 0;
+  ASSERT_OK(rocksdb()->sadd("set1", "elem1", added, 9));
+  ASSERT_EQ(added, 1);
+  ASSERT_EQ(rocksdb()->getLastApplied(), 9);
+
+  ASSERT_NOTFOUND(rocksdb()->srem("set1", "elem2", 10));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 10);
+}
+
+TEST_F(Rocks_DB, test_hincrby) {
+  ASSERT_EQ(rocksdb()->getLastApplied(), 0);
+
+  int64_t result;
+  ASSERT_OK(rocksdb()->hincrby("myhash", "counter", "1", result, 1));
+  ASSERT_EQ(result, 1);
+  ASSERT_EQ(rocksdb()->getLastApplied(), 1);
+
+  ASSERT_NOT_OK(rocksdb()->hincrby("myhash", "counter", "asdf", result, 2));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 2);
+
+  ASSERT_OK(rocksdb()->hincrby("myhash", "counter", "5", result, 3));
+  ASSERT_EQ(result, 6);
+  ASSERT_EQ(rocksdb()->getLastApplied(), 3);
+
+  ASSERT_OK(rocksdb()->hset("myhash", "str", "asdf", 4));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 4);
+
+  ASSERT_NOT_OK(rocksdb()->hincrby("myhash", "str", "5", result, 5));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 5);
+
+  ASSERT_OK(rocksdb()->hincrby("myhash", "counter", "-30", result, 6));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 6);
+  ASSERT_EQ(result, -24);
+}
+
+TEST_F(Rocks_DB, basic_sanity) {
   std::string buffer;
-  std::vector<std::string> vec;
-  std::vector<std::string> vec2;
-};
+  std::vector<std::string> vec, vec2;
 
-TEST_F(Rocks_DB, T1) {
-  ASSERT_OK(store->set("abc", "cde"));
-  ASSERT_OK(store->get("abc", buffer));
+  ASSERT_OK(rocksdb()->set("abc", "cde"));
+  ASSERT_OK(rocksdb()->get("abc", buffer));
   ASSERT_EQ(buffer, "cde");
-  ASSERT_OK(store->del("abc"));
+  ASSERT_OK(rocksdb()->del("abc"));
 
-  ASSERT_NOTFOUND(store->get("abc", buffer));
-  ASSERT_NOTFOUND(store->exists("abc"));
-  ASSERT_NOTFOUND(store->del("abc"));
+  ASSERT_NOTFOUND(rocksdb()->get("abc", buffer));
+  ASSERT_NOTFOUND(rocksdb()->exists("abc"));
+  ASSERT_NOTFOUND(rocksdb()->del("abc"));
 
-  ASSERT_OK(store->set("123", "345"));
-  ASSERT_OK(store->set("qwerty", "asdf"));
+  ASSERT_OK(rocksdb()->set("123", "345"));
+  ASSERT_OK(rocksdb()->set("qwerty", "asdf"));
 
-  ASSERT_OK(store->keys("*", vec));
+  ASSERT_OK(rocksdb()->keys("*", vec));
   vec2 = {"123", "qwerty"};
   ASSERT_EQ(vec, vec2);
 
-  ASSERT_OK(store->flushall());
-  ASSERT_NOTFOUND(store->exists("123"));
-  ASSERT_OK(store->keys("*", vec));
+  ASSERT_OK(rocksdb()->flushall());
+  ASSERT_NOTFOUND(rocksdb()->exists("123"));
+  ASSERT_OK(rocksdb()->keys("*", vec));
   ASSERT_EQ(vec.size(), 0u);
 
   int64_t num = 0;
 
-  ASSERT_OK(store->sadd("myset", "qqq", num));
+  ASSERT_OK(rocksdb()->sadd("myset", "qqq", num));
   ASSERT_EQ(num, 1);
 
-  ASSERT_OK(store->sismember("myset", "qqq"));
-  ASSERT_NOTFOUND(store->sismember("myset", "ppp"));
+  ASSERT_OK(rocksdb()->sismember("myset", "qqq"));
+  ASSERT_NOTFOUND(rocksdb()->sismember("myset", "ppp"));
 
   num = 0;
-  ASSERT_OK(store->sadd("myset", "ppp", num));
+  ASSERT_OK(rocksdb()->sadd("myset", "ppp", num));
   ASSERT_EQ(num, 1);
 
   num = 0;
-  ASSERT_OK(store->sadd("myset", "ppp", num));
+  ASSERT_OK(rocksdb()->sadd("myset", "ppp", num));
   ASSERT_EQ(num, 0);
 
-  ASSERT_OK(store->sismember("myset", "ppp"));
+  ASSERT_OK(rocksdb()->sismember("myset", "ppp"));
   size_t size;
-  ASSERT_OK(store->scard("myset", size));
+  ASSERT_OK(rocksdb()->scard("myset", size));
   ASSERT_EQ(size, 2u);
 
-  ASSERT_OK(store->smembers("myset", vec));
+  ASSERT_OK(rocksdb()->smembers("myset", vec));
   vec2 = {"ppp", "qqq"};
   ASSERT_EQ(vec, vec2);
 
-  ASSERT_OK(store->srem("myset", "ppp"));
-  ASSERT_NOTFOUND(store->srem("myset", "www"));
-  ASSERT_NOTFOUND(store->srem("myset", "ppp"));
+  ASSERT_OK(rocksdb()->srem("myset", "ppp"));
+  ASSERT_NOTFOUND(rocksdb()->srem("myset", "www"));
+  ASSERT_NOTFOUND(rocksdb()->srem("myset", "ppp"));
 
-  ASSERT_OK(store->scard("myset", size));
+  ASSERT_OK(rocksdb()->scard("myset", size));
   ASSERT_EQ(size, 1u);
 
-  ASSERT_OK(store->smembers("myset", vec));
+  ASSERT_OK(rocksdb()->smembers("myset", vec));
   vec2 = {"qqq"};
   ASSERT_EQ(vec, vec2);
 
-  ASSERT_NOTFOUND(store->hget("myhash", "123", buffer));
-  ASSERT_OK(store->hset("myhash", "abc", "123"));
-  ASSERT_OK(store->hset("myhash", "abc", "234"));
-  ASSERT_OK(store->hset("myhash", "abc", "345"));
+  ASSERT_NOTFOUND(rocksdb()->hget("myhash", "123", buffer));
+  ASSERT_OK(rocksdb()->hset("myhash", "abc", "123"));
+  ASSERT_OK(rocksdb()->hset("myhash", "abc", "234"));
+  ASSERT_OK(rocksdb()->hset("myhash", "abc", "345"));
 
-  ASSERT_OK(store->hlen("myhash", size));
+  ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 1u);
 
-  ASSERT_OK(store->hget("myhash", "abc", buffer));
+  ASSERT_OK(rocksdb()->hget("myhash", "abc", buffer));
   ASSERT_EQ(buffer, "345");
 
-  ASSERT_OK(store->hset("myhash", "qqq", "ppp"));
-  ASSERT_OK(store->hlen("myhash", size));
+  ASSERT_OK(rocksdb()->hset("myhash", "qqq", "ppp"));
+  ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 2u);
 
-  ASSERT_OK(store->hexists("myhash", "qqq"));
-  ASSERT_NOTFOUND(store->hexists("myhash", "aaa"));
+  ASSERT_OK(rocksdb()->hexists("myhash", "qqq"));
+  ASSERT_NOTFOUND(rocksdb()->hexists("myhash", "aaa"));
 
-  ASSERT_OK(store->hkeys("myhash", vec));
+  ASSERT_OK(rocksdb()->hkeys("myhash", vec));
   vec2 = {"abc", "qqq"};
   ASSERT_EQ(vec, vec2);
 
-  ASSERT_OK(store->hvals("myhash", vec));
+  ASSERT_OK(rocksdb()->hvals("myhash", vec));
   vec2 = {"345", "ppp"};
   ASSERT_EQ(vec, vec2);
 
-  ASSERT_OK(store->hgetall("myhash", vec));
+  ASSERT_OK(rocksdb()->hgetall("myhash", vec));
   vec2 = {"abc", "345", "qqq", "ppp"};
   ASSERT_EQ(vec, vec2);
 
-  ASSERT_OK(store->hincrby("myhash", "val", "1", num));
+  ASSERT_OK(rocksdb()->hincrby("myhash", "val", "1", num));
   ASSERT_EQ(num, 1);
 
-  ASSERT_OK(store->hincrby("myhash", "val", "3", num));
+  ASSERT_OK(rocksdb()->hincrby("myhash", "val", "3", num));
   ASSERT_EQ(num, 4);
 
-  ASSERT_OK(store->hincrby("myhash", "val", "-3", num));
+  ASSERT_OK(rocksdb()->hincrby("myhash", "val", "-3", num));
   ASSERT_EQ(num, 1);
 
-  ASSERT_OK(store->hlen("myhash", size));
+  ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 3u);
 
-  ASSERT_OK(store->hdel("myhash", "val"));
-  ASSERT_OK(store->hlen("myhash", size));
+  ASSERT_OK(rocksdb()->hdel("myhash", "val"));
+  ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 2u);
 
-  ASSERT_NOTFOUND(store->hexists("myhash", "val"));
-
+  ASSERT_NOTFOUND(rocksdb()->hexists("myhash", "val"));
 }

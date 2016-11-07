@@ -27,6 +27,9 @@
 #include "Common.hh"
 #include "Utils.hh"
 #include <rocksdb/db.h>
+#include <rocksdb/utilities/optimistic_transaction_db.h>
+#include <rocksdb/utilities/transaction_db.h>
+#include <rocksdb/utilities/transaction.h>
 
 namespace quarkdb {
 
@@ -35,8 +38,10 @@ public:
   RocksDB(const std::string &filename);
   virtual ~RocksDB();
   DISALLOW_COPY_AND_ASSIGN(RocksDB);
+  void reset();
 
   using IteratorPtr = std::shared_ptr<rocksdb::Iterator>;
+  using TransactionPtr = std::shared_ptr<rocksdb::Transaction>;
 
   //----------------------------------------------------------------------------
   // Main API
@@ -46,22 +51,24 @@ public:
   rocksdb::Status hexists(const std::string &key, const std::string &field);
   rocksdb::Status hkeys(const std::string &key, std::vector<std::string> &keys);
   rocksdb::Status hgetall(const std::string &key, std::vector<std::string> &res);
-  rocksdb::Status hset(const std::string &key, const std::string &field, const std::string &value);
-  rocksdb::Status hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result);
-  rocksdb::Status hdel(const std::string &key, const std::string &field);
+  rocksdb::Status hset(const std::string &key, const std::string &field, const std::string &value, LogIndex index = 0);
+  rocksdb::Status hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index = 0);
+  rocksdb::Status hdel(const std::string &key, const std::string &field, LogIndex index = 0);
   rocksdb::Status hlen(const std::string &key, size_t &len);
   rocksdb::Status hvals(const std::string &key, std::vector<std::string> &vals);
-  rocksdb::Status sadd(const std::string &key, const std::string &element, int64_t &added);
+  rocksdb::Status sadd(const std::string &key, const std::string &element, int64_t &added, LogIndex index = 0);
   rocksdb::Status sismember(const std::string &key, const std::string &element);
-  rocksdb::Status srem(const std::string &key, const std::string &element);
+  rocksdb::Status srem(const std::string &key, const std::string &element, LogIndex index = 0);
   rocksdb::Status smembers(const std::string &key, std::vector<std::string> &members);
   rocksdb::Status scard(const std::string &key, size_t &count);
-  rocksdb::Status set(const std::string& key, const std::string& value);
+  rocksdb::Status set(const std::string& key, const std::string& value, LogIndex index = 0);
   rocksdb::Status get(const std::string &key, std::string &value);
-  rocksdb::Status del(const std::string &key);
+  rocksdb::Status del(const std::string &key, LogIndex index = 0);
   rocksdb::Status exists(const std::string &key);
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
-  rocksdb::Status flushall();
+  rocksdb::Status flushall(LogIndex index = 0);
+
+  LogIndex getLastApplied();
 
   //----------------------------------------------------------------------------
   // Checkpoint for online backups
@@ -77,8 +84,16 @@ public:
   int64_t get_int_or_die(const std::string &key);
 
 private:
-  rocksdb::Status remove_all_with_prefix(const std::string &prefix);
+  LogIndex lastApplied;
 
+  TransactionPtr startTransaction();
+  void commitTransaction(TransactionPtr &tx, LogIndex index);
+
+  void retrieveLastApplied();
+
+  rocksdb::Status remove_all_with_prefix(const std::string &prefix, LogIndex index);
+
+  rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;
   const std::string filename;
 };

@@ -123,7 +123,7 @@ void RaftDirector::actAsFollower(RaftStateSnapshot &snapshot) {
 
     state.wait(randomTimeout);
     if(raftClock.timeout()) {
-      qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, leader is not sending heartbeats. Attempting to start election.");
+      qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
       runForLeader();
       return;
     }
