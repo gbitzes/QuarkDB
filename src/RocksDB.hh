@@ -82,6 +82,7 @@ public:
   void set_or_die(const std::string &key, const std::string &value);
   std::string get_or_die(const std::string &key);
   int64_t get_int_or_die(const std::string &key);
+  void set_int_or_die(const std::string &key, int64_t value);
 
 private:
   LogIndex lastApplied;

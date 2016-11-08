@@ -84,12 +84,11 @@ void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, Raft
 void RaftJournal::ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID clusterID, std::vector<RaftServer> nodes) {
   store.flushall();
 
-  store.set_or_die("RAFT_CURRENT_TERM", "0");
-  store.set_or_die("RAFT_LOG_SIZE", "1");
+  store.set_int_or_die("RAFT_CURRENT_TERM", 0);
+  store.set_int_or_die("RAFT_LOG_SIZE", 1);
   store.set_or_die("RAFT_CLUSTER_ID", clusterID);
   store.set_or_die("RAFT_VOTED_FOR", "");
-  store.set_or_die("RAFT_LAST_APPLIED", "0");
-  store.set_or_die("RAFT_COMMIT_INDEX", "0");
+  store.set_int_or_die("RAFT_COMMIT_INDEX", 0);
 
   RedisRequest req { "UPDATE_RAFT_NODES", serializeNodes(nodes) };
   store.set_or_die("RAFT_ENTRY_0", serializeRedisRequest(0, req));
@@ -139,28 +138,28 @@ RaftJournal::RaftJournal(const std::string &filename) : store(filename) {
 bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   std::lock_guard<std::mutex> lock(currentTermMutex);
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
   // Terms should never go back in time
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   if(term < currentTerm) {
     return false;
   }
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
   // The vote for the current term should never change
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   if(term == currentTerm && !votedFor.empty()) {
     return false;
   }
 
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
   // Just in case we crash in the middle, make sure votedFor becomes invalid first
-  //------------------------------------------------------------------------------
+  //----------------------------------------------------------------------------
 
   store.set_or_die("RAFT_VOTED_FOR", RaftState::BLOCKED_VOTE.toString());
-  store.set_or_die("RAFT_CURRENT_TERM", std::to_string(term));
+  store.set_int_or_die("RAFT_CURRENT_TERM", term);
   store.set_or_die("RAFT_VOTED_FOR", vote.toString());
 
   currentTerm = term;
@@ -180,7 +179,7 @@ bool RaftJournal::setCommitIndex(LogIndex newIndex) {
   }
 
   if(commitIndex < newIndex) {
-    store.set_or_die("RAFT_COMMIT_INDEX", std::to_string(newIndex));
+    store.set_int_or_die("RAFT_COMMIT_INDEX", newIndex);
     commitIndex = newIndex;
     commitNotifier.notify_all();
   }
@@ -230,7 +229,7 @@ void RaftJournal::setLogSize(LogIndex index) {
     throw FatalException(SSTR("Attempted to remove applied entry by setting logSize to " << index << " while commitIndex = " << commitIndex));
   }
 
-  store.set_or_die("RAFT_LOG_SIZE", std::to_string(index));
+  store.set_int_or_die("RAFT_LOG_SIZE", index);
   logSize = index;
 }
 

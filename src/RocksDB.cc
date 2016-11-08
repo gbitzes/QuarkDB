@@ -463,13 +463,14 @@ std::string RocksDB::get_or_die(const std::string &key) {
 
 int64_t RocksDB::get_int_or_die(const std::string &key) {
   std::string tmp = this->get_or_die(key);
+  return binaryStringToInt(tmp.c_str());
+}
 
-  int64_t value;
-  if(!my_strtoll(tmp, value)) {
-    throw FatalException(SSTR("db corruption, unable to parse integer key " << key << ". Received " << value));
+void RocksDB::set_int_or_die(const std::string &key, int64_t value) {
+  rocksdb::Status st = this->set(key, intToBinaryString(value));
+  if(!st.ok()) {
+    throw FatalException(SSTR("unable to set key " << key << ". Error: " << st.ToString()));
   }
-
-  return value;
 }
 
 RocksDB::TransactionPtr RocksDB::startTransaction() {
