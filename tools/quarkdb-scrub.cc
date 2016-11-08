@@ -126,8 +126,10 @@ void processReplies(ReplyRound &replyRound, bool verbose) {
   // ascertain all entries are identical
   bool identical = true;
   for(size_t i = 1; i < entries.size(); i++) {
-    if(entries[i] != entries[i-1]) identical = false;
-    break;
+    if(entries[i] != entries[i-1]) {
+      identical = false;
+      break;
+    }
   }
 
   if(!identical) {
