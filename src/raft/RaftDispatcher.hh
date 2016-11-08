@@ -39,7 +39,7 @@ public:
   RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc);
   DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override;
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit) override;
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);
@@ -51,6 +51,7 @@ public:
 private:
   void flushQueues(const std::string &msg);
   LinkStatus service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type);
+  LinkStatus applyOneCommit(LogIndex index);
 
   //----------------------------------------------------------------------------
   // Raft commands should not be run in parallel, but be serialized

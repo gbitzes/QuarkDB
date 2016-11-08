@@ -62,7 +62,7 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(journal.getCurrentTerm(), 0);
   ASSERT_EQ(journal.getLogSize(), 1);
   ASSERT_EQ(journal.getClusterID(), clusterID);
-  ASSERT_EQ(journal.getLastApplied(), 0);
+  ASSERT_EQ(journal.getCommitIndex(), 0);
 
   ASSERT_TRUE(journal.setCurrentTerm(2, srv));
   ASSERT_EQ(journal.getCurrentTerm(), 2);
@@ -90,12 +90,12 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(entry1, entry2);
   ASSERT_TRUE(journal.matchEntries(1, 2));
 
-  ASSERT_THROW(journal.setLastApplied(2), FatalException);
+  ASSERT_THROW(journal.setCommitIndex(2), FatalException);
   req = { "set", "qwerty", "asdf" };
   ASSERT_FALSE(journal.append(2, 4, req));
   ASSERT_TRUE(journal.append(2, 2, req));
   ASSERT_TRUE(journal.matchEntries(2, 2));
-  journal.setLastApplied(2);
+  journal.setCommitIndex(2);
 
   req = { "set", "123", "456"};
   ASSERT_FALSE(journal.append(3, 1, req));
@@ -113,7 +113,7 @@ TEST_F(Raft_Journal, T1) {
 }
 {
   RaftJournal journal(dbpath);
-  ASSERT_EQ(journal.getLastApplied(), 2);
+  ASSERT_EQ(journal.getCommitIndex(), 2);
   ASSERT_EQ(journal.getLogSize(), 4);
   ASSERT_EQ(journal.getNodes(), nodes);
   ASSERT_EQ(journal.getCurrentTerm(), 4);
@@ -128,7 +128,7 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_FALSE(journal.append(4, 3, req));
   ASSERT_EQ(journal.getLogSize(), 4);
 
-  // try to remove applied entry
+  // try to remove committed entry
   ASSERT_THROW(journal.removeEntries(2), FatalException);
 
   ASSERT_FALSE(journal.removeEntries(5));

@@ -34,7 +34,9 @@ RaftDispatcher::RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, Ra
 : journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm) {
 }
 
-LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
+LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogIndex commit) {
+  if(commit != 0) qdb_throw("commit should have been zero here: " << commit);
+
   auto it = redis_cmd_map.find(req[0]);
   if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
 
@@ -154,8 +156,17 @@ void RaftDispatcher::flushQueues(const std::string &msg) {
   blockedWrites.clear();
 }
 
-LinkStatus RaftDispatcher::applyCommits(LogIndex index) {
+LinkStatus RaftDispatcher::applyCommits(LogIndex commitIndex) {
   std::lock_guard<std::mutex> lock(raftCommand);
+
+  for(LogIndex index = stateMachine.getLastApplied()+1; index <= commitIndex; index++) {
+    applyOneCommit(index);
+  }
+
+  return 1;
+}
+
+LinkStatus RaftDispatcher::applyOneCommit(LogIndex index) {
 
   auto it = blockedWrites.find(index);
   if(it == blockedWrites.end()) {
@@ -171,7 +182,7 @@ LinkStatus RaftDispatcher::applyCommits(LogIndex index) {
     }
 
     Connection devnull;
-    redisDispatcher.dispatch(&devnull, entry.request);
+    redisDispatcher.dispatch(&devnull, entry.request, index);
     return 1;
   }
 
@@ -301,7 +312,7 @@ RaftInfo RaftDispatcher::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
   return {journal.getClusterID(), state.getMyself(), state.getNodes(), snapshot.term,
-          journal.getLogSize(), snapshot.status, journal.getCommitIndex(), journal.getLastApplied(), blockedWrites.size()};
+          journal.getLogSize(), snapshot.status, journal.getCommitIndex(), stateMachine.getLastApplied(), blockedWrites.size()};
 }
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {

@@ -46,16 +46,7 @@ void RaftDirector::applyCommits() {
     if(state.inShutdown()) break;
 
     commitIndex = journal.getCommitIndex();
-    for(LogIndex index = journal.getLastApplied()+1; index <= commitIndex; index++) {
-      RaftEntry entry;
-
-      // we're dealing with committed entries, so it _must_ be there
-      journal.fetch_or_die(index, entry);
-
-      // TODO make applying a journal entry atomic
-      dispatcher.applyCommits(index);
-      journal.setLastApplied(index);
-    }
+    dispatcher.applyCommits(commitIndex);
   }
 }
 

@@ -34,7 +34,7 @@ namespace quarkdb {
 
 class Dispatcher {
 public:
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit = 0) = 0;
   virtual ~Dispatcher() {}
 };
 
@@ -42,8 +42,8 @@ class RedisDispatcher : public Dispatcher {
 public:
   RedisDispatcher(RocksDB &rocksdb);
 
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req);
-  LinkStatus dispatch(Connection *conn, RedisRequest &request, RedisCommand command);
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit = 0);
+  LinkStatus dispatch(Connection *conn, RedisRequest &request, RedisCommand command, LogIndex commit = 0);
 private:
   RocksDB &store;
 };

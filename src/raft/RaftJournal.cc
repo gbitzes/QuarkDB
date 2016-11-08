@@ -107,7 +107,6 @@ void RaftJournal::initialize() {
   currentTerm = store.get_int_or_die("RAFT_CURRENT_TERM");
   logSize = store.get_int_or_die("RAFT_LOG_SIZE");
   clusterID = store.get_or_die("RAFT_CLUSTER_ID");
-  lastApplied = store.get_int_or_die("RAFT_LAST_APPLIED");
   commitIndex = store.get_int_or_die("RAFT_COMMIT_INDEX");
   std::string vote = store.get_or_die("RAFT_VOTED_FOR");
   this->fetch_or_die(logSize-1, termOfLastEntry);
@@ -169,21 +168,6 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   return true;
 }
 
-void RaftJournal::setLastApplied(LogIndex index) {
-  std::lock_guard<std::mutex> lock(lastAppliedMutex);
-
-  if(index < lastApplied) {
-    throw FatalException(SSTR("attempted to reduce lastApplied, from " << lastApplied << " to " << index));
-  }
-
-  if(logSize <= index) {
-    throw FatalException(SSTR("attempted to set lastApplied to non-existent entry. index: " << index << ", logSize " << logSize));
-  }
-
-  store.set_or_die("RAFT_LAST_APPLIED", std::to_string(index));
-  lastApplied = index;
-}
-
 bool RaftJournal::setCommitIndex(LogIndex newIndex) {
   std::lock_guard<std::mutex> lock(commitIndexMutex);
   if(newIndex < commitIndex) {
@@ -242,8 +226,8 @@ void RaftJournal::rawAppend(LogIndex index, RaftTerm term, const RedisRequest &c
 }
 
 void RaftJournal::setLogSize(LogIndex index) {
-  if(index <= lastApplied) {
-    throw FatalException(SSTR("Attempted to remove applied entry by setting logSize to " << index << " while lastApplied = " << lastApplied));
+  if(index <= commitIndex) {
+    throw FatalException(SSTR("Attempted to remove applied entry by setting logSize to " << index << " while commitIndex = " << commitIndex));
   }
 
   store.set_or_die("RAFT_LOG_SIZE", std::to_string(index));
@@ -297,7 +281,7 @@ bool RaftJournal::removeEntries(LogIndex from) {
   std::unique_lock<std::mutex> lock(contentMutex);
   if(logSize <= from) return false;
 
-  if(from <= lastApplied) qdb_throw("attempted to remove committed entries. lastApplied: " << lastApplied << ", from: " << from);
+  if(from <= commitIndex) qdb_throw("attempted to remove committed entries. commitIndex: " << commitIndex << ", from: " << from);
   qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize-1 << "]");
 
   for(LogIndex i = from; i < logSize; i++) {

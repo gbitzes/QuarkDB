@@ -48,7 +48,6 @@ public:
   void initialize();
 
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
-  void setLastApplied(LogIndex index);
   bool setCommitIndex(LogIndex index);
   void setNodes(const std::vector<RaftServer> &newNodes);
   void setObservers(const std::vector<RaftServer> &obs);
@@ -56,7 +55,6 @@ public:
   RaftTerm getCurrentTerm() const { return currentTerm; }
   LogIndex getLogSize() const { return logSize; }
   RaftClusterID getClusterID() const { return clusterID; }
-  LogIndex getLastApplied() const { return lastApplied; }
   LogIndex getCommitIndex() const { return commitIndex; }
   std::vector<RaftServer> getNodes();
   RaftServer getVotedFor();
@@ -85,7 +83,6 @@ private:
   //----------------------------------------------------------------------------
 
   std::atomic<RaftTerm> currentTerm;
-  std::atomic<LogIndex> lastApplied;
   std::atomic<LogIndex> commitIndex;
   std::atomic<LogIndex> logSize;
   std::vector<RaftServer> nodes;

@@ -30,14 +30,14 @@ using namespace quarkdb;
 RedisDispatcher::RedisDispatcher(RocksDB &rocksdb) : store(rocksdb) {
 }
 
-LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req) {
+LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req, LogIndex commit) {
   auto it = redis_cmd_map.find(req[0]);
-  if(it != redis_cmd_map.end()) return dispatch(conn, req, it->second.first);
+  if(it != redis_cmd_map.end()) return dispatch(conn, req, it->second.first, commit);
 
   return conn->err(SSTR("unknown command " << quotes(req[0])));
 }
 
-LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, RedisCommand cmd) {
+LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, RedisCommand cmd, LogIndex commit) {
   switch(cmd) {
     case RedisCommand::PING: {
       if(request.size() > 2) return conn->errArgs(request[0]);
@@ -55,7 +55,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     }
     case RedisCommand::FLUSHALL: {
       if(request.size() != 1) return conn->errArgs(request[0]);
-      rocksdb::Status st = store.flushall();
+      rocksdb::Status st = store.flushall(commit);
       return conn->fromStatus(st);
     }
     case RedisCommand::GET: {
@@ -69,7 +69,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     }
     case RedisCommand::SET: {
       if(request.size() != 3) return conn->errArgs(request[0]);
-      rocksdb::Status st = store.set(request[1], request[2]);
+      rocksdb::Status st = store.set(request[1], request[2], commit);
       return conn->fromStatus(st);
     }
     case RedisCommand::EXISTS: {
@@ -87,7 +87,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
 
       int64_t count = 0;
       for(size_t i = 1; i < request.size(); i++) {
-        rocksdb::Status st = store.del(request[i]);
+        rocksdb::Status st = store.del(request[i], commit);
         if(st.ok()) count++;
         else if(!st.IsNotFound()) return conn->fromStatus(st);
       }
@@ -118,7 +118,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       rocksdb::Status existed = store.hexists(request[1], request[2]);
       if(!existed.ok() && !existed.IsNotFound()) return conn->fromStatus(existed);
 
-      rocksdb::Status st = store.hset(request[1], request[2], request[3]);
+      rocksdb::Status st = store.hset(request[1], request[2], request[3], commit);
       if(!st.ok()) return conn->fromStatus(st);
 
       if(existed.ok()) return conn->integer(0);
@@ -148,7 +148,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     case RedisCommand::HINCRBY: {
       if(request.size() != 4) return conn->errArgs(request[0]);
       int64_t ret = 0;
-      rocksdb::Status st = store.hincrby(request[1], request[2], request[3], ret);
+      rocksdb::Status st = store.hincrby(request[1], request[2], request[3], ret, commit);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(ret);
     }
@@ -156,7 +156,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       if(request.size() <= 2) return conn->errArgs(request[0]);
       int64_t count = 0;
       for(size_t i = 2; i < request.size(); i++) {
-        rocksdb::Status st = store.hdel(request[1], request[i]);
+        rocksdb::Status st = store.hdel(request[1], request[i], commit);
         if(st.ok()) count++;
         else if(!st.IsNotFound()) return conn->fromStatus(st);
       }
@@ -190,7 +190,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       int64_t count = 0;
       for(size_t i = 2; i < request.size(); i++) {
         int64_t tmp = 0;
-        rocksdb::Status st = store.sadd(request[1], request[i], tmp);
+        rocksdb::Status st = store.sadd(request[1], request[i], tmp, commit);
         if(!st.ok()) return conn->fromStatus(st);
         count += tmp;
       }
@@ -207,7 +207,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       if(request.size() <= 2) return conn->errArgs(request[0]);
       int64_t count = 0;
       for(size_t i = 2; i < request.size(); i++) {
-        rocksdb::Status st = store.srem(request[1], request[i]);
+        rocksdb::Status st = store.srem(request[1], request[i], commit);
         if(st.ok()) count++;
         else if(!st.IsNotFound()) return conn->fromStatus(st);
       }

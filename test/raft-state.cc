@@ -174,8 +174,6 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(journal.append(1, 7, req));
   req = { "set", "1234", "9876" };
   ASSERT_TRUE(journal.append(2, 7, req));
-  journal.setLastApplied(1);
-  ASSERT_THROW(journal.setLastApplied(3), FatalException);
   ASSERT_TRUE(journal.setCommitIndex(1));
   ASSERT_FALSE(journal.setCommitIndex(0));
   ASSERT_THROW(journal.setCommitIndex(3), FatalException);
@@ -197,9 +195,8 @@ TEST_F(Raft_State, T1) {
   ASSERT_EQ(journal.getCurrentTerm(), 7);
   ASSERT_EQ(journal.getVotedFor(), RaftState::BLOCKED_VOTE);
 
-  // verify we remember last applied and commit index
+  // verify we remember commit index
   ASSERT_EQ(journal.getCommitIndex(), 2);
-  ASSERT_EQ(journal.getLastApplied(), 1);
 
   // re-enter cluster
   nodes.push_back(myself);

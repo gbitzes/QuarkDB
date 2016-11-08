@@ -139,7 +139,7 @@ LogIndex Connection::dispatchPending(Dispatcher *dispatcher, LogIndex commitInde
       this->err(req.error);
     }
     else {
-      dispatcher->dispatch(this, req.req);
+      dispatcher->dispatch(this, req.req, commitIndex);
     }
 
     pending.pop();
