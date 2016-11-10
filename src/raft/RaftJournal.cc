@@ -236,9 +236,9 @@ void RaftJournal::trimUntil(LogIndex newLogStart) {
 
   qdb_info("Trimming raft journal from #" << logStart << " until #" << newLogStart);
 
-  store.set_int_or_die("RAFT_LOG_START", logStart);
   LogIndex prevLogStart = logStart;
   logStart = newLogStart;
+  store.set_int_or_die("RAFT_LOG_START", logStart);
 
   for(LogIndex i = prevLogStart; i < newLogStart; i++) {
     rocksdb::Status st = store.del(encodeEntryKey(i));

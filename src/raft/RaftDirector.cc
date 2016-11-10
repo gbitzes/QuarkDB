@@ -36,10 +36,10 @@ RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, RaftState &s
 
 RaftDirector::~RaftDirector() {
   state.shutdown();
-  journal.notifyWaitingThreads();
-  mainThread.join();
-  commitApplier.join();
   journalTrimmer.join();
+  journal.notifyWaitingThreads();
+  commitApplier.join();
+  mainThread.join();
 }
 
 void RaftDirector::trimJournal() {
