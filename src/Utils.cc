@@ -39,22 +39,14 @@ bool my_strtoll(const std::string &str, int64_t &ret) {
   return true;
 }
 
-#if __BYTE_ORDER == __BIG_ENDIAN
-# define htole64(x) __bswap_64 (x)
-# define le64toh(x) __bswap_64 (x)
-# else
-# define htole64(x) (x)
-# define le64toh(x) (x)
-#endif
-
 int64_t binaryStringToInt(const char* buff) {
   int64_t result;
   memcpy(&result, buff, sizeof(result));
-  return le64toh(result);
+  return be64toh(result);
 }
 
 void intToBinaryString(int64_t num, char* buff) {
-  int64_t be = htole64(num);
+  int64_t be = htobe64(num);
   memcpy(buff, &be, sizeof(be));
 }
 

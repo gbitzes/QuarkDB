@@ -27,8 +27,8 @@
 using namespace quarkdb;
 
 TEST(Utils, binary_string_int_conversion) {
-  EXPECT_EQ(intToBinaryString(1), std::string("\x01\x00\x00\x00\x00\x00\x00\x00", 8));
-  EXPECT_EQ(binaryStringToInt("\x01\x00\x00\x00\x00\x00\x00\x00"), 1);
+  EXPECT_EQ(intToBinaryString(1), std::string("\x00\x00\x00\x00\x00\x00\x00\x01", 8));
+  EXPECT_EQ(binaryStringToInt("\x00\x00\x00\x00\x00\x00\x00\x01"), 1);
 
   EXPECT_EQ(binaryStringToInt(intToBinaryString(1).data()), 1);
   EXPECT_EQ(binaryStringToInt(intToBinaryString(2).c_str()), 2);

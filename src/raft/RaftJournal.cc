@@ -72,6 +72,10 @@ static void deserializeRedisRequest(const std::string &data, RaftTerm &term, Red
   }
 }
 
+static std::string encodeEntryKey(LogIndex index) {
+  return SSTR("ENTRY_" << intToBinaryString(index));
+}
+
 //------------------------------------------------------------------------------
 // RaftJournal
 //------------------------------------------------------------------------------
@@ -91,7 +95,7 @@ void RaftJournal::ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID
   store.set_int_or_die("RAFT_COMMIT_INDEX", 0);
 
   RedisRequest req { "UPDATE_RAFT_NODES", serializeNodes(nodes) };
-  store.set_or_die("RAFT_ENTRY_0", serializeRedisRequest(0, req));
+  store.set_or_die(encodeEntryKey(0), serializeRedisRequest(0, req));
   store.set_or_die("RAFT_NODES", serializeNodes(nodes));
   store.set_or_die("RAFT_OBSERVERS", "");
 }
@@ -221,7 +225,7 @@ bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req)
 }
 
 void RaftJournal::rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd) {
-  store.set_or_die(SSTR("RAFT_ENTRY_" << index), serializeRedisRequest(term, cmd));
+  store.set_or_die(encodeEntryKey(index), serializeRedisRequest(term, cmd));
 }
 
 void RaftJournal::setLogSize(LogIndex index) {
@@ -284,8 +288,8 @@ bool RaftJournal::removeEntries(LogIndex from) {
   qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize-1 << "]");
 
   for(LogIndex i = from; i < logSize; i++) {
-    rocksdb::Status st = store.del(SSTR("RAFT_ENTRY_" << i));
-    if(!st.ok()) qdb_critical("Error when deleting RAFT_ENTRY_" << i << ": " << st.ToString());
+    rocksdb::Status st = store.del(encodeEntryKey(i));
+    if(!st.ok()) qdb_critical("Error when deleting entry " << i << ": " << st.ToString());
   }
 
   fetch_or_die(from-1, termOfLastEntry);
@@ -334,7 +338,7 @@ bool RaftJournal::matchEntries(LogIndex index, RaftTerm term) {
 
 rocksdb::Status RaftJournal::fetch(LogIndex index, RaftEntry &entry) {
   std::string data;
-  rocksdb::Status st = store.get(SSTR("RAFT_ENTRY_" << index), data);
+  rocksdb::Status st = store.get(encodeEntryKey(index), data);
   if(!st.ok()) return st;
 
   deserializeRedisRequest(data, entry.term, entry.request);
