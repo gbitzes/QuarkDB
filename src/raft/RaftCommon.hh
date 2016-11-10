@@ -112,6 +112,7 @@ struct RaftInfo {
   RaftServer myself;
   std::vector<RaftServer> nodes;
   RaftTerm term;
+  LogIndex logStart;
   LogIndex logSize;
   RaftStatus status;
   LogIndex commitIndex;
@@ -121,6 +122,7 @@ struct RaftInfo {
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
     ret.push_back(SSTR("TERM " << term));
+    ret.push_back(SSTR("LOG-START " << logStart));
     ret.push_back(SSTR("LOG-SIZE " << logSize));
     ret.push_back(SSTR("MYSELF " << myself.toString()));
     ret.push_back(SSTR("NODES " << serializeNodes(nodes)));

@@ -90,6 +90,7 @@ void RaftJournal::ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID
 
   store.set_int_or_die("RAFT_CURRENT_TERM", 0);
   store.set_int_or_die("RAFT_LOG_SIZE", 1);
+  store.set_int_or_die("RAFT_LOG_START", 0);
   store.set_or_die("RAFT_CLUSTER_ID", clusterID);
   store.set_or_die("RAFT_VOTED_FOR", "");
   store.set_int_or_die("RAFT_COMMIT_INDEX", 0);
@@ -109,6 +110,7 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
 void RaftJournal::initialize() {
   currentTerm = store.get_int_or_die("RAFT_CURRENT_TERM");
   logSize = store.get_int_or_die("RAFT_LOG_SIZE");
+  logStart = store.get_int_or_die("RAFT_LOG_START");
   clusterID = store.get_or_die("RAFT_CLUSTER_ID");
   commitIndex = store.get_int_or_die("RAFT_COMMIT_INDEX");
   std::string vote = store.get_or_die("RAFT_VOTED_FOR");
@@ -224,6 +226,26 @@ bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req)
   return true;
 }
 
+void RaftJournal::trimUntil(LogIndex newLogStart) {
+  // no locking - trimmed entries should be so old
+  // that they are not being accessed anymore
+
+  if(newLogStart <= logStart) return; // no entries to trim
+  if(logSize < newLogStart) qdb_throw("attempted to trim a journal past its end. logSize: " << logSize << ", new log start: " << newLogStart);
+  if(commitIndex < newLogStart) qdb_throw("attempted to trim non-committed entries. commitIndex: " << commitIndex << ", new log start: " << newLogStart);
+
+  qdb_info("Trimming raft journal from #" << logStart << " until #" << newLogStart);
+
+  store.set_int_or_die("RAFT_LOG_START", logStart);
+  LogIndex prevLogStart = logStart;
+  logStart = newLogStart;
+
+  for(LogIndex i = prevLogStart; i < newLogStart; i++) {
+    rocksdb::Status st = store.del(encodeEntryKey(i));
+    if(!st.ok()) qdb_critical("Error when trimming journal, cannot delete entry " << i << ": " << st.ToString());
+  }
+}
+
 void RaftJournal::rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd) {
   store.set_or_die(encodeEntryKey(index), serializeRedisRequest(term, cmd));
 }
@@ -302,8 +324,13 @@ LogIndex RaftJournal::compareEntries(LogIndex start, const std::vector<RaftEntry
   std::unique_lock<std::mutex> lock(contentMutex);
 
   LogIndex endIndex = std::min(LogIndex(logSize), LogIndex(start+entries.size()));
+  LogIndex startIndex = std::max(start, LogIndex(logStart));
 
-  for(LogIndex i = start; i < endIndex; i++) {
+  if(start != startIndex) {
+    qdb_critical("Tried to compare entries which have already been trimmed.. will assume they contain no inconsistencies. logStart: " << logStart << ", asked to compare starting from: " << start);
+  }
+
+  for(LogIndex i = startIndex; i < endIndex; i++) {
     RaftEntry entry;
     fetch_or_die(i, entry);
     if(entries[i-start] != entry) {
@@ -337,6 +364,10 @@ bool RaftJournal::matchEntries(LogIndex index, RaftTerm term) {
 //------------------------------------------------------------------------------
 
 rocksdb::Status RaftJournal::fetch(LogIndex index, RaftEntry &entry) {
+  // we intentionally do not check logSize and logStart, so as to be able to
+  // catch potential inconsistencies between the counters and what is
+  // really contained in the journal
+
   std::string data;
   rocksdb::Status st = store.get(encodeEntryKey(index), data);
   if(!st.ok()) return st;

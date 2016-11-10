@@ -78,6 +78,7 @@ RaftClusterID RaftState::getClusterID() {
 void RaftState::declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader) {
   if(observedTerm > term) {
     qdb_event("Progressing raft term: " << term << " ==> " << observedTerm);
+    notifier.notify_all();
   }
   if(!observedLeader.empty()) {
     qdb_event("Recognizing leader " << observedLeader.toString() << " for term " << observedTerm);

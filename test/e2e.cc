@@ -47,7 +47,7 @@ void assert_reply(const redisReplyPtr &reply, int integer) {
 void assert_reply(const redisReplyPtr &reply, const std::string &str) {
   ASSERT_NE(reply, nullptr);
   // ASSERT_TRUE(reply->type == REDIS_REPLY_STRING || reply->type == REDIS_REPLY_STATUS);
-  ASSERT_EQ(std::string(reply->str, reply->len), str);
+  EXPECT_EQ(std::string(reply->str, reply->len), str);
 }
 
 // crazy C++ templating to allow ASSERT_REPLY() to work as one liner in all cases
@@ -170,4 +170,59 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 
     ASSERT_EQ(entry1, entry2);
   }
+}
+
+TEST_F(Raft_e2e, replication_with_trimmed_journal) {
+  prepare(0); prepare(1);
+  spinup(0); spinup(1);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int firstSlaveID = (leaderID+1)%2;
+  ASSERT_GE(leaderID, 0);
+  ASSERT_LE(leaderID, 1);
+
+  std::vector<std::future<redisReplyPtr>> futures;
+
+  // send off many requests, pipeline them
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    futures.emplace_back(tunnel(leaderID)->execute(testreqs[i]));
+  }
+
+  for(size_t i = 0; i < 2; i++) {
+    ASSERT_REPLY(futures[i], "OK");
+  }
+
+  for(size_t i = 2; i < futures.size(); i++) {
+    ASSERT_REPLY(futures[i], 1);
+  }
+
+  // now let's trim leader's journal..
+  journal(leaderID)->trimUntil(4);
+
+  // and verify it's NOT possible to bring node #2 up to date
+  spinup(2);
+
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+  // verify consensus on leader
+  ASSERT_EQ(state(2)->getSnapshot().leader, state(0)->getSnapshot().leader);
+  ASSERT_EQ(state(2)->getSnapshot().leader, state(1)->getSnapshot().leader);
+
+  ASSERT_EQ(journal(2)->getLogSize(), 1);
+  ASSERT_EQ(journal(2)->getLogStart(), 0);
+
+  // a divine intervention fills up the missing entries in node #2 journal
+  for(size_t i = 1; i < 5; i++) {
+    RaftEntry entry;
+    ASSERT_TRUE(journal(firstSlaveID)->fetch(i, entry).ok());
+
+    journal(2)->append(i, entry.term, entry.request);
+  }
+
+  // now verify node #2 can be brought up to date successfully
+  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  ASSERT_EQ(journal(2)->getLogSize(), journal(leaderID)->getLogSize());
+  ASSERT_EQ(journal(2)->getLogSize(), journal(firstSlaveID)->getLogSize());
 }

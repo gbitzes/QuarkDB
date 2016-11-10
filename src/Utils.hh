@@ -75,6 +75,17 @@ bool parseServer(const std::string &str, RaftServer &srv);
 bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
 std::string serializeNodes(const std::vector<RaftServer> &nodes);
 
+inline std::string vecToString(const std::vector<std::string> &vec) {
+  std::ostringstream ss;
+  ss << "[";
+  for(size_t i = 0; i < vec.size(); i++) {
+    ss << vec[i];
+    if(i != vec.size()-1) ss << ", ";
+  }
+  ss << "]";
+  return ss.str();
+}
+
 // given a vector, checks whether all elements are unique
 template<class T>
 bool checkUnique(const std::vector<T> &v) {

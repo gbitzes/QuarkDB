@@ -43,6 +43,7 @@ private:
   void actAsFollower(RaftStateSnapshot &snapshot);
   void runForLeader();
   void applyCommits();
+  void trimJournal();
 
   RaftDispatcher &dispatcher;
   // RocksDB &stateMachine;
@@ -52,6 +53,7 @@ private:
 
   std::thread mainThread;
   std::thread commitApplier;
+  std::thread journalTrimmer;
 };
 
 }

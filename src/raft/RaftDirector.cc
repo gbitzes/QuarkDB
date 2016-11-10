@@ -31,6 +31,7 @@ RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, RaftState &s
 : dispatcher(disp), journal(jour), state(st), raftClock(rc) {
   mainThread = std::thread(&RaftDirector::main, this);
   commitApplier = std::thread(&RaftDirector::applyCommits, this);
+  journalTrimmer = std::thread(&RaftDirector::trimJournal, this);
 }
 
 RaftDirector::~RaftDirector() {
@@ -38,6 +39,20 @@ RaftDirector::~RaftDirector() {
   journal.notifyWaitingThreads();
   mainThread.join();
   commitApplier.join();
+  journalTrimmer.join();
+}
+
+void RaftDirector::trimJournal() {
+  while(!state.inShutdown()) {
+    LogIndex logSpan = journal.getLogSize() - journal.getLogStart();
+
+    // TODO: make these configurable?
+    if(logSpan >= 1000000) {
+      journal.trimUntil(journal.getLogStart() + 100000);
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(1));
+  }
 }
 
 void RaftDirector::applyCommits() {

@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "raft/RaftJournal.hh"
+#include "test-utils.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
@@ -144,5 +145,34 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(entry2.term, 2);
   ASSERT_EQ(entry2.request, req);
 
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    ASSERT_TRUE(journal.append(3+i, 4, testreqs[i])) << i;
+  }
+
+  ASSERT_THROW(journal.trimUntil(4), FatalException); // commit index is 2
+  ASSERT_THROW(journal.trimUntil(3), FatalException);
+
+  journal.trimUntil(2);
+  journal.trimUntil(2); // no op
+
+  ASSERT_EQ(journal.getLogStart(), 2);
+
+  RaftEntry tmp;
+  ASSERT_NOTFOUND(journal.fetch(0, tmp));
+  ASSERT_NOTFOUND(journal.fetch(1, tmp));
+  ASSERT_OK(journal.fetch(2, tmp));
+
+  journal.setCommitIndex(3);
+
+  journal.trimUntil(3);
+  ASSERT_NOTFOUND(journal.fetch(2, tmp));
+  ASSERT_OK(journal.fetch(3, tmp));
+  ASSERT_THROW(journal.trimUntil(4), FatalException); // commit index is 3
+
+  journal.setCommitIndex(6);
+  journal.trimUntil(5);
+
+  ASSERT_NOTFOUND(journal.fetch(4, tmp));
+  ASSERT_EQ(journal.getLogStart(), 5);
 }
 }

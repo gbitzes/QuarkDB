@@ -54,6 +54,7 @@ public:
 
   RaftTerm getCurrentTerm() const { return currentTerm; }
   LogIndex getLogSize() const { return logSize; }
+  LogIndex getLogStart() const { return logStart; }
   RaftClusterID getClusterID() const { return clusterID; }
   LogIndex getCommitIndex() const { return commitIndex; }
   std::vector<RaftServer> getNodes();
@@ -75,6 +76,7 @@ public:
   void notifyWaitingThreads();
 
   rocksdb::Status checkpoint(const std::string &path);
+  void trimUntil(LogIndex newLogStart);
 private:
   RocksDB store;
 
@@ -85,6 +87,7 @@ private:
   std::atomic<RaftTerm> currentTerm;
   std::atomic<LogIndex> commitIndex;
   std::atomic<LogIndex> logSize;
+  std::atomic<LogIndex> logStart;
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;
   RaftServer votedFor;

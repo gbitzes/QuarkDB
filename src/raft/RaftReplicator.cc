@@ -91,15 +91,18 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
 
   bool online = false;
   int64_t payloadLimit = 1;
+
+  bool needResilvering = false;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
-    if(nextIndex <= 0) std::terminate();
+    if(nextIndex <= 0) qdb_throw("nextIndex has invalid value: " << nextIndex);
+    if(nextIndex <= journal.getLogStart()) nextIndex = journal.getLogSize();
 
     // TODO: check if configuration epoch has changed
 
     RaftTerm prevTerm;
 
     if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
-      qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString());
+      qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString() << ". My log start: " << journal.getLogStart());
       state.wait(timeouts.getHeartbeatInterval());
       continue;
     }
@@ -121,6 +124,17 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
         online = true;
         qdb_event("Replication target " << target.toString() << " came back online. Outcome: " << resp.outcome << ", logsize: " << resp.logSize);
       }
+
+      if(resp.logSize <= journal.getLogStart()) {
+        nextIndex = journal.getLogSize();
+        qdb_critical("Unable to perform replication on " << target.toString() << ", it's too far behind (its logsize: " << resp.logSize << ") and my journal starts at " << journal.getLogStart() << ". The target node must be resilvered manually.");
+        needResilvering = true;
+        payloadLimit = 1;
+
+        goto nextRound;
+      }
+
+      needResilvering = false;
 
       if(!resp.outcome) {
         // never try to touch entry #0
@@ -149,7 +163,8 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
         online = false;
     }
 
-    if(!online) {
+nextRound:
+    if(!online || needResilvering) {
       state.wait(timeouts.getHeartbeatInterval());
     }
     else if(online && nextIndex >= journal.getLogSize()) {
