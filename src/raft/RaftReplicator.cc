@@ -119,48 +119,62 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), reqs, terms);
     RaftAppendEntriesResponse resp;
 
-    if(retrieve_response(fut, resp)) {
-      if(!online) {
-        online = true;
-        qdb_event("Replication target " << target.toString() << " came back online. Outcome: " << resp.outcome << ", logsize: " << resp.logSize);
-      }
-
-      if(resp.logSize <= journal.getLogStart()) {
-        nextIndex = journal.getLogSize();
-        qdb_critical("Unable to perform replication on " << target.toString() << ", it's too far behind (its logsize: " << resp.logSize << ") and my journal starts at " << journal.getLogStart() << ". The target node must be resilvered manually.");
-        needResilvering = true;
-        payloadLimit = 1;
-
-        goto nextRound;
-      }
-
-      needResilvering = false;
-
-      if(!resp.outcome) {
-        // never try to touch entry #0
-        if(nextIndex >= 2 && nextIndex <= resp.logSize) {
-          nextIndex--;
-        } else if(resp.logSize > 0) {
-          nextIndex = resp.logSize;
-        }
-      }
-
-      if(resp.outcome) {
-        if(nextIndex+payloadSize != resp.logSize) {
-          qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize);
-        }
-
-        matchIndex.update(resp.logSize-1);
-        nextIndex = resp.logSize;
-        if(payloadLimit < 1024) {
-          payloadLimit *= 2;
-        }
-      }
-    }
-    else if(online) {
+    // Check: Is the target even online?
+    if(!retrieve_response(fut, resp)) {
+      if(online) {
         payloadLimit = 1;
         qdb_event("Replication target " << target.toString() << " went offline.");
         online = false;
+      }
+
+      goto nextRound;
+    }
+
+    if(!online) {
+      // Print an event if the target just came back online
+      online = true;
+      qdb_event("Replication target " << target.toString() << " came back online. Outcome: " << resp.outcome << ", logsize: " << resp.logSize);
+    }
+
+    // Check: Does the target need resilvering?
+    if(resp.logSize <= journal.getLogStart()) {
+      nextIndex = journal.getLogSize();
+
+      if(!needResilvering) {
+        qdb_critical("Unable to perform replication on " << target.toString() << ", it's too far behind (its logsize: " << resp.logSize << ") and my journal starts at " << journal.getLogStart() << ". The target node must be resilvered manually.");
+        needResilvering = true;
+        payloadLimit = 1;
+      }
+
+      goto nextRound;
+    }
+
+    needResilvering = false;
+
+    // Check: Is my current view of the target's journal correct? (nextIndex)
+    if(!resp.outcome) {
+      // never try to touch entry #0
+      if(nextIndex >= 2 && nextIndex <= resp.logSize) {
+        // There are journal inconsistencies. Move back a step to remove a single
+        // inconsistent entry in the next round.
+        nextIndex--;
+      } else if(resp.logSize > 0) {
+        // Our nextIndex is outdated, update
+        nextIndex = resp.logSize;
+      }
+
+      goto nextRound;
+    }
+
+    // All checks have passed
+    if(nextIndex+payloadSize != resp.logSize) {
+      qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize);
+    }
+
+    matchIndex.update(resp.logSize-1);
+    nextIndex = resp.logSize;
+    if(payloadLimit < 1024) {
+      payloadLimit *= 2;
     }
 
 nextRound:
