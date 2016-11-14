@@ -50,8 +50,9 @@ void RaftDirector::trimJournal() {
     if(logSpan >= 1000000) {
       journal.trimUntil(journal.getLogStart() + 100000);
     }
-
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    else {
+      state.wait(std::chrono::seconds(1));
+    }
   }
 }
 
