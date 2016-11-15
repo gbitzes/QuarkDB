@@ -25,6 +25,7 @@
 #include "../Common.hh"
 #include "../Utils.hh"
 #include "RaftState.hh"
+#include <rocksdb/utilities/checkpoint.h>
 
 using namespace quarkdb;
 
@@ -81,47 +82,45 @@ static std::string encodeEntryKey(LogIndex index) {
 //------------------------------------------------------------------------------
 
 void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes) {
-  RocksDB store(path);
-  return ObliterateAndReinitializeJournal(store, clusterID, nodes);
+  RaftJournal journal(path, clusterID, nodes);
 }
-
-void RaftJournal::ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID clusterID, std::vector<RaftServer> nodes) {
-  store.flushall();
-
-  store.set_int_or_die("RAFT_CURRENT_TERM", 0);
-  store.set_int_or_die("RAFT_LOG_SIZE", 1);
-  store.set_int_or_die("RAFT_LOG_START", 0);
-  store.set_or_die("RAFT_CLUSTER_ID", clusterID);
-  store.set_or_die("RAFT_VOTED_FOR", "");
-  store.set_int_or_die("RAFT_COMMIT_INDEX", 0);
-
-  RedisRequest req { "UPDATE_RAFT_NODES", serializeNodes(nodes) };
-  store.set_or_die(encodeEntryKey(0), serializeRedisRequest(0, req));
-  store.set_or_die("RAFT_NODES", serializeNodes(nodes));
-  store.set_or_die("RAFT_OBSERVERS", "");
-}
-
 
 void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftServer> &newNodes) {
-  ObliterateAndReinitializeJournal(store, newClusterID, newNodes);
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {
+    db->Delete(rocksdb::WriteOptions(), iter->key().ToString());
+  }
+
+  this->set_int_or_die("RAFT_CURRENT_TERM", 0);
+  this->set_int_or_die("RAFT_LOG_SIZE", 1);
+  this->set_int_or_die("RAFT_LOG_START", 0);
+  this->set_or_die("RAFT_CLUSTER_ID", newClusterID);
+  this->set_or_die("RAFT_VOTED_FOR", "");
+  this->set_int_or_die("RAFT_COMMIT_INDEX", 0);
+
+  RedisRequest req { "UPDATE_RAFT_NODES", serializeNodes(newNodes) };
+  this->set_or_die(encodeEntryKey(0), serializeRedisRequest(0, req));
+  this->set_or_die("RAFT_NODES", serializeNodes(newNodes));
+  this->set_or_die("RAFT_OBSERVERS", "");
+
   initialize();
 }
 
 void RaftJournal::initialize() {
-  currentTerm = store.get_int_or_die("RAFT_CURRENT_TERM");
-  logSize = store.get_int_or_die("RAFT_LOG_SIZE");
-  logStart = store.get_int_or_die("RAFT_LOG_START");
-  clusterID = store.get_or_die("RAFT_CLUSTER_ID");
-  commitIndex = store.get_int_or_die("RAFT_COMMIT_INDEX");
-  std::string vote = store.get_or_die("RAFT_VOTED_FOR");
+  currentTerm = this->get_int_or_die("RAFT_CURRENT_TERM");
+  logSize = this->get_int_or_die("RAFT_LOG_SIZE");
+  logStart = this->get_int_or_die("RAFT_LOG_START");
+  clusterID = this->get_or_die("RAFT_CLUSTER_ID");
+  commitIndex = this->get_int_or_die("RAFT_COMMIT_INDEX");
+  std::string vote = this->get_or_die("RAFT_VOTED_FOR");
   this->fetch_or_die(logSize-1, termOfLastEntry);
 
-  std::string tmp = store.get_or_die("RAFT_NODES");
+  std::string tmp = this->get_or_die("RAFT_NODES");
   if(!parseServers(tmp, nodes)) {
     qdb_throw("journal corruption, cannot parse RAFT_NODES: " << tmp);
   }
 
-  tmp = store.get_or_die("RAFT_OBSERVERS");
+  tmp = this->get_or_die("RAFT_OBSERVERS");
   if(!tmp.empty() && !parseServers(tmp, observers)) {
     qdb_throw("journal corruption, cannot parse RAFT_OBSERVERS: " << tmp);
   }
@@ -131,13 +130,35 @@ void RaftJournal::initialize() {
   }
 }
 
-RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes)
-: store(filename) {
-  ObliterateAndReinitializeJournal(store, clusterID, nodes);
-  initialize();
+void RaftJournal::openDB(const std::string &path) {
+  qdb_info("Opening journal database " << quotes(path));
+  dbPath = path;
+
+  rocksdb::Options options;
+  options.create_if_missing = true;
+  rocksdb::Status status = rocksdb::TransactionDB::Open(options, rocksdb::TransactionDBOptions(), path, &transactionDB);
+  if(!status.ok()) qdb_throw("Error while opening journal in " << path << ":" << status.ToString());
+
+  db = transactionDB->GetBaseDB();
 }
 
-RaftJournal::RaftJournal(const std::string &filename) : store(filename) {
+RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
+  openDB(filename);
+  obliterate(clusterID, nodes);
+}
+
+RaftJournal::~RaftJournal() {
+  qdb_info("Closing journal database " << quotes(dbPath));
+
+  if(transactionDB) {
+    delete transactionDB;
+    transactionDB = nullptr;
+    db = nullptr;
+  }
+}
+
+RaftJournal::RaftJournal(const std::string &filename) {
+  openDB(filename);
   initialize();
 }
 
@@ -164,9 +185,9 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   // Just in case we crash in the middle, make sure votedFor becomes invalid first
   //----------------------------------------------------------------------------
 
-  store.set_or_die("RAFT_VOTED_FOR", RaftState::BLOCKED_VOTE.toString());
-  store.set_int_or_die("RAFT_CURRENT_TERM", term);
-  store.set_or_die("RAFT_VOTED_FOR", vote.toString());
+  this->set_or_die("RAFT_VOTED_FOR", RaftState::BLOCKED_VOTE.toString());
+  this->set_int_or_die("RAFT_CURRENT_TERM", term);
+  this->set_or_die("RAFT_VOTED_FOR", vote.toString());
 
   currentTerm = term;
   votedFor = vote;
@@ -185,7 +206,7 @@ bool RaftJournal::setCommitIndex(LogIndex newIndex) {
   }
 
   if(commitIndex < newIndex) {
-    store.set_int_or_die("RAFT_COMMIT_INDEX", newIndex);
+    this->set_int_or_die("RAFT_COMMIT_INDEX", newIndex);
     commitIndex = newIndex;
     commitNotifier.notify_all();
   }
@@ -238,16 +259,16 @@ void RaftJournal::trimUntil(LogIndex newLogStart) {
 
   LogIndex prevLogStart = logStart;
   logStart = newLogStart;
-  store.set_int_or_die("RAFT_LOG_START", logStart);
+  this->set_int_or_die("RAFT_LOG_START", logStart);
 
   for(LogIndex i = prevLogStart; i < newLogStart; i++) {
-    rocksdb::Status st = store.del(encodeEntryKey(i));
+    rocksdb::Status st = db->Delete(rocksdb::WriteOptions(), encodeEntryKey(i));
     if(!st.ok()) qdb_critical("Error when trimming journal, cannot delete entry " << i << ": " << st.ToString());
   }
 }
 
 void RaftJournal::rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd) {
-  store.set_or_die(encodeEntryKey(index), serializeRedisRequest(term, cmd));
+  this->set_or_die(encodeEntryKey(index), serializeRedisRequest(term, cmd));
 }
 
 void RaftJournal::setLogSize(LogIndex index) {
@@ -255,7 +276,7 @@ void RaftJournal::setLogSize(LogIndex index) {
     throw FatalException(SSTR("Attempted to remove applied entry by setting logSize to " << index << " while commitIndex = " << commitIndex));
   }
 
-  store.set_int_or_die("RAFT_LOG_SIZE", index);
+  this->set_int_or_die("RAFT_LOG_SIZE", index);
   logSize = index;
 }
 
@@ -272,14 +293,14 @@ std::vector<RaftServer> RaftJournal::getNodes() {
 void RaftJournal::setNodes(const std::vector<RaftServer> &newNodes) {
   std::lock_guard<std::mutex> lock(nodesMutex);
 
-  store.set_or_die("RAFT_NODES", serializeNodes(newNodes));
+  this->set_or_die("RAFT_NODES", serializeNodes(newNodes));
   nodes = newNodes;
 }
 
 void RaftJournal::setObservers(const std::vector<RaftServer> &obs) {
   std::lock_guard<std::mutex> lock(observersMutex);
 
-  store.set_or_die("RAFT_OBSERVERS", serializeNodes(obs));
+  this->set_or_die("RAFT_OBSERVERS", serializeNodes(obs));
   observers = obs;
 }
 
@@ -310,7 +331,7 @@ bool RaftJournal::removeEntries(LogIndex from) {
   qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize-1 << "]");
 
   for(LogIndex i = from; i < logSize; i++) {
-    rocksdb::Status st = store.del(encodeEntryKey(i));
+    rocksdb::Status st = db->Delete(rocksdb::WriteOptions(), encodeEntryKey(i));
     if(!st.ok()) qdb_critical("Error when deleting entry " << i << ": " << st.ToString());
   }
 
@@ -369,7 +390,7 @@ rocksdb::Status RaftJournal::fetch(LogIndex index, RaftEntry &entry) {
   // really contained in the journal
 
   std::string data;
-  rocksdb::Status st = store.get(encodeEntryKey(index), data);
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), encodeEntryKey(index), &data);
   if(!st.ok()) return st;
 
   deserializeRedisRequest(data, entry.term, entry.request);
@@ -397,10 +418,39 @@ void RaftJournal::fetch_or_die(LogIndex index, RaftTerm &term) {
   }
 }
 
+void RaftJournal::set_or_die(const std::string &key, const std::string &value) {
+  rocksdb::Status st = db->Put(rocksdb::WriteOptions(), key, value);
+  if(!st.ok()) {
+    qdb_throw("unable to set journal key " << key << ". Error: " << st.ToString());
+  }
+}
+
+void RaftJournal::set_int_or_die(const std::string &key, int64_t value) {
+  this->set_or_die(key, intToBinaryString(value));
+}
+
+int64_t RaftJournal::get_int_or_die(const std::string &key) {
+  return binaryStringToInt(this->get_or_die(key).c_str());
+}
+
+std::string RaftJournal::get_or_die(const std::string &key) {
+  std::string tmp;
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), key, &tmp);
+  if(!st.ok()) qdb_throw("error when getting journal key " << key << ": " << st.ToString());
+  return tmp;
+}
+
 //------------------------------------------------------------------------------
 // Checkpoint for online backup
 //------------------------------------------------------------------------------
 
 rocksdb::Status RaftJournal::checkpoint(const std::string &path) {
-  return store.checkpoint(path);
+  rocksdb::Checkpoint *checkpoint = nullptr;
+  rocksdb::Status st = rocksdb::Checkpoint::Create(db, &checkpoint);
+  if(!st.ok()) return st;
+
+  st = checkpoint->CreateCheckpoint(path);
+  delete checkpoint;
+
+  return st;
 }

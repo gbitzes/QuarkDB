@@ -24,7 +24,10 @@
 #ifndef __QUARKDB_RAFT_JOURNAL_H__
 #define __QUARKDB_RAFT_JOURNAL_H__
 
-#include "../RocksDB.hh"
+#include <rocksdb/db.h>
+#include <rocksdb/utilities/transaction_db.h>
+#include <rocksdb/utilities/transaction.h>
+
 #include <mutex>
 #include <condition_variable>
 #include "RaftCommon.hh"
@@ -34,13 +37,13 @@ namespace quarkdb {
 class RaftJournal {
 public:
   static void ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes);
-  static void ObliterateAndReinitializeJournal(RocksDB &store, RaftClusterID clusterID, std::vector<RaftServer> nodes);
 
   // opens an existing journal
   RaftJournal(const std::string &path);
 
   // re-initializes a journal, obliterates the contents of the old one, if it exists
   RaftJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  ~RaftJournal();
 
   // should never have to be called during normal operation, only in the tests
   // assumes there's no other concurrent access to the journal
@@ -78,7 +81,14 @@ public:
   rocksdb::Status checkpoint(const std::string &path);
   void trimUntil(LogIndex newLogStart);
 private:
-  RocksDB store;
+  void openDB(const std::string &path);
+
+  rocksdb::TransactionDB* transactionDB = nullptr;
+  rocksdb::DB* db = nullptr;
+  std::string dbPath;
+
+  using IteratorPtr = std::shared_ptr<rocksdb::Iterator>;
+  using TransactionPtr = std::shared_ptr<rocksdb::Transaction>;
 
   //----------------------------------------------------------------------------
   // Cached values, always backed to stable storage
@@ -116,6 +126,11 @@ private:
 
   void rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd);
   void setLogSize(LogIndex index);
+
+  void set_or_die(const std::string &key, const std::string &value);
+  void set_int_or_die(const std::string &key, int64_t value);
+  std::string get_or_die(const std::string &key);
+  int64_t get_int_or_die(const std::string &key);
 };
 
 }

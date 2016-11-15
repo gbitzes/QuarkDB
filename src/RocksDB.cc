@@ -27,9 +27,9 @@
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/utilities/checkpoint.h>
 
-#define RETURN_ON_ERROR(st) if(!st.ok()) return st;
-#define THROW_ON_ERROR(st) if(!st.ok()) qdb_throw(st.ToString())
-#define ASSERT_OK_OR_NOTFOUND(st) if(!st.ok() && !st.IsNotFound()) qdb_throw(st.ToString())
+#define RETURN_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) return st2; }
+#define THROW_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) qdb_throw(st2.ToString()); }
+#define ASSERT_OK_OR_NOTFOUND(st) { rocksdb::Status st2 = st; if(!st2.ok() && !st2.IsNotFound()) qdb_throw(st2.ToString()); }
 
 using namespace quarkdb;
 
@@ -434,13 +434,6 @@ rocksdb::Status RocksDB::flushall(LogIndex index) {
   return remove_all_with_prefix("", index);
 }
 
-void RocksDB::set_or_die(const std::string &key, const std::string &value) {
-  rocksdb::Status st = this->set(key, value);
-  if(!st.ok()) {
-    throw FatalException(SSTR("unable to set key " << key << " to " << value << ". Error: " << st.ToString()));
-  }
-}
-
 rocksdb::Status RocksDB::checkpoint(const std::string &path) {
   rocksdb::Checkpoint *checkpoint = nullptr;
   RETURN_ON_ERROR(rocksdb::Checkpoint::Create(db, &checkpoint));
@@ -449,28 +442,6 @@ rocksdb::Status RocksDB::checkpoint(const std::string &path) {
   delete checkpoint;
 
   return st;
-}
-
-
-std::string RocksDB::get_or_die(const std::string &key) {
-  std::string tmp;
-  rocksdb::Status st = this->get(key, tmp);
-  if(!st.ok()) {
-    throw FatalException(SSTR("unable to get key " << key << ". Error: " << st.ToString()));
-  }
-  return tmp;
-}
-
-int64_t RocksDB::get_int_or_die(const std::string &key) {
-  std::string tmp = this->get_or_die(key);
-  return binaryStringToInt(tmp.c_str());
-}
-
-void RocksDB::set_int_or_die(const std::string &key, int64_t value) {
-  rocksdb::Status st = this->set(key, intToBinaryString(value));
-  if(!st.ok()) {
-    throw FatalException(SSTR("unable to set key " << key << ". Error: " << st.ToString()));
-  }
 }
 
 RocksDB::TransactionPtr RocksDB::startTransaction() {
