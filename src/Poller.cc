@@ -24,6 +24,7 @@
 #include "Poller.hh"
 #include "RedisParser.hh"
 #include <sys/socket.h>
+#include <sys/ioctl.h>
 #include <poll.h>
 
 #include <sys/types.h>
@@ -114,6 +115,15 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
 
     // time to quit?
     if(shutdown) break;
+
+    // EOF?
+    if(polls[0].revents & POLLIN) {
+      int count = -1;
+      ioctl(fd, FIONREAD, &count);
+      if(count == 0) {
+        break;
+      }
+    }
 
     while(true) {
       LinkStatus status = parser.fetch(currentRequest);
