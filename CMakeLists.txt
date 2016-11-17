@@ -1,11 +1,23 @@
 cmake_minimum_required(VERSION 2.6)
+
+#-------------------------------------------------------------------------------
+# Initialize
+#-------------------------------------------------------------------------------
+
 project(quarkdb)
+set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+
+#-------------------------------------------------------------------------------
+# Regenerate Version.hh
+#-------------------------------------------------------------------------------
+
+add_custom_target(GenerateVersionInfo ALL DEPENDS Version)
+add_custom_command(OUTPUT Version COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/genversion.py)
 
 #-------------------------------------------------------------------------------
 # Search for dependencies
 #-------------------------------------------------------------------------------
-
-set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(XRootD REQUIRED)
 find_package(RocksDB REQUIRED)
