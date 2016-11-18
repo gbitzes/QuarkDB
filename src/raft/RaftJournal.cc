@@ -28,6 +28,7 @@
 #include <rocksdb/utilities/checkpoint.h>
 
 using namespace quarkdb;
+#define THROW_ON_ERROR(stmt) { rocksdb::Status st2 = stmt; if(!st2.ok()) qdb_throw(st2.ToString()); }
 
 //------------------------------------------------------------------------------
 // Helper functions
@@ -177,12 +178,13 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   }
 
   //----------------------------------------------------------------------------
-  // Just in case we crash in the middle, make sure votedFor becomes invalid first
+  // Atomically update currentTerm and votedFor
   //----------------------------------------------------------------------------
 
-  this->set_or_die("RAFT_VOTED_FOR", RaftState::BLOCKED_VOTE.toString());
-  this->set_int_or_die("RAFT_CURRENT_TERM", term);
-  this->set_or_die("RAFT_VOTED_FOR", vote.toString());
+  TransactionPtr tx(startTransaction());
+  THROW_ON_ERROR(tx->Put("RAFT_CURRENT_TERM", intToBinaryString(term)));
+  THROW_ON_ERROR(tx->Put("RAFT_VOTED_FOR", vote.toString()));
+  commitTransaction(tx);
 
   currentTerm = term;
   votedFor = vote;
@@ -216,6 +218,24 @@ bool RaftJournal::waitForCommits(const LogIndex currentCommit) {
   return true;
 }
 
+RaftJournal::TransactionPtr RaftJournal::startTransaction() {
+  return TransactionPtr(transactionDB->BeginTransaction(rocksdb::WriteOptions()));
+}
+
+void RaftJournal::commitTransaction(TransactionPtr &tx, LogIndex index) {
+  if(index >= 0 && index <= commitIndex) {
+    qdb_throw("Attempted to remove committed entries by setting logSize to " << index << " while commitIndex = " << commitIndex);
+  }
+
+  if(index >= 0 && index != logSize) {
+    THROW_ON_ERROR(tx->Put("RAFT_LOG_SIZE", intToBinaryString(index)));
+  }
+
+  rocksdb::Status st = tx->Commit();
+  if(!st.ok()) qdb_throw("unable to commit journal transaction: " << st.ToString());
+  if(index >= 0) logSize = index;
+}
+
 bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req) {
   std::lock_guard<std::mutex> lock(contentMutex);
 
@@ -234,8 +254,9 @@ bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req)
     return false;
   }
 
-  rawAppend(index, term, req);
-  setLogSize(logSize+1);
+  TransactionPtr tx(startTransaction());
+  THROW_ON_ERROR(tx->Put(encodeEntryKey(index), serializeRedisRequest(term, req)));
+  commitTransaction(tx, index+1);
 
   termOfLastEntry = term;
   logUpdated.notify_all();
@@ -251,28 +272,16 @@ void RaftJournal::trimUntil(LogIndex newLogStart) {
   if(commitIndex < newLogStart) qdb_throw("attempted to trim non-committed entries. commitIndex: " << commitIndex << ", new log start: " << newLogStart);
 
   qdb_info("Trimming raft journal from #" << logStart << " until #" << newLogStart);
+  TransactionPtr tx(startTransaction());
 
-  LogIndex prevLogStart = logStart;
+  for(LogIndex i = logStart; i < newLogStart; i++) {
+    rocksdb::Status st = tx->Delete(encodeEntryKey(i));
+    if(!st.ok()) qdb_throw("Error when trimming journal, cannot delete entry " << i << ": " << st.ToString());
+  }
+
+  THROW_ON_ERROR(tx->Put("RAFT_LOG_START", intToBinaryString(newLogStart)));
+  commitTransaction(tx);
   logStart = newLogStart;
-  this->set_int_or_die("RAFT_LOG_START", logStart);
-
-  for(LogIndex i = prevLogStart; i < newLogStart; i++) {
-    rocksdb::Status st = db->Delete(rocksdb::WriteOptions(), encodeEntryKey(i));
-    if(!st.ok()) qdb_critical("Error when trimming journal, cannot delete entry " << i << ": " << st.ToString());
-  }
-}
-
-void RaftJournal::rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd) {
-  this->set_or_die(encodeEntryKey(index), serializeRedisRequest(term, cmd));
-}
-
-void RaftJournal::setLogSize(LogIndex index) {
-  if(index <= commitIndex) {
-    throw FatalException(SSTR("Attempted to remove applied entry by setting logSize to " << index << " while commitIndex = " << commitIndex));
-  }
-
-  this->set_int_or_die("RAFT_LOG_SIZE", index);
-  logSize = index;
 }
 
 RaftServer RaftJournal::getVotedFor() {
@@ -325,13 +334,14 @@ bool RaftJournal::removeEntries(LogIndex from) {
   if(from <= commitIndex) qdb_throw("attempted to remove committed entries. commitIndex: " << commitIndex << ", from: " << from);
   qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize-1 << "]");
 
+  TransactionPtr tx(startTransaction());
   for(LogIndex i = from; i < logSize; i++) {
-    rocksdb::Status st = db->Delete(rocksdb::WriteOptions(), encodeEntryKey(i));
+    rocksdb::Status st = tx->Delete(encodeEntryKey(i));
     if(!st.ok()) qdb_critical("Error when deleting entry " << i << ": " << st.ToString());
   }
 
+  commitTransaction(tx, from);
   fetch_or_die(from-1, termOfLastEntry);
-  this->setLogSize(from);
   return true;
 }
 

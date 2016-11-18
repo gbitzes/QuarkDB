@@ -114,6 +114,13 @@ private:
   std::condition_variable logUpdated;
 
   //----------------------------------------------------------------------------
+  // Utility functions for transactions
+  //----------------------------------------------------------------------------
+
+  TransactionPtr startTransaction();
+  void commitTransaction(TransactionPtr &tx, LogIndex index = -1);
+
+  //----------------------------------------------------------------------------
   // Transient values, can always be inferred from stable storage
   //----------------------------------------------------------------------------
 
@@ -122,9 +129,6 @@ private:
   //----------------------------------------------------------------------------
   // Helper functions
   //----------------------------------------------------------------------------
-
-  void rawAppend(LogIndex index, RaftTerm term, const RedisRequest &cmd);
-  void setLogSize(LogIndex index);
 
   void set_or_die(const std::string &key, const std::string &value);
   void set_int_or_die(const std::string &key, int64_t value);
