@@ -107,10 +107,6 @@ TEST_F(Raft_Journal, T1) {
 
 
   ASSERT_EQ(journal.getObservers(), observers);
-  observers.emplace_back("observer1", 123);
-  observers.emplace_back("observer2", 345);
-  journal.setObservers(observers);
-  ASSERT_EQ(journal.getObservers(), observers);
 }
 {
   RaftJournal journal(dbpath);
@@ -120,7 +116,6 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(journal.getCurrentTerm(), 4);
   ASSERT_EQ(journal.getClusterID(), clusterID);
   ASSERT_EQ(journal.getVotedFor(), srv);
-  ASSERT_EQ(journal.getObservers(), observers);
 
   journal.fetch_or_die(3, entry1);
   ASSERT_EQ(entry1.term, 4);
@@ -174,5 +169,99 @@ TEST_F(Raft_Journal, T1) {
 
   ASSERT_NOTFOUND(journal.fetch(4, tmp));
   ASSERT_EQ(journal.getLogStart(), 5);
+
+
+  LogIndex size = 3+testreqs.size();
+  ASSERT_EQ(journal.getLogSize(), size);
+
+  // add and remove observers
+  std::string err;
+
+  observers.emplace_back("observer1", 123);
+  ASSERT_TRUE(journal.addObserver(4, observers[0], err));
+  ASSERT_EQ(journal.getMembers().observers, observers);
+
+  observers.emplace_back("observer2", 345);
+
+  // previous membership change not committed yet, cannot add another
+  ASSERT_FALSE(journal.addObserver(4, observers[1], err));
+  ASSERT_EQ(journal.getMembers().observers.size(), 1u);
+  ASSERT_EQ(journal.getMembers().observers[0], observers[0]);
+
+  ASSERT_EQ(journal.getLogSize(), size+1);
+  ASSERT_OK(journal.fetch(size, tmp));
+  ASSERT_EQ(tmp.request[0], "JOURNAL_UPDATE_MEMBERS");
+
+  ASSERT_TRUE(journal.setCommitIndex(size));
+
+  // try to add the same observer again
+  ASSERT_FALSE(journal.addObserver(4, observers[0], err));
+  // try to add an existing node as observer
+  ASSERT_FALSE(journal.addObserver(4, nodes[1], err));
+  // try to remove non-existing nodes
+  ASSERT_FALSE(journal.removeMember(4, observers[1], err));
+  ASSERT_FALSE(journal.removeMember(4, RaftServer("asdfad", 13), err));
+  // ASSERT_FALSE(journal.removeObserver(4, nodes[2], err));
+
+  // try to add an observer again, after committing the previous membership epoch
+  ASSERT_TRUE(journal.addObserver(4, observers[1], err));
+  ASSERT_EQ(journal.getMembers().observers, observers);
+
+  // roll-back previous membership change
+  ASSERT_TRUE(journal.removeEntries(size+1));
+  ASSERT_EQ(journal.getMembers().observers.size(), 1u);
+  ASSERT_EQ(journal.getMembers().observers[0], observers[0]);
+
+  // add it again, and commit
+  ASSERT_TRUE(journal.addObserver(4, observers[1], err));
+  ASSERT_EQ(journal.getMembers().observers, observers);
+  ASSERT_TRUE(journal.setCommitIndex(size+1));
+  ASSERT_EQ(journal.getMembers().observers, observers);
+
+  ASSERT_TRUE(journal.removeMember(4, observers[0], err));
+  observers.erase(observers.begin());
+  ASSERT_EQ(journal.getMembers().observers, observers);
+  ASSERT_TRUE(journal.setCommitIndex(size+2));
+
+  ASSERT_TRUE(journal.removeMember(4, observers[0], err));
+  ASSERT_TRUE(journal.getMembers().observers.empty());
+
+  // roll-back
+  ASSERT_TRUE(journal.removeEntries(size+3));
+  ASSERT_EQ(journal.getMembers().observers, observers);
+
+  // push a regular entry, just because
+  req = { "set", "regular_entry", "just_because" };
+  ASSERT_TRUE(journal.append(size+3, 4, req));
+
+  // remove the last observer again
+  ASSERT_TRUE(journal.removeMember(4, observers[0], err));
+  ASSERT_TRUE(journal.getMembers().observers.empty());
+  ASSERT_TRUE(journal.setCommitIndex(size+4));
+  ASSERT_TRUE(journal.getMembers().observers.empty());
+
+  // add two observers, promote the first
+  ASSERT_TRUE(journal.addObserver(4, observers[0], err));
+  ASSERT_TRUE(journal.setCommitIndex(size+5));
+
+  observers.emplace_back("observer3", 789);
+  ASSERT_TRUE(journal.addObserver(4, observers[1], err));
+  ASSERT_TRUE(journal.setCommitIndex(size+6));
+  ASSERT_EQ(journal.getMembers().observers, observers);
+
+  observers.emplace_back("observer4", 1111);
+
+  ASSERT_FALSE(journal.promoteObserver(4, observers[2], err));
+  ASSERT_TRUE(journal.promoteObserver(4, observers[1], err));
+  ASSERT_EQ(journal.getMembers().observers.size(), 1u);
+  ASSERT_EQ(journal.getMembers().nodes.size(), 4u);
+  ASSERT_EQ(journal.getMembers().observers[0], observers[0]);
+  ASSERT_EQ(journal.getMembers().nodes[3], observers[1]);
+
+  ASSERT_TRUE(journal.setCommitIndex(size+7));
+  ASSERT_TRUE(journal.removeMember(4, nodes[0], err));
+  ASSERT_EQ(journal.getMembers().nodes.size(), 3u);
+  ASSERT_EQ(journal.getMembers().nodes[0], nodes[1]);
+  ASSERT_TRUE(journal.setCommitIndex(size+8));
 }
 }

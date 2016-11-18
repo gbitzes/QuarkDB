@@ -108,6 +108,19 @@ bool contains(const std::vector<T> &v, const T& element) {
 }
 
 template<class T>
+bool erase_element(std::vector<T> &v, const T& element) {
+  auto it = v.begin();
+  while(it != v.end()) {
+    if(*it == element) {
+      v.erase(it);
+      return true;
+    }
+    it++;
+  }
+  return false;
+}
+
+template<class T>
 class ScopedAdder {
 public:
   ScopedAdder(std::atomic<T> &target_, T value_ = 1) : target(target_), value(value_) {

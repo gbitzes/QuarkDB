@@ -21,7 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include <algorithm>
 #include "RaftJournal.hh"
+#include "RaftMembers.hh"
 #include "../Common.hh"
 #include "../Utils.hh"
 #include "RaftState.hh"
@@ -236,9 +238,42 @@ void RaftJournal::commitTransaction(TransactionPtr &tx, LogIndex index) {
   if(index >= 0) logSize = index;
 }
 
-bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req) {
+RaftMembers RaftJournal::getMembers() {
+  std::lock_guard<std::mutex> lock(membersMutex);
+  return members;
+}
+
+bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers, std::string &err) {
   std::lock_guard<std::mutex> lock(contentMutex);
 
+  if(commitIndex < membershipEpoch) {
+    err = SSTR("The current membership epoch has not been committed yet: " << membershipEpoch);
+    return false;
+  }
+
+  RedisRequest req = {"JOURNAL_UPDATE_MEMBERS", newMembers.toString() };
+  return appendNoLock(logSize, term, req);
+}
+
+bool RaftJournal::addObserver(RaftTerm term, const RaftServer &observer, std::string &err) {
+  RaftMembers newMembers = getMembers();
+  if(!newMembers.addObserver(observer, err)) return false;
+  return membershipUpdate(term, newMembers, err);
+}
+
+bool RaftJournal::removeMember(RaftTerm term, const RaftServer &member, std::string &err) {
+  RaftMembers newMembers = getMembers();
+  if(!newMembers.removeMember(member, err)) return false;
+  return membershipUpdate(term, newMembers, err);
+}
+
+bool RaftJournal::promoteObserver(RaftTerm term, const RaftServer &observer, std::string &err) {
+  RaftMembers newMembers = getMembers();
+  if(!newMembers.promoteObserver(observer, err)) return false;
+  return membershipUpdate(term, newMembers, err);
+}
+
+bool RaftJournal::appendNoLock(LogIndex index, RaftTerm term, const RedisRequest &req) {
   if(index != logSize) {
     qdb_warn("attempted to insert journal entry at an invalid position. index = " << index << ", logSize = " << logSize);
     return false;
@@ -255,12 +290,41 @@ bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req)
   }
 
   TransactionPtr tx(startTransaction());
+
+  if(req[0] == "JOURNAL_UPDATE_MEMBERS") {
+    //--------------------------------------------------------------------------
+    // Special case for membership updates
+    // We don't wait until the entry is committed, and it takes effect
+    // immediatelly.
+    // The commit applier will ignore such entries, and apply a no-op to the
+    // state machine.
+    //--------------------------------------------------------------------------
+
+    THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", req[1]));
+    THROW_ON_ERROR(tx->Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(index)));
+
+    THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERS", members.toString()));
+    THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERSHIP_EPOCH", intToBinaryString(membershipEpoch)));
+
+    qdb_event("Transitioning into a new membership epoch: " << membershipEpoch << " => " << index
+    << ". Old members: " << members.toString() << ", new members: " << req[1]);
+
+    std::lock_guard<std::mutex> lock(membersMutex);
+    members = RaftMembers(req[1]);
+    membershipEpoch = index;
+  }
+
   THROW_ON_ERROR(tx->Put(encodeEntryKey(index), serializeRedisRequest(term, req)));
   commitTransaction(tx, index+1);
 
   termOfLastEntry = term;
   logUpdated.notify_all();
   return true;
+}
+
+bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req) {
+  std::lock_guard<std::mutex> lock(contentMutex);
+  return appendNoLock(index, term, req);
 }
 
 void RaftJournal::trimUntil(LogIndex newLogStart) {
@@ -290,27 +354,11 @@ RaftServer RaftJournal::getVotedFor() {
 }
 
 std::vector<RaftServer> RaftJournal::getNodes() {
-  std::lock_guard<std::mutex> lock(membersMutex);
-  return members.nodes;
-}
-
-void RaftJournal::setNodes(const std::vector<RaftServer> &newNodes) {
-  std::lock_guard<std::mutex> lock(membersMutex);
-
-  members.nodes = newNodes;
-  this->set_or_die("RAFT_MEMBERS", members.toString());
-}
-
-void RaftJournal::setObservers(const std::vector<RaftServer> &obs) {
-  std::lock_guard<std::mutex> lock(membersMutex);
-
-  members.observers = obs;
-  this->set_or_die("RAFT_MEMBERS", members.toString());
+  return getMembers().nodes;
 }
 
 std::vector<RaftServer> RaftJournal::getObservers() {
-  std::lock_guard<std::mutex> lock(membersMutex);
-  return members.observers;
+  return getMembers().observers;
 }
 
 void RaftJournal::notifyWaitingThreads() {
@@ -332,12 +380,37 @@ bool RaftJournal::removeEntries(LogIndex from) {
   if(logSize <= from) return false;
 
   if(from <= commitIndex) qdb_throw("attempted to remove committed entries. commitIndex: " << commitIndex << ", from: " << from);
-  qdb_warn("Removing inconsistent log entries, [" << from << "," << logSize-1 << "]");
+  qdb_warn("Removing inconsistent log entries: [" << from << "," << logSize-1 << "]");
 
   TransactionPtr tx(startTransaction());
   for(LogIndex i = from; i < logSize; i++) {
     rocksdb::Status st = tx->Delete(encodeEntryKey(i));
     if(!st.ok()) qdb_critical("Error when deleting entry " << i << ": " << st.ToString());
+  }
+
+  //----------------------------------------------------------------------------
+  // Membership epochs take effect immediatelly, without waiting for the entries
+  // to be committed. (as per the Raft PhD thesis)
+  // This means that an uncommitted membership epoch can be theoretically rolled
+  // back.
+  // This should be extremely uncommon, so we log a critical message.
+  //----------------------------------------------------------------------------
+
+  if(from <= membershipEpoch) {
+    std::lock_guard<std::mutex> lock2(membersMutex);
+
+    LogIndex previousMembershipEpoch = this->get_int_or_die("RAFT_PREVIOUS_MEMBERSHIP_EPOCH");
+    std::string previousMembers = this->get_or_die("RAFT_PREVIOUS_MEMBERS");
+
+    THROW_ON_ERROR(tx->Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(previousMembershipEpoch)));
+    THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", previousMembers));
+
+    qdb_critical("Rolling back an uncommitted membership epoch. Transitioning from " <<
+    membershipEpoch << " => " << previousMembershipEpoch << ". Old members: " << members.toString() <<
+    ", new members: " << previousMembers);
+
+    members = RaftMembers(previousMembers);
+    membershipEpoch = previousMembershipEpoch;
   }
 
   commitTransaction(tx, from);

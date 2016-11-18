@@ -136,7 +136,10 @@ TEST_F(Raft_State, T1) {
 
   // let's erase ourselves from the cluster and become an observer
   nodes.erase(nodes.begin()+1);
-  journal.setNodes(nodes);
+
+  std::string err;
+  ASSERT_TRUE(journal.removeMember(6, myself, err));
+  ASSERT_TRUE(journal.setCommitIndex(1));
 
   ASSERT_TRUE(state.becomeObserver(6));
   snapshot = {6, RaftStatus::OBSERVER, {}, RaftState::BLOCKED_VOTE};
@@ -160,7 +163,10 @@ TEST_F(Raft_State, T1) {
 
   // re-enter the cluster
   nodes.push_back(myself);
-  journal.setNodes(nodes);
+  ASSERT_TRUE(journal.addObserver(7, myself, err));
+  ASSERT_TRUE(journal.setCommitIndex(2));
+  ASSERT_TRUE(journal.promoteObserver(7, myself, err));
+  ASSERT_TRUE(journal.setCommitIndex(3));
 
   ASSERT_TRUE(state.joinCluster(7));
   snapshot = {7, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE};
@@ -171,17 +177,18 @@ TEST_F(Raft_State, T1) {
   // push two changes to the log
   // mark the first as applied, the other as committed
   RedisRequest req = { "set", "qwerty", "asdf" };
-  ASSERT_TRUE(journal.append(1, 7, req));
+  ASSERT_TRUE(journal.append(4, 7, req));
   req = { "set", "1234", "9876" };
-  ASSERT_TRUE(journal.append(2, 7, req));
-  ASSERT_TRUE(journal.setCommitIndex(1));
+  ASSERT_TRUE(journal.append(5, 7, req));
+  ASSERT_TRUE(journal.setCommitIndex(4));
   ASSERT_FALSE(journal.setCommitIndex(0));
-  ASSERT_THROW(journal.setCommitIndex(3), FatalException);
-  ASSERT_TRUE(journal.setCommitIndex(2));
+  ASSERT_THROW(journal.setCommitIndex(6), FatalException);
+  ASSERT_TRUE(journal.setCommitIndex(5));
 
   // exit again..
+  ASSERT_TRUE(journal.removeMember(7, nodes[2], err));
   nodes.erase(nodes.begin()+2);
-  journal.setNodes(nodes);
+  // journal.setNodes(nodes);
   ASSERT_TRUE(state.becomeObserver(7));
   snapshot = {7, RaftStatus::OBSERVER, nodes[0], RaftState::BLOCKED_VOTE};
   ASSERT_EQ(state.getSnapshot(), snapshot);
@@ -196,11 +203,17 @@ TEST_F(Raft_State, T1) {
   ASSERT_EQ(journal.getVotedFor(), RaftState::BLOCKED_VOTE);
 
   // verify we remember commit index
-  ASSERT_EQ(journal.getCommitIndex(), 2);
+  ASSERT_EQ(journal.getCommitIndex(), 5);
 
   // re-enter cluster
   nodes.push_back(myself);
-  journal.setNodes(nodes);
+
+  ASSERT_TRUE(journal.setCommitIndex(6));
+  std::string err;
+  ASSERT_TRUE(journal.addObserver(7, myself, err));
+  ASSERT_TRUE(journal.setCommitIndex(7));
+  ASSERT_TRUE(journal.promoteObserver(7, myself, err));
+
   ASSERT_TRUE(state.joinCluster(7));
 
   ASSERT_TRUE(state.observed(8, {}));

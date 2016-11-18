@@ -31,6 +31,7 @@
 #include <mutex>
 #include <condition_variable>
 #include "RaftCommon.hh"
+#include "RaftMembers.hh"
 
 namespace quarkdb {
 
@@ -52,8 +53,8 @@ public:
 
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
   bool setCommitIndex(LogIndex index);
-  void setNodes(const std::vector<RaftServer> &newNodes);
-  void setObservers(const std::vector<RaftServer> &obs);
+  // void setNodes(const std::vector<RaftServer> &newNodes);
+  // void setObservers(const std::vector<RaftServer> &obs);
 
   RaftTerm getCurrentTerm() const { return currentTerm; }
   LogIndex getLogSize() const { return logSize; }
@@ -63,6 +64,8 @@ public:
   std::vector<RaftServer> getNodes();
   RaftServer getVotedFor();
   std::vector<RaftServer> getObservers();
+
+  RaftMembers getMembers();
 
   bool append(LogIndex index, RaftTerm term, const RedisRequest &req);
   rocksdb::Status fetch(LogIndex index, RaftEntry &entry);
@@ -80,6 +83,10 @@ public:
 
   rocksdb::Status checkpoint(const std::string &path);
   void trimUntil(LogIndex newLogStart);
+
+  bool addObserver(RaftTerm term, const RaftServer &observer, std::string &err);
+  bool promoteObserver(RaftTerm term, const RaftServer &obserer, std::string &err);
+  bool removeMember(RaftTerm term, const RaftServer &member, std::string &err);
 private:
   void openDB(const std::string &path);
 
@@ -129,6 +136,9 @@ private:
   //----------------------------------------------------------------------------
   // Helper functions
   //----------------------------------------------------------------------------
+
+  bool membershipUpdate(RaftTerm term, const RaftMembers &newMembers, std::string &err);
+  bool appendNoLock(LogIndex index, RaftTerm term, const RedisRequest &req);
 
   void set_or_die(const std::string &key, const std::string &value);
   void set_int_or_die(const std::string &key, int64_t value);
