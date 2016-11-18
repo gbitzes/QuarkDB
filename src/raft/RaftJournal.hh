@@ -98,8 +98,8 @@ private:
   std::atomic<LogIndex> commitIndex;
   std::atomic<LogIndex> logSize;
   std::atomic<LogIndex> logStart;
-  std::vector<RaftServer> nodes;
-  std::vector<RaftServer> observers;
+  std::atomic<LogIndex> membershipEpoch;
+  RaftMembers members;
   RaftServer votedFor;
   RaftClusterID clusterID;
 
@@ -107,8 +107,7 @@ private:
   std::mutex lastAppliedMutex;
   std::mutex commitIndexMutex;
   std::mutex contentMutex;
-  std::mutex nodesMutex;
-  std::mutex observersMutex;
+  std::mutex membersMutex;
   std::mutex votedForMutex;
 
   std::condition_variable commitNotifier;

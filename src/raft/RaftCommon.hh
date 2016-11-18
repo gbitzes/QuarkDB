@@ -56,6 +56,41 @@ inline std::ostream& operator<<(std::ostream& out, const RaftEntry& entry) {
   return out;
 }
 
+struct RaftMembers {
+  std::vector<RaftServer> nodes;
+  std::vector<RaftServer> observers;
+
+  RaftMembers() {}
+
+  RaftMembers(const std::vector<RaftServer> &_nodes, const std::vector<RaftServer> &_obs)
+  : nodes(_nodes), observers(_obs) {}
+
+  RaftMembers(const std::string &serialized) {
+    std::vector<std::string> parts = split(serialized, "|");
+    if(parts.size() != 2) qdb_throw("corruption, unable to parse raft members: " << serialized);
+
+    if(!parseServers(parts[0], nodes)) {
+      qdb_throw("corruption, cannot parse nodes: " << parts[0]);
+    }
+
+    if(!parts[1].empty() && !parseServers(parts[1], observers)) {
+      qdb_throw("corruption, cannot parse observers: " << parts[1]);
+    }
+  }
+
+  std::string toString() const {
+    std::ostringstream ss;
+    ss << serializeNodes(nodes);
+    ss << "|";
+    ss << serializeNodes(observers);
+    return ss.str();
+  }
+
+  bool operator==(const RaftMembers &rhs) const {
+    return nodes == rhs.nodes && observers == rhs.observers;
+  }
+};
+
 struct RaftAppendEntriesRequest {
   RaftTerm term;
   RaftServer leader;

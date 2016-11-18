@@ -141,7 +141,7 @@ TEST_F(Raft_Dispatcher, validate_initial_state) {
   RaftEntry entry;
   ASSERT_TRUE(dispatcher()->fetch(0, entry));
   ASSERT_EQ(entry.term, 0);
-  ASSERT_EQ(entry.request, make_req("UPDATE_RAFT_NODES", serializeNodes(nodes())));
+  ASSERT_EQ(entry.request, make_req("JOURNAL_UPDATE_MEMBERS", RaftMembers(nodes(), {}).toString()));
 }
 
 TEST_F(Raft_Dispatcher, send_first_heartbeat) {
@@ -716,4 +716,47 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
 
   matchIndex1.update(16); // now we have 16, 11, 15
   ASSERT_EQ(journal(0)->getCommitIndex(), 15);
+}
+
+TEST(RaftMembers, basic_sanity) {
+  std::vector<RaftServer> nodes = {
+    {"server1", 245},
+    {"localhost", 789},
+    {"server2.cern.ch", 1789}
+  };
+
+  std::vector<RaftServer> observers = {
+    {"observer1", 1234},
+    {"observer2", 789},
+    {"observer3.cern.ch", 111}
+  };
+
+  RaftMembers members(nodes, observers);
+  ASSERT_EQ(members.nodes, nodes);
+  ASSERT_EQ(members.observers, observers);
+
+  RaftMembers members2(members.toString());
+  ASSERT_EQ(members, members2);
+  ASSERT_EQ(members.nodes, members2.nodes);
+  ASSERT_EQ(members.observers, members2.observers);
+  ASSERT_EQ(members.toString(), members2.toString());
+}
+
+TEST(RaftMembers, no_observers) {
+  std::vector<RaftServer> nodes = {
+    {"server1", 245},
+    {"localhost", 789},
+    {"server2.cern.ch", 1789}
+  };
+
+  std::vector<RaftServer> observers;
+  RaftMembers members(nodes, observers);
+  ASSERT_EQ(members.nodes, nodes);
+  ASSERT_EQ(members.observers, observers);
+
+  RaftMembers members2(members.toString());
+  ASSERT_EQ(members, members2);
+  ASSERT_EQ(members.nodes, members2.nodes);
+  ASSERT_EQ(members.observers, members2.observers);
+  ASSERT_EQ(members.toString(), members2.toString());
 }

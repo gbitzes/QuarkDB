@@ -98,10 +98,12 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
   this->set_or_die("RAFT_VOTED_FOR", "");
   this->set_int_or_die("RAFT_COMMIT_INDEX", 0);
 
-  RedisRequest req { "UPDATE_RAFT_NODES", serializeNodes(newNodes) };
+  RaftMembers newMembers(newNodes, {});
+  this->set_or_die("RAFT_MEMBERS", newMembers.toString());
+  this->set_int_or_die("RAFT_MEMBERSHIP_EPOCH", 0);
+
+  RedisRequest req { "JOURNAL_UPDATE_MEMBERS", newMembers.toString() };
   this->set_or_die(encodeEntryKey(0), serializeRedisRequest(0, req));
-  this->set_or_die("RAFT_NODES", serializeNodes(newNodes));
-  this->set_or_die("RAFT_OBSERVERS", "");
 
   initialize();
 }
@@ -115,15 +117,8 @@ void RaftJournal::initialize() {
   std::string vote = this->get_or_die("RAFT_VOTED_FOR");
   this->fetch_or_die(logSize-1, termOfLastEntry);
 
-  std::string tmp = this->get_or_die("RAFT_NODES");
-  if(!parseServers(tmp, nodes)) {
-    qdb_throw("journal corruption, cannot parse RAFT_NODES: " << tmp);
-  }
-
-  tmp = this->get_or_die("RAFT_OBSERVERS");
-  if(!tmp.empty() && !parseServers(tmp, observers)) {
-    qdb_throw("journal corruption, cannot parse RAFT_OBSERVERS: " << tmp);
-  }
+  membershipEpoch = this->get_int_or_die("RAFT_MEMBERSHIP_EPOCH");
+  members = RaftMembers(this->get_or_die("RAFT_MEMBERS"));
 
   if(!vote.empty() && !parseServer(vote, votedFor)) {
     qdb_throw("journal corruption, cannot parse RAFT_VOTED_FOR: " << vote);
@@ -286,27 +281,27 @@ RaftServer RaftJournal::getVotedFor() {
 }
 
 std::vector<RaftServer> RaftJournal::getNodes() {
-  std::lock_guard<std::mutex> lock(nodesMutex);
-  return nodes;
+  std::lock_guard<std::mutex> lock(membersMutex);
+  return members.nodes;
 }
 
 void RaftJournal::setNodes(const std::vector<RaftServer> &newNodes) {
-  std::lock_guard<std::mutex> lock(nodesMutex);
+  std::lock_guard<std::mutex> lock(membersMutex);
 
-  this->set_or_die("RAFT_NODES", serializeNodes(newNodes));
-  nodes = newNodes;
+  members.nodes = newNodes;
+  this->set_or_die("RAFT_MEMBERS", members.toString());
 }
 
 void RaftJournal::setObservers(const std::vector<RaftServer> &obs) {
-  std::lock_guard<std::mutex> lock(observersMutex);
+  std::lock_guard<std::mutex> lock(membersMutex);
 
-  this->set_or_die("RAFT_OBSERVERS", serializeNodes(obs));
-  observers = obs;
+  members.observers = obs;
+  this->set_or_die("RAFT_MEMBERS", members.toString());
 }
 
 std::vector<RaftServer> RaftJournal::getObservers() {
-  std::lock_guard<std::mutex> lock(observersMutex);
-  return observers;
+  std::lock_guard<std::mutex> lock(membersMutex);
+  return members.observers;
 }
 
 void RaftJournal::notifyWaitingThreads() {
