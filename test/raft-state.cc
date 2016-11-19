@@ -131,48 +131,45 @@ TEST_F(Raft_State, T1) {
   RaftStateSnapshot snapshot = {6, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE };
   ASSERT_EQ(state.getSnapshot(), snapshot);
 
-  // can't become an observer, part of the cluster
-  ASSERT_FALSE(state.becomeObserver(6));
-
-  // let's erase ourselves from the cluster and become an observer
+  // let's erase ourselves from the cluster..
   nodes.erase(nodes.begin()+1);
 
   std::string err;
   ASSERT_TRUE(journal.removeMember(6, myself, err));
   ASSERT_TRUE(journal.setCommitIndex(1));
 
-  ASSERT_TRUE(state.becomeObserver(6));
-  snapshot = {6, RaftStatus::OBSERVER, {}, RaftState::BLOCKED_VOTE};
+  snapshot = {6, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE};
   ASSERT_EQ(state.getSnapshot(), snapshot);
 
   ASSERT_TRUE(state.observed(6, nodes[0]));
-  snapshot = {6, RaftStatus::OBSERVER, nodes[0], RaftState::BLOCKED_VOTE};
+  snapshot = {6, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE};
   ASSERT_EQ(state.getSnapshot(), snapshot);
 
   ASSERT_TRUE(state.observed(7, {}));
-  snapshot = {7, RaftStatus::OBSERVER, {}, {}};
+  snapshot = {7, RaftStatus::FOLLOWER, {}, {}};
   ASSERT_EQ(state.getSnapshot(), snapshot);
 
-  // cannot become candidate, I'm only an observer
+  // cannot become candidate, not part of the cluster
   ASSERT_FALSE(state.becomeCandidate(7));
   ASSERT_FALSE(state.ascend(7));
 
-  // try to re-enter the cluster without being part of the nodes
-  ASSERT_FALSE(state.joinCluster(7));
-  ASSERT_TRUE(state.observed(7, nodes[0]));
-
-  // re-enter the cluster
+  // re-enter the cluster as an observer
   nodes.push_back(myself);
   ASSERT_TRUE(journal.addObserver(7, myself, err));
   ASSERT_TRUE(journal.setCommitIndex(2));
+
+  // still cannot call election, not a full node
+  ASSERT_FALSE(state.becomeCandidate(7));
+  ASSERT_FALSE(state.ascend(7));
+
+  // become full-node
   ASSERT_TRUE(journal.promoteObserver(7, myself, err));
   ASSERT_TRUE(journal.setCommitIndex(3));
 
-  ASSERT_TRUE(state.joinCluster(7));
+  ASSERT_TRUE(state.observed(7, nodes[0]));
+
   snapshot = {7, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE};
   ASSERT_EQ(state.getSnapshot(), snapshot);
-
-  ASSERT_FALSE(state.becomeObserver(7));
 
   // push two changes to the log
   // mark the first as applied, the other as committed
@@ -188,16 +185,14 @@ TEST_F(Raft_State, T1) {
   // exit again..
   ASSERT_TRUE(journal.removeMember(7, nodes[2], err));
   nodes.erase(nodes.begin()+2);
-  // journal.setNodes(nodes);
-  ASSERT_TRUE(state.becomeObserver(7));
-  snapshot = {7, RaftStatus::OBSERVER, nodes[0], RaftState::BLOCKED_VOTE};
+  snapshot = {7, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE};
   ASSERT_EQ(state.getSnapshot(), snapshot);
 }
 {
   RaftJournal journal(dbpath);
 
   RaftState state(journal, myself);
-  RaftStateSnapshot snapshot = {7, RaftStatus::OBSERVER, {}, RaftState::BLOCKED_VOTE};
+  RaftStateSnapshot snapshot = {7, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE};
   ASSERT_EQ(state.getSnapshot(), snapshot);
   ASSERT_EQ(journal.getCurrentTerm(), 7);
   ASSERT_EQ(journal.getVotedFor(), RaftState::BLOCKED_VOTE);
@@ -214,16 +209,20 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(journal.setCommitIndex(7));
   ASSERT_TRUE(journal.promoteObserver(7, myself, err));
 
-  ASSERT_TRUE(state.joinCluster(7));
-
+  // become leader
   ASSERT_TRUE(state.observed(8, {}));
-  ASSERT_TRUE(state.grantVote(8, nodes[1]));
+  ASSERT_TRUE(state.becomeCandidate(8));
+  ASSERT_TRUE(state.ascend(8));
+
+  snapshot = {8, RaftStatus::LEADER, myself, myself};
+  ASSERT_EQ(state.getSnapshot(), snapshot);
+
 }
 {
   RaftJournal journal(dbpath);
 
   RaftState state(journal, myself);
-  RaftStateSnapshot snapshot = {8, RaftStatus::FOLLOWER, {}, nodes[1]};
+  RaftStateSnapshot snapshot = {8, RaftStatus::FOLLOWER, {}, myself};
   ASSERT_EQ(state.getSnapshot(), snapshot);
 }
 

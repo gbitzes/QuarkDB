@@ -30,11 +30,7 @@ RaftServer RaftState::BLOCKED_VOTE = { "VOTING_BLOCKED_FOR_THIS_TERM", -1 };
 RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
 : journal(jr), myself(me) {
 
-  status = RaftStatus::OBSERVER;
-  if(contains(journal.getNodes(), myself)) {
-    status = RaftStatus::FOLLOWER;
-  }
-
+  status = RaftStatus::FOLLOWER;
   term = journal.getCurrentTerm();
   votedFor = journal.getVotedFor();
 }
@@ -116,18 +112,23 @@ bool RaftState::becomeCandidate(RaftTerm forTerm) {
   }
 
   if(status != RaftStatus::FOLLOWER) {
-    qdb_critical("attempted to become a candidate without first being a follower for term " << forTerm);
+    qdb_warn("attempted to become a candidate without first being a follower for term " << forTerm);
     return false;
   }
 
   if(!leader.empty()) {
-    qdb_critical("attempted to become a candidate for term " << term << " while having recognized "
+    qdb_warn("attempted to become a candidate for term " << term << " while having recognized "
                  << leader.toString() << " as leader already");
     return false;
   }
 
   if(!votedFor.empty()) {
-    qdb_critical("attempted to become a candidate for term " << term << " while having voted already for " << votedFor.toString());
+    qdb_warn("attempted to become a candidate for term " << term << " while having voted already for " << votedFor.toString());
+    return false;
+  }
+
+  if(!contains(journal.getNodes(), myself)) {
+    qdb_warn("attempted to become a candidate even though I'm not a full voting member");
     return false;
   }
 
@@ -160,6 +161,11 @@ bool RaftState::ascend(RaftTerm forTerm) {
 
   if(votedFor != myself) {
     qdb_critical("attempted to ascend in term " << forTerm << " without having voted for myself first");
+    return false;
+  }
+
+  if(!contains(journal.getNodes(), myself)) {
+    qdb_critical("attempted to ascend even though I'm not a full voting member");
     return false;
   }
 
@@ -209,46 +215,6 @@ bool RaftState::grantVote(RaftTerm forTerm, const RaftServer &vote) {
   return true;
 }
 
-bool RaftState::joinCluster(RaftTerm forTerm) {
-  std::lock_guard<std::mutex> lock(update);
-
-  if(forTerm != term) return false;
-
-  if(status != RaftStatus::OBSERVER) {
-    qdb_critical("attempted to join cluster but I'm already not an observer.");
-    return false;
-  }
-
-  std::vector<RaftServer> nodes = journal.getNodes();
-  if(!contains(nodes, myself)) {
-    qdb_critical("attempted to join cluster, but I'm not part of the participating nodes: " << serializeNodes(nodes));
-    return false;
-  }
-
-  updateStatus(RaftStatus::FOLLOWER);
-  return true;
-}
-
-bool RaftState::becomeObserver(RaftTerm forTerm) {
-  std::lock_guard<std::mutex> lock(update);
-
-  if(forTerm != term) return false;
-
-  if(status != RaftStatus::FOLLOWER && status != RaftStatus::CANDIDATE) {
-    qdb_critical("attempted to become an observer while status = " << statusToString(status));
-    return false;
-  }
-
-  std::vector<RaftServer> nodes = journal.getNodes();
-  if(contains(nodes, myself)) {
-    qdb_critical("attempted to become an observer, but I'm still part of the participating nodes: " << serializeNodes(nodes));
-    return false;
-  }
-
-  updateStatus(RaftStatus::OBSERVER);
-  return true;
-}
-
 bool RaftState::inShutdown() {
   return status == RaftStatus::SHUTDOWN;
 }
@@ -286,9 +252,7 @@ bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader
 
   // observed a newer term, step down if leader / candidate
   if(observedTerm > term) {
-    if(status != RaftStatus::OBSERVER) {
-      updateStatus(RaftStatus::FOLLOWER);
-    }
+    updateStatus(RaftStatus::FOLLOWER);
     declareEvent(observedTerm, observedLeader);
 
     votedFor.clear();
@@ -338,7 +302,6 @@ std::string quarkdb::statusToString(RaftStatus st) {
   if(st == RaftStatus::LEADER) return "LEADER";
   if(st == RaftStatus::FOLLOWER) return "FOLLOWER";
   if(st == RaftStatus::CANDIDATE) return "CANDIDATE";
-  if(st == RaftStatus::OBSERVER) return "OBSERVER";
   if(st == RaftStatus::SHUTDOWN) return "SHUTDOWN";
 
   qdb_throw("unrecognized RaftStatus");

@@ -425,7 +425,7 @@ TEST_F(Raft_Election, observer_cannot_call_election) {
   node(0, GlobalEnv::server(3));
 
   RaftStateSnapshot snapshot = state()->getSnapshot();
-  ASSERT_EQ(snapshot.status, RaftStatus::OBSERVER);
+  ASSERT_EQ(snapshot.status, RaftStatus::FOLLOWER);
 
   ASSERT_TRUE(state()->observed(1, {}));
 

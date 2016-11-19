@@ -92,9 +92,6 @@ void RaftDirector::main() {
         state.wait(raftClock.getTimeouts().getHeartbeatInterval());
       }
     }
-    else if(snapshot.status == RaftStatus::OBSERVER) {
-      state.wait(raftClock.getRandomTimeout());
-    }
     else if(snapshot.status == RaftStatus::CANDIDATE) {
       qdb_throw("should never happen");
     }

@@ -33,7 +33,6 @@ enum class RaftStatus {
   LEADER,
   FOLLOWER,
   CANDIDATE,
-  OBSERVER,
   SHUTDOWN
 };
 std::string statusToString(RaftStatus st);
