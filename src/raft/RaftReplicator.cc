@@ -136,6 +136,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
       qdb_event("Replication target " << target.toString() << " came back online. Outcome: " << resp.outcome << ", logsize: " << resp.logSize);
     }
 
+    state.observed(resp.term, {});
     // Check: Does the target need resilvering?
     if(resp.logSize <= journal.getLogStart()) {
       nextIndex = journal.getLogSize();

@@ -324,7 +324,7 @@ bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader
 
     return true;
   }
-  else if(observedTerm == term && !leader.empty() && leader != observedLeader) {
+  else if(observedTerm == term && !leader.empty() && leader != observedLeader && !observedLeader.empty()) {
     qdb_critical("attempted to change leader for term " << term << ": " << leader.toString() << " ==> " << observedLeader.toString());
   }
 
