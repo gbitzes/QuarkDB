@@ -160,6 +160,17 @@ public:
   }) { };
 };
 
+class TestCluster5Nodes : public TestCluster {
+public:
+  TestCluster5Nodes() : TestCluster("a9b9e979-5428-42e9-8a52-f675c39fdf80", {
+    GlobalEnv::server(0),
+    GlobalEnv::server(1),
+    GlobalEnv::server(2),
+    GlobalEnv::server(3),
+    GlobalEnv::server(4)
+  }) { };
+};
+
 class SocketListener {
 private:
   int s;

@@ -41,6 +41,7 @@ public:
 private:
   void main();
   void actAsFollower(RaftStateSnapshot &snapshot);
+  void actAsLeader(RaftStateSnapshot &snapshot);
   void runForLeader();
   void applyCommits();
   void trimJournal();

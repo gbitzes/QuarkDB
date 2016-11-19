@@ -97,10 +97,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     if(nextIndex <= 0) qdb_throw("nextIndex has invalid value: " << nextIndex);
     if(nextIndex <= journal.getLogStart()) nextIndex = journal.getLogSize();
 
-    // TODO: check if configuration epoch has changed
-
     RaftTerm prevTerm;
-
     if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
       qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString() << ". My log start: " << journal.getLogStart());
       state.wait(timeouts.getHeartbeatInterval());

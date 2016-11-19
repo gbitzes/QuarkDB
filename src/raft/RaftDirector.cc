@@ -69,7 +69,7 @@ void RaftDirector::applyCommits() {
 void RaftDirector::main() {
   raftClock.heartbeat();
   while(true) {
-    qdb_info("Random timeout refresh: " << raftClock.refreshRandomTimeout().count() << "ms");
+    raftClock.refreshRandomTimeout();
     RaftStateSnapshot snapshot = state.getSnapshot();
 
     if(snapshot.status == RaftStatus::SHUTDOWN) {
@@ -79,22 +79,34 @@ void RaftDirector::main() {
       actAsFollower(snapshot);
     }
     else if(snapshot.status == RaftStatus::LEADER) {
-
-      qdb_info("Starting replicator");
-      RaftReplicator replicator(journal, state, raftClock.getTimeouts());
-      for(const RaftServer& srv : state.getNodes()) {
-        if(srv != state.getMyself()) {
-          replicator.launch(srv, snapshot);
-        }
-      }
-
-      while(snapshot.term == state.getCurrentTerm() && state.getSnapshot().status == RaftStatus::LEADER) {
-        state.wait(raftClock.getTimeouts().getHeartbeatInterval());
-      }
+      actAsLeader(snapshot);
     }
-    else if(snapshot.status == RaftStatus::CANDIDATE) {
+    else {
       qdb_throw("should never happen");
     }
+  }
+}
+
+void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
+  RaftMembership membership = journal.getMembership();
+  qdb_info("Starting replicator for membership epoch " << membership.epoch);
+
+  RaftReplicator replicator(journal, state, raftClock.getTimeouts());
+  for(const RaftServer& srv : membership.nodes) {
+    if(srv != state.getMyself()) {
+      replicator.launch(srv, snapshot);
+    }
+  }
+
+  for(const RaftServer& srv : membership.observers) {
+    if(srv == state.getMyself()) qdb_throw("found myself in the list of observers, even though I'm leader: " << serializeNodes(membership.observers));
+    replicator.launch(srv, snapshot);
+  }
+
+  while(membership.epoch == journal.getEpoch() &&
+        snapshot.term == state.getCurrentTerm() &&
+        state.getSnapshot().status == RaftStatus::LEADER) {
+    state.wait(raftClock.getTimeouts().getHeartbeatInterval());
   }
 }
 
@@ -130,9 +142,12 @@ void RaftDirector::actAsFollower(RaftStateSnapshot &snapshot) {
 
     state.wait(randomTimeout);
     if(raftClock.timeout()) {
-      qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
-      runForLeader();
-      return;
+      if(contains(journal.getMembership().nodes, state.getMyself())) {
+        qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
+        runForLeader();
+        return;
+      }
+      qdb_warn("I am not receiving heartbeats - not running for leader since in membership epoch " << journal.getEpoch() << " I am not a full node. Will keep on waiting.");
     }
   }
 }

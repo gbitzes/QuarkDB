@@ -83,7 +83,7 @@ struct RaftMembers {
     return false;
   }
 
-  bool promoteObserver(const RaftServer &observer, std::string err) {
+  bool promoteObserver(const RaftServer &observer, std::string &err) {
     if(erase_element(observers, observer)) {
       nodes.push_back(observer);
       return true;

@@ -34,6 +34,10 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInd
   auto it = redis_cmd_map.find(req[0]);
   if(it != redis_cmd_map.end()) return dispatch(conn, req, it->second.first, commit);
 
+  if(startswith(req[0], "JOURNAL_")) {
+    store.noop(commit);
+  }
+
   return conn->err(SSTR("unknown command " << quotes(req[0])));
 }
 

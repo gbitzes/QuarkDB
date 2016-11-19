@@ -121,6 +121,39 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
       raftClock.triggerTimeout();
       return conn->status("vive la revolution");
     }
+    case RedisCommand::RAFT_ADD_OBSERVER:
+    case RedisCommand::RAFT_REMOVE_MEMBER:
+    case RedisCommand::RAFT_PROMOTE_OBSERVER: {
+      if(req.size() != 2) return conn->errArgs(req[0]);
+
+      RaftServer srv;
+      if(!parseServer(req[1], srv)) {
+        return conn->err(SSTR("cannot parse server: " << req[1]));
+      }
+
+      RaftStateSnapshot snapshot = state.getSnapshot();
+      if(snapshot.status != RaftStatus::LEADER) return conn->err("not a leader");
+      if(srv == state.getMyself()) conn->err(SSTR("cannot perform membership changes on current leader"));
+
+      std::string err;
+      bool rc;
+
+      if(cmd == RedisCommand::RAFT_ADD_OBSERVER) {
+        rc = journal.addObserver(snapshot.term, srv, err);
+      }
+      else if(cmd == RedisCommand::RAFT_REMOVE_MEMBER) {
+        rc = journal.removeMember(snapshot.term, srv, err);
+      }
+      else if(cmd == RedisCommand::RAFT_PROMOTE_OBSERVER) {
+        rc = journal.promoteObserver(snapshot.term, srv, err);
+      }
+      else {
+        qdb_throw("should never happen");
+      }
+
+      if(!rc) return conn->err(err);
+      return conn->ok();
+    }
     default: {
       return this->service(conn, req, cmd, it->second.second);
     }
@@ -278,7 +311,31 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
 RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   std::lock_guard<std::mutex> lock(raftCommand);
   if(req.candidate == state.getMyself()) {
-    qdb_throw("received request vote from myself");
+    qdb_throw("received request vote from myself: " << state.getMyself().toString());
+  }
+
+  //----------------------------------------------------------------------------
+  // Defend against disruptive servers.
+  // A node that has been removed from the cluster will often not know that,
+  // and will repeatedly start elections trying to depose the current leader,
+  // effectively making the cluster unavailable.
+  //
+  // If this node is not part of the cluster (that I know of) and I am already
+  // in contact with the leader, completely ignore its vote request, and don't
+  // take its term into consideration.
+  //
+  // If I don't have a leader, the situation is different though. Maybe this
+  // node was added later, and I just don't know about it yet. Process the
+  // request normally, since there's no leader to depose of, anyway.
+  //----------------------------------------------------------------------------
+
+  if(!contains(state.getNodes(), req.candidate)) {
+    RaftStateSnapshot snapshot = state.getSnapshot();
+    if(!snapshot.leader.empty()) {
+      qdb_critical("Non-voting " << req.candidate.toString() << " attempted to disrupt the cluster by starting an election for term " << req.term << ". Ignoring its request.");
+      return {snapshot.term, false};
+    }
+    qdb_warn("Non-voting " << req.candidate.toString() << " is requesting a vote, even though it is not a voting member of the cluster as far I know. Will still process its request, since I have no leader.");
   }
 
   state.observed(req.term, {});
