@@ -53,8 +53,6 @@ public:
 
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
   bool setCommitIndex(LogIndex index);
-  // void setNodes(const std::vector<RaftServer> &newNodes);
-  // void setObservers(const std::vector<RaftServer> &obs);
 
   RaftTerm getCurrentTerm() const { return currentTerm; }
   LogIndex getLogSize() const { return logSize; }
@@ -63,9 +61,9 @@ public:
   LogIndex getCommitIndex() const { return commitIndex; }
   std::vector<RaftServer> getNodes();
   RaftServer getVotedFor();
-  std::vector<RaftServer> getObservers();
 
-  RaftMembers getMembers();
+  LogIndex getEpoch() const { return membershipEpoch; }
+  RaftMembership getMembership();
 
   bool append(LogIndex index, RaftTerm term, const RedisRequest &req);
   rocksdb::Status fetch(LogIndex index, RaftEntry &entry);
@@ -137,6 +135,7 @@ private:
   // Helper functions
   //----------------------------------------------------------------------------
 
+  RaftMembers getMembers();
   bool membershipUpdate(RaftTerm term, const RaftMembers &newMembers, std::string &err);
   bool appendNoLock(LogIndex index, RaftTerm term, const RedisRequest &req);
 

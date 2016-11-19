@@ -30,6 +30,14 @@
 
 namespace quarkdb {
 
+// Public class to give out a consistent membership snapshot
+struct RaftMembership {
+  std::vector<RaftServer> nodes;
+  std::vector<RaftServer> observers;
+  LogIndex epoch;
+};
+
+// Internal class, not exposed to users
 struct RaftMembers {
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;

@@ -243,6 +243,11 @@ RaftMembers RaftJournal::getMembers() {
   return members;
 }
 
+RaftMembership RaftJournal::getMembership() {
+  std::lock_guard<std::mutex> lock(membersMutex);
+  return {members.nodes, members.observers, membershipEpoch};
+}
+
 bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers, std::string &err) {
   std::lock_guard<std::mutex> lock(contentMutex);
 
@@ -354,11 +359,7 @@ RaftServer RaftJournal::getVotedFor() {
 }
 
 std::vector<RaftServer> RaftJournal::getNodes() {
-  return getMembers().nodes;
-}
-
-std::vector<RaftServer> RaftJournal::getObservers() {
-  return getMembers().observers;
+  return getMembership().nodes;
 }
 
 void RaftJournal::notifyWaitingThreads() {

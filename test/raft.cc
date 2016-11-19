@@ -137,6 +137,9 @@ TEST_F(Raft_Dispatcher, validate_initial_state) {
   ASSERT_EQ(info.myself, myself());
   ASSERT_EQ(info.term, 0);
   ASSERT_EQ(info.logSize, 1);
+  ASSERT_TRUE(info.observers.empty());
+  ASSERT_EQ(info.nodes, nodes());
+  ASSERT_EQ(info.membershipEpoch, 0);
 
   RaftEntry entry;
   ASSERT_TRUE(dispatcher()->fetch(0, entry));

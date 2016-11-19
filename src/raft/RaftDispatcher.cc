@@ -311,7 +311,9 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
 RaftInfo RaftDispatcher::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
-  return {journal.getClusterID(), state.getMyself(), state.getNodes(), snapshot.term, journal.getLogStart(),
+  RaftMembership membership = journal.getMembership();
+
+  return {journal.getClusterID(), state.getMyself(), membership.epoch, membership.nodes, membership.observers, snapshot.term, journal.getLogStart(),
           journal.getLogSize(), snapshot.status, journal.getCommitIndex(), stateMachine.getLastApplied(), blockedWrites.size()};
 }
 
