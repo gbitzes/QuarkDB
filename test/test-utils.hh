@@ -138,6 +138,8 @@ public:
   RaftClusterID clusterID();
 
   int getServerID(const RaftServer &srv);
+  std::vector<RaftServer> retrieveLeaders();
+  int getLeaderID();
 private:
   std::string rocksdbPath(int id = 0);
 

@@ -53,6 +53,7 @@ public:
   LinkStatus pong();
   LinkStatus string(const std::string &str);
   LinkStatus fromStatus(const rocksdb::Status &status);
+  LinkStatus status(const std::string &msg);
   LinkStatus ok();
   LinkStatus null();
   LinkStatus integer(int64_t number);

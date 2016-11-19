@@ -38,6 +38,7 @@ public:
   static LinkStatus pong(Link *link);
   static LinkStatus string(Link *link, const std::string &str);
   static LinkStatus fromStatus(Link *link, const rocksdb::Status &status);
+  static LinkStatus status(Link *link, const std::string &str);
   static LinkStatus ok(Link *link);
   static LinkStatus null(Link *link);
   static LinkStatus integer(Link *link, int64_t number);

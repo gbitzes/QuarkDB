@@ -49,4 +49,7 @@ TEST(Response, T1) {
   ASSERT_EQ(reader.consume(5, buffer), 5);
   ASSERT_EQ(buffer, "$-1\r\n");
 
+  ASSERT_EQ(Response::status(&link, "test"), 7);
+  ASSERT_EQ(reader.consume(7, buffer), 7);
+  ASSERT_EQ(buffer, "+test\r\n");
 }

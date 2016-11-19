@@ -64,7 +64,8 @@ enum class RedisCommand {
   RAFT_REQUEST_VOTE,
   RAFT_PANIC,
   RAFT_FETCH,
-  RAFT_CHECKPOINT
+  RAFT_CHECKPOINT,
+  RAFT_COUP_DETAT
 };
 
 enum class CommandType {

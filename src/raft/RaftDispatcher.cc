@@ -106,6 +106,21 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
 
       return conn->ok();
     }
+    case RedisCommand::RAFT_COUP_DETAT: {
+      RaftStateSnapshot snapshot = state.getSnapshot();
+
+      if(snapshot.leader.empty()) {
+        return conn->err("I have no leader to depose of");
+      }
+
+      if(snapshot.leader == state.getMyself()) {
+        return conn->err("I am the leader! I can't revolt against myself, you know.");
+      }
+
+      qdb_event("Received request to attempt a coup d'etat against the current leader.");
+      raftClock.triggerTimeout();
+      return conn->status("vive la revolution");
+    }
     default: {
       return this->service(conn, req, cmd, it->second.second);
     }

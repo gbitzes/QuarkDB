@@ -121,6 +121,14 @@ bool erase_element(std::vector<T> &v, const T& element) {
 }
 
 template<class T>
+bool all_identical(const std::vector<T> &v) {
+  for(size_t i = 1; i < v.size(); i++) {
+    if( !(v[i] == v[i-1]) ) return false;
+  }
+  return true;
+}
+
+template<class T>
 class ScopedAdder {
 public:
   ScopedAdder(std::atomic<T> &target_, T value_ = 1) : target(target_), value(value_) {

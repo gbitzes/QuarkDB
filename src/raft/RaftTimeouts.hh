@@ -63,12 +63,14 @@ public:
 
   RaftTimeouts getTimeouts() { return timeouts; }
   milliseconds getRandomTimeout();
+  void triggerTimeout();
 private:
   std::mutex lastHeartbeatMutex;
   std::chrono::steady_clock::time_point lastHeartbeat;
   milliseconds randomTimeout;
 
   RaftTimeouts timeouts;
+  bool artificialTimeout = false;
 };
 
 extern RaftTimeouts defaultTimeouts;

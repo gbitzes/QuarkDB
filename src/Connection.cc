@@ -61,6 +61,11 @@ LinkStatus Connection::fromStatus(const rocksdb::Status &status) {
   return Response::fromStatus(link, status);
 }
 
+LinkStatus Connection::status(const std::string &msg) {
+  if(!link) return 1;
+  return Response::status(link, msg);
+}
+
 LinkStatus Connection::ok() {
   if(!link) return 1;
   return Response::ok(link);

@@ -62,6 +62,25 @@ void assert_reply(std::future<redisReplyPtr> &&fut, T&& check) {
   assert_reply(fut.get(), check);
 }
 
+TEST_F(Raft_e2e, coup) {
+  prepare(0); prepare(1); prepare(2);
+  spinup(0); spinup(1); spinup(2);
+
+  // wait for consensus
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+
+  int leaderID = getLeaderID();
+  ASSERT_GE(leaderID, 0);
+  ASSERT_LE(leaderID, 2);
+
+  int instigator = (leaderID+1)%3;
+  ASSERT_REPLY(tunnel(instigator)->exec("RAFT_COUP_DETAT"), "vive la revolution");
+  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  ASSERT_EQ(instigator, getLeaderID());
+  ASSERT_TRUE(all_identical(retrieveLeaders()));
+}
+
 TEST_F(Raft_e2e, simultaneous_clients) {
   prepare(0); prepare(1); prepare(2);
   spinup(0); spinup(1); spinup(2);

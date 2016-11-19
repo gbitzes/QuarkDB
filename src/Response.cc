@@ -42,6 +42,10 @@ LinkStatus Response::string(Link *link, const std::string &str) {
   return link->Send(SSTR("$" << str.length() << "\r\n" << str << "\r\n"));
 }
 
+LinkStatus Response::status(Link *link, const std::string &str) {
+  return link->Send(SSTR("+" << str << "\r\n"));
+}
+
 LinkStatus Response::ok(Link *link) {
   return link->Send("+OK\r\n");
 }

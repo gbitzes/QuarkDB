@@ -71,8 +71,19 @@ void RaftClock::heartbeat() {
   lastHeartbeat = std::chrono::steady_clock::now();
 }
 
+void RaftClock::triggerTimeout() {
+  std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
+  artificialTimeout = true;
+}
+
 bool RaftClock::timeout() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
+  if(artificialTimeout) {
+    qdb_event("Triggering an artificial timeout.");
+    artificialTimeout = false;
+    return true;
+  }
+
   return std::chrono::steady_clock::now() - lastHeartbeat > randomTimeout;
 }
 
