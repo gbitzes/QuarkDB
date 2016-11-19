@@ -83,6 +83,7 @@ TEST(Tunnel, T1) {
   reply = fut2.get();
   ASSERT_EQ(reply->type, REDIS_REPLY_STRING);
   ASSERT_EQ(str_from_reply(reply), "1234567");
+  close(s2);
 }
 
 TEST(Tunnel, T2) {
@@ -104,4 +105,5 @@ TEST(Tunnel, T2) {
 
   assert_receive(s2, "*3\r\n$3\r\nset\r\n$3\r\nabc\r\n$3\r\n123\r\n");
   socket_send(s2, "+OK\r\n");
+  close(s2);
 }
