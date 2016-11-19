@@ -68,6 +68,7 @@ public:
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status flushall(LogIndex index = 0);
 
+  rocksdb::Status noop(LogIndex index);
   LogIndex getLastApplied();
 
   //----------------------------------------------------------------------------

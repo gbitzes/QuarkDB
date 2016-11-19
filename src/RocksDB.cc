@@ -448,6 +448,12 @@ RocksDB::TransactionPtr RocksDB::startTransaction() {
   return TransactionPtr(transactionDB->BeginTransaction(rocksdb::WriteOptions()));
 }
 
+rocksdb::Status RocksDB::noop(LogIndex index) {
+  TransactionPtr tx = startTransaction();
+  commitTransaction(tx, index);
+  return rocksdb::Status::OK();
+}
+
 void RocksDB::commitTransaction(TransactionPtr &tx, LogIndex index) {
   if(index <= 0 && lastApplied > 0) qdb_throw("provided invalid index for version-tracked database: " << index << ", current last applied: " << lastApplied);
 

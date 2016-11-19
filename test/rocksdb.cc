@@ -72,6 +72,9 @@ TEST_F(Rocks_DB, test_write_transactions) {
 
   ASSERT_NOTFOUND(rocksdb()->srem("set1", "elem2", 10));
   ASSERT_EQ(rocksdb()->getLastApplied(), 10);
+
+  ASSERT_OK(rocksdb()->noop(11));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 11);
 }
 
 TEST_F(Rocks_DB, test_hincrby) {
