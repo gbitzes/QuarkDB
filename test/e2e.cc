@@ -160,6 +160,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 
   RaftInfo info = dispatcher(leaderID)->info();
   ASSERT_EQ(info.blockedWrites, 0u);
+  ASSERT_EQ(info.leader, myself(leaderID));
 
   std::string err;
   std::string checkpointPath = SSTR(commonState.testdir << "/checkpoint");

@@ -385,7 +385,7 @@ RaftInfo RaftDispatcher::info() {
   RaftStateSnapshot snapshot = state.getSnapshot();
   RaftMembership membership = journal.getMembership();
 
-  return {journal.getClusterID(), state.getMyself(), membership.epoch, membership.nodes, membership.observers, snapshot.term, journal.getLogStart(),
+  return {journal.getClusterID(), state.getMyself(), snapshot.leader, membership.epoch, membership.nodes, membership.observers, snapshot.term, journal.getLogStart(),
           journal.getLogSize(), snapshot.status, journal.getCommitIndex(), stateMachine.getLastApplied(), blockedWrites.size()};
 }
 

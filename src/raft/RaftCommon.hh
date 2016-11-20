@@ -109,6 +109,7 @@ struct RaftVoteResponse {
 struct RaftInfo {
   RaftClusterID clusterID;
   RaftServer myself;
+  RaftServer leader;
   LogIndex membershipEpoch;
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;
@@ -126,6 +127,7 @@ struct RaftInfo {
     ret.push_back(SSTR("LOG-START " << logStart));
     ret.push_back(SSTR("LOG-SIZE " << logSize));
     ret.push_back(SSTR("MYSELF " << myself.toString()));
+    ret.push_back(SSTR("LEADER " << leader.toString()));
     ret.push_back(SSTR("MEMBERSHIP-EPOCH " << membershipEpoch));
     ret.push_back(SSTR("NODES " << serializeNodes(nodes)));
     ret.push_back(SSTR("OBSERVERS " << serializeNodes(observers)));
