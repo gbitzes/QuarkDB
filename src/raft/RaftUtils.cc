@@ -206,7 +206,7 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
 }
 
 bool RaftParser::fetchResponse(const redisReplyPtr &source, RaftEntry &entry) {
-  entry = {};
+  entry = RaftEntry();
 
   if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements < 2) {
     return false;

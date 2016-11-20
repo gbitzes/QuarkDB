@@ -24,7 +24,7 @@ def main():
     commit_hash = sh("git rev-parse HEAD").strip()
     git_describe = sh("git describe --dirty").strip()
 
-    git_commit_date = sh("git log -1 --date=format:%Y%m%d --pretty=format:%cd").strip()
+    git_commit_date = sh("git log -1 --date=short --pretty=format:%cd").strip().replace("-", "")
     branch = sh("git rev-parse --symbolic-full-name --abbrev-ref HEAD").strip()
     latest_tag = sh("git describe --abbrev=0 --tags").strip()
     versions = latest_tag.split(".")

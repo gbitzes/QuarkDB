@@ -390,7 +390,7 @@ RaftInfo RaftDispatcher::info() {
 }
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {
-  entry = {};
+  entry = RaftEntry();
   rocksdb::Status st = journal.fetch(index, entry);
   return st.ok();
 }

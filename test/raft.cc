@@ -190,7 +190,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   ASSERT_EQ(resp.logSize, 3);
 
   // previous entry term mismatch, but verify term progressed
-  req = {};
+  req = RaftAppendEntriesRequest();
   req.term = 3;
   req.leader = myself(1);
   req.prevIndex = 2;
@@ -205,7 +205,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   // add three more entries with a different leader, while removing the last
   // entry as inconsistent
 
-  req = {};
+  req = RaftAppendEntriesRequest();
   req.term = 5;
   req.leader = myself(2);
   req.prevIndex = 1;
@@ -227,7 +227,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   ASSERT_EQ(entry.request, make_req("sadd", "myset", "a"));
 
   // let's commit all entries
-  req = {};
+  req = RaftAppendEntriesRequest();
   req.term = 5;
   req.leader = myself(2);
   req.prevIndex = 4;
@@ -241,7 +241,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
 
   // now let's say the new leader is a little confused, and tries to replicate the
   // last *committed* entry once again. Ensure the follower plays along
-  req = {};
+  req = RaftAppendEntriesRequest();
   req.term = 5;
   req.leader = myself(2);
   req.prevIndex = 3;
@@ -255,7 +255,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   ASSERT_EQ(resp.logSize, 5);
 
   // the leader is still confused, and is sending an even older entry
-  req = {};
+  req = RaftAppendEntriesRequest();
   req.term = 5;
   req.leader = myself(2);
   req.prevIndex = 2;
@@ -270,7 +270,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
 
   // the leader is drunk and tries to overwrite the last committed entry with
   // a different one.
-  req = {};
+  req = RaftAppendEntriesRequest();
   req.term = 5;
   req.leader = myself(2);
   req.prevIndex = 3;

@@ -42,6 +42,7 @@ add_library(XrdRedis SHARED
 
 target_link_libraries(
   XrdRedis
+  bz2
   # libasan.a
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
