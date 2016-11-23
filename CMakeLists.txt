@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.8.11)
 
 #-------------------------------------------------------------------------------
 # Initialize
@@ -19,9 +19,14 @@ add_custom_command(OUTPUT Version COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/genversion
 # Search for dependencies
 #-------------------------------------------------------------------------------
 
-find_package(XRootD REQUIRED)
-find_package(RocksDB REQUIRED)
 find_package(hiredis REQUIRED)
+find_package(XRootD REQUIRED)
+
+find_package(RocksDB)
+if(NOT ROCKSDB_FOUND)
+  include(buildRocksDB)
+  buildRocksDB()
+endif()
 
 #-------------------------------------------------------------------------------
 # Compiler options
