@@ -27,9 +27,9 @@
 #include "Utils.hh"
 #include <mutex>
 #include <future>
+#include <queue>
 #include <map>
 #include <hiredis/hiredis.h>
-#include <hiredis/async.h>
 #include "EventFD.hh"
 
 namespace quarkdb {
@@ -41,13 +41,6 @@ public:
   Tunnel(const std::string &host, const int port, RedisRequest handshake = {});
   ~Tunnel();
   DISALLOW_COPY_AND_ASSIGN(Tunnel);
-
-  // these two should have been private, but are called by an external callback
-  void removeWriteNotification();
-  void notifyWrite();
-
-  void receivedDisconnect();
-  void freeContext();
 
   std::future<redisReplyPtr> execute(const RedisRequest &req);
   std::future<redisReplyPtr> execute(size_t nchunks, const char **chunks, const size_t *sizes);
@@ -85,13 +78,19 @@ private:
   void startEventLoop();
   void eventLoop();
   void connect();
-  void disconnect();
-  void discoverIntercept();
 
-  std::recursive_mutex asyncMutex;
-  redisAsyncContext *asyncContext;
+  std::atomic<int> sock {-1};
+  redisReader *reader = nullptr;
+
+  void cleanup();
+  bool feed(const char *buf, size_t len);
+  void connectTCP();
+
+  std::recursive_mutex mtx;
+  std::queue<std::promise<redisReplyPtr>> promises;
   EventFD writeEventFD;
 
+  void discoverIntercept();
   RedisRequest handshakeCommand;
   std::thread eventLoopThread;
 

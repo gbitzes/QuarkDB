@@ -27,6 +27,12 @@
 #include <string.h>
 #include <poll.h>
 #include <signal.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
 
 using namespace quarkdb;
 
@@ -51,17 +57,175 @@ void Tunnel::clearIntercepts() {
 // Tunnel class implementation
 //------------------------------------------------------------------------------
 
-void Tunnel::startEventLoop() {
-  asyncContext = nullptr;
-  writeEventFD.reset();
+std::future<redisReplyPtr> Tunnel::execute(size_t nchunks, const char **chunks, const size_t *sizes) {
+  std::lock_guard<std::recursive_mutex> lock(mtx);
 
+  // not connected?
+  if(sock <= 0) {
+    std::promise<redisReplyPtr> prom;
+    prom.set_value(redisReplyPtr());
+    return prom.get_future();
+  }
+
+  char *buffer = NULL;
+  int len = redisFormatCommandArgv(&buffer, nchunks, chunks, sizes);
+  send(sock, buffer, len, 0);
+  free(buffer);
+
+  promises.emplace();
+  return promises.back().get_future();
+}
+
+void Tunnel::startEventLoop() {
   this->connect();
   eventLoopThread = std::thread(&Tunnel::eventLoop, this);
 }
 
+bool Tunnel::feed(const char *buf, size_t len) {
+  if(len > 0) {
+    redisReaderFeed(reader, buf, len);
+  }
+
+  while(true) {
+    void *reply = NULL;
+    if(redisReaderGetReply(reader, &reply) == REDIS_ERR) {
+      return false;
+    }
+
+    if(reply == NULL) break;
+
+    // new request to process
+    if(!promises.empty()) {
+      promises.front().set_value(redisReplyPtr((redisReply*) reply, freeReplyObject));
+      promises.pop();
+    }
+  }
+  return true;
+}
+
+void Tunnel::cleanup() {
+  if(sock > 0) {
+    close(sock);
+    sock = -1;
+  }
+
+  if(reader != nullptr) {
+    redisReaderFree(reader);
+    reader = nullptr;
+  }
+
+  // return NULL to all pending requests
+  while(!promises.empty()) {
+    promises.front().set_value(redisReplyPtr());
+    promises.pop();
+  }
+}
+
+void Tunnel::connectTCP() {
+  struct addrinfo hints, *servinfo, *p;
+
+  int tmpsock, rv;
+
+  memset(&hints, 0, sizeof hints);
+  hints.ai_family = AF_UNSPEC;
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = AI_CANONNAME;
+
+  if((rv = getaddrinfo(targetHost.c_str(), std::to_string(targetPort).c_str(), &hints, &servinfo)) != 0) {
+    qdb_warn("error when resolving " << targetHost << ": " << gai_strerror(rv));
+    return;
+  }
+
+  // loop through all the results and connect to the first we can
+  for(p = servinfo; p != NULL; p = p->ai_next) {
+    if((tmpsock = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1) {
+      continue;
+    }
+
+    if(::connect(tmpsock, p->ai_addr, p->ai_addrlen) == -1) {
+      close(tmpsock);
+      continue;
+    }
+
+    break;
+  }
+
+  freeaddrinfo(servinfo);
+
+  if(p == NULL) {
+    return;
+  }
+
+  sock = tmpsock; // atomic set
+}
+
+void Tunnel::connect() {
+  std::unique_lock<std::recursive_mutex> lock(mtx);
+
+  cleanup();
+  discoverIntercept();
+  reader = redisReaderCreate();
+
+  connectTCP();
+
+  if(!handshakeCommand.empty()) {
+    execute(handshakeCommand);
+  }
+}
+
+void Tunnel::eventLoop() {
+  const size_t BUFFER_SIZE = 1024 * 2;
+  char buffer[BUFFER_SIZE];
+
+  signal(SIGPIPE, SIG_IGN);
+
+  std::chrono::milliseconds backoff(1);
+  while(true) {
+    std::unique_lock<std::recursive_mutex> lock(mtx);
+
+    struct pollfd polls[2];
+    polls[0].fd = writeEventFD.getFD();
+    polls[0].events = POLLIN;
+
+    polls[1].fd = sock;
+    polls[1].events = POLLIN;
+
+    while(sock > 0) {
+      lock.unlock();
+      poll(polls, 2, 1);
+      lock.lock();
+
+      if(shutdown) break;
+
+      // legit connection, reset backoff
+      backoff = std::chrono::milliseconds(1);
+
+      if(polls[1].revents != 0) {
+        int bytes = recv(sock, buffer, BUFFER_SIZE, 0);
+
+        if(bytes <= 0) {
+          break;
+        }
+        feed(buffer, bytes);
+      }
+    }
+
+    if(shutdown) {
+      feed(NULL, 0);
+      break;
+    }
+
+    lock.unlock();
+    std::this_thread::sleep_for(backoff);
+    if(backoff < std::chrono::milliseconds(2048)) {
+      backoff++;
+    }
+    this->connect();
+  }
+}
+
 Tunnel::Tunnel(const std::string &host_, const int port_, RedisRequest handshake)
 : host(host_), port(port_), handshakeCommand(handshake) {
-
   startEventLoop();
 }
 
@@ -84,151 +248,9 @@ void Tunnel::discoverIntercept() {
 
 Tunnel::~Tunnel() {
   shutdown = true;
-  notifyWrite();
-  eventLoopThread.join();
-  freeContext();
-}
-
-void Tunnel::freeContext() {
-  if(asyncContext) {
-    // redisAsyncFree(asyncContext);
-    asyncContext = nullptr;
-  }
-}
-
-void Tunnel::receivedDisconnect() {
-  // once this function exits, the async context is automatically free'd
-  // by hiredis
-  std::unique_lock<std::recursive_mutex> lock(asyncMutex);
-  asyncContext = nullptr;
-}
-
-static void add_write_callback(void *privdata) {
-  Tunnel *tunnel = (Tunnel*) privdata;
-  tunnel->notifyWrite();
-}
-
-static void del_write_callback(void *privdata) {
-  Tunnel *tunnel = (Tunnel*) privdata;
-  tunnel->removeWriteNotification();
-}
-
-static redisReply* dupReplyObject(redisReply* reply) {
-    redisReply* r = (redisReply*)calloc(1, sizeof(*r));
-    memcpy(r, reply, sizeof(*r));
-    if(REDIS_REPLY_ERROR==reply->type || REDIS_REPLY_STRING==reply->type || REDIS_REPLY_STATUS==reply->type) //copy str
-    {
-        r->str = (char*)malloc(reply->len+1);
-        memcpy(r->str, reply->str, reply->len);
-        r->str[reply->len] = '\0';
-    }
-    else if(REDIS_REPLY_ARRAY==reply->type) //copy array
-    {
-        r->element = (redisReply**)calloc(reply->elements, sizeof(redisReply*));
-        memset(r->element, 0, r->elements*sizeof(redisReply*));
-        for(uint32_t i=0; i<reply->elements; ++i)
-        {
-            if(NULL!=reply->element[i])
-            {
-                if( NULL == (r->element[i] = dupReplyObject(reply->element[i])) )
-                {
-                    //clone child failed, free current reply, and return NULL
-                        freeReplyObject(r);
-                    return NULL;
-                }
-            }
-        }
-    }
-    return r;
-}
-
-static void async_future_callback(redisAsyncContext *c, void *reply, void *privdata) {
-  redisReply *rreply = (redisReply*) reply;
-  std::promise<redisReplyPtr> *promise = (std::promise<redisReplyPtr>*) privdata;
-
-  if(reply) {
-    promise->set_value(redisReplyPtr(dupReplyObject(rreply), freeReplyObject));
-  }
-  else {
-    promise->set_value(redisReplyPtr());
-  }
-  delete promise;
-}
-
-void Tunnel::notifyWrite() {
   writeEventFD.notify();
-}
-
-void Tunnel::removeWriteNotification() {
-  writeEventFD.reset();
-}
-
-void disconnectCallback(const redisAsyncContext *asyncContext, int status) {
-  ((Tunnel*) asyncContext->ev.data)->receivedDisconnect();
-}
-
-void Tunnel::connect() {
-  std::unique_lock<std::recursive_mutex> lock(asyncMutex);
-  freeContext();
-
-  discoverIntercept();
-  asyncContext = redisAsyncConnect(targetHost.c_str(), targetPort);
-
-  redisAsyncSetDisconnectCallback(asyncContext, disconnectCallback);
-
-  asyncContext->ev.addWrite = add_write_callback;
-  asyncContext->ev.delWrite = del_write_callback;
-  asyncContext->ev.data = this;
-
-  if(!handshakeCommand.empty()) {
-    execute(handshakeCommand);
-  }
-
-  lock.unlock();
-
-}
-
-void Tunnel::eventLoop() {
-  signal(SIGPIPE, SIG_IGN);
-
-  std::chrono::milliseconds backoff(1);
-  while(true) {
-    std::unique_lock<std::recursive_mutex> lock(asyncMutex);
-
-    struct pollfd polls[2];
-    polls[0].fd = writeEventFD.getFD();
-    polls[0].events = POLLIN;
-
-    polls[1].fd = asyncContext->c.fd;
-    polls[1].events = POLLIN;
-
-    while(asyncContext && !asyncContext->err) {
-      lock.unlock();
-      poll(polls, 2, -1);
-      lock.lock();
-
-      if(shutdown) return;
-
-      // legit connection, reset backoff
-      backoff = std::chrono::milliseconds(1);
-
-      if(polls[0].revents != 0) {
-        redisAsyncHandleWrite(asyncContext);
-      }
-      else if(polls[1].revents != 0) {
-        redisAsyncHandleRead(asyncContext);
-      }
-    }
-    lock.unlock();
-
-    if(shutdown) return;
-    // dropped connection, wait before retrying with an increasing backoff
-    std::this_thread::sleep_for(backoff);
-    if(backoff < std::chrono::milliseconds(1024)) {
-      backoff++;
-    }
-    this->connect();
-  }
+  eventLoopThread.join();
+  cleanup();
 }
 
 std::future<redisReplyPtr> Tunnel::execute(const RedisRequest &req) {
@@ -241,21 +263,4 @@ std::future<redisReplyPtr> Tunnel::execute(const RedisRequest &req) {
   }
 
   return execute(req.size(), cstr, sizes);
-}
-
-std::future<redisReplyPtr> Tunnel::execute(size_t nchunks, const char **chunks, const size_t *sizes) {
-  std::lock_guard<std::recursive_mutex> lock(asyncMutex);
-
-  if(asyncContext && !asyncContext->err) {
-    std::promise<redisReplyPtr>* prom = new std::promise<redisReplyPtr>();
-    if(redisAsyncCommandArgv(asyncContext, async_future_callback, prom, nchunks, chunks, sizes) != REDIS_OK) {
-      prom->set_value(redisReplyPtr());
-      delete prom;
-    }
-    return prom->get_future();
-  }
-
-  std::promise<redisReplyPtr> prom;
-  prom.set_value(redisReplyPtr());
-  return prom.get_future();
 }
