@@ -50,3 +50,8 @@ target_link_libraries(
   ${BACKWARD_LIBRARIES}
   ${HIREDIS_LIBRARIES}
 )
+
+install(
+  TARGETS XrdRedis
+  LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
+)

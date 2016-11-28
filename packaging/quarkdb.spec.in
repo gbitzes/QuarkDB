@@ -1,0 +1,48 @@
+%define _unpackaged_files_terminate_build 0
+
+#-------------------------------------------------------------------------------
+# Package definitions
+#-------------------------------------------------------------------------------
+Summary: A highly available key-value store
+Name: quarkdb
+Version: @VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@
+Release: @VERSION_RELEASE@%{dist}
+Prefix: /usr
+License: none
+Group: Applications/File
+
+Source: %{name}-%{version}-@VERSION_RELEASE@.tar.gz
+BuildRoot: %{_tmppath}/%{name}-root
+BuildRequires: xrootd
+BuildRequires: xrootd-server-devel
+BuildRequires: xrootd-devel
+BuildRequires: xrootd-private-devel
+BuildRequires: cmake3
+BuildRequires: hiredis
+BuildRequires: hiredis-devel
+BuildRequires: bzip2-devel
+
+Requires: xrootd
+
+%description
+A highly available key-value store.
+
+%prep
+%setup -n %{name}-%{version}-@VERSION_RELEASE@
+
+%build
+mkdir build
+cd build
+cmake3 ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr
+%{__make} %{_smp_mflags}
+
+%install
+cd build
+%{__make} install # DESTDIR=$RPM_BUILD_ROOT
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-, root, root, -)
+%{_libdir}/libXrdRedis.so
