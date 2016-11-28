@@ -27,6 +27,7 @@ BuildRequires: cmake3 >= 3.3
 BuildRequires: hiredis
 BuildRequires: hiredis-devel
 BuildRequires: bzip2-devel
+BuildRequires: python
 
 Requires: xrootd
 
