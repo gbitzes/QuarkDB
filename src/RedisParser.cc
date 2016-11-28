@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "RedisParser.hh"
+#include <climits>
 
 using namespace quarkdb;
 
