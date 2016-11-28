@@ -43,10 +43,10 @@ add_library(XrdRedis SHARED
 target_link_libraries(
   XrdRedis
   bz2
+  rocksdb
   # libasan.a
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
-  ${ROCKSDB_LIBRARY}
   ${BACKWARD_LIBRARIES}
   ${HIREDIS_LIBRARIES}
 )

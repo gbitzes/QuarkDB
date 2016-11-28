@@ -9,7 +9,7 @@
 
 include(FindPackageHandleStandardArgs)
 
-if(ROCKSDB_INCLUDE_DIRS AND ROCKSDB_SHARED_LIBRARY)
+if(ROCKSDB_INCLUDE_DIRS AND ROCKSDB_LIBRARY)
   set(ROCKSDB_FIND_QUIETLY TRUE)
 else()
   find_path(
@@ -22,10 +22,15 @@ else()
     ROCKSDB_LIBRARY
     NAMES librocksdb.a
     HINTS ${ROCKSDB_ROOT_DIR})
+endif()
 
-  find_package_handle_standard_args(
-    rocksdb
-    DEFAULT_MSG
-    ROCKSDB_LIBRARY
-    ROCKSDB_INCLUDE_DIRS)
+find_package_handle_standard_args(
+  rocksdb
+  DEFAULT_MSG
+  ROCKSDB_LIBRARY
+  ROCKSDB_INCLUDE_DIRS)
+
+if(ROCKSDB_FOUND)
+  add_library(rocksdb STATIC IMPORTED)
+  set_property(TARGET rocksdb PROPERTY IMPORTED_LOCATION ${ROCKSDB_LIBRARY})
 endif()
