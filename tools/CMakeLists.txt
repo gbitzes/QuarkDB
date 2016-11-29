@@ -11,3 +11,8 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/deps  # for optionparser.h
   ${ROCKSDB_INCLUDE_DIRS}
 )
+
+install(
+  TARGETS quarkdb-journal quarkdb-scrub
+  RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
+)
