@@ -75,13 +75,13 @@ void QuarkDBNode::detach() {
 void QuarkDBNode::attach() {
   if(attached) return;
 
-  rocksdb = new RocksDB(configuration.getDB());
+  rocksdb = new RocksDB(SSTR(configuration.getDatabase() << "/state-machine"));
 
   if(configuration.getMode() == Mode::rocksdb) {
     dispatcher = new RedisDispatcher(*rocksdb);
   }
   else if(configuration.getMode() == Mode::raft) {
-    journal = new RaftJournal(configuration.getRaftLog());
+    journal = new RaftJournal(SSTR(configuration.getDatabase() << "/raft-journal"));
     if(journal->getClusterID() != configuration.getClusterID()) {
       delete journal;
       qdb_throw("clusterID from configuration does not match the one stored in the journal");

@@ -46,19 +46,17 @@ public:
   bool isValid();
 
   Mode getMode() { return mode; }
-  std::string getDB() { return db; }
+  std::string getDatabase() { return database; }
   TraceLevel getTraceLevel() { return trace; }
 
-  std::string getRaftLog() { return raftLog; }
   RaftServer getMyself() { return myself; }
   std::string getClusterID() { return clusterID; }
 private:
   Mode mode;
-  std::string db;
+  std::string database;
   TraceLevel trace = TraceLevel::info;
 
   // raft options
-  std::string raftLog;
   RaftServer myself;
   RaftClusterID clusterID;
 };

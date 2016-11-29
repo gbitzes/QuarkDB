@@ -113,11 +113,8 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       if(!strcmp("mode", option)) {
         success = fetchSingle(stream, buffer) && parseMode(buffer, out.mode);
       }
-      else if(!strcmp("db", option)) {
-        success = fetchSingle(stream, out.db);
-      }
-      else if(!strcmp("raftlog", option)) {
-        success = fetchSingle(stream, out.raftLog);
+      else if(!strcmp("database", option)) {
+        success = fetchSingle(stream, out.database);
       }
       else if(!strcmp("myself", option)) {
         success = fetchSingle(stream, buffer) && parseServer(buffer, out.myself);
@@ -162,17 +159,12 @@ bool Configuration::fromString(const std::string &str, Configuration &out) {
 }
 
 bool Configuration::isValid() {
-  if(db.empty()) {
-    qdb_log("redis.db must be specified.");
+  if(database.empty()) {
+    qdb_log("redis.database must be specified.");
     return false;
   }
 
   bool raft = (mode == Mode::raft);
-
-  if(raft == raftLog.empty()) {
-    qdb_log("redis.raftlog is required when using raft and is incompatible with rocksdb");
-    return false;
-  }
 
   if(raft == myself.hostname.empty()) {
     qdb_log("redis.myself is required when using raft and is incompatible with rocksdb");
@@ -184,13 +176,8 @@ bool Configuration::isValid() {
     return false;
   }
 
-  if(raftLog == db) {
-    qdb_log("redis.db and redis.raftlog must be different");
-    return false;
-  }
-
-  if(raftLog[raftLog.size()-1] == '/' || db[db.size()-1] == '/') {
-    qdb_log("redis.db and redis.raftlog cannot contain trailing slashes");
+  if(database[database.size()-1] == '/') {
+    qdb_log("redis.database cannot contain trailing slashes");
     return false;
   }
 
