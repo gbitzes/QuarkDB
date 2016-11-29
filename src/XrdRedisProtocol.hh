@@ -32,6 +32,8 @@
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdOuc/XrdOucStream.hh"
 
+#include "QuarkDBNode.hh"
+
 #include "Configuration.hh"
 #include "RedisParser.hh"
 #include "RocksDB.hh"
@@ -42,7 +44,6 @@
 #include "raft/RaftDirector.hh"
 
 namespace quarkdb {
-
 
 
 class XrdRedisProtocol : public XrdProtocol {
@@ -75,19 +76,10 @@ private:
   Connection *conn = nullptr;
 
   RedisRequest currentRequest;
-
-
-
   void Reset();
 protected:
-  static Configuration configuration;
   static XrdBuffManager *bufferManager;
-  static RocksDB *rocksdb;
-  static Dispatcher *dispatcher;
-  static RaftJournal *journal;
-  static RaftState *state;
-  static RaftClock *raftClock;
-  static RaftDirector *director;
+  static QuarkDBNode *quarkdbNode;
 
   static void shutdownMonitor();
   static std::atomic<int64_t> inFlight;

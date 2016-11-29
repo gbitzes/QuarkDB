@@ -1,5 +1,5 @@
-//-----------------------------------------------------------------------
-// File: Commands.hh
+// ----------------------------------------------------------------------
+// File: QuarkDBNode.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,82 +21,47 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_COMMANDS_H__
-#define __QUARKDB_COMMANDS_H__
+#ifndef __QUARKDB_NODE_H__
+#define __QUARKDB_NODE_H__
 
-#include <map>
+#include "Dispatcher.hh"
+#include "Configuration.hh"
+#include "RedisParser.hh"
+#include "RocksDB.hh"
+#include "Dispatcher.hh"
+#include "raft/RaftJournal.hh"
+#include "raft/RaftState.hh"
+#include "raft/RaftTimeouts.hh"
+#include "raft/RaftDirector.hh"
 
 namespace quarkdb {
 
-enum class RedisCommand {
-  PING,
-  DEBUG,
+class QuarkDBNode {
+public:
+  QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_);
+  ~QuarkDBNode();
 
-  FLUSHALL,
+  void detach();
+  void attach();
+  LinkStatus dispatch(Connection *conn, RedisRequest &req);
+private:
+  Configuration configuration;
 
-  GET,
-  SET,
-  EXISTS,
-  DEL,
-  KEYS,
+  Dispatcher* dispatcher = nullptr;
+  RocksDB *rocksdb = nullptr;
+  RaftJournal *journal = nullptr;
+  RaftState *state = nullptr;
+  RaftClock *raftClock = nullptr;
+  RaftDirector *director = nullptr;
 
-  HGET,
-  HSET,
-  HEXISTS,
-  HKEYS,
-  HGETALL,
-  HINCRBY,
-  HDEL,
-  HLEN,
-  HVALS,
-  HSCAN,
+  XrdBuffManager *bufferManager = nullptr; // owned by xrootd, not me
 
-  SADD,
-  SISMEMBER,
-  SREM,
-  SMEMBERS,
-  SCARD,
-  SSCAN,
+  std::vector<std::string> info();
 
-  RAFT_HANDSHAKE,
-  RAFT_APPEND_ENTRIES,
-  RAFT_INFO,
-  RAFT_REQUEST_VOTE,
-  RAFT_FETCH,
-  RAFT_CHECKPOINT,
-  RAFT_COUP_DETAT,
-  RAFT_ADD_OBSERVER,
-  RAFT_REMOVE_MEMBER,
-  RAFT_PROMOTE_OBSERVER,
-
-  QUARKDB_INFO,
-  QUARKDB_DETACH,
-  QUARKDB_ATTACH
+  std::atomic<bool> attached {false};
+  const std::atomic<int64_t> &inFlight;
+  std::atomic<int64_t> beingDispatched {0};
 };
 
-enum class CommandType {
-  READ,
-  WRITE,
-  CONTROL,
-  RAFT,
-  QUARKDB
-};
-
-struct caseInsensitiveComparator {
-    bool operator() (const std::string& lhs, const std::string& rhs) const {
-        for(size_t i = 0; i < std::min(lhs.size(), rhs.size()); i++) {
-          if(tolower(lhs[i]) != tolower(rhs[i])) {
-            return tolower(lhs[i] < tolower(rhs[i]));
-          }
-        }
-        return lhs.size() < rhs.size();
-    }
-};
-
-extern std::map<std::string,
-                std::pair<RedisCommand, CommandType>,
-                caseInsensitiveComparator>
-                redis_cmd_map;
 }
-
 #endif

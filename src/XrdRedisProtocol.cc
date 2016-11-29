@@ -36,18 +36,12 @@ using namespace quarkdb;
 // Globals
 //------------------------------------------------------------------------------
 
-Configuration XrdRedisProtocol::configuration;
 XrdSysError XrdRedisProtocol::eDest(0, "redis");
 
 const char *XrdRedisTraceID = "XrdRedis";
 XrdOucTrace *XrdRedisTrace = 0;
 XrdBuffManager *XrdRedisProtocol::bufferManager = 0;
-RocksDB *XrdRedisProtocol::rocksdb = 0;
-Dispatcher *XrdRedisProtocol::dispatcher = 0;
-RaftJournal *XrdRedisProtocol::journal = 0;
-RaftState *XrdRedisProtocol::state = 0;
-RaftClock *XrdRedisProtocol::raftClock = 0;
-RaftDirector *XrdRedisProtocol::director = 0;
+QuarkDBNode *XrdRedisProtocol::quarkdbNode = 0;
 std::atomic<bool> XrdRedisProtocol::inShutdown {false};
 std::atomic<int64_t> XrdRedisProtocol::inFlight {0};
 EventFD XrdRedisProtocol::shutdownFD;
@@ -59,8 +53,7 @@ EventFD XrdRedisProtocol::shutdownFD;
 // safe. write() is signal-safe, so let's use an eventfd.
 //
 // After inShutdown is set, all new requests are rejected, and we wait until
-// all requests currently in flight are completed before starting to delete
-// stuff.
+// all requests currently in flight are completed before deleting the main node.
 //------------------------------------------------------------------------------
 
 void XrdRedisProtocol::shutdownMonitor() {
@@ -73,18 +66,7 @@ void XrdRedisProtocol::shutdownMonitor() {
   while(inFlight != 0) ;
   qdb_info("Requests in flight: " << inFlight << ", it is now safe to shut down.");
 
-  if(state) {
-    qdb_info("Shutting down the raft machinery.");
-
-    delete director;
-    delete dispatcher;
-    delete state;
-    delete raftClock;
-    delete journal;
-  }
-
-  qdb_info("Shutting down the main rocksdb store.");
-  delete rocksdb;
+  delete quarkdbNode;
 
   qdb_event("SHUTTING DOWN");
   std::exit(0);
@@ -102,6 +84,7 @@ XrdRedisProtocol::XrdRedisProtocol()
 int XrdRedisProtocol::Process(XrdLink *lp) {
   if(inShutdown) { return -1; }
   ScopedAdder<int64_t> adder(inFlight);
+  if(inShutdown) { return -1; }
 
   if(!link) link = new Link(lp);
   if(!parser) parser = new RedisParser(link, bufferManager);
@@ -112,7 +95,7 @@ int XrdRedisProtocol::Process(XrdLink *lp) {
     if(status == 0) return 1;     // slow link
     if(status < 0) return status; // error
 
-    dispatcher->dispatch(conn, currentRequest);
+    quarkdbNode->dispatch(conn, currentRequest);
   }
 }
 
@@ -158,38 +141,20 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
   eDest.logger(pi->eDest->logger());
 
   char* rdf = (parms && *parms ? parms : pi->ConfigFN);
+
+  Configuration configuration;
   bool success = Configuration::fromFile(rdf, configuration);
   if(!success) return 0;
 
-  rocksdb = new RocksDB(configuration.getDB());
-
-  if(configuration.getMode() == Mode::rocksdb) {
-    dispatcher = new RedisDispatcher(*rocksdb);
-  }
-  else if(configuration.getMode() == Mode::raft) {
-    if(pi->Port != configuration.getMyself().port) {
-      std::cerr << "configuration error: xrootd listening port doesn't match redis.myself" << std::endl;
-      return 0;
-    }
-
-    journal = new RaftJournal(configuration.getRaftLog());
-    if(journal->getClusterID() != configuration.getClusterID()) {
-      delete journal;
-      qdb_throw("clusterID from configuration does not match the one stored in the journal");
-    }
-
-    state = new RaftState(*journal, configuration.getMyself());
-    raftClock = new RaftClock(defaultTimeouts);
-    RaftDispatcher *raftdispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);
-    dispatcher = raftdispatcher;
-    director = new RaftDirector(*raftdispatcher, *journal, *state, *raftClock);
-  }
-  else {
-    qdb_throw("cannot determine configuration mode"); // should never happen
+  if(configuration.getMode() == Mode::raft && pi->Port != configuration.getMyself().port) {
+    std::cerr << "configuration error: xrootd listening port doesn't match redis.myself" << std::endl;
+    return 0;
   }
 
+  quarkdbNode = new QuarkDBNode(configuration, bufferManager, inFlight);
   std::thread(&XrdRedisProtocol::shutdownMonitor).detach();
   signal(SIGINT, handle_sigint);
+  signal(SIGTERM, handle_sigint);
   return 1;
 }
 
