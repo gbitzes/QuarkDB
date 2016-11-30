@@ -51,7 +51,6 @@ public:
   TraceLevel getTraceLevel() { return trace; }
 
   RaftServer getMyself() { return myself; }
-  std::string getClusterID() { return clusterID; }
 
   std::string getStateMachine() { return SSTR(database << "/state-machine"); }
   std::string getRaftJournal() { return SSTR(database << "/raft-journal"); }
@@ -62,7 +61,6 @@ private:
 
   // raft options
   RaftServer myself;
-  RaftClusterID clusterID;
 };
 }
 

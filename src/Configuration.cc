@@ -119,9 +119,6 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       else if(!strcmp("myself", option)) {
         success = fetchSingle(stream, buffer) && parseServer(buffer, out.myself);
       }
-      else if(!strcmp("cluster_id", option)) {
-        success = fetchSingle(stream, out.clusterID);
-      }
       else if(!strcmp("trace", option)) {
         success = fetchSingle(stream, buffer) && parseTraceLevel(buffer, out.trace);
       }
@@ -168,11 +165,6 @@ bool Configuration::isValid() {
 
   if(raft == myself.hostname.empty()) {
     qdb_log("redis.myself is required when using raft and is incompatible with rocksdb");
-    return false;
-  }
-
-  if(raft == clusterID.empty()) {
-    qdb_log("redis.cluster_id is required when using raft and is incompatible with rocksdb");
     return false;
   }
 

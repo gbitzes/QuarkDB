@@ -113,11 +113,6 @@ bool QuarkDBNode::attach(std::string &err) {
   }
   else if(configuration.getMode() == Mode::raft) {
     journal = new RaftJournal(configuration.getRaftJournal());
-    if(journal->getClusterID() != configuration.getClusterID()) {
-      delete journal;
-      qdb_throw("clusterID from configuration does not match the one stored in the journal");
-    }
-
     state = new RaftState(*journal, configuration.getMyself());
     raftClock = new RaftClock(defaultTimeouts);
     RaftDispatcher *raftdispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);

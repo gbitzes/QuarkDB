@@ -45,14 +45,12 @@ TEST(Configuration, T2) {
       "redis.mode raft\n"
       "redis.database /home/user/mydb\n"
       "redis.myself server1:7776\n"
-      "redis.cluster_id 992453f4-378d-4dc2-9648-c8ce347e22ce\n"
       "redis.trace debug\n"
       "fi\n";
 
   ASSERT_TRUE(Configuration::fromString(c, config));
   ASSERT_EQ(config.getMode(), Mode::raft);
   ASSERT_EQ(config.getDatabase(), "/home/user/mydb");
-  ASSERT_EQ(config.getClusterID(), "992453f4-378d-4dc2-9648-c8ce347e22ce");
   ASSERT_EQ(config.getMyself(), RaftServer("server1", 7776) );
   ASSERT_EQ(config.getTraceLevel(), TraceLevel::debug);
 }
@@ -66,7 +64,7 @@ TEST(Configuration, T3) {
       "xrd.protocol redis:7776 libXrdRedis.so\n"
       "redis.mode rocksdb\n"
       "redis.database /home/user/mydb\n"
-      "redis.cluster_id 992453f4-378d-4dc2-9648-c8ce347e22ce\n"
+      "redis.myself server1:7776\n"
       "fi\n";
 
   ASSERT_FALSE(Configuration::fromString(c, config));
