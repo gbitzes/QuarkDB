@@ -50,7 +50,7 @@ TEST(RaftTalker, T1) {
   while( (rc = parser.fetch(req)) == 0) ;
   ASSERT_EQ(rc, 1);
 
-  RedisRequest tmp = {"RAFT_HANDSHAKE", clusterID};
+  RedisRequest tmp = {"RAFT_HANDSHAKE", STRINGIFY(VERSION_FULL), clusterID};
   ASSERT_EQ(req, tmp);
 
   // send an append entries message over the talker

@@ -87,9 +87,9 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
     }
     case RedisCommand::RAFT_HANDSHAKE: {
       conn->raftAuthorization = false;
-      if(req.size() != 2) return conn->errArgs(req[0]);
-      if(req[1] != journal.getClusterID()) {
-        qdb_critical("received handshake with wrong cluster id: " << req[1] << " (mine is " << journal.getClusterID() << ")");
+      if(req.size() != 3) return conn->errArgs(req[0]);
+      if(req[2] != journal.getClusterID()) {
+        qdb_critical("received handshake with wrong cluster id: " << req[2] << " (mine is " << journal.getClusterID() << ")");
         return conn->err("wrong cluster id");
       }
 
