@@ -30,6 +30,7 @@
 #include <XrdOuc/XrdOucStream.hh>
 
 #include "Common.hh"
+#include "Utils.hh"
 
 namespace quarkdb {
 
@@ -51,6 +52,9 @@ public:
 
   RaftServer getMyself() { return myself; }
   std::string getClusterID() { return clusterID; }
+
+  std::string getStateMachine() { return SSTR(database << "/state-machine"); }
+  std::string getRaftJournal() { return SSTR(database << "/raft-journal"); }
 private:
   Mode mode;
   std::string database;

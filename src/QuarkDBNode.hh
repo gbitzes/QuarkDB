@@ -42,7 +42,7 @@ public:
   ~QuarkDBNode();
 
   void detach();
-  void attach();
+  bool attach(std::string &err);
   LinkStatus dispatch(Connection *conn, RedisRequest &req);
 private:
   Configuration configuration;

@@ -23,6 +23,7 @@
 
 #include "QuarkDBNode.hh"
 #include "Version.hh"
+#include <sys/stat.h>
 
 using namespace quarkdb;
 
@@ -72,16 +73,46 @@ void QuarkDBNode::detach() {
   qdb_info("Backend has been detached from this quarkdb node.")
 }
 
-void QuarkDBNode::attach() {
-  if(attached) return;
+static bool directoryExists(const std::string &path, std::string &err) {
+  struct stat sb;
 
-  rocksdb = new RocksDB(SSTR(configuration.getDatabase() << "/state-machine"));
+  if(stat(path.c_str(), &sb) != 0) {
+    err = SSTR("Cannot stat " << path);
+    return false;
+  }
+
+  if(!S_ISDIR(sb.st_mode)) {
+    err = SSTR(path << " is not a directory");
+    return false;
+  }
+
+  return true;
+}
+
+bool QuarkDBNode::attach(std::string &err) {
+  if(attached) {
+    err = "Node already attached.";
+    return false;
+  }
+
+  std::string suberr;
+  if(!directoryExists(configuration.getDatabase(), suberr)) {
+    err = SSTR("Unable to attach to backend, cannot access base directory: " << suberr);
+    return false;
+  }
+
+  if(configuration.getMode() == Mode::raft && !directoryExists(configuration.getRaftJournal(), suberr)) {
+    err = SSTR("Unable to attach to backend (raft mode), cannot access raft journal: " << suberr);
+    return false;
+  }
+
+  rocksdb = new RocksDB(configuration.getStateMachine());
 
   if(configuration.getMode() == Mode::rocksdb) {
     dispatcher = new RedisDispatcher(*rocksdb);
   }
   else if(configuration.getMode() == Mode::raft) {
-    journal = new RaftJournal(SSTR(configuration.getDatabase() << "/raft-journal"));
+    journal = new RaftJournal(configuration.getRaftJournal());
     if(journal->getClusterID() != configuration.getClusterID()) {
       delete journal;
       qdb_throw("clusterID from configuration does not match the one stored in the journal");
@@ -98,11 +129,13 @@ void QuarkDBNode::attach() {
   }
 
   attached = true;
+  return true;
 }
 
 QuarkDBNode::QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_)
 : configuration(config), bufferManager(buffManager), inFlight(inFlight_) {
-  attach();
+  std::string err;
+  if(!attach(err)) qdb_critical(err);
 }
 
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
@@ -119,8 +152,9 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
       return conn->ok();
     }
     case RedisCommand::QUARKDB_ATTACH: {
-      attach();
-      return conn->ok();
+      std::string err;
+      if(attach(err)) return conn->ok();
+      return conn->err(err);
     }
     default: {
       if(!attached) return conn->err("node is detached from any backends");
@@ -132,8 +166,26 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
   }
 }
 
+static std::string boolToString(bool b) {
+  if(b) return "TRUE";
+  return "FALSE";
+}
+
+static std::string modeToString(const Mode &mode) {
+  if(mode == Mode::rocksdb) {
+    return "STANDALONE";
+  }
+  if(mode == Mode::raft) {
+    return "RAFT";
+  }
+  qdb_throw("unknown mode"); // should never happen
+}
+
 std::vector<std::string> QuarkDBNode::info() {
   std::vector<std::string> ret;
+  ret.emplace_back(SSTR("ATTACHED " << boolToString(attached)));
+  ret.emplace_back(SSTR("MODE " << modeToString(configuration.getMode())));
+  ret.emplace_back(SSTR("BASE-DIRECTORY " << configuration.getDatabase()));
   ret.emplace_back(SSTR("QUARKDB-VERSION " << STRINGIFY(VERSION_FULL)));
   ret.emplace_back(SSTR("ROCKSDB-VERSION " << ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH));
   ret.emplace_back(SSTR("IN-FLIGHT " << inFlight));
