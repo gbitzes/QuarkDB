@@ -27,8 +27,8 @@
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, RaftState &st, RaftClock &rc)
-: dispatcher(disp), journal(jour), state(st), raftClock(rc) {
+RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
+: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc) {
   mainThread = std::thread(&RaftDirector::main, this);
   commitApplier = std::thread(&RaftDirector::applyCommits, this);
   journalTrimmer = std::thread(&RaftDirector::trimJournal, this);
@@ -91,7 +91,7 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   RaftMembership membership = journal.getMembership();
   qdb_info("Starting replicator for membership epoch " << membership.epoch);
 
-  RaftReplicator replicator(journal, state, raftClock.getTimeouts());
+  RaftReplicator replicator(journal, stateMachine, state, raftClock.getTimeouts());
   for(const RaftServer& srv : membership.nodes) {
     if(srv != state.getMyself()) {
       replicator.launch(srv, snapshot);

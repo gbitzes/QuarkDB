@@ -61,6 +61,9 @@ private:
   std::atomic<bool> attached {false};
   const std::atomic<int64_t> &inFlight;
   std::atomic<int64_t> beingDispatched {0};
+
+  void cancelResilvering();
+  std::atomic<bool> resilvering {false};
 };
 
 }

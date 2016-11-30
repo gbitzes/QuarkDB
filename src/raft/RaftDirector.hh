@@ -35,7 +35,7 @@ namespace quarkdb {
 
 class RaftDirector {
 public:
-  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, RaftState &state, RaftClock &rc);
+  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, RocksDB &stateMachine, RaftState &state, RaftClock &rc);
   ~RaftDirector();
   DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
@@ -47,8 +47,8 @@ private:
   void trimJournal();
 
   RaftDispatcher &dispatcher;
-  // RocksDB &stateMachine;
   RaftJournal &journal;
+  RocksDB &stateMachine;
   RaftState &state;
   RaftClock &raftClock;
 

@@ -257,7 +257,7 @@ RaftClock* TestNode::raftClock() {
 
 RaftDirector* TestNode::director() {
   if(raftdirectorptr == nullptr) {
-    raftdirectorptr = new RaftDirector(*dispatcher(), *journal(), *state(), *raftClock());
+    raftdirectorptr = new RaftDirector(*dispatcher(), *journal(), *rocksdb(), *state(), *raftClock());
   }
   return raftdirectorptr;
 }
@@ -278,7 +278,7 @@ RaftState* TestNode::state() {
 
 RaftReplicator* TestNode::replicator() {
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *state(), raftClock()->getTimeouts());
+    replicatorptr = new RaftReplicator(*journal(), *rocksdb(), *state(), raftClock()->getTimeouts());
   }
   return replicatorptr;
 }

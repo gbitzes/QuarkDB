@@ -39,16 +39,18 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 class RaftReplicator {
 public:
-  RaftReplicator(RaftJournal &journal, RaftState &state, const RaftTimeouts t = defaultTimeouts);
+  RaftReplicator(RaftJournal &journal, RocksDB &stateMachine, RaftState &state, const RaftTimeouts t = defaultTimeouts);
   ~RaftReplicator();
 
   bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
   void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
+  bool resilver(const RaftServer &target, const RaftStateSnapshot &snapshot);
 private:
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
 
   RaftJournal &journal;
+  RocksDB &stateMachine;
   RaftState &state;
 
   RaftCommitTracker commitTracker;

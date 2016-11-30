@@ -79,6 +79,7 @@ public:
   bool waitForCommits(const LogIndex currentCommit);
   void notifyWaitingThreads();
 
+  std::string getDBPath() { return dbPath; }
   rocksdb::Status checkpoint(const std::string &path);
   void trimUntil(LogIndex newLogStart);
 

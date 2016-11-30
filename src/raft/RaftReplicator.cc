@@ -26,11 +26,13 @@
 #include "RaftReplicator.hh"
 #include "RaftTalker.hh"
 #include "RaftUtils.hh"
+#include <dirent.h>
+#include <fstream>
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_, const RaftTimeouts t)
-: journal(journal_), state(state_), commitTracker(journal, (journal.getNodes().size()/2)+1), timeouts(t) {
+RaftReplicator::RaftReplicator(RaftJournal &journal_, RocksDB &sm, RaftState &state_, const RaftTimeouts t)
+: journal(journal_), stateMachine(sm), state(state_), commitTracker(journal, (journal.getNodes().size()/2)+1), timeouts(t) {
 
 }
 
@@ -75,6 +77,108 @@ static bool retrieve_response(std::future<redisReplyPtr> &fut, RaftAppendEntries
   }
 
   return true;
+}
+
+static bool is_ok_response(std::future<redisReplyPtr> &fut) {
+  std::future_status status = fut.wait_for(std::chrono::milliseconds(500));
+  if(status != std::future_status::ready) {
+    return false;
+  }
+
+  redisReplyPtr rep = fut.get();
+  if(rep == nullptr) return false;
+
+  if(rep->type != REDIS_REPLY_STATUS) return false;
+  if(std::string(rep->str, rep->len) != "OK") return false;
+
+  return true;
+}
+
+static bool resilveringCopyDirectory(const std::string &path, const std::string &prefix, Tunnel &tunnel) {
+  qdb_info("Copying directory " << path << " under prefix '" << prefix << "'");
+
+  DIR *dir;
+  struct dirent *entry;
+
+  dir = opendir(path.c_str());
+  if(!dir) {
+    qdb_critical("Unable to open directory " << path << " when resilvering");
+    return false;
+  }
+
+  entry = readdir(dir);
+  if(!entry) {
+    qdb_critical("Unable to readdir " << path << " when resilvering");
+    return false;
+  }
+
+  do {
+    if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+
+    std::string currentPath = SSTR(path << "/" << entry->d_name);
+    std::string currentPrefix;
+
+    if(prefix.empty()) {
+      currentPrefix = SSTR(entry->d_name);
+    }
+    else {
+      currentPrefix = SSTR(prefix << "/" << entry->d_name);
+    }
+
+    if(entry->d_type == DT_DIR) {
+      if(!resilveringCopyDirectory(currentPath, currentPrefix, tunnel)) {
+        closedir(dir);
+        return false;
+      }
+    }
+    else {
+      std::ifstream t(currentPath);
+      std::stringstream buffer;
+      buffer << t.rdbuf();
+
+      std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_RESILVERING_COPY_FILE", currentPrefix, buffer.str()});
+      if(!is_ok_response(fut)) return false;
+    }
+  } while( (entry = readdir(dir)));
+
+  return true;
+}
+
+bool RaftReplicator::resilver(const RaftServer &target, const RaftStateSnapshot &snapshot) {
+  qdb_critical("Attempting to automatically resilver target " << target.toString());
+
+  std::string checkpointPath = SSTR(chopPath(journal.getDBPath()) << "/tmp/checkpoints-for-" << target.toString());
+  system(SSTR("rm -rf " << checkpointPath).c_str());
+
+  std::string journalCheckpoint  = SSTR(checkpointPath << "/raft-journal");
+  std::string smCheckpoint = SSTR(checkpointPath << "/state-machine");
+
+  std::string err;
+  if(!mkpath(journalCheckpoint, 0755, err)) {
+    qdb_critical(err);
+    return false;
+  }
+
+  rocksdb::Status st = journal.checkpoint(journalCheckpoint);
+  if(!st.ok()) {
+    qdb_critical("cannot create journal checkpoint to perform resilvering in " << journalCheckpoint << ": " << st.ToString());
+    return false;
+  }
+
+  st = stateMachine.checkpoint(smCheckpoint);
+  if(!st.ok()) {
+    qdb_critical("cannot create state machine checkpoint to perform resilvering in " << smCheckpoint << ": " << st.ToString());
+    return false;
+  }
+
+  Tunnel tunnel(target.hostname, target.port);
+
+  std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_START_RESILVERING"});
+  if(!is_ok_response(fut)) return false;
+
+  if(!resilveringCopyDirectory(checkpointPath, "", tunnel)) return false;
+  fut = tunnel.execute({"QUARKDB_FINISH_RESILVERING"});
+  return is_ok_response(fut);
 }
 
 void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &snapshot) {
@@ -139,9 +243,10 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
       nextIndex = journal.getLogSize();
 
       if(!needResilvering) {
-        qdb_critical("Unable to perform replication on " << target.toString() << ", it's too far behind (its logsize: " << resp.logSize << ") and my journal starts at " << journal.getLogStart() << ". The target node must be resilvered manually.");
+        qdb_critical("Unable to perform replication on " << target.toString() << ", it's too far behind (its logsize: " << resp.logSize << ") and my journal starts at " << journal.getLogStart() << ". The target node must be resilvered.");
         needResilvering = true;
         payloadLimit = 1;
+        resilver(target, snapshot);
       }
 
       goto nextRound;

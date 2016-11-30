@@ -71,6 +71,8 @@ int64_t binaryStringToInt(const char* buff);
 void intToBinaryString(int64_t num, char* buff);
 std::string intToBinaryString(int64_t num);
 
+std::string chopPath(const std::string &path);
+bool mkpath(const std::string &path, mode_t mode, std::string &err);
 bool my_strtoll(const std::string &str, int64_t &ret);
 std::vector<std::string> split(std::string data, std::string token);
 bool startswith(const std::string &str, const std::string &prefix);

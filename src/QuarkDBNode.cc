@@ -91,7 +91,12 @@ static bool directoryExists(const std::string &path, std::string &err) {
 
 bool QuarkDBNode::attach(std::string &err) {
   if(attached) {
-    err = "Node already attached.";
+    err = "node already attached.";
+    return false;
+  }
+
+  if(resilvering) {
+    err = "cannot attach, resilvering in progress";
     return false;
   }
 
@@ -117,7 +122,7 @@ bool QuarkDBNode::attach(std::string &err) {
     raftClock = new RaftClock(defaultTimeouts);
     RaftDispatcher *raftdispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);
     dispatcher = raftdispatcher;
-    director = new RaftDirector(*raftdispatcher, *journal, *state, *raftClock);
+    director = new RaftDirector(*raftdispatcher, *journal, *rocksdb, *state, *raftClock);
   }
   else {
     qdb_throw("cannot determine configuration mode"); // should never happen
@@ -127,8 +132,22 @@ bool QuarkDBNode::attach(std::string &err) {
   return true;
 }
 
+void QuarkDBNode::cancelResilvering() {
+  std::string path = SSTR(configuration.getDatabase() << "/resilvering-arena");
+
+  struct stat sb;
+  if(stat(path.c_str(), &sb) == 0) {
+    qdb_critical("Deleting the contents of " << path << ", leftover from a failed resilvering");
+    system(SSTR("rm -rf " << path).c_str());
+  }
+
+  resilvering = false;
+}
+
 QuarkDBNode::QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_)
 : configuration(config), bufferManager(buffManager), inFlight(inFlight_) {
+  cancelResilvering();
+
   std::string err;
   if(!attach(err)) qdb_critical(err);
 }
@@ -150,6 +169,97 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
       std::string err;
       if(attach(err)) return conn->ok();
       return conn->err(err);
+    }
+    case RedisCommand::QUARKDB_START_RESILVERING: {
+      if(resilvering) {
+        cancelResilvering();
+        return conn->err("error, resilvering was already in progress. Calling it off");
+      }
+
+      if(attached) {
+        detach();
+      }
+
+      if(mkdir(SSTR(configuration.getDatabase() << "/resilvering-arena").c_str(), 0755) != 0) {
+        return conn->err("could not create resilvering arena");
+      }
+
+      qdb_event("Entering resilvering mode. Re-attaching during resilvering is forbidden.");
+      resilvering = true;
+      return conn->ok();
+    }
+    case RedisCommand::QUARKDB_CANCEL_RESILVERING: {
+      if(!resilvering) return conn->err("resilvering not in progress");
+      cancelResilvering();
+      return conn->ok();
+    }
+    case RedisCommand::QUARKDB_FINISH_RESILVERING: {
+      if(!resilvering) return conn->err("resilvering not in progress");
+      qdb_event("Received request to finish resilvering.");
+      std::string oldSnapshots = SSTR(configuration.getDatabase() << "/old-checkpoint-" << TIME_NOW);
+
+      std::string errMsg;
+      if(mkdir(oldSnapshots.c_str(), 0755) != 0) {
+        errMsg = SSTR("could not create old checkpoints dir: " << strerror(errno));
+        qdb_critical(errMsg);
+        return conn->err(errMsg);
+      }
+
+      system(SSTR("mv " << configuration.getDatabase() << "/raft-journal " << oldSnapshots).c_str());
+      system(SSTR("mv " << configuration.getDatabase() << "/state-machine " << oldSnapshots).c_str());
+
+      system(SSTR("mv " << configuration.getDatabase() << "/resilvering-arena/raft-journal " << configuration.getDatabase()).c_str());
+      system(SSTR("mv " << configuration.getDatabase() << "/resilvering-arena/state-machine " << configuration.getDatabase()).c_str());
+
+      resilvering = false;
+
+      std::string err;
+      if(attach(err)) {
+        qdb_event("RESILVERING SUCCESSFULL! Continuing normally.");
+        return conn->ok();
+      }
+
+      qdb_critical("Error when re-attaching after resilvering: " << err);
+      cancelResilvering();
+      return conn->err(err);
+    }
+    case RedisCommand::QUARKDB_RESILVERING_COPY_FILE: {
+      if(!resilvering) return conn->err("resilvering not in progress, cannot copy file");
+      if(req.size() != 3) return conn->errArgs(req[0]);
+
+      std::string errMsg;
+      std::string targetPath = SSTR(configuration.getDatabase() << "/resilvering-arena/" << req[1]);
+      int fd;
+
+      if(!mkpath(targetPath, 0755, errMsg)) {
+        errMsg = "could not create path";
+        goto error;
+      }
+
+      fd = creat(targetPath.c_str(), 0664);
+
+      if(fd < 0) {
+        errMsg = "could not create file";
+        goto error;
+      }
+
+      if(write(fd, req[2].c_str(), req[2].size()) < 0) {
+        errMsg = "could not write file";
+        goto error;
+      }
+
+      if(close(fd) < 0) {
+        errMsg = "could not close file";
+        goto error;
+      }
+
+      qdb_info("RESILVERING: copied file " << req[1] << " (size: " << req[2].size() << ") successfully.");
+      return conn->ok();
+error:
+      int localErrno = errno;
+      qdb_critical("calling off resilvering, " << errMsg << ":" << strerror(localErrno));
+      cancelResilvering();
+      return conn->err(SSTR("resilvering called off, " << errMsg << ": " << strerror(localErrno)));
     }
     default: {
       if(!attached) return conn->err("node is detached from any backends");
@@ -179,6 +289,7 @@ static std::string modeToString(const Mode &mode) {
 std::vector<std::string> QuarkDBNode::info() {
   std::vector<std::string> ret;
   ret.emplace_back(SSTR("ATTACHED " << boolToString(attached)));
+  ret.emplace_back(SSTR("BEING-RESILVERED " << boolToString(resilvering)));
   ret.emplace_back(SSTR("MODE " << modeToString(configuration.getMode())));
   ret.emplace_back(SSTR("BASE-DIRECTORY " << configuration.getDatabase()));
   ret.emplace_back(SSTR("QUARKDB-VERSION " << STRINGIFY(VERSION_FULL)));
