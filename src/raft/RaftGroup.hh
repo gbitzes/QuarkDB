@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftReplicator.hh
+// File: RaftGroup.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,46 +21,55 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_REPLICATOR_H__
-#define __QUARKDB_RAFT_REPLICATOR_H__
+#ifndef __QUARKDB_RAFT_GROUP_H__
+#define __QUARKDB_RAFT_GROUP_H__
 
-#include "../RocksDB.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
-#include "RaftTimeouts.hh"
-#include "RaftCommitTracker.hh"
-#include <mutex>
+#include "../Utils.hh"
 
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
-// A class that is given a number of target raft machine of the cluster, and
-// ensures that their journals match my own.
+// This class keeps track of and owns all objects needed for the raft party.
+// Everything is initialized lazily.
+//
+// The journal and rocksdb objects can be injected, and in that case are not
+// owned by us.
 //------------------------------------------------------------------------------
-class RaftReplicator {
+
+class RocksDB; class RaftJournal; class RaftDispatcher;
+class RaftState; class RaftReplicator; class RaftClock;
+class RaftDirector;
+
+class RaftGroup {
 public:
-  RaftReplicator(RaftJournal &journal, RocksDB &stateMachine, RaftState &state, const RaftTimeouts t);
-  ~RaftReplicator();
+  RaftGroup(const std::string &path, const RaftServer &myself, const RaftTimeouts &t);
+  RaftGroup(RaftJournal &journal, RocksDB &stateMachine, const RaftServer &myself, const RaftTimeouts &t);
+  DISALLOW_COPY_AND_ASSIGN(RaftGroup);
+  ~RaftGroup();
 
-  bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  bool resilver(const RaftServer &target, const RaftStateSnapshot &snapshot);
+  RocksDB *rocksdb();
+  RaftJournal *journal();
+  RaftDispatcher *dispatcher();
+  RaftState *state();
+  RaftReplicator *replicator();
+  RaftClock *raftclock();
+  RaftDirector *director();
+  RaftServer myself();
+
+  void spinup();
+  void spindown();
 private:
-  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
-    std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
-
-  RaftJournal &journal;
-  RocksDB &stateMachine;
-  RaftState &state;
-
-  RaftCommitTracker commitTracker;
-
-  std::atomic<int64_t> threadsAlive {0};
-  std::atomic<bool> shutdown {0};
-  std::vector<std::thread> threads;
-  std::mutex threadsMutex;
-
+  bool injectedDatabases = false;
+  const RaftServer me;
   const RaftTimeouts timeouts;
+
+  RocksDB *rocksdbptr = nullptr;
+  RaftJournal *journalptr = nullptr;
+  RaftDispatcher *dispatcherptr = nullptr;
+  RaftReplicator *replicatorptr = nullptr;
+  RaftState *stateptr = nullptr;
+  RaftClock *clockptr = nullptr;
+  RaftDirector *directorptr = nullptr;
 };
 
 }

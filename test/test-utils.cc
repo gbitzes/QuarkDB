@@ -64,6 +64,7 @@ void GlobalEnv::TearDown() {
 RocksDB* GlobalEnv::getRocksDB(const std::string &path) {
   RocksDB *ret = rocksdbCache[path];
   if(ret == nullptr) {
+    mkpath_or_die(path, 0755);
     ret = new RocksDB(path);
     rocksdbCache[path] = ret;
   }
@@ -75,6 +76,7 @@ RocksDB* GlobalEnv::getRocksDB(const std::string &path) {
 RaftJournal* GlobalEnv::getJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
   RaftJournal *ret = journalCache[path];
   if(ret == nullptr) {
+    mkpath_or_die(path, 0755);
     ret = new RaftJournal(path, clusterID, nodes);
     journalCache[path] = ret;
   }
@@ -117,23 +119,23 @@ RaftClusterID TestCluster::clusterID() {
 }
 
 RocksDB* TestCluster::rocksdb(int id) {
-  return node(id)->rocksdb();
+  return node(id)->group()->rocksdb();
 }
 
 RaftJournal* TestCluster::journal(int id) {
-  return node(id)->journal();
+  return node(id)->group()->journal();
 }
 
 RaftDispatcher* TestCluster::dispatcher(int id) {
-  return node(id)->dispatcher();
+  return node(id)->group()->dispatcher();
 }
 
 RaftState* TestCluster::state(int id) {
-  return node(id)->state();
+  return node(id)->group()->state();
 }
 
 RaftReplicator* TestCluster::replicator(int id) {
-  return node(id)->replicator();
+  return node(id)->group()->replicator();
 }
 
 Poller* TestCluster::poller(int id) {
@@ -141,11 +143,11 @@ Poller* TestCluster::poller(int id) {
 }
 
 RaftDirector* TestCluster::director(int id) {
-  return node(id)->director();
+  return node(id)->group()->director();
 }
 
 RaftServer TestCluster::myself(int id) {
-  return node(id)->myself();
+  return node(id)->group()->myself();
 }
 
 std::vector<RaftServer> TestCluster::nodes(int id) {
@@ -165,12 +167,6 @@ TestNode* TestCluster::node(int id, const RaftServer &srv) {
     testnodes[id] = ret;
   }
   return ret;
-}
-
-void TestCluster::prepare(int id) {
-  qdb_info("Preparing node #" << id);
-  journal(id);
-  rocksdb(id);
 }
 
 void TestCluster::spinup(int id) {
@@ -203,34 +199,19 @@ int TestCluster::getLeaderID() {
 TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)
 : myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
+  RocksDB *rocksdbPtr = commonState.getRocksDB(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/state-machine"));
+  RaftJournal *journalPtr = commonState.getJournal(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/raft-journal"), clusterID, initialNodes);
+  raftgroup = new RaftGroup(*journalPtr, *rocksdbPtr, myself(), aggressiveTimeouts);
+}
+
+RaftGroup* TestNode::group() {
+  return raftgroup;
 }
 
 TestNode::~TestNode() {
-  if(raftdirectorptr) delete raftdirectorptr;
   if(pollerptr) delete pollerptr;
-  if(raftdispatcherptr) delete raftdispatcherptr;
-  if(replicatorptr) delete replicatorptr;
-  if(raftstateptr) delete raftstateptr;
-  if(raftclockptr) delete raftclockptr;
   if(tunnelptr) delete tunnelptr;
-}
-
-RocksDB* TestNode::rocksdb() {
-  // must be cached locally, because with every call to getRocksDB()
-  // the contents are reset
-  // NOT deleted by ~TestNode - ownership is retained by commonState for caching.
-  if(rocksdbptr == nullptr) {
-    rocksdbptr = commonState.getRocksDB(SSTR(commonState.testdir << "/rocksdb-" << myself().hostname << "-" << myself().port));
-  }
-  return rocksdbptr;
-}
-
-RaftJournal* TestNode::journal() {
-  // see TestNode::rocksdb()
-  if(journalptr == nullptr) {
-    journalptr = commonState.getJournal(SSTR(commonState.testdir << "/journal-" << myself().hostname << "-" << myself().port), clusterID, initialNodes);
-  }
-  return journalptr;
+  if(raftgroup) delete raftgroup;
 }
 
 RaftServer TestNode::myself() {
@@ -238,49 +219,14 @@ RaftServer TestNode::myself() {
 }
 
 std::vector<RaftServer> TestNode::nodes() {
-  return journal()->getNodes();
+  return group()->journal()->getNodes();
 }
 
 Poller* TestNode::poller() {
   if(pollerptr == nullptr) {
-    pollerptr = new Poller(myself().port, dispatcher());
+    pollerptr = new Poller(myself().port, group()->dispatcher());
   }
   return pollerptr;
-}
-
-RaftClock* TestNode::raftClock() {
-  if(raftclockptr == nullptr) {
-    raftclockptr = new RaftClock(aggressiveTimeouts);
-  }
-  return raftclockptr;
-}
-
-RaftDirector* TestNode::director() {
-  if(raftdirectorptr == nullptr) {
-    raftdirectorptr = new RaftDirector(*dispatcher(), *journal(), *rocksdb(), *state(), *raftClock());
-  }
-  return raftdirectorptr;
-}
-
-RaftDispatcher* TestNode::dispatcher() {
-  if(raftdispatcherptr == nullptr) {
-    raftdispatcherptr = new RaftDispatcher(*journal(), *rocksdb(), *state(), *raftClock());
-  }
-  return raftdispatcherptr;
-}
-
-RaftState* TestNode::state() {
-  if(raftstateptr == nullptr) {
-    raftstateptr = new RaftState(*journal(), myself());
-  }
-  return raftstateptr;
-}
-
-RaftReplicator* TestNode::replicator() {
-  if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *rocksdb(), *state(), raftClock()->getTimeouts());
-  }
-  return replicatorptr;
 }
 
 Tunnel* TestNode::tunnel() {

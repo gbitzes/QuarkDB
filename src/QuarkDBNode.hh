@@ -33,33 +33,63 @@
 #include "raft/RaftState.hh"
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftDirector.hh"
+#include "raft/RaftGroup.hh"
 
 namespace quarkdb {
 
-class QuarkDBNode {
+inline std::string modeToString(const Mode &mode) {
+  if(mode == Mode::rocksdb) {
+    return "STANDALONE";
+  }
+  if(mode == Mode::raft) {
+    return "RAFT";
+  }
+  qdb_throw("unknown mode"); // should never happen
+}
+
+struct QuarkDBInfo {
+  bool attached;
+  bool resilvering;
+  Mode mode;
+  std::string baseDir;
+  std::string version;
+  std::string rocksdbVersion;
+  int64_t inFlight;
+
+  std::vector<std::string> toVector() {
+    std::vector<std::string> ret;
+    ret.emplace_back(SSTR("ATTACHED " << boolToString(attached)));
+    ret.emplace_back(SSTR("BEING-RESILVERED " << boolToString(resilvering)));
+    ret.emplace_back(SSTR("MODE " << modeToString(mode)));
+    ret.emplace_back(SSTR("BASE-DIRECTORY " << baseDir));
+    ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
+    ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
+    ret.emplace_back(SSTR("IN-FLIGHT " << inFlight));
+    return ret;
+  }
+};
+
+class QuarkDBNode : public Dispatcher {
 public:
-  QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_);
+  QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t = defaultTimeouts);
   ~QuarkDBNode();
 
   void detach();
   bool attach(std::string &err);
-  LinkStatus dispatch(Connection *conn, RedisRequest &req);
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit = 0) override final;
 private:
   Configuration configuration;
-
-  Dispatcher* dispatcher = nullptr;
+  RaftGroup* raftgroup = nullptr;
   RocksDB *rocksdb = nullptr;
-  RaftJournal *journal = nullptr;
-  RaftState *state = nullptr;
-  RaftClock *raftClock = nullptr;
-  RaftDirector *director = nullptr;
+  Dispatcher* dispatcher = nullptr;
 
   XrdBuffManager *bufferManager = nullptr; // owned by xrootd, not me
 
-  std::vector<std::string> info();
+  QuarkDBInfo info();
 
   std::atomic<bool> attached {false};
   const std::atomic<int64_t> &inFlight;
+  const RaftTimeouts timeouts;
   std::atomic<int64_t> beingDispatched {0};
 
   void cancelResilvering();

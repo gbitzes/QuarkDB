@@ -95,6 +95,11 @@ bool mkpath(const std::string &path, mode_t mode, std::string &err) {
   return true;
 }
 
+void mkpath_or_die(const std::string &path, mode_t mode) {
+  std::string err;
+  if(!mkpath(path, mode, err)) qdb_throw(err);
+}
+
 std::vector<std::string> split(std::string data, std::string token) {
     std::vector<std::string> output;
     size_t pos = std::string::npos;

@@ -45,29 +45,18 @@ void QuarkDBNode::detach() {
   while(beingDispatched != 0) ;
   qdb_info("Requests being dispatched: " << beingDispatched << ", it is now safe to detach.");
 
-  if(state) {
+  if(raftgroup) {
     qdb_info("Shutting down the raft machinery.");
-
-    delete director;
-    director = nullptr;
-
-    delete dispatcher;
-    dispatcher = nullptr;
-
-    delete state;
-    state = nullptr;
-
-    delete raftClock;
-    raftClock = nullptr;
-
-    delete journal;
-    journal = nullptr;
+    delete raftgroup;
+    raftgroup = nullptr;
   }
-
-  if(rocksdb) {
+  else if(rocksdb) {
     qdb_info("Shutting down the main rocksdb store.");
     delete rocksdb;
     rocksdb = nullptr;
+
+    delete dispatcher;
+    dispatcher = nullptr;
   }
 
   qdb_info("Backend has been detached from this quarkdb node.")
@@ -111,18 +100,14 @@ bool QuarkDBNode::attach(std::string &err) {
     return false;
   }
 
-  rocksdb = new RocksDB(configuration.getStateMachine());
-
   if(configuration.getMode() == Mode::rocksdb) {
+    rocksdb = new RocksDB(configuration.getStateMachine());
     dispatcher = new RedisDispatcher(*rocksdb);
   }
   else if(configuration.getMode() == Mode::raft) {
-    journal = new RaftJournal(configuration.getRaftJournal());
-    state = new RaftState(*journal, configuration.getMyself());
-    raftClock = new RaftClock(defaultTimeouts);
-    RaftDispatcher *raftdispatcher = new RaftDispatcher(*journal, *rocksdb, *state, *raftClock);
-    dispatcher = raftdispatcher;
-    director = new RaftDirector(*raftdispatcher, *journal, *rocksdb, *state, *raftClock);
+    raftgroup = new RaftGroup(configuration.getDatabase(), configuration.getMyself(), timeouts);
+    dispatcher = raftgroup->dispatcher();
+    raftgroup->spinup();
   }
   else {
     qdb_throw("cannot determine configuration mode"); // should never happen
@@ -144,22 +129,22 @@ void QuarkDBNode::cancelResilvering() {
   resilvering = false;
 }
 
-QuarkDBNode::QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_)
-: configuration(config), bufferManager(buffManager), inFlight(inFlight_) {
+QuarkDBNode::QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t)
+: configuration(config), bufferManager(buffManager), inFlight(inFlight_), timeouts(t) {
   cancelResilvering();
 
   std::string err;
   if(!attach(err)) qdb_critical(err);
 }
 
-LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
+LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req, LogIndex commit) {
   auto it = redis_cmd_map.find(req[0]);
   if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
 
   RedisCommand cmd = it->second.first;
   switch(cmd) {
     case RedisCommand::QUARKDB_INFO: {
-      return conn->vector(this->info());
+      return conn->vector(this->info().toVector());
     }
     case RedisCommand::QUARKDB_DETACH: {
       detach();
@@ -215,7 +200,7 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 
       std::string err;
       if(attach(err)) {
-        qdb_event("RESILVERING SUCCESSFULL! Continuing normally.");
+        qdb_event("RESILVERING SUCCESSFUL! Continuing normally.");
         return conn->ok();
       }
 
@@ -271,25 +256,8 @@ error:
   }
 }
 
-static std::string modeToString(const Mode &mode) {
-  if(mode == Mode::rocksdb) {
-    return "STANDALONE";
-  }
-  if(mode == Mode::raft) {
-    return "RAFT";
-  }
-  qdb_throw("unknown mode"); // should never happen
-}
-
-std::vector<std::string> QuarkDBNode::info() {
-  std::vector<std::string> ret;
-  ret.emplace_back(SSTR("ATTACHED " << boolToString(attached)));
-  ret.emplace_back(SSTR("BEING-RESILVERED " << boolToString(resilvering)));
-  ret.emplace_back(SSTR("MODE " << modeToString(configuration.getMode())));
-  ret.emplace_back(SSTR("BASE-DIRECTORY " << configuration.getDatabase()));
-  ret.emplace_back(SSTR("QUARKDB-VERSION " << STRINGIFY(VERSION_FULL)));
-  ret.emplace_back(SSTR("ROCKSDB-VERSION " << ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH));
-  ret.emplace_back(SSTR("IN-FLIGHT " << inFlight));
-
-  return ret;
+QuarkDBInfo QuarkDBNode::info() {
+  return {attached, resilvering, configuration.getMode(), configuration.getDatabase(),
+          STRINGIFY(VERSION_FULL), SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH),
+          inFlight};
 }

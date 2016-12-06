@@ -31,6 +31,7 @@
 #include "raft/RaftDispatcher.hh"
 #include "raft/RaftReplicator.hh"
 #include "raft/RaftDirector.hh"
+#include "raft/RaftGroup.hh"
 #include "Poller.hh"
 #include <gtest/gtest.h>
 
@@ -72,21 +73,15 @@ extern GlobalEnv &commonState;
 
 // Includes everything needed to simulate a single raft-enabled server.
 // Everything is initialized lazily, so if you only want to test the journal for example,
-// this is possible, too. Just don't call eg director(), and you won't have to worry
+// this is possible, too. Just don't call eg group()->director(), and you won't have to worry
 // about raft messing up your variables and terms due to timeouts.
 class TestNode {
 public:
   TestNode(RaftServer myself, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   ~TestNode();
 
-  RocksDB *rocksdb();
-  RaftJournal *journal();
-  RaftDispatcher *dispatcher();
-  RaftState *state();
-  RaftReplicator *replicator();
+  RaftGroup* group();
   Poller *poller();
-  RaftClock *raftClock();
-  RaftDirector *director();
   Tunnel *tunnel();
 
   RaftServer myself();
@@ -96,14 +91,8 @@ private:
   RaftClusterID clusterID;
   std::vector<RaftServer> initialNodes;
 
-  RocksDB *rocksdbptr = nullptr;
-  RaftJournal *journalptr = nullptr;
-  RaftDispatcher *raftdispatcherptr = nullptr;
-  RaftReplicator *replicatorptr = nullptr;
+  RaftGroup *raftgroup = nullptr;
   Poller *pollerptr = nullptr;
-  RaftState *raftstateptr = nullptr;
-  RaftClock *raftclockptr = nullptr;
-  RaftDirector *raftdirectorptr = nullptr;
   Tunnel *tunnelptr = nullptr;
 };
 
@@ -123,11 +112,6 @@ public:
   RaftServer myself(int id = 0);
   RaftDirector *director(int id = 0);
   Tunnel *tunnel(int id = 0);
-
-  // In some tests, the latency of opening rocksdb can kill us, since by the
-  // time the db is open raft starts timing out.
-  // This function will prepare a node, so that spinning it up later is instant.
-  void prepare(int id);
 
   // spin up a node,
   void spinup(int id);

@@ -28,6 +28,8 @@
 #include "raft/RaftCommitTracker.hh"
 #include "Tunnel.hh"
 #include "Poller.hh"
+#include "Configuration.hh"
+#include "QuarkDBNode.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
@@ -64,7 +66,6 @@ void assert_reply(std::future<redisReplyPtr> &&fut, T&& check) {
 }
 
 TEST_F(Raft_e2e, coup) {
-  prepare(0); prepare(1); prepare(2);
   spinup(0); spinup(1); spinup(2);
 
   // wait for consensus
@@ -83,7 +84,6 @@ TEST_F(Raft_e2e, coup) {
 }
 
 TEST_F(Raft_e2e, simultaneous_clients) {
-  prepare(0); prepare(1); prepare(2);
   spinup(0); spinup(1); spinup(2);
 
   // wait for consensus..
@@ -194,7 +194,6 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
-  prepare(0); prepare(1);
   spinup(0); spinup(1);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -249,7 +248,6 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
 }
 
 TEST_F(Raft_e2e, membership_updates) {
-  prepare(0); prepare(1); prepare(2);
   spinup(0); spinup(1); spinup(2);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(300));
@@ -289,7 +287,6 @@ TEST_F(Raft_e2e, membership_updates) {
 
 TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   // let's get this party started
-  prepare(0); prepare(1); prepare(2); prepare(3); prepare(4);
   spinup(0); spinup(1); spinup(2); spinup(3);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(200));

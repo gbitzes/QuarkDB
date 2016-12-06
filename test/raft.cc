@@ -530,8 +530,6 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
 }
 
 TEST_F(Raft_Director, achieve_natural_election) {
-  prepare(0); prepare(1); prepare(2);
-
   // spin up the directors and pollers - this fully simulates a 3-node cluster
   spinup(0); spinup(1); spinup(2);
 
@@ -583,8 +581,6 @@ TEST_F(Raft_Director, achieve_natural_election) {
 }
 
 TEST_F(Raft_Director, late_arrival_in_established_cluster) {
-  prepare(0); prepare(1); prepare(2);
-
   // spin up only two nodes
   spinup(0); spinup(1);
 
@@ -610,8 +606,6 @@ TEST_F(Raft_Director, late_arrival_in_established_cluster) {
 }
 
 TEST_F(Raft_Director, late_consensus) {
-  prepare(0); prepare(1); prepare(2);
-
   // at first, node #0 is all alone and should not be able to ascend
   spinup(0);
 
@@ -652,7 +646,6 @@ TEST_F(Raft_Director, election_with_different_journals) {
   RedisRequest req = {"set", "asdf", "abc"};
   ASSERT_TRUE(journal(1)->append(1, 0, req));
 
-  prepare(0); prepare(1);
   spinup(0);
 
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
