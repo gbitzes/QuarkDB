@@ -271,11 +271,6 @@ error:
   }
 }
 
-static std::string boolToString(bool b) {
-  if(b) return "TRUE";
-  return "FALSE";
-}
-
 static std::string modeToString(const Mode &mode) {
   if(mode == Mode::rocksdb) {
     return "STANDALONE";

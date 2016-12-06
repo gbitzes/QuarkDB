@@ -31,6 +31,13 @@ namespace quarkdb {
 
 std::mutex logMutex;
 
+std::string pathJoin(const std::string &part1, const std::string &part2) {
+  if(part1.empty()) return "/" + part2;
+  if(part2.empty()) return part1;
+  if(part1[part1.size()-1] == '/') return part1 + part2;
+  return part1 + "/" + part2;
+}
+
 bool my_strtoll(const std::string &str, int64_t &ret) {
   char *endptr = NULL;
   ret = strtoll(str.c_str(), &endptr, 10);

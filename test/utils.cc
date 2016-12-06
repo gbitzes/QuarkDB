@@ -37,3 +37,10 @@ TEST(Utils, binary_string_int_conversion) {
   EXPECT_EQ(binaryStringToInt(intToBinaryString(16583415634).c_str()), 16583415634);
   EXPECT_EQ(binaryStringToInt(intToBinaryString(-1234169761).c_str()), -1234169761);
 }
+
+TEST(Utils, pathJoin) {
+  ASSERT_EQ(pathJoin("/home/", "test"), "/home/test");
+  ASSERT_EQ(pathJoin("/home", "test"), "/home/test");
+  ASSERT_EQ(pathJoin("", "home"), "/home");
+  ASSERT_EQ(pathJoin("/home", ""), "/home");
+}
