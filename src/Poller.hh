@@ -50,7 +50,6 @@ private:
 
   std::thread mainThread;
 
-  std::string path;
   struct sockaddr_in local, remote;
   int s;
   size_t len;

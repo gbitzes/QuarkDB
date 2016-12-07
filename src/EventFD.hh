@@ -59,7 +59,7 @@ public:
   void notify(int64_t val = 1) {
     int rc = write(fd, &val, sizeof(val));
     if(rc != sizeof(val)) {
-      qdb_critical("could not notify eventfd, write rc: " << rc);
+      qdb_throw("could not notify eventfd, write rc: " << rc);
     }
   }
 

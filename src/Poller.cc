@@ -90,7 +90,6 @@ Poller::~Poller() {
   ::shutdown(s, SHUT_RDWR); // kill the socket
   mainThread.join();
   close(s);
-  unlink(path.c_str());
 }
 
 void Poller::worker(int fd, Dispatcher *dispatcher) {
@@ -135,7 +134,6 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
       break;
     }
   }
-  close(fd);
 }
 
 void Poller::main(Dispatcher *dispatcher) {
