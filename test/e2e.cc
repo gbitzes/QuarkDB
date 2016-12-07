@@ -37,9 +37,16 @@
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
 #define ASSERT_REPLY(reply, val) { assert_reply(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
+#define ASSERT_ERR(reply, val) { assert_error(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 
 class Raft_e2e : public TestCluster3Nodes {};
 class Raft_e2e5 : public TestCluster5Nodes {};
+
+void assert_error(const redisReplyPtr &reply, const std::string &err) {
+  ASSERT_NE(reply, nullptr);
+  ASSERT_EQ(reply->type, REDIS_REPLY_ERROR);
+  ASSERT_EQ(std::string(reply->str, reply->len), err);
+}
 
 void assert_reply(const redisReplyPtr &reply, int integer) {
   ASSERT_NE(reply, nullptr);
@@ -52,6 +59,25 @@ void assert_reply(const redisReplyPtr &reply, const std::string &str) {
   // ASSERT_TRUE(reply->type == REDIS_REPLY_STRING || reply->type == REDIS_REPLY_STATUS);
   EXPECT_EQ(std::string(reply->str, reply->len), str);
 }
+
+void assert_reply(const redisReplyPtr &reply, const std::vector<std::string> &vec) {
+  ASSERT_NE(reply, nullptr);
+  ASSERT_EQ(reply->type, REDIS_REPLY_ARRAY);
+  ASSERT_EQ(reply->elements, vec.size());
+
+  for(size_t i = 0; i < vec.size(); i++) {
+    ASSERT_REPLY(redisReplyPtr(reply->element[i], [](redisReply*){}), vec[i]);
+  }
+}
+
+void assert_reply(const redisReplyPtr &reply, const std::pair<std::string, std::vector<std::string>> &scan) {
+  ASSERT_NE(reply, nullptr);
+  ASSERT_EQ(reply->type, REDIS_REPLY_ARRAY);
+  ASSERT_EQ(reply->elements, 2u);
+  ASSERT_REPLY(redisReplyPtr(reply->element[0], [](redisReply*){}), scan.first);
+  ASSERT_REPLY(redisReplyPtr(reply->element[1], [](redisReply*){}), scan.second);
+}
+
 
 // crazy C++ templating to allow ASSERT_REPLY() to work as one liner in all cases
 // T&& here is a universal reference
@@ -191,6 +217,36 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 
     ASSERT_EQ(entry1, entry2);
   }
+}
+
+TEST_F(Raft_e2e, hscan) {
+  spinup(0); spinup(1); spinup(2);
+  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  ASSERT_EQ(state(0)->getSnapshot().leader, state(1)->getSnapshot().leader);
+  ASSERT_EQ(state(1)->getSnapshot().leader, state(2)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot().leader);
+
+  for(size_t i = 1; i < 10; i++) {
+    ASSERT_REPLY(tunnel(leaderID)->execute(make_req("hset", "hash", SSTR("f" << i), SSTR("v" << i))), 1);
+  }
+
+  redisReplyPtr reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "0", "cOUnT", "3")).get();
+  ASSERT_REPLY(reply, std::make_pair("next:f4", make_req("f1", "v1", "f2", "v2", "f3", "v3")));
+
+  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "0", "asdf", "123")).get();
+  ASSERT_ERR(reply, "ERR syntax error");
+
+  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "next:f4", "COUNT", "3")).get();
+  ASSERT_REPLY(reply, std::make_pair("next:f7", make_req("f4", "v4", "f5", "v5", "f6", "v6")));
+
+  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "next:f7", "COUNT", "30")).get();
+  ASSERT_REPLY(reply, std::make_pair("0", make_req("f7", "v7", "f8", "v8", "f9", "v9")));
+
+  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "adfaf")).get();
+  ASSERT_ERR(reply, "ERR invalid cursor");
+
+  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "next:zz")).get();
+  ASSERT_REPLY(reply, std::make_pair("0", make_req()));
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {

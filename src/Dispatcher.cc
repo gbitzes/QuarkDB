@@ -180,14 +180,34 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       return conn->vector(values);
     }
     case RedisCommand::HSCAN: {
-      if(request.size() != 3) return conn->errArgs(request[0]);
-      if(request[2] != "0") return conn->err("invalid cursor");
+      if(request.size() != 3 && request.size() != 5) return conn->errArgs(request[0]);
+      std::string cursor;
+      int64_t count = 100;
 
+      if(request[2] == "0") {
+        cursor = "";
+      }
+      else if(startswith(request[2], "next:")) {
+        cursor = std::string(request[2].begin() + 5, request[2].end());
+      }
+      else {
+        return conn->err("invalid cursor");
+      }
+
+      if(request.size() == 5) {
+        if(!caseInsensitiveEquals(request[3], "count")) return conn->err("syntax error");
+        if(startswith(request[4], "-") || request[4] == "0") return conn->err("syntax error");
+        if(!my_strtoll(request[4], count)) return conn->err("value is not an integer or out of range");
+      }
+
+      std::string newcursor;
       std::vector<std::string> vec;
-      rocksdb::Status st = store.hgetall(request[1], vec);
+      rocksdb::Status st = store.hscan(request[1], cursor, count, newcursor, vec);
       if(!st.ok()) return conn->fromStatus(st);
 
-      return conn->scan("0", vec);
+      if(newcursor == "") newcursor = "0";
+      else newcursor = "next:" + newcursor;
+      return conn->scan(newcursor, vec);
     }
     case RedisCommand::SADD: {
       if(request.size() <= 2) return conn->err(request[0]);

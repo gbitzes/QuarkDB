@@ -172,7 +172,7 @@ TestNode* TestCluster::node(int id, const RaftServer &srv) {
 void TestCluster::spinup(int id) {
   qdb_info("Spinning up node #" << id)
   poller(id);
-  director(id);
+  node(id)->group()->director();
 }
 
 int TestCluster::getServerID(const RaftServer &srv) {

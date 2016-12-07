@@ -81,6 +81,7 @@ bool parseServer(const std::string &str, RaftServer &srv);
 bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
 std::string serializeNodes(const std::vector<RaftServer> &nodes);
 std::string pathJoin(const std::string &part1, const std::string &part2);
+bool caseInsensitiveEquals(const std::string &str1, const std::string &str2);
 
 inline std::string boolToString(bool b) {
   if(b) return "TRUE";

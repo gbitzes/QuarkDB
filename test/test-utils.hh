@@ -113,7 +113,7 @@ public:
   RaftDirector *director(int id = 0);
   Tunnel *tunnel(int id = 0);
 
-  // spin up a node,
+  // spin up a node
   void spinup(int id);
 
   // initialize nodes using information passed on the nodes variable, except if srv is set

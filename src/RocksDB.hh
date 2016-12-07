@@ -55,6 +55,7 @@ public:
   rocksdb::Status hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index = 0);
   rocksdb::Status hdel(const std::string &key, const std::string &field, LogIndex index = 0);
   rocksdb::Status hlen(const std::string &key, size_t &len);
+  rocksdb::Status hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
   rocksdb::Status hvals(const std::string &key, std::vector<std::string> &vals);
   rocksdb::Status sadd(const std::string &key, const std::string &element, int64_t &added, LogIndex index = 0);
   rocksdb::Status sismember(const std::string &key, const std::string &element);

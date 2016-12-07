@@ -212,3 +212,27 @@ TEST_F(Rocks_DB, basic_sanity) {
 
   ASSERT_NOTFOUND(rocksdb()->hexists("myhash", "val"));
 }
+
+TEST_F(Rocks_DB, hscan) {
+  std::vector<std::string> vec;
+  for(size_t i = 1; i < 10; i++) {
+    ASSERT_OK(rocksdb()->hset("hash", SSTR("f" << i), SSTR("v" << i)));
+  }
+
+  std::string newcursor;
+  ASSERT_OK(rocksdb()->hscan("hash", "", 3, newcursor, vec));
+  ASSERT_EQ(vec, make_req("f1", "v1", "f2", "v2", "f3", "v3"));
+  ASSERT_EQ(newcursor, "f4");
+
+  ASSERT_OK(rocksdb()->hscan("hash", "f4", 4, newcursor, vec));
+  ASSERT_EQ(vec, make_req("f4", "v4", "f5", "v5", "f6", "v6", "f7", "v7"));
+  ASSERT_EQ(newcursor, "f8");
+
+  ASSERT_OK(rocksdb()->hscan("hash", "f8", 4, newcursor, vec));
+  ASSERT_EQ(vec, make_req("f8", "v8", "f9", "v9"));
+  ASSERT_EQ(newcursor, "");
+
+  ASSERT_OK(rocksdb()->hscan("hash", "zz", 4, newcursor, vec));
+  ASSERT_TRUE(vec.empty());
+  ASSERT_EQ(newcursor, "");
+}

@@ -38,6 +38,14 @@ std::string pathJoin(const std::string &part1, const std::string &part2) {
   return part1 + "/" + part2;
 }
 
+bool caseInsensitiveEquals(const std::string &str1, const std::string &str2) {
+  if(str1.size() != str2.size()) return false;
+  for(size_t i = 0; i < str1.size(); i++) {
+    if(tolower(str1[i]) != tolower(str2[i])) return false;
+  }
+  return true;
+}
+
 bool my_strtoll(const std::string &str, int64_t &ret) {
   char *endptr = NULL;
   ret = strtoll(str.c_str(), &endptr, 10);

@@ -248,6 +248,31 @@ rocksdb::Status RocksDB::hlen(const std::string &key, size_t &len) {
   return rocksdb::Status::OK();
 }
 
+rocksdb::Status RocksDB::hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
+  std::string prefix = translate_key(kHash, key) + "#";
+  std::string tkey = translate_key(kHash, key, cursor);
+  res.clear();
+
+  newCursor = "";
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
+    std::string tmp = iter->key().ToString();
+
+    if(!startswith(tmp, prefix)) break;
+
+    std::string fieldname = std::string(tmp.begin()+prefix.size(), tmp.end());
+    if(res.size() >= count*2) {
+      newCursor = fieldname;
+      break;
+    }
+
+    res.push_back(fieldname);
+    res.push_back(iter->value().ToString());
+  }
+
+  return rocksdb::Status::OK();
+}
+
 rocksdb::Status RocksDB::hvals(const std::string &key, std::vector<std::string> &vals) {
   std::string tkey = translate_key(kHash, key) + "#";
   vals.clear();
