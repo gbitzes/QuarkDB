@@ -44,6 +44,21 @@
 
 namespace quarkdb {
 
+#define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
+  size_t nretries = 0; \
+  while(nretries++ < retry) { \
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitInterval)); \
+    if((cond)) { \
+      qdb_info("Condition '" << #cond << "' is true after " << nretries << " attempts"); \
+      break; \
+    } \
+  } \
+  ASSERT_TRUE(cond) << " - failure after " << nretries << " retries "; \
+}
+
+// retry every 10ms for a total of 2 seconds
+#define RETRY_ASSERT_TRUE(cond) RETRY_ASSERT_TRUE_3(cond, 200, 10)
+
 extern std::vector<RedisRequest> testreqs;
 
 // necessary because C macros are dumb and don't undestand
@@ -120,6 +135,23 @@ public:
   TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);
   RaftClusterID clusterID();
+
+  template<typename... Args>
+  bool checkStateConsensus(const Args... args) {
+    std::vector<int> arguments = { args... };
+    std::vector<RaftStateSnapshot> snapshots;
+
+    for(size_t i = 0; i < arguments.size(); i++) {
+      snapshots.emplace_back(state(i)->getSnapshot());
+    }
+
+    for(size_t i = 1; i < snapshots.size(); i++) {
+      if(snapshots[i].leader.empty() || snapshots[i-1].leader.empty()) return false;
+      if(snapshots[i].term != snapshots[i-1].term) return false;
+      if(snapshots[i].leader != snapshots[i-1].leader) return false;
+    }
+    return true;
+  }
 
   int getServerID(const RaftServer &srv);
   std::vector<RaftServer> retrieveLeaders();

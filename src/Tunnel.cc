@@ -105,6 +105,7 @@ bool Tunnel::feed(const char *buf, size_t len) {
 
 void Tunnel::cleanup() {
   if(sock > 0) {
+    ::shutdown(sock, SHUT_RDWR);
     close(sock);
     sock = -1;
   }

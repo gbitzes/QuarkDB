@@ -91,14 +91,12 @@ TEST_F(Raft_Replicator, do_simple_replication) {
     ASSERT_TRUE(journal(0)->append(i+1, 2, testreqs[i]));
   }
 
-  // a bit ugly..
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
   // verify #1 recognized #0 as leader and that replication was successful
+  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == (int64_t) testreqs.size()+1);
+
   RaftStateSnapshot snapshot = state(1)->getSnapshot();
   ASSERT_EQ(snapshot.term, 2);
   ASSERT_EQ(snapshot.leader, myself(0));
-  ASSERT_EQ(journal(1)->getLogSize(), (int64_t) testreqs.size()+1);
 
   for(size_t i = 0; i < testreqs.size(); i++) {
     RaftEntry entry;
@@ -122,9 +120,8 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   // launch
   ASSERT_TRUE(replicator(0)->launch(myself(1), state(0)->getSnapshot()));
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
   // verify everything's sane
+  RETRY_ASSERT_TRUE(state(1)->getSnapshot().leader == myself(0));
   RaftStateSnapshot snapshot = state(1)->getSnapshot();
   ASSERT_EQ(snapshot.term, 2);
   ASSERT_EQ(snapshot.leader, myself(0));
@@ -532,8 +529,7 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
 TEST_F(Raft_Director, achieve_natural_election) {
   // spin up the directors and pollers - this fully simulates a 3-node cluster
   spinup(0); spinup(1); spinup(2);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   std::vector<RaftStateSnapshot> snapshots;
   snapshots.push_back(state(0)->getSnapshot());
@@ -563,11 +559,11 @@ TEST_F(Raft_Director, achieve_natural_election) {
     ASSERT_TRUE(journal(leaderID)->append(i+1, 0, testreqs[i]));
   }
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-  ASSERT_EQ(journal(0)->getCommitIndex(), (int64_t)testreqs.size());
-  ASSERT_EQ(journal(1)->getCommitIndex(), (int64_t)testreqs.size());
-  ASSERT_EQ(journal(2)->getCommitIndex(), (int64_t)testreqs.size());
+  RETRY_ASSERT_TRUE(
+    journal(0)->getCommitIndex() == (int64_t) testreqs.size() &&
+    journal(1)->getCommitIndex() == (int64_t) testreqs.size() &&
+    journal(2)->getCommitIndex() == (int64_t) testreqs.size()
+  );
 
   // verify entries one by one, for all three journals
   for(size_t i = 0; i < testreqs.size(); i++) {
@@ -583,8 +579,7 @@ TEST_F(Raft_Director, achieve_natural_election) {
 TEST_F(Raft_Director, late_arrival_in_established_cluster) {
   // spin up only two nodes
   spinup(0); spinup(1);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
 
   // verify they reached consensus
   std::vector<RaftStateSnapshot> snapshots;
@@ -597,8 +592,7 @@ TEST_F(Raft_Director, late_arrival_in_established_cluster) {
 
   // spin up node #2, make sure it joins the cluster and doesn't disrupt the current leader
   spinup(2);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   RaftStateSnapshot late_arrival = state(2)->getSnapshot();
   ASSERT_EQ(late_arrival.term, snapshots[0].term);
@@ -608,7 +602,6 @@ TEST_F(Raft_Director, late_arrival_in_established_cluster) {
 TEST_F(Raft_Director, late_consensus) {
   // at first, node #0 is all alone and should not be able to ascend
   spinup(0);
-
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
   // verify the node tried to ascend, and failed
@@ -618,7 +611,7 @@ TEST_F(Raft_Director, late_consensus) {
   ASSERT_TRUE( (snapshot.status == RaftStatus::FOLLOWER) || (snapshot.status == RaftStatus::CANDIDATE) );
 
   spinup(1);
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
 
   // verify consensus reached
   std::vector<RaftStateSnapshot> snapshots;
@@ -631,7 +624,7 @@ TEST_F(Raft_Director, late_consensus) {
 
   // spin up node #2, ensure it doesn't disrupt current leader
   spinup(2);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   RaftStateSnapshot late_arrival = state(2)->getSnapshot();
   ASSERT_EQ(late_arrival.term, snapshots[0].term);
@@ -647,10 +640,9 @@ TEST_F(Raft_Director, election_with_different_journals) {
   ASSERT_TRUE(journal(1)->append(1, 0, req));
 
   spinup(0);
-
   std::this_thread::sleep_for(std::chrono::milliseconds(100));
   spinup(1);
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
 
   RaftStateSnapshot snapshot = state(0)->getSnapshot();
   ASSERT_EQ(snapshot.leader, myself(1));

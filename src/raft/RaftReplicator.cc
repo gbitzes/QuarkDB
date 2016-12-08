@@ -144,8 +144,18 @@ static bool resilveringCopyDirectory(const std::string &path, const std::string 
   return true;
 }
 
+static bool cancelResilvering(Tunnel &tunnel) {
+  std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_FINISH_RESILVERING"});
+  is_ok_response(fut);
+  return false;
+}
+
 bool RaftReplicator::resilver(const RaftServer &target, const RaftStateSnapshot &snapshot) {
   qdb_critical("Attempting to automatically resilver target " << target.toString());
+
+  Tunnel tunnel(target.hostname, target.port);
+  std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_START_RESILVERING"});
+  if(!is_ok_response(fut)) return cancelResilvering(tunnel);
 
   std::string checkpointPath = SSTR(chopPath(journal.getDBPath()) << "/tmp/checkpoints-for-" << target.toString());
   system(SSTR("rm -rf " << checkpointPath).c_str());
@@ -156,27 +166,22 @@ bool RaftReplicator::resilver(const RaftServer &target, const RaftStateSnapshot 
   std::string err;
   if(!mkpath(journalCheckpoint, 0755, err)) {
     qdb_critical(err);
-    return false;
+    return cancelResilvering(tunnel);
   }
 
   rocksdb::Status st = journal.checkpoint(journalCheckpoint);
   if(!st.ok()) {
     qdb_critical("cannot create journal checkpoint to perform resilvering in " << journalCheckpoint << ": " << st.ToString());
-    return false;
+    return cancelResilvering(tunnel);
   }
 
   st = stateMachine.checkpoint(smCheckpoint);
   if(!st.ok()) {
     qdb_critical("cannot create state machine checkpoint to perform resilvering in " << smCheckpoint << ": " << st.ToString());
-    return false;
+    return cancelResilvering(tunnel);
   }
 
-  Tunnel tunnel(target.hostname, target.port);
-
-  std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_START_RESILVERING"});
-  if(!is_ok_response(fut)) return false;
-
-  if(!resilveringCopyDirectory(checkpointPath, "", tunnel)) return false;
+  if(!resilveringCopyDirectory(checkpointPath, "", tunnel)) return cancelResilvering(tunnel);
   fut = tunnel.execute({"QUARKDB_FINISH_RESILVERING"});
   return is_ok_response(fut);
 }

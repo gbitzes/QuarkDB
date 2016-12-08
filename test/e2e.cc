@@ -94,8 +94,7 @@ void assert_reply(std::future<redisReplyPtr> &&fut, T&& check) {
 TEST_F(Raft_e2e, coup) {
   spinup(0); spinup(1); spinup(2);
 
-  // wait for consensus
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   int leaderID = getLeaderID();
   ASSERT_GE(leaderID, 0);
@@ -103,17 +102,13 @@ TEST_F(Raft_e2e, coup) {
 
   int instigator = (leaderID+1)%3;
   ASSERT_REPLY(tunnel(instigator)->exec("RAFT_COUP_DETAT"), "vive la revolution");
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-  ASSERT_EQ(instigator, getLeaderID());
-  ASSERT_TRUE(all_identical(retrieveLeaders()));
+  RETRY_ASSERT_TRUE(instigator == getLeaderID());
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 }
 
 TEST_F(Raft_e2e, simultaneous_clients) {
   spinup(0); spinup(1); spinup(2);
-
-  // wait for consensus..
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   int leaderID = getServerID(state(0)->getSnapshot().leader);
   ASSERT_GE(leaderID, 0);
@@ -139,13 +134,10 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   ASSERT_REPLY(futures[0], "OK");
   ASSERT_REPLY(futures[1], "3456");
 
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
   // make sure the log entry has been propagated to all nodes
   for(size_t i = 0; i < 3; i++) {
     std::string value;
-    ASSERT_TRUE(rocksdb(i)->get("asdf", value).ok());
-    ASSERT_EQ(value, "3456");
+    RETRY_ASSERT_TRUE(rocksdb(i)->get("asdf", value).ok() && value == "3456");
   }
 
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "qwerty", "789"), "OK");
@@ -221,9 +213,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 
 TEST_F(Raft_e2e, hscan) {
   spinup(0); spinup(1); spinup(2);
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
-  ASSERT_EQ(state(0)->getSnapshot().leader, state(1)->getSnapshot().leader);
-  ASSERT_EQ(state(1)->getSnapshot().leader, state(2)->getSnapshot().leader);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getServerID(state(0)->getSnapshot().leader);
 
   for(size_t i = 1; i < 10; i++) {
@@ -251,8 +241,7 @@ TEST_F(Raft_e2e, hscan) {
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   spinup(0); spinup(1);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
 
   int leaderID = getServerID(state(0)->getSnapshot().leader);
   int firstSlaveID = (leaderID+1)%2;
@@ -279,12 +268,7 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
 
   // and verify it's NOT possible to bring node #2 up to date
   spinup(2);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
-
-  // verify consensus on leader
-  ASSERT_EQ(state(2)->getSnapshot().leader, state(0)->getSnapshot().leader);
-  ASSERT_EQ(state(2)->getSnapshot().leader, state(1)->getSnapshot().leader);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   ASSERT_EQ(journal(2)->getLogSize(), 1);
   ASSERT_EQ(journal(2)->getLogStart(), 0);
@@ -298,30 +282,36 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   }
 
   // now verify node #2 can be brought up to date successfully
-  std::this_thread::sleep_for(std::chrono::milliseconds(50));
+  RETRY_ASSERT_TRUE(
+    journal(0)->getLogSize() == journal(1)->getLogSize() &&
+    journal(1)->getLogSize() == journal(2)->getLogSize()
+  );
+
   ASSERT_EQ(journal(2)->getLogSize(), journal(leaderID)->getLogSize());
   ASSERT_EQ(journal(2)->getLogSize(), journal(firstSlaveID)->getLogSize());
 }
 
 TEST_F(Raft_e2e, membership_updates) {
   spinup(0); spinup(1); spinup(2);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(300));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getServerID(state(0)->getSnapshot().leader);
-
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "pi", "3.141516"), "OK");
 
   // throw a node out of the cluster
   int victim = (leaderID+1) % 3;
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(victim).toString()), "OK");
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == 2);
 
   // verify the cluster has not been disrupted
   ASSERT_EQ(state(leaderID)->getSnapshot().leader, myself(leaderID));
 
   // add it back as an observer, verify consensus
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_ADD_OBSERVER", myself(victim).toString()), "OK");
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+  RETRY_ASSERT_TRUE(dispatcher(0)->info().commitIndex == 3);
+  RETRY_ASSERT_TRUE(dispatcher(1)->info().commitIndex == 3);
+  RETRY_ASSERT_TRUE(dispatcher(2)->info().commitIndex == 3);
+
   ASSERT_EQ(state(victim)->getSnapshot().status, RaftStatus::FOLLOWER);
 
   ASSERT_EQ(state(0)->getSnapshot().leader, state(1)->getSnapshot().leader);
@@ -336,16 +326,14 @@ TEST_F(Raft_e2e, membership_updates) {
   // add back as a full voting member
   leaderID = getServerID(state(0)->getSnapshot().leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(victim).toString()), "OK");
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  ASSERT_EQ(state(0)->getSnapshot().leader, state(1)->getSnapshot().leader);
-  ASSERT_EQ(state(1)->getSnapshot().leader, state(2)->getSnapshot().leader);
+  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == 4);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 }
 
 TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   // let's get this party started
   spinup(0); spinup(1); spinup(2); spinup(3);
-
-  std::this_thread::sleep_for(std::chrono::milliseconds(200));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2, 3));
 
   // verify consensus
   for(size_t i = 1; i < 3; i++) {
@@ -355,7 +343,7 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   // throw node #4 out of the cluster
   int leaderID = getServerID(state(0)->getSnapshot().leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(4).toString()), "OK");
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == 1);
 
   // .. and now spinup node #4 :> Ensure it doesn't disrupt the current leader
   spinup(4);
