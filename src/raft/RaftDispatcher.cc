@@ -106,11 +106,11 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
 
       return conn->ok();
     }
-    case RedisCommand::RAFT_COUP_DETAT: {
+    case RedisCommand::RAFT_ATTEMPT_COUP: {
       RaftStateSnapshot snapshot = state.getSnapshot();
 
       if(snapshot.leader.empty()) {
-        return conn->err("I have no leader to depose of");
+        return conn->err("I have no leader, cannot start a coup");
       }
 
       if(snapshot.leader == state.getMyself()) {

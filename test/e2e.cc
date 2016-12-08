@@ -101,7 +101,7 @@ TEST_F(Raft_e2e, coup) {
   ASSERT_LE(leaderID, 2);
 
   int instigator = (leaderID+1)%3;
-  ASSERT_REPLY(tunnel(instigator)->exec("RAFT_COUP_DETAT"), "vive la revolution");
+  ASSERT_REPLY(tunnel(instigator)->exec("RAFT_ATTEMPT_COUP"), "vive la revolution");
   RETRY_ASSERT_TRUE(instigator == getLeaderID());
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 }
