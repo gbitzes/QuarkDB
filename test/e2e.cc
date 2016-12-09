@@ -347,7 +347,7 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
 
   // .. and now spinup node #4 :> Ensure it doesn't disrupt the current leader
   spinup(4);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::this_thread::sleep_for(raftclock()->getTimeouts().getHigh()*2);
   ASSERT_EQ(leaderID, getServerID(state(0)->getSnapshot().leader));
 
   // verify the cluster has not been disrupted
@@ -358,7 +358,7 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   if(victim == 4) victim = 2;
 
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(victim).toString()), "OK");
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::this_thread::sleep_for(raftclock()->getTimeouts().getHigh()*2);
 
   // verify the cluster has not been disrupted
   ASSERT_EQ(state(leaderID)->getSnapshot().leader, myself(leaderID));

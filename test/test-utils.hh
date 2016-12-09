@@ -127,6 +127,7 @@ public:
   RaftServer myself(int id = 0);
   RaftDirector *director(int id = 0);
   Tunnel *tunnel(int id = 0);
+  RaftClock *raftclock(int id = 0);
 
   // spin up a node
   void spinup(int id);
@@ -150,6 +151,8 @@ public:
       if(snapshots[i].term != snapshots[i-1].term) return false;
       if(snapshots[i].leader != snapshots[i-1].leader) return false;
     }
+
+    qdb_info("Achieved state consensus for term " << snapshots[0].term << " with leader " << snapshots[0].leader.toString());
     return true;
   }
 

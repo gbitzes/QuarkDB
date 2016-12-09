@@ -65,7 +65,7 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
   std::chrono::steady_clock::time_point deadline = now + timeouts.getHeartbeatInterval()*2;
 
   qdb_info(state.getMyself().toString() <<  ": Vote requests have been sent off, will allow a window of "
-    << timeouts.getHeartbeatInterval().count()*2 << "ms to receive replies.");
+    << timeouts.getLow().count() << "ms to receive replies.");
 
   for(size_t i = 0; i < futures.size(); i++) {
     if(futures[i].wait_until(deadline) == std::future_status::ready) {

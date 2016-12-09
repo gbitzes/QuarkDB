@@ -602,7 +602,7 @@ TEST_F(Raft_Director, late_arrival_in_established_cluster) {
 TEST_F(Raft_Director, late_consensus) {
   // at first, node #0 is all alone and should not be able to ascend
   spinup(0);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
+  std::this_thread::sleep_for(raftclock()->getTimeouts().getHigh()*2);
 
   // verify the node tried to ascend, and failed
   RaftStateSnapshot snapshot = state(0)->getSnapshot();
@@ -639,9 +639,7 @@ TEST_F(Raft_Director, election_with_different_journals) {
   RedisRequest req = {"set", "asdf", "abc"};
   ASSERT_TRUE(journal(1)->append(1, 0, req));
 
-  spinup(0);
-  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-  spinup(1);
+  spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
 
   RaftStateSnapshot snapshot = state(0)->getSnapshot();

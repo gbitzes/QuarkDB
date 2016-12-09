@@ -158,6 +158,10 @@ Tunnel* TestCluster::tunnel(int id) {
   return node(id)->tunnel();
 }
 
+RaftClock* TestCluster::raftclock(int id) {
+  return node(id)->group()->raftclock();
+}
+
 TestNode* TestCluster::node(int id, const RaftServer &srv) {
   TestNode *ret = testnodes[id];
   if(ret == nullptr) {

@@ -80,6 +80,7 @@ void RaftDirector::main() {
     }
     else if(snapshot.status == RaftStatus::LEADER) {
       actAsLeader(snapshot);
+      raftClock.heartbeat();
     }
     else {
       qdb_throw("should never happen");

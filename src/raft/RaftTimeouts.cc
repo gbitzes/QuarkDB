@@ -31,12 +31,12 @@ std::mt19937 RaftTimeouts::gen(rd());
 
 
 RaftTimeouts quarkdb::defaultTimeouts {milliseconds(1000), milliseconds(1500),
-  milliseconds(750)};
+  milliseconds(250)};
 
 RaftTimeouts quarkdb::tightTimeouts {milliseconds(100), milliseconds(150),
   milliseconds(75)};
 
-RaftTimeouts quarkdb::aggressiveTimeouts {milliseconds(20), milliseconds(50),
+RaftTimeouts quarkdb::aggressiveTimeouts {milliseconds(50), milliseconds(75),
   milliseconds(5)};
 
 RaftTimeouts::RaftTimeouts(const milliseconds &low, const milliseconds &high,
