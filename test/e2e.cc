@@ -279,12 +279,18 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("set", "mystring", "asdf"));
+  futures.emplace_back(tunnel(leaderID)->exec("keys", "*"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "mystring", "myset", "myhash", "adfa", "myhash"));
   futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset", "mystring"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "mystring", "myset", "myhash", "adfa", "myhash"));
   futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset"));
 
   ASSERT_REPLY(futures[0], "OK");
-  ASSERT_REPLY(futures[1], 3);
-  ASSERT_REPLY(futures[2], 0);
+  ASSERT_REPLY(futures[1], make_req("mystring", "myhash", "myset"));
+  ASSERT_REPLY(futures[2], 4);
+  ASSERT_REPLY(futures[3], 3);
+  ASSERT_REPLY(futures[4], 0);
+  ASSERT_REPLY(futures[5], 0);
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("set", "a", "aa"));
@@ -292,12 +298,14 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("get", "a"));
   futures.emplace_back(tunnel(leaderID)->exec("del", "a"));
   futures.emplace_back(tunnel(leaderID)->exec("get", "aa"));
+  futures.emplace_back(tunnel(leaderID)->exec("keys", "*"));
 
   ASSERT_REPLY(futures[0], "OK");
   ASSERT_REPLY(futures[1], "OK");
   ASSERT_REPLY(futures[2], "aa");
   ASSERT_REPLY(futures[3], 1);
   ASSERT_REPLY(futures[4], "a");
+  ASSERT_REPLY(futures[5], make_req("aa"));
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("flushall"));
@@ -305,6 +313,21 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   ASSERT_REPLY(futures[0], "OK");
   ASSERT_REPLY(futures[1], 0);
+
+  futures.clear();
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "hash", "key1", "v1"));
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "hash2", "key1", "v1"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "hash", "hash2"));
+  futures.emplace_back(tunnel(leaderID)->exec("del", "hash"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "hash"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "hash2"));
+
+  ASSERT_REPLY(futures[0], 1);
+  ASSERT_REPLY(futures[1], 1);
+  ASSERT_REPLY(futures[2], 2);
+  ASSERT_REPLY(futures[3], 1);
+  ASSERT_REPLY(futures[4], 0);
+  ASSERT_REPLY(futures[5], 1);
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {

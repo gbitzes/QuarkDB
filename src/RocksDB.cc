@@ -422,7 +422,7 @@ rocksdb::Status RocksDB::del(const VecIterator &start, const VecIterator &end, i
 
     int64_t count = 0;
     // is it a hash?
-    tkey = translate_key(kHash, *it);
+    tkey = translate_key(kHash, *it) + "#";
     remove_all_with_prefix(tkey, count, tx);
     if(count > 0) {
       removed++;
@@ -430,7 +430,7 @@ rocksdb::Status RocksDB::del(const VecIterator &start, const VecIterator &end, i
     }
 
     // is it a set?
-    tkey = translate_key(kSet, *it);
+    tkey = translate_key(kSet, *it) + "#";
     remove_all_with_prefix(tkey, count, tx);
     if(count > 0) {
       removed++;
