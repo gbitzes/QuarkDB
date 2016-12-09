@@ -40,6 +40,7 @@ public:
   DISALLOW_COPY_AND_ASSIGN(RocksDB);
   void reset();
 
+  using VecIterator = std::vector<std::string>::const_iterator;
   using IteratorPtr = std::shared_ptr<rocksdb::Iterator>;
   using TransactionPtr = std::shared_ptr<rocksdb::Transaction>;
 
@@ -53,18 +54,18 @@ public:
   rocksdb::Status hgetall(const std::string &key, std::vector<std::string> &res);
   rocksdb::Status hset(const std::string &key, const std::string &field, const std::string &value, LogIndex index = 0);
   rocksdb::Status hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index = 0);
-  rocksdb::Status hdel(const std::string &key, const std::string &field, LogIndex index = 0);
+  rocksdb::Status hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status hlen(const std::string &key, size_t &len);
   rocksdb::Status hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
   rocksdb::Status hvals(const std::string &key, std::vector<std::string> &vals);
-  rocksdb::Status sadd(const std::string &key, const std::string &element, int64_t &added, LogIndex index = 0);
+  rocksdb::Status sadd(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added, LogIndex index = 0);
   rocksdb::Status sismember(const std::string &key, const std::string &element);
-  rocksdb::Status srem(const std::string &key, const std::string &element, LogIndex index = 0);
+  rocksdb::Status srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status smembers(const std::string &key, std::vector<std::string> &members);
   rocksdb::Status scard(const std::string &key, size_t &count);
   rocksdb::Status set(const std::string& key, const std::string& value, LogIndex index = 0);
   rocksdb::Status get(const std::string &key, std::string &value);
-  rocksdb::Status del(const std::string &key, LogIndex index = 0);
+  rocksdb::Status del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status exists(const std::string &key);
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status flushall(LogIndex index = 0);
@@ -83,8 +84,7 @@ private:
   void commitTransaction(TransactionPtr &tx, LogIndex index);
 
   void retrieveLastApplied();
-
-  rocksdb::Status remove_all_with_prefix(const std::string &prefix, LogIndex index);
+  void remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx);
 
   rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;

@@ -239,6 +239,74 @@ TEST_F(Raft_e2e, hscan) {
   ASSERT_REPLY(reply, std::make_pair("0", make_req()));
 }
 
+TEST_F(Raft_e2e, test_many_redis_commands) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getServerID(state(0)->getSnapshot().leader);
+
+  std::vector<std::future<redisReplyPtr>> futures;
+  futures.emplace_back(tunnel(leaderID)->exec("SADD", "myset", "a", "b", "c"));
+  futures.emplace_back(tunnel(leaderID)->exec("SCARD", "myset"));
+  futures.emplace_back(tunnel(leaderID)->exec("Smembers", "myset"));
+  futures.emplace_back(tunnel(leaderID)->exec("srem", "myset", "a", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("srem", "myset", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("scard", "myset"));
+  futures.emplace_back(tunnel(leaderID)->exec("smembers", "myset"));
+
+  ASSERT_REPLY(futures[0], 3);
+  ASSERT_REPLY(futures[1], 3);
+  ASSERT_REPLY(futures[2], make_req("a", "b", "c"));
+  ASSERT_REPLY(futures[3], 2);
+  ASSERT_REPLY(futures[4], 0);
+  ASSERT_REPLY(futures[5], 1);
+  ASSERT_REPLY(futures[6], make_req("c"));
+
+  futures.clear();
+
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "myhash", "a", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "myhash", "b", "c"));
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "myhash", "c", "d"));
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "myhash", "a", "d"));
+  futures.emplace_back(tunnel(leaderID)->exec("hdel", "myhash", "a", "b", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("hdel", "myhash", "a"));
+
+  ASSERT_REPLY(futures[0], 1);
+  ASSERT_REPLY(futures[1], 1);
+  ASSERT_REPLY(futures[2], 1);
+  ASSERT_REPLY(futures[3], 0);
+  ASSERT_REPLY(futures[4], 2);
+  ASSERT_REPLY(futures[5], 0);
+
+  futures.clear();
+  futures.emplace_back(tunnel(leaderID)->exec("set", "mystring", "asdf"));
+  futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset", "mystring"));
+  futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset"));
+
+  ASSERT_REPLY(futures[0], "OK");
+  ASSERT_REPLY(futures[1], 3);
+  ASSERT_REPLY(futures[2], 0);
+
+  futures.clear();
+  futures.emplace_back(tunnel(leaderID)->exec("set", "a", "aa"));
+  futures.emplace_back(tunnel(leaderID)->exec("set", "aa", "a"));
+  futures.emplace_back(tunnel(leaderID)->exec("get", "a"));
+  futures.emplace_back(tunnel(leaderID)->exec("del", "a"));
+  futures.emplace_back(tunnel(leaderID)->exec("get", "aa"));
+
+  ASSERT_REPLY(futures[0], "OK");
+  ASSERT_REPLY(futures[1], "OK");
+  ASSERT_REPLY(futures[2], "aa");
+  ASSERT_REPLY(futures[3], 1);
+  ASSERT_REPLY(futures[4], "a");
+
+  futures.clear();
+  futures.emplace_back(tunnel(leaderID)->exec("flushall"));
+  futures.emplace_back(tunnel(leaderID)->exec("del", "aa"));
+
+  ASSERT_REPLY(futures[0], "OK");
+  ASSERT_REPLY(futures[1], 0);
+}
+
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));

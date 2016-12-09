@@ -217,23 +217,27 @@ rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &fiel
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::hdel(const std::string &key, const std::string &field, LogIndex index) {
-  std::string tkey = translate_key(kHash, key, field);
-
+rocksdb::Status RocksDB::hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
+  removed = 0;
   TransactionPtr tx = startTransaction();
 
-  std::string value;
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
+  for(VecIterator it = start; it != end; it++) {
+    std::string tkey = translate_key(kHash, key, *it);
 
-  if(st.ok()) {
-    THROW_ON_ERROR(tx->Delete(tkey));
-  }
-  else if(!st.IsNotFound()) {
-    qdb_throw(st.ToString());
+    std::string value;
+    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
+
+    if(st.ok()) {
+      removed++;
+      THROW_ON_ERROR(tx->Delete(tkey));
+    }
+    else if(!st.IsNotFound()) {
+      qdb_throw("unexpected rocksdb status: " << st.ToString());
+    }
   }
 
   commitTransaction(tx, index);
-  return st;
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status RocksDB::hlen(const std::string &key, size_t &len) {
@@ -286,22 +290,27 @@ rocksdb::Status RocksDB::hvals(const std::string &key, std::vector<std::string> 
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::sadd(const std::string &key, const std::string &element, int64_t &added, LogIndex index) {
-  std::string tkey = translate_key(kSet, key, element);
-
+rocksdb::Status RocksDB::sadd(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added, LogIndex index) {
+  added = 0;
   TransactionPtr tx = startTransaction();
 
-  std::string tmp;
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+  for(VecIterator it = start; it != end; it++) {
+    std::string tkey = translate_key(kSet, key, *it);
 
-  if(st.IsNotFound()) {
-    added++;
-    RETURN_ON_ERROR(tx->Put(tkey, "1"));
-    st = rocksdb::Status::OK();
+    std::string tmp;
+    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+
+    if(st.IsNotFound()) {
+      added++;
+      THROW_ON_ERROR(tx->Put(tkey, "1"));
+    }
+    else if(!st.ok()) {
+      qdb_throw("unexpected rocksdb status: " << st.ToString());
+    }
   }
 
   commitTransaction(tx, index);
-  return st;
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status RocksDB::sismember(const std::string &key, const std::string &element) {
@@ -311,17 +320,27 @@ rocksdb::Status RocksDB::sismember(const std::string &key, const std::string &el
   return db->Get(rocksdb::ReadOptions(), tkey, &tmp);
 }
 
-rocksdb::Status RocksDB::srem(const std::string &key, const std::string &element, LogIndex index) {
-  std::string tkey = translate_key(kSet, key, element);
-
+rocksdb::Status RocksDB::srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
+  removed = 0;
   TransactionPtr tx = startTransaction();
 
-  std::string tmp;
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+  for(VecIterator it = start; it != end; it++) {
+    std::string tkey = translate_key(kSet, key, *it);
 
-  if(st.ok()) THROW_ON_ERROR(tx->Delete(tkey));
+    std::string tmp;
+    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+
+    if(st.ok()) {
+      removed++;
+      THROW_ON_ERROR(tx->Delete(tkey));
+    }
+    else if(!st.IsNotFound()) {
+      qdb_throw("unexpected rocksdb status: " << st.ToString());
+    }
+  }
+
   commitTransaction(tx, index);
-  return st;
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status RocksDB::smembers(const std::string &key, std::vector<std::string> &members) {
@@ -363,49 +382,64 @@ rocksdb::Status RocksDB::get(const std::string &key, std::string &value) {
   return db->Get(rocksdb::ReadOptions(), tkey, &value);
 }
 
-// if 0 keys are found matching prefix, we return kOk, not kNotFound
-rocksdb::Status RocksDB::remove_all_with_prefix(const std::string &prefix, LogIndex index) {
-  std::string tmp;
+void RocksDB::remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx) {
+  removed = 0;
 
+  std::string tmp;
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
-  TransactionPtr tx = startTransaction();
 
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
     if(!startswith(key, prefix)) break;
-    RETURN_ON_ERROR(tx->Delete(key));
+    if(key.size() > 0 && key[0] == kInternal) continue;
+
+    rocksdb::Status st = tx->Delete(key);
+
+    // not found is still a valid case, because a different thread might have removed
+    // the key in-between
+    if(st.ok()) removed++;
+    else if(!st.IsNotFound()) qdb_throw("unexpected rocksdb status: " << st.ToString());
   }
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::del(const std::string &key, LogIndex index) {
-  std::string tmp;
-
-  // is it a string?
-  std::string str_key = translate_key(kString, key);
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), str_key, &tmp);
-  if(st.ok()) return remove_all_with_prefix(str_key, index);
-
-  // is it a hash?
-  std::string hash_key = translate_key(kHash, key) + "#";
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
-  iter->Seek(hash_key);
-  if(iter->Valid() && startswith(iter->key().ToString(), hash_key)) {
-    return remove_all_with_prefix(hash_key, index);
-  }
-
-  // is it a set?
-  std::string set_key = translate_key(kSet, key) + "#";
-  iter = IteratorPtr(db->NewIterator(rocksdb::ReadOptions()));
-  iter->Seek(set_key);
-  if(iter->Valid() && startswith(iter->key().ToString(), set_key)) {
-    return remove_all_with_prefix(set_key, index);
-  }
-
+rocksdb::Status RocksDB::del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
+  removed = 0;
   TransactionPtr tx = startTransaction();
+
+  for(VecIterator it = start; it != end; it++) {
+    std::string tmp;
+    std::string tkey;
+
+    // is it a string?
+    tkey = translate_key(kString, *it);
+    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+    ASSERT_OK_OR_NOTFOUND(st);
+    if(st.ok()) {
+      removed++;
+      THROW_ON_ERROR(tx->Delete(tkey));
+      continue;
+    }
+
+    int64_t count = 0;
+    // is it a hash?
+    tkey = translate_key(kHash, *it);
+    remove_all_with_prefix(tkey, count, tx);
+    if(count > 0) {
+      removed++;
+      continue;
+    }
+
+    // is it a set?
+    tkey = translate_key(kSet, *it);
+    remove_all_with_prefix(tkey, count, tx);
+    if(count > 0) {
+      removed++;
+      continue;
+    }
+  }
+
   commitTransaction(tx, index);
-  return rocksdb::Status::NotFound();
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status RocksDB::exists(const std::string &key) {
@@ -456,7 +490,11 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
 }
 
 rocksdb::Status RocksDB::flushall(LogIndex index) {
-  return remove_all_with_prefix("", index);
+  int64_t tmp;
+  TransactionPtr tx = startTransaction();
+  remove_all_with_prefix("", tmp, tx);
+  commitTransaction(tx, index);
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status RocksDB::checkpoint(const std::string &path) {

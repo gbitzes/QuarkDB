@@ -49,28 +49,40 @@ TEST_F(Rocks_DB, test_write_transactions) {
   ASSERT_OK(rocksdb()->hget("myhash", "key1", tmp));
   ASSERT_EQ(tmp, "value");
 
-  ASSERT_OK(rocksdb()->hdel("myhash", "key1", 4));
+  std::vector<std::string> elem { "key1", "key2" };
+  int64_t count;
+  ASSERT_OK(rocksdb()->hdel("myhash", elem.begin(), elem.end(), count, 4));
+  ASSERT_EQ(count, 1);
   ASSERT_NOTFOUND(rocksdb()->hget("myhash", "key1", tmp));
   ASSERT_EQ(rocksdb()->getLastApplied(), 4);
 
-  ASSERT_NOTFOUND(rocksdb()->hdel("myhash", "key1", 5));
+  ASSERT_OK(rocksdb()->hdel("myhash", elem.begin(), elem.begin()+1, count, 5));
+  ASSERT_EQ(count, 0);
   ASSERT_EQ(rocksdb()->getLastApplied(), 5);
 
-  ASSERT_NOTFOUND(rocksdb()->del("not-existing", 6));
+  elem = {"not-existing"};
+  ASSERT_OK(rocksdb()->del(elem.begin(), elem.end(), count, 6));
+  ASSERT_EQ(count, 0);
   ASSERT_EQ(rocksdb()->getLastApplied(), 6);
 
   ASSERT_OK(rocksdb()->hset("hash2", "key1", "v2", 7));
   ASSERT_EQ(rocksdb()->getLastApplied(), 7);
 
-  ASSERT_OK(rocksdb()->del("hash2", 8));
+  elem = {"hash2", "asdfasdfad"};
+  ASSERT_OK(rocksdb()->del(elem.begin(), elem.end(), count, 8));
+  ASSERT_EQ(count, 1);
   ASSERT_EQ(rocksdb()->getLastApplied(), 8);
 
-  int64_t added = 0;
-  ASSERT_OK(rocksdb()->sadd("set1", "elem1", added, 9));
-  ASSERT_EQ(added, 1);
+  int64_t added;
+  std::vector<std::string> elementsToAdd { "elem1", "elem2" };
+  ASSERT_OK(rocksdb()->sadd("set1", elementsToAdd.begin(), elementsToAdd.end(), added, 9));
+  ASSERT_EQ(added, 2);
   ASSERT_EQ(rocksdb()->getLastApplied(), 9);
 
-  ASSERT_NOTFOUND(rocksdb()->srem("set1", "elem2", 10));
+  int64_t removed;
+  std::vector<std::string> elementsToRem { "elem2", "elem3" };
+  ASSERT_OK(rocksdb()->srem("set1", elementsToRem.begin(), elementsToRem.end(), removed, 10));
+  ASSERT_EQ(removed, 1);
   ASSERT_EQ(rocksdb()->getLastApplied(), 10);
 
   ASSERT_OK(rocksdb()->noop(11));
@@ -110,11 +122,17 @@ TEST_F(Rocks_DB, basic_sanity) {
   ASSERT_OK(rocksdb()->set("abc", "cde"));
   ASSERT_OK(rocksdb()->get("abc", buffer));
   ASSERT_EQ(buffer, "cde");
-  ASSERT_OK(rocksdb()->del("abc"));
+
+  std::vector<std::string> elem = {"abc"};
+  int64_t count;
+  ASSERT_OK(rocksdb()->del(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 1);
 
   ASSERT_NOTFOUND(rocksdb()->get("abc", buffer));
   ASSERT_NOTFOUND(rocksdb()->exists("abc"));
-  ASSERT_NOTFOUND(rocksdb()->del("abc"));
+  elem = {"abc"};
+  ASSERT_OK(rocksdb()->del(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 0);
 
   ASSERT_OK(rocksdb()->set("123", "345"));
   ASSERT_OK(rocksdb()->set("qwerty", "asdf"));
@@ -129,19 +147,20 @@ TEST_F(Rocks_DB, basic_sanity) {
   ASSERT_EQ(vec.size(), 0u);
 
   int64_t num = 0;
-
-  ASSERT_OK(rocksdb()->sadd("myset", "qqq", num));
+  std::vector<std::string> elements { "qqq" };
+  ASSERT_OK(rocksdb()->sadd("myset", elements.begin(), elements.end(), num));
   ASSERT_EQ(num, 1);
 
   ASSERT_OK(rocksdb()->sismember("myset", "qqq"));
   ASSERT_NOTFOUND(rocksdb()->sismember("myset", "ppp"));
 
   num = 0;
-  ASSERT_OK(rocksdb()->sadd("myset", "ppp", num));
+  elements = { "ppp" };
+  ASSERT_OK(rocksdb()->sadd("myset", elements.begin(), elements.end(), num));
   ASSERT_EQ(num, 1);
 
   num = 0;
-  ASSERT_OK(rocksdb()->sadd("myset", "ppp", num));
+  ASSERT_OK(rocksdb()->sadd("myset", elements.begin(), elements.end(), num));
   ASSERT_EQ(num, 0);
 
   ASSERT_OK(rocksdb()->sismember("myset", "ppp"));
@@ -153,9 +172,17 @@ TEST_F(Rocks_DB, basic_sanity) {
   vec2 = {"ppp", "qqq"};
   ASSERT_EQ(vec, vec2);
 
-  ASSERT_OK(rocksdb()->srem("myset", "ppp"));
-  ASSERT_NOTFOUND(rocksdb()->srem("myset", "www"));
-  ASSERT_NOTFOUND(rocksdb()->srem("myset", "ppp"));
+  elements = { "ppp" };
+  ASSERT_OK(rocksdb()->srem("myset", elements.begin(), elements.end(), num));
+  ASSERT_EQ(num, 1);
+
+  elements = { "www" };
+  ASSERT_OK(rocksdb()->srem("myset", elements.begin(), elements.end(), num));
+  ASSERT_EQ(num, 0);
+
+  elements = { "ppp" };
+  ASSERT_OK(rocksdb()->srem("myset", elements.begin(), elements.end(), num));
+  ASSERT_EQ(num, 0);
 
   ASSERT_OK(rocksdb()->scard("myset", size));
   ASSERT_EQ(size, 1u);
@@ -206,7 +233,9 @@ TEST_F(Rocks_DB, basic_sanity) {
   ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 3u);
 
-  ASSERT_OK(rocksdb()->hdel("myhash", "val"));
+  vec2 = { "val" };
+  ASSERT_OK(rocksdb()->hdel("myhash", vec2.begin(), vec2.end(), count));
+  ASSERT_EQ(count, 1);
   ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 2u);
 

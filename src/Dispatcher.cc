@@ -88,13 +88,9 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     }
     case RedisCommand::DEL: {
       if(request.size() <= 1) return conn->errArgs(request[0]);
-
       int64_t count = 0;
-      for(size_t i = 1; i < request.size(); i++) {
-        rocksdb::Status st = store.del(request[i], commit);
-        if(st.ok()) count++;
-        else if(!st.IsNotFound()) return conn->fromStatus(st);
-      }
+      rocksdb::Status st = store.del(request.begin()+1, request.end(), count, commit);
+      if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::KEYS: {
@@ -159,11 +155,8 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     case RedisCommand::HDEL: {
       if(request.size() <= 2) return conn->errArgs(request[0]);
       int64_t count = 0;
-      for(size_t i = 2; i < request.size(); i++) {
-        rocksdb::Status st = store.hdel(request[1], request[i], commit);
-        if(st.ok()) count++;
-        else if(!st.IsNotFound()) return conn->fromStatus(st);
-      }
+      rocksdb::Status st = store.hdel(request[1], request.begin()+2, request.end(), count, commit);
+      if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::HLEN: {
@@ -212,12 +205,8 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     case RedisCommand::SADD: {
       if(request.size() <= 2) return conn->err(request[0]);
       int64_t count = 0;
-      for(size_t i = 2; i < request.size(); i++) {
-        int64_t tmp = 0;
-        rocksdb::Status st = store.sadd(request[1], request[i], tmp, commit);
-        if(!st.ok()) return conn->fromStatus(st);
-        count += tmp;
-      }
+      rocksdb::Status st = store.sadd(request[1], request.begin()+2, request.end(), count, commit);
+      if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::SISMEMBER: {
@@ -230,11 +219,8 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     case RedisCommand::SREM: {
       if(request.size() <= 2) return conn->errArgs(request[0]);
       int64_t count = 0;
-      for(size_t i = 2; i < request.size(); i++) {
-        rocksdb::Status st = store.srem(request[1], request[i], commit);
-        if(st.ok()) count++;
-        else if(!st.IsNotFound()) return conn->fromStatus(st);
-      }
+      rocksdb::Status st = store.srem(request[1], request.begin()+2, request.end(), count, commit);
+      if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::SMEMBERS: {
