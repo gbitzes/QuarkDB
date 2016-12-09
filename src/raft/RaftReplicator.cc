@@ -145,7 +145,7 @@ static bool resilveringCopyDirectory(const std::string &path, const std::string 
 }
 
 static bool cancelResilvering(Tunnel &tunnel) {
-  std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_FINISH_RESILVERING"});
+  std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_CANCEL_RESILVERING"});
   is_ok_response(fut);
   return false;
 }
