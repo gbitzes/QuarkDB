@@ -143,6 +143,33 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req, LogIndex c
 
   RedisCommand cmd = it->second.first;
   switch(cmd) {
+    case RedisCommand::PING: {
+      if(req.size() > 2) return conn->errArgs(req[0]);
+      if(req.size() == 1) return conn->pong();
+
+      return conn->string(req[1]);
+    }
+    case RedisCommand::DEBUG: {
+      if(req.size() != 2) return conn->errArgs(req[0]);
+      if(caseInsensitiveEquals(req[1], "segfault")) {
+        qdb_critical("COMMITTING SEPPUKU ON CLIENT REQUEST: SEGV");
+        *( (int*) nullptr) = 5;
+      }
+
+      if(caseInsensitiveEquals(req[1], "kill")) {
+        qdb_critical("COMMITTING SEPPUKU ON CLIENT REQUEST: SIGKILL");
+        system(SSTR("kill -9 " << getpid()).c_str());
+        return conn->ok();
+      }
+
+      if(caseInsensitiveEquals(req[1], "terminate")) {
+        qdb_critical("COMMITTING SEPPUKU ON CLIENT REQUEST: SIGTERM");
+        system(SSTR("kill " << getpid()).c_str());
+        return conn->ok();
+      }
+
+      return conn->err(SSTR("unknown argument '" << req[1] << "'"));
+    }
     case RedisCommand::QUARKDB_INFO: {
       return conn->vector(this->info().toVector());
     }
