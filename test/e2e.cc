@@ -152,6 +152,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   futures.emplace_back(tunnel(leaderID)->exec("get", "client2"));
   futures.emplace_back(tunnel(leaderID)->exec("sadd", "myset", "a"));
   futures.emplace_back(tunnel2.exec("sadd", "myset", "b"));
+  futures.emplace_back(tunnel2.exec("sadd", "myset")); // malformed request
   futures.emplace_back(tunnel3.exec("set", "client3", "myval"));
   futures.emplace_back(tunnel3.exec("get", "client3"));
 
@@ -163,10 +164,11 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   ASSERT_REPLY(futures[2], "val");
   ASSERT_REPLY(futures[3], 1);
   ASSERT_REPLY(futures[4], 1);
-  ASSERT_REPLY(futures[5], "OK");
-  ASSERT_REPLY(futures[6], "myval");
+  ASSERT_REPLY(futures[5], "ERR wrong number of arguments for 'sadd' command");
+  ASSERT_REPLY(futures[6], "OK");
+  ASSERT_REPLY(futures[7], "myval");
 
-  redisReplyPtr reply = futures[7].get();
+  redisReplyPtr reply = futures[8].get();
   std::string str = std::string(reply->str, reply->len);
   qdb_info("Race-y request: GET client3 ==> " << str);
   ASSERT_TRUE(str == "myval" || str == "");

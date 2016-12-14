@@ -45,6 +45,8 @@ public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit = 0);
   LinkStatus dispatch(Connection *conn, RedisRequest &request, RedisCommand command, LogIndex commit = 0);
 private:
+  LinkStatus errArgs(Connection *conn, RedisRequest &request, LogIndex commit);
+
   RocksDB &store;
 };
 

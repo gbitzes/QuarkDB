@@ -41,21 +41,26 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInd
   return conn->err(SSTR("unknown command " << quotes(req[0])));
 }
 
+LinkStatus RedisDispatcher::errArgs(Connection *conn, RedisRequest &request, LogIndex commit) {
+  if(commit > 0) store.noop(commit);
+  return conn->errArgs(request[0]);
+}
+
 LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, RedisCommand cmd, LogIndex commit) {
   switch(cmd) {
     case RedisCommand::PING: {
-      if(request.size() > 2) return conn->errArgs(request[0]);
+      if(request.size() > 2) return errArgs(conn, request, commit);
       if(request.size() == 1) return conn->pong();
 
       return conn->string(request[1]);
     }
     case RedisCommand::FLUSHALL: {
-      if(request.size() != 1) return conn->errArgs(request[0]);
+      if(request.size() != 1) return errArgs(conn, request, commit);
       rocksdb::Status st = store.flushall(commit);
       return conn->fromStatus(st);
     }
     case RedisCommand::GET: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
 
       std::string value;
       rocksdb::Status st = store.get(request[1], value);
@@ -64,12 +69,12 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       return conn->string(value);
     }
     case RedisCommand::SET: {
-      if(request.size() != 3) return conn->errArgs(request[0]);
+      if(request.size() != 3) return errArgs(conn, request, commit);
       rocksdb::Status st = store.set(request[1], request[2], commit);
       return conn->fromStatus(st);
     }
     case RedisCommand::EXISTS: {
-      if(request.size() <= 1) return conn->errArgs(request[0]);
+      if(request.size() <= 1) return errArgs(conn, request, commit);
       int64_t count = 0;
       for(size_t i = 1; i < request.size(); i++) {
         rocksdb::Status st = store.exists(request[i]);
@@ -79,21 +84,21 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       return conn->integer(count);
     }
     case RedisCommand::DEL: {
-      if(request.size() <= 1) return conn->errArgs(request[0]);
+      if(request.size() <= 1) return errArgs(conn, request, commit);
       int64_t count = 0;
       rocksdb::Status st = store.del(request.begin()+1, request.end(), count, commit);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::KEYS: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
       std::vector<std::string> ret;
       rocksdb::Status st = store.keys(request[1], ret);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->vector(ret);
     }
     case RedisCommand::HGET: {
-      if(request.size() != 3) return conn->errArgs(request[0]);
+      if(request.size() != 3) return errArgs(conn, request, commit);
 
       std::string value;
       rocksdb::Status st = store.hget(request[1], request[2], value);
@@ -102,7 +107,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       return conn->string(value);
     }
     case RedisCommand::HSET: {
-      if(request.size() != 4) return conn->errArgs(request[0]);
+      if(request.size() != 4) return errArgs(conn, request, commit);
 
       // Mild race condition here.. if the key doesn't exist, but another thread modifies
       // it in the meantime the user gets a response of 1, not 0
@@ -117,55 +122,55 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       return conn->integer(1);
     }
     case RedisCommand::HEXISTS: {
-      if(request.size() != 3) return conn->errArgs(request[0]);
+      if(request.size() != 3) return errArgs(conn, request, commit);
       rocksdb::Status st = store.hexists(request[1], request[2]);
       if(st.ok()) return conn->integer(1);
       if(st.IsNotFound()) return conn->integer(0);
       return conn->fromStatus(st);
     }
     case RedisCommand::HKEYS: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
       std::vector<std::string> keys;
       rocksdb::Status st = store.hkeys(request[1], keys);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->vector(keys);
     }
     case RedisCommand::HGETALL: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
       std::vector<std::string> vec;
       rocksdb::Status st = store.hgetall(request[1], vec);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->vector(vec);
     }
     case RedisCommand::HINCRBY: {
-      if(request.size() != 4) return conn->errArgs(request[0]);
+      if(request.size() != 4) return errArgs(conn, request, commit);
       int64_t ret = 0;
       rocksdb::Status st = store.hincrby(request[1], request[2], request[3], ret, commit);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(ret);
     }
     case RedisCommand::HDEL: {
-      if(request.size() <= 2) return conn->errArgs(request[0]);
+      if(request.size() <= 2) return errArgs(conn, request, commit);
       int64_t count = 0;
       rocksdb::Status st = store.hdel(request[1], request.begin()+2, request.end(), count, commit);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::HLEN: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
       size_t len;
       rocksdb::Status st = store.hlen(request[1], len);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(len);
     }
     case RedisCommand::HVALS: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
       std::vector<std::string> values;
       rocksdb::Status st = store.hvals(request[1], values);
       return conn->vector(values);
     }
     case RedisCommand::HSCAN: {
-      if(request.size() != 3 && request.size() != 5) return conn->errArgs(request[0]);
+      if(request.size() != 3 && request.size() != 5) return errArgs(conn, request, commit);
       std::string cursor;
       int64_t count = 100;
 
@@ -195,42 +200,42 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       return conn->scan(newcursor, vec);
     }
     case RedisCommand::SADD: {
-      if(request.size() <= 2) return conn->err(request[0]);
+      if(request.size() <= 2) return errArgs(conn, request, commit);
       int64_t count = 0;
       rocksdb::Status st = store.sadd(request[1], request.begin()+2, request.end(), count, commit);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::SISMEMBER: {
-      if(request.size() != 3) return conn->errArgs(request[0]);
+      if(request.size() != 3) return errArgs(conn, request, commit);
       rocksdb::Status st = store.sismember(request[1], request[2]);
       if(st.ok()) return conn->integer(1);
       if(st.IsNotFound()) return conn->integer(0);
       return conn->fromStatus(st);
     }
     case RedisCommand::SREM: {
-      if(request.size() <= 2) return conn->errArgs(request[0]);
+      if(request.size() <= 2) return errArgs(conn, request, commit);
       int64_t count = 0;
       rocksdb::Status st = store.srem(request[1], request.begin()+2, request.end(), count, commit);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::SMEMBERS: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
       std::vector<std::string> members;
       rocksdb::Status st = store.smembers(request[1], members);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->vector(members);
     }
     case RedisCommand::SCARD: {
-      if(request.size() != 2) return conn->errArgs(request[0]);
+      if(request.size() != 2) return errArgs(conn, request, commit);
       size_t count;
       rocksdb::Status st = store.scard(request[1], count);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(count);
     }
     case RedisCommand::SSCAN: {
-      if(request.size() != 3) return conn->errArgs(request[0]);
+      if(request.size() != 3) return errArgs(conn, request, commit);
       if(request[2] != "0") return conn->err("invalid cursor");
       std::vector<std::string> members;
       rocksdb::Status st = store.smembers(request[1], members);
