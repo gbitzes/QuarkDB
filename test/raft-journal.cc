@@ -262,5 +262,15 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(journal.getMembership().nodes.size(), 3u);
   ASSERT_EQ(journal.getMembership().nodes[0], nodes[1]);
   ASSERT_TRUE(journal.setCommitIndex(size+8));
+
+  // try to update members by appending a journal entry which has a wrong clusterID
+  // verify it is ignored
+  RaftMembership originalMembership = journal.getMembership();
+  nodes = originalMembership.nodes;
+  observers = originalMembership.observers;
+  observers.emplace_back("some_node", 567);
+
+  ASSERT_TRUE(journal.append(journal.getLogSize(), 4, make_req("JOURNAL_UPDATE_MEMBERS", RaftMembers(nodes, observers).toString(), "wrong_cluster_id")));
+  ASSERT_EQ(journal.getMembership(), originalMembership);
 }
 }

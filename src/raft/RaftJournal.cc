@@ -105,7 +105,7 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
   this->set_or_die("RAFT_MEMBERS", newMembers.toString());
   this->set_int_or_die("RAFT_MEMBERSHIP_EPOCH", 0);
 
-  RedisRequest req { "JOURNAL_UPDATE_MEMBERS", newMembers.toString() };
+  RedisRequest req { "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), newClusterID };
   this->set_or_die(encodeEntryKey(0), serializeRedisRequest(0, req));
 
   initialize();
@@ -256,7 +256,7 @@ bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers,
     return false;
   }
 
-  RedisRequest req = {"JOURNAL_UPDATE_MEMBERS", newMembers.toString() };
+  RedisRequest req = {"JOURNAL_UPDATE_MEMBERS", newMembers.toString(), clusterID };
   return appendNoLock(logSize, term, req);
 }
 
@@ -297,6 +297,8 @@ bool RaftJournal::appendNoLock(LogIndex index, RaftTerm term, const RedisRequest
   TransactionPtr tx(startTransaction());
 
   if(req[0] == "JOURNAL_UPDATE_MEMBERS") {
+    if(req.size() != 3) qdb_throw("Journal corruption, invalid journal_update_members: " << req);
+
     //--------------------------------------------------------------------------
     // Special case for membership updates
     // We don't wait until the entry is committed, and it takes effect
@@ -305,18 +307,25 @@ bool RaftJournal::appendNoLock(LogIndex index, RaftTerm term, const RedisRequest
     // state machine.
     //--------------------------------------------------------------------------
 
-    THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", req[1]));
-    THROW_ON_ERROR(tx->Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(index)));
+    if(req[2] == clusterID) {
+      THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", req[1]));
+      THROW_ON_ERROR(tx->Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(index)));
 
-    THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERS", members.toString()));
-    THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERSHIP_EPOCH", intToBinaryString(membershipEpoch)));
+      THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERS", members.toString()));
+      THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERSHIP_EPOCH", intToBinaryString(membershipEpoch)));
 
-    qdb_event("Transitioning into a new membership epoch: " << membershipEpoch << " => " << index
-    << ". Old members: " << members.toString() << ", new members: " << req[1]);
+      qdb_event("Transitioning into a new membership epoch: " << membershipEpoch << " => " << index
+      << ". Old members: " << members.toString() << ", new members: " << req[1]);
 
-    std::lock_guard<std::mutex> lock(membersMutex);
-    members = RaftMembers(req[1]);
-    membershipEpoch = index;
+      std::lock_guard<std::mutex> lock(membersMutex);
+      members = RaftMembers(req[1]);
+      membershipEpoch = index;
+    }
+    else {
+      qdb_critical("Received request for membership update " << req << ", but the clusterIDs do not match - mine is " << clusterID
+      << ". THE MEMBERSHIP UPDATE ENTRY WILL BE IGNORED. Something is either corrupted or you force-reconfigured " <<
+      " the nodes recently - if it's the latter, this message is nothing to worry about.");
+    }
   }
 
   THROW_ON_ERROR(tx->Put(encodeEntryKey(index), serializeRedisRequest(term, req)));

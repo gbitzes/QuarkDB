@@ -35,6 +35,10 @@ struct RaftMembership {
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;
   LogIndex epoch;
+
+  bool operator==(const RaftMembership &rhs) const {
+    return nodes == rhs.nodes && observers == rhs.observers && epoch == rhs.epoch;
+  }
 };
 
 // Internal class, not exposed to users

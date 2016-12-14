@@ -141,7 +141,7 @@ TEST_F(Raft_Dispatcher, validate_initial_state) {
   RaftEntry entry;
   ASSERT_TRUE(dispatcher()->fetch(0, entry));
   ASSERT_EQ(entry.term, 0);
-  ASSERT_EQ(entry.request, make_req("JOURNAL_UPDATE_MEMBERS", RaftMembers(nodes(), {}).toString()));
+  ASSERT_EQ(entry.request, make_req("JOURNAL_UPDATE_MEMBERS", RaftMembers(nodes(), {}).toString(), info.clusterID));
 }
 
 TEST_F(Raft_Dispatcher, send_first_heartbeat) {
