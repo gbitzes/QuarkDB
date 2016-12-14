@@ -1,11 +1,14 @@
-cmake_minimum_required(VERSION 2.6)
-
 include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${BACKWARD_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIRS}
   ${HIREDIS_INCLUDE_DIRS}
 )
+
+#-------------------------------------------------------------------------------
+# Add the XrdQuarkOfs plugin
+#-------------------------------------------------------------------------------
+add_subdirectory(XrdQuarkOfs)
 
 #-------------------------------------------------------------------------------
 # XrdRedis plugin
