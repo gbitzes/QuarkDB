@@ -100,6 +100,13 @@ int XrdRedisProtocol::Process(XrdLink *lp) {
 }
 
 XrdProtocol* XrdRedisProtocol::Match(XrdLink *lp) {
+  char buffer[4];
+
+  // Peek at the first bytes of data
+  int dlen = lp->Peek(buffer, (int) sizeof (buffer), 10000);
+  if(dlen <= 0) return nullptr;
+  if(buffer[0] != '*') return nullptr;
+
   XrdRedisProtocol *rp = new XrdRedisProtocol();
   return rp;
 }
