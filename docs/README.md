@@ -1,6 +1,6 @@
 # quarkdb
 
-quarkdb is a highly available key-value store that implements a small subset
+[quarkdb](https://gitlab.cern.ch/eos/quarkdb) is a highly available key-value store that implements a small subset
 of the redis command set, developed by IT-ST at CERN.
 
 We build on top of [rocksdb](https://github.com/facebook/rocksdb), a strongly
