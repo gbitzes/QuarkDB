@@ -24,7 +24,7 @@
 #ifndef __XRDQUARK_NAMESPACE_HH__
 #define __XRDQUARK_NAMESPACE_HH__
 
-#define XRDQUARKNAMESPACE_BEGIN namespace quark {
+#define XRDQUARKNAMESPACE_BEGIN namespace quarkdb {
 #define XRDQUARKNAMESPACE_END }
 
 #endif

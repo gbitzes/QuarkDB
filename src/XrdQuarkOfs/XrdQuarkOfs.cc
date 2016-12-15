@@ -28,9 +28,11 @@
 #include "XrdSec/XrdSecEntity.hh"
 #include "XrdNet/XrdNetIF.hh"
 #include "XrdVersion.hh"
+#include "../Tunnel.hh"
+#include "../Common.hh"
 
 // The global OFS handle
-quark::XrdQuarkOfs* quark::gOFS;
+quarkdb::XrdQuarkOfs* quarkdb::gOFS;
 extern XrdSysError OfsEroute;
 extern XrdOfs* XrdOfsFS;
 XrdVERSIONINFO(XrdSfsGetFileSystem, QuarkOfs);
@@ -40,12 +42,12 @@ char g_logstring[2048];
 // Log wrapping function
 //------------------------------------------------------------------------------
 static
-void log_fn(quark::log::lvl level, const char *format, ...) {
+void log_fn(quarkdb::log::lvl level, const char *format, ...) {
   va_list args;
   va_start(args, format);
   vsnprintf(g_logstring, 2048, format, args);
   va_end(args);
-  OfsEroute.Log(level, quark::GetStringLogLvl(level), g_logstring);
+  OfsEroute.Log(level, quarkdb::GetStringLogLvl(level), g_logstring);
 }
 
 //------------------------------------------------------------------------------
@@ -64,15 +66,15 @@ extern "C"
     version += XrdVERSION;
     OfsEroute.Say("++++++ (c) 2016 CERN/IT-DSS ", version.c_str());
     // Initialize the subsystems
-    quark::gOFS = new quark::XrdQuarkOfs();
-    quark::gOFS->ConfigFN = (configfn && *configfn ? strdup(configfn) : 0);
+    quarkdb::gOFS = new quarkdb::XrdQuarkOfs();
+    quarkdb::gOFS->ConfigFN = (configfn && *configfn ? strdup(configfn) : 0);
 
-    if (quark::gOFS->Configure(OfsEroute)) {
+    if (quarkdb::gOFS->Configure(OfsEroute)) {
       return 0;
     }
 
-    XrdOfsFS = quark::gOFS;
-    return quark::gOFS;
+    XrdOfsFS = quarkdb::gOFS;
+    return quarkdb::gOFS;
   }
 }
 
@@ -100,6 +102,7 @@ XrdQuarkOfs::~XrdQuarkOfs()
 int
 XrdQuarkOfs::Configure(XrdSysError& error)
 {
+  tunnel = new quarkdb::Tunnel("localhost", myPort);
   error.setMsgMask(log::lvl::info);
   return 0;
 }
@@ -116,6 +119,53 @@ XrdQuarkOfs::fsctl(const int cmd, const char* args, XrdOucErrInfo& out_error,
   return Emsg(epname, out_error, ENOSYS, epname, "");
 }
 
+static char* redisReplyToStr(redisReply *reply) {
+  if(reply->type == REDIS_REPLY_STRING) {
+    char* buffer = new char[reply->len + 25];
+
+    int len = sprintf(buffer, "$%d\r\n", reply->len);
+
+    if(reply->len != 0) {
+      memcpy(buffer+len, reply->str, reply->len); // we might have embedded null bytes
+      sprintf(buffer+len+reply->len, "\r\n");
+    }
+    return buffer;
+  }
+  else if(reply->type == REDIS_REPLY_ERROR || reply->type == REDIS_REPLY_STATUS) {
+    char* buffer = new char[reply->len + 25];
+    char prefix = '-';
+    if(reply->type == REDIS_REPLY_STATUS) prefix = '+';
+    sprintf(buffer, "%c%s\r\n", prefix, reply->str);
+    return buffer;
+  }
+  else if(reply->type == REDIS_REPLY_INTEGER) {
+    char* buffer = new char[50];
+    sprintf(buffer, ":%lld\r\n", reply->integer);
+    return buffer;
+  }
+  else if(reply->type == REDIS_REPLY_NIL) {
+    char* buffer = new char[10];
+    sprintf(buffer, ":-1\r\n");
+    return buffer;
+  }
+  else if(reply->type == REDIS_REPLY_ARRAY) {
+    std::ostringstream ss;
+    ss << "*" << reply->elements;
+
+    for(size_t i = 0; i < reply->elements; i++) {
+      char* buffer = redisReplyToStr(reply->element[i]);
+      ss << buffer;
+      delete buffer;
+    }
+
+    char *buffer = new char[ss.tellp()];
+    memcpy(buffer, ss.str().c_str(), ss.tellp());
+    return buffer;
+  }
+
+  qdb_throw("should never happen");
+}
+
 //------------------------------------------------------------------------------
 // Execute file system command !!! FSctl !!!
 //------------------------------------------------------------------------------
@@ -123,11 +173,19 @@ int
 XrdQuarkOfs::FSctl(const int cmd, XrdSfsFSctl& args, XrdOucErrInfo& error,
 		   const XrdSecEntity* client)
 {
-  // TODO (esindril): implement this
-  EPNAME("FSctl");
   log_fn(log::lvl::info, "arg1:%s arg1len:%i arg2:%s arg2len:%i", args.Arg1,
 	args.Arg1Len, args.Arg2, args.Arg2Len);
-  return Emsg(epname, error, ENOSYS, epname, "");
+
+  quarkdb::redisReplyPtr rep = tunnel->execute(args.Arg1, args.Arg1Len).get();
+
+  if(!rep) {
+    return SFS_ERROR;
+  }
+
+  char* response = redisReplyToStr(rep.get());
+  XrdOucBuffer* xrd_buff = new XrdOucBuffer(response, strlen(response));
+  error.setErrInfo(xrd_buff->BuffSize(), xrd_buff);
+  return SFS_DATA;
 }
 
 XRDQUARKNAMESPACE_END

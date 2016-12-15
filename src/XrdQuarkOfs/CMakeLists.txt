@@ -10,6 +10,7 @@ add_library(
 
 target_link_libraries(
   XrdQuarkOfs
+  XrdRedis
   ${XROOTD_SERVER_LIBRARY})
 
 install(
