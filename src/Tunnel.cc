@@ -57,7 +57,7 @@ void Tunnel::clearIntercepts() {
 // Tunnel class implementation
 //------------------------------------------------------------------------------
 
-std::future<redisReplyPtr> Tunnel::execute(size_t nchunks, const char **chunks, const size_t *sizes) {
+std::future<redisReplyPtr> Tunnel::execute(const char *buffer, const size_t len) {
   std::lock_guard<std::recursive_mutex> lock(mtx);
 
   // not connected?
@@ -67,13 +67,17 @@ std::future<redisReplyPtr> Tunnel::execute(size_t nchunks, const char **chunks, 
     return prom.get_future();
   }
 
-  char *buffer = NULL;
-  int len = redisFormatCommandArgv(&buffer, nchunks, chunks, sizes);
   send(sock, buffer, len, 0);
-  free(buffer);
-
   promises.emplace();
   return promises.back().get_future();
+}
+
+std::future<redisReplyPtr> Tunnel::execute(size_t nchunks, const char **chunks, const size_t *sizes) {
+  char *buffer = NULL;
+  int len = redisFormatCommandArgv(&buffer, nchunks, chunks, sizes);
+  std::future<redisReplyPtr> ret = this->execute(buffer, len);
+  free(buffer);
+  return ret;
 }
 
 void Tunnel::startEventLoop() {

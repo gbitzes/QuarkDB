@@ -42,6 +42,7 @@ public:
   ~Tunnel();
   DISALLOW_COPY_AND_ASSIGN(Tunnel);
 
+  std::future<redisReplyPtr> execute(const char *buffer, size_t len);
   std::future<redisReplyPtr> execute(const RedisRequest &req);
   std::future<redisReplyPtr> execute(size_t nchunks, const char **chunks, const size_t *sizes);
 
