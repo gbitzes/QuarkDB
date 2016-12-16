@@ -23,7 +23,6 @@
 
 #include "raft/RaftTalker.hh"
 #include "Common.hh"
-#include "Tunnel.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>

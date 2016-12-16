@@ -56,6 +56,7 @@ add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++11 -g3 -fPIC
 
 if(NOT PACKAGEONLY)
   add_subdirectory(deps/backward-cpp)
+  add_subdirectory(deps/qclient)
   add_subdirectory(test)
   add_subdirectory(src)
   add_subdirectory(tools)

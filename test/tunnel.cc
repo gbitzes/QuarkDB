@@ -21,7 +21,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "Tunnel.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
 #include <sys/socket.h>
@@ -29,6 +28,7 @@
 
 
 using namespace quarkdb;
+using namespace qclient;
 
 static void assert_receive(int fd, const std::string &contents) {
   char buffer[contents.size()];
@@ -46,7 +46,7 @@ static std::string str_from_reply(redisReplyPtr &reply) {
 }
 
 TEST(Tunnel, T1) {
-  Tunnel tunnel("localhost", 1234);
+  QClient tunnel("localhost", 1234);
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
@@ -86,9 +86,9 @@ TEST(Tunnel, T1) {
   close(s2);
 }
 
-TEST(Tunnel, T2) {
+TEST(QClient, T2) {
   // with handshake
-  Tunnel tunnel("localhost", 1234, {"RAFT_HANDSHAKE", "some-cluster-id"});
+  QClient tunnel("localhost", 1234, false, {"RAFT_HANDSHAKE", "some-cluster-id"});
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);

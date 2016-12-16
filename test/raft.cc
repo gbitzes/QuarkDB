@@ -26,7 +26,6 @@
 #include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
-#include "Tunnel.hh"
 #include "Poller.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"

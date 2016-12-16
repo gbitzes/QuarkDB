@@ -94,7 +94,7 @@ static bool is_ok_response(std::future<redisReplyPtr> &fut) {
   return true;
 }
 
-static bool resilveringCopyDirectory(const std::string &path, const std::string &prefix, Tunnel &tunnel) {
+static bool resilveringCopyDirectory(const std::string &path, const std::string &prefix, qclient::QClient &tunnel) {
   qdb_info("Copying directory " << path << " under prefix '" << prefix << "'");
 
   DIR *dir;
@@ -144,7 +144,7 @@ static bool resilveringCopyDirectory(const std::string &path, const std::string 
   return true;
 }
 
-static bool cancelResilvering(Tunnel &tunnel) {
+static bool cancelResilvering(QClient &tunnel) {
   std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_CANCEL_RESILVERING"});
   is_ok_response(fut);
   return false;
@@ -153,7 +153,7 @@ static bool cancelResilvering(Tunnel &tunnel) {
 bool RaftReplicator::resilver(const RaftServer &target, const RaftStateSnapshot &snapshot) {
   qdb_critical("Attempting to automatically resilver target " << target.toString());
 
-  Tunnel tunnel(target.hostname, target.port);
+  QClient tunnel(target.hostname, target.port);
   std::future<redisReplyPtr> fut = tunnel.execute({"QUARKDB_START_RESILVERING"});
   if(!is_ok_response(fut)) return cancelResilvering(tunnel);
 

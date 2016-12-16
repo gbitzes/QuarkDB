@@ -22,11 +22,12 @@
  ************************************************************************/
 
 #include "Poller.hh"
-#include "Tunnel.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
+#include <qclient/qclient.hh>
 
 using namespace quarkdb;
+using namespace qclient;
 
 #define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
 
@@ -38,7 +39,7 @@ TEST_F(tPoller, T1) {
   Poller rocksdbPoller(myself().port, &dispatcher);
 
   // start first connection
-  Tunnel tunnel(myself().hostname, myself().port);
+  QClient tunnel(myself().hostname, myself().port);
 
   redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
   ASSERT_REPLY(reply, "OK");
@@ -47,7 +48,7 @@ TEST_F(tPoller, T1) {
   ASSERT_REPLY(reply, "1234");
 
   // start second connection, ensure the poller can handle them concurrently
-  Tunnel tunnel2(myself().hostname, myself().port);
+  QClient tunnel2(myself().hostname, myself().port);
 
   reply = tunnel2.execute({"get", "abc"}).get();
   ASSERT_REPLY(reply, "1234");
@@ -56,7 +57,7 @@ TEST_F(tPoller, T1) {
   ASSERT_REPLY(reply, "OK");
 
   // now try a third
-  Tunnel tunnel3(myself().hostname, myself().port);
+  QClient tunnel3(myself().hostname, myself().port);
   reply = tunnel3.execute({"get", "qwert"}).get();
   ASSERT_REPLY(reply, "asdf");
 }
@@ -64,7 +65,7 @@ TEST_F(tPoller, T1) {
 TEST_F(tPoller, test_reconnect) {
   RedisDispatcher dispatcher(*rocksdb());
 
-  Tunnel tunnel(myself().hostname, myself().port);
+  QClient tunnel(myself().hostname, myself().port);
 
   for(size_t reconnects = 0; reconnects < 5; reconnects++) {
     Poller rocksdbpoller(myself().port, &dispatcher);

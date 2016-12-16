@@ -7,3 +7,6 @@
 [submodule "deps/rocksdb"]
 	path = deps/rocksdb
 	url = https://github.com/facebook/rocksdb
+[submodule "deps/qclient"]
+	path = deps/qclient
+	url = https://gitlab.cern.ch/eos/qclient.git

@@ -37,6 +37,7 @@ include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src  # need access to the private headers
   ${ROCKSDB_INCLUDE_DIRS}
+  ${CMAKE_SOURCE_DIR}/deps/qclient/include
 )
 
 target_link_libraries(tests

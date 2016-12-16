@@ -3,6 +3,7 @@ include_directories(
   ${BACKWARD_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIRS}
   ${HIREDIS_INCLUDE_DIRS}
+  ${CMAKE_SOURCE_DIR}/deps/qclient/include
 )
 
 #-------------------------------------------------------------------------------
@@ -27,7 +28,6 @@ add_library(XrdRedis SHARED
   Commands.cc                Commands.hh
   Response.cc                Response.hh
   Dispatcher.cc              Dispatcher.hh
-  Tunnel.cc                  Tunnel.hh
   Poller.cc                  Poller.hh
   Connection.cc              Connection.hh
   QuarkDBNode.cc             QuarkDBNode.hh
@@ -47,6 +47,7 @@ add_library(XrdRedis SHARED
 
 target_link_libraries(
   XrdRedis
+  qclient
   bz2
   rocksdb
   # libasan.a

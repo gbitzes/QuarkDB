@@ -25,11 +25,12 @@
 #define __QUARKDB_RAFT_TALKER_H__
 
 #include "../Common.hh"
-#include "../Tunnel.hh"
+#include <qclient/qclient.hh>
 #include "RaftCommon.hh"
 #include <mutex>
 
 namespace quarkdb {
+using namespace qclient;
 
 class RaftTalker {
 public:
@@ -44,7 +45,7 @@ public:
   std::future<redisReplyPtr> fetch(LogIndex index);
 private:
   const RaftClusterID clusterID;
-  Tunnel tunnel;
+  QClient tunnel;
 };
 
 }

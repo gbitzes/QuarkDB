@@ -1,5 +1,7 @@
 include_directories(
-  ${XROOTD_INCLUDE_DIRS})
+  ${XROOTD_INCLUDE_DIRS}
+  ${CMAKE_SOURCE_DIR}/deps/qclient/include
+)
 
 #-------------------------------------------------------------------------------
 # XrdQuarkOfs plugin

@@ -24,7 +24,7 @@
 #ifndef __QUARKDB_RAFT_PARSER_H__
 #define __QUARKDB_RAFT_PARSER_H__
 
-#include "../Tunnel.hh"
+#include <qclient/qclient.hh>
 #include "RaftCommon.hh"
 #include "../Common.hh"
 #include "RaftState.hh"
@@ -35,10 +35,10 @@ namespace quarkdb {
 class RaftParser {
 public:
   static bool appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &dest);
-  static bool appendEntriesResponse(const redisReplyPtr &source, RaftAppendEntriesResponse &dest);
+  static bool appendEntriesResponse(const qclient::redisReplyPtr &source, RaftAppendEntriesResponse &dest);
   static bool voteRequest(RedisRequest &source, RaftVoteRequest &dest);
-  static bool voteResponse(const redisReplyPtr &source, RaftVoteResponse &dest);
-  static bool fetchResponse(const redisReplyPtr &source, RaftEntry &entry);
+  static bool voteResponse(const qclient::redisReplyPtr &source, RaftVoteResponse &dest);
+  static bool fetchResponse(const qclient::redisReplyPtr &source, RaftEntry &entry);
 };
 
 class RaftElection {

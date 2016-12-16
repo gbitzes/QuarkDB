@@ -23,7 +23,6 @@
 
 #include "test-utils.hh"
 #include "Utils.hh"
-#include "Tunnel.hh"
 #include <vector>
 #include <string>
 #include <gtest/gtest.h>
@@ -97,7 +96,7 @@ RaftServer GlobalEnv::server(int id) {
   srv.hostname = SSTR("server" << id);
   srv.port = 23456 + id;
 
-  Tunnel::addIntercept(srv.hostname, srv.port, "127.0.0.1", srv.port);
+  qclient::QClient::addIntercept(srv.hostname, srv.port, "127.0.0.1", srv.port);
   return srv;
 }
 
@@ -154,7 +153,7 @@ std::vector<RaftServer> TestCluster::nodes(int id) {
   return node(id)->nodes();
 }
 
-Tunnel* TestCluster::tunnel(int id) {
+qclient::QClient* TestCluster::tunnel(int id) {
   return node(id)->tunnel();
 }
 
@@ -233,9 +232,9 @@ Poller* TestNode::poller() {
   return pollerptr;
 }
 
-Tunnel* TestNode::tunnel() {
+qclient::QClient* TestNode::tunnel() {
   if(tunnelptr == nullptr) {
-    tunnelptr = new Tunnel(myself().hostname, myself().port);
+    tunnelptr = new qclient::QClient(myself().hostname, myself().port);
   }
   return tunnelptr;
 }

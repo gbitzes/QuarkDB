@@ -28,7 +28,7 @@
 #include "XrdOfs/XrdOfsTrace.hh"
 #include <string>
 #include "Namespace.hh"
-#include "../Tunnel.hh"
+#include <qclient/qclient.hh>
 
 XRDQUARKNAMESPACE_BEGIN
 
@@ -278,7 +278,7 @@ public:
   }
 
 private:
-  quarkdb::Tunnel *tunnel;
+  qclient::QClient *tunnel;
   std::string mManagerIp; ///< the IP address of instance
   int mLogLevel; ///< log level value 0 -7 (LOG_EMERG - LOG_DEBUG)
 };

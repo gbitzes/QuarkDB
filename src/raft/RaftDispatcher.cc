@@ -171,7 +171,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   RaftStateSnapshot snapshot = state.getSnapshot();
   if(snapshot.status != RaftStatus::LEADER) {
     if(snapshot.leader.empty()) {
-      return conn->appendError("unavailable");
+      return conn->appendError("ERR unavailable");
     }
     return conn->appendError(SSTR("MOVED 0 " << snapshot.leader.toString()));
   }
@@ -189,7 +189,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   if(!journal.append(index, snapshot.term, req)) {
     qdb_critical("appending to journal failed for index = " << index <<
     " and term " << snapshot.term << " when servicing client request");
-    return conn->appendError("unknown error");
+    return conn->appendError("ERR unknown error");
   }
 
   conn->appendReq(&redisDispatcher, std::move(req), index);

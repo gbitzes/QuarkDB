@@ -33,6 +33,7 @@
 #include "raft/RaftDirector.hh"
 #include "raft/RaftGroup.hh"
 #include "Poller.hh"
+#include <qclient/qclient.hh>
 #include <gtest/gtest.h>
 
 #include <sys/types.h>
@@ -97,7 +98,7 @@ public:
 
   RaftGroup* group();
   Poller *poller();
-  Tunnel *tunnel();
+  qclient::QClient *tunnel();
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
@@ -108,7 +109,7 @@ private:
 
   RaftGroup *raftgroup = nullptr;
   Poller *pollerptr = nullptr;
-  Tunnel *tunnelptr = nullptr;
+  qclient::QClient *tunnelptr = nullptr;
 };
 
 // Contains everything needed to simulate a cluster with an arbitrary number of nodes.
@@ -126,7 +127,7 @@ public:
   Poller *poller(int id = 0);
   RaftServer myself(int id = 0);
   RaftDirector *director(int id = 0);
-  Tunnel *tunnel(int id = 0);
+  qclient::QClient *tunnel(int id = 0);
   RaftClock *raftclock(int id = 0);
 
   // spin up a node

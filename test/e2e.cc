@@ -26,13 +26,13 @@
 #include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
-#include "Tunnel.hh"
 #include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
+#include <qclient/qclient.hh>
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -144,8 +144,8 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   futures.clear();
 
   // interwine pipelined requests from three connections
-  Tunnel tunnel2(myself(leaderID).hostname, myself(leaderID).port);
-  Tunnel tunnel3(myself(leaderID).hostname, myself(leaderID).port);
+  qclient::QClient tunnel2(myself(leaderID).hostname, myself(leaderID).port);
+  qclient::QClient tunnel3(myself(leaderID).hostname, myself(leaderID).port);
 
   futures.emplace_back(tunnel2.exec("get", "qwerty"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "client2", "val"));

@@ -33,6 +33,7 @@
 #include "XrdOuc/XrdOucStream.hh"
 
 #include "QuarkDBNode.hh"
+#include "EventFD.hh"
 
 #include "Configuration.hh"
 #include "RedisParser.hh"

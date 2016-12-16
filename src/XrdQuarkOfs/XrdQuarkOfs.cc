@@ -28,8 +28,9 @@
 #include "XrdSec/XrdSecEntity.hh"
 #include "XrdNet/XrdNetIF.hh"
 #include "XrdVersion.hh"
-#include "../Tunnel.hh"
 #include "../Common.hh"
+#include <sstream>
+#include "../Utils.hh"
 
 // The global OFS handle
 quarkdb::XrdQuarkOfs* quarkdb::gOFS;
@@ -78,6 +79,8 @@ extern "C"
   }
 }
 
+using namespace qclient;
+
 XRDQUARKNAMESPACE_BEGIN
 
 //------------------------------------------------------------------------------
@@ -102,7 +105,7 @@ XrdQuarkOfs::~XrdQuarkOfs()
 int
 XrdQuarkOfs::Configure(XrdSysError& error)
 {
-  tunnel = new quarkdb::Tunnel("localhost", myPort);
+  tunnel = new QClient("localhost", myPort);
   error.setMsgMask(log::lvl::info);
   return 0;
 }
@@ -145,7 +148,7 @@ static char* redisReplyToStr(redisReply *reply) {
   }
   else if(reply->type == REDIS_REPLY_NIL) {
     char* buffer = new char[10];
-    sprintf(buffer, ":-1\r\n");
+    sprintf(buffer, "$-1\r\n");
     return buffer;
   }
   else if(reply->type == REDIS_REPLY_ARRAY) {
@@ -176,7 +179,7 @@ XrdQuarkOfs::FSctl(const int cmd, XrdSfsFSctl& args, XrdOucErrInfo& error,
   log_fn(log::lvl::info, "arg1:%s arg1len:%i arg2:%s arg2len:%i", args.Arg1,
 	args.Arg1Len, args.Arg2, args.Arg2Len);
 
-  quarkdb::redisReplyPtr rep = tunnel->execute(args.Arg1, args.Arg1Len).get();
+  redisReplyPtr rep = tunnel->execute(args.Arg1, args.Arg1Len).get();
 
   if(!rep) {
     return SFS_ERROR;
