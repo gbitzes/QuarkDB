@@ -38,7 +38,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInd
     store.noop(commit);
   }
 
-  return conn->err(SSTR("unknown command " << quotes(req[0])));
+  return conn->err(SSTR("ERR unknown command " << quotes(req[0])));
 }
 
 LinkStatus RedisDispatcher::errArgs(Connection *conn, RedisRequest &request, LogIndex commit) {
@@ -181,13 +181,13 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
         cursor = std::string(request[2].begin() + 5, request[2].end());
       }
       else {
-        return conn->err("invalid cursor");
+        return conn->err("ERR invalid cursor");
       }
 
       if(request.size() == 5) {
-        if(!caseInsensitiveEquals(request[3], "count")) return conn->err("syntax error");
-        if(startswith(request[4], "-") || request[4] == "0") return conn->err("syntax error");
-        if(!my_strtoll(request[4], count)) return conn->err("value is not an integer or out of range");
+        if(!caseInsensitiveEquals(request[3], "count")) return conn->err("ERR syntax error");
+        if(startswith(request[4], "-") || request[4] == "0") return conn->err("ERR syntax error");
+        if(!my_strtoll(request[4], count)) return conn->err("ERR value is not an integer or out of range");
       }
 
       std::string newcursor;
@@ -236,13 +236,13 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
     }
     case RedisCommand::SSCAN: {
       if(request.size() != 3) return errArgs(conn, request, commit);
-      if(request[2] != "0") return conn->err("invalid cursor");
+      if(request[2] != "0") return conn->err("ERR invalid cursor");
       std::vector<std::string> members;
       rocksdb::Status st = store.smembers(request[1], members);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->scan("0", members);
     }
     default:
-      return conn->err(SSTR("internal dispatching error for " << quotes(request[0]) << " - raft not enabled?"));
+      return conn->err(SSTR("ERR internal dispatching error for " << quotes(request[0]) << " - raft not enabled?"));
   }
 }

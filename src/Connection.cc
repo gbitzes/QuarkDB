@@ -33,7 +33,7 @@ Connection::Connection(Link *l)
 }
 
 Connection::~Connection() {
-  flushPending("connection shutting down");
+  flushPending("ERR connection shutting down");
 }
 
 LinkStatus Connection::err(const std::string &msg) {

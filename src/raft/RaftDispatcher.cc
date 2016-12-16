@@ -66,20 +66,20 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
       return conn->vector(ret);
     }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
-      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
+      if(!conn->raftAuthorization) return conn->err("ERR not authorized to issue raft commands");
       RaftAppendEntriesRequest dest;
       if(!RaftParser::appendEntries(std::move(req), dest)) {
-        return conn->err("malformed request");
+        return conn->err("ERR malformed request");
       }
 
       RaftAppendEntriesResponse resp = appendEntries(std::move(dest));
       return conn->vector(resp.toVector());
     }
     case RedisCommand::RAFT_REQUEST_VOTE: {
-      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
+      if(!conn->raftAuthorization) return conn->err("ERR not authorized to issue raft commands");
       RaftVoteRequest votereq;
       if(!RaftParser::voteRequest(req, votereq)) {
-        return conn->err("malformed request");
+        return conn->err("ERR malformed request");
       }
 
       RaftVoteResponse resp = requestVote(votereq);
@@ -90,7 +90,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
       if(req.size() != 3) return conn->errArgs(req[0]);
       if(req[2] != journal.getClusterID()) {
         qdb_critical("received handshake with wrong cluster id: " << req[2] << " (mine is " << journal.getClusterID() << ")");
-        return conn->err("wrong cluster id");
+        return conn->err("ERR wrong cluster id");
       }
 
       conn->raftAuthorization = true;
@@ -110,11 +110,11 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
       RaftStateSnapshot snapshot = state.getSnapshot();
 
       if(snapshot.leader.empty()) {
-        return conn->err("I have no leader, cannot start a coup");
+        return conn->err("ERR I have no leader, cannot start a coup");
       }
 
       if(snapshot.leader == state.getMyself()) {
-        return conn->err("I am the leader! I can't revolt against myself, you know.");
+        return conn->err("ERR I am the leader! I can't revolt against myself, you know.");
       }
 
       qdb_event("Received request to attempt a coup d'etat against the current leader.");

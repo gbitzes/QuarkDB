@@ -27,7 +27,8 @@
 using namespace quarkdb;
 
 LinkStatus Response::err(Link *link, const std::string &err) {
-  return link->Send(SSTR("-ERR " << err << "\r\n"));
+  if(!startswith(err, "ERR ") && !startswith(err, "MOVED ")) qdb_throw("invalid error message: " << err);
+  return link->Send(SSTR("-" << err << "\r\n"));
 }
 
 LinkStatus Response::errArgs(Link *link, const std::string &cmd) {

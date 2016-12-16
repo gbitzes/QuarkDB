@@ -33,7 +33,7 @@ TEST(Response, T1) {
   XrdBuffManager bufferManager(NULL, NULL);
   BufferedReader reader(&link, &bufferManager, 3);
 
-  ASSERT_EQ(Response::err(&link, "test"), 11);
+  ASSERT_EQ(Response::err(&link, "ERR test"), 11);
   ASSERT_EQ(reader.consume(11, buffer), 11);
   ASSERT_EQ(buffer, "-ERR test\r\n");
 
