@@ -46,6 +46,11 @@ bool verify_options_sane(option::Parser &parse, std::vector<option::Option> &opt
     return false;
   }
 
+  if(!options[Opt::NODES]) {
+    std::cout << "--nodes is required." << std::endl;
+    return false;
+  }
+
   std::vector<quarkdb::RaftServer> servers;
   if(options[Opt::NODES] && !quarkdb::parseServers(options[Opt::NODES].arg, servers)) {
     std::cout << "Error parsing --nodes. Example of valid entry: server1:9000,server2:9000,server3:9000" << std::endl;
