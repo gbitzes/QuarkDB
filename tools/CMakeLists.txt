@@ -1,10 +1,14 @@
 cmake_minimum_required(VERSION 2.6)
+find_package (Threads)
 
 add_executable(quarkdb-journal quarkdb-journal.cc)
 target_link_libraries(quarkdb-journal XrdRedis)
 
 add_executable(quarkdb-scrub quarkdb-scrub.cc)
 target_link_libraries(quarkdb-scrub XrdRedis)
+
+add_executable(quarkdb-chaos quarkdb-chaos.cc)
+target_link_libraries(quarkdb-chaos XrdRedis ${CMAKE_THREAD_LIBS_INIT})
 
 include_directories(
   ${CMAKE_SOURCE_DIR}/src   # need access to the private headers
@@ -14,6 +18,6 @@ include_directories(
 )
 
 install(
-  TARGETS quarkdb-journal quarkdb-scrub
+  TARGETS quarkdb-journal quarkdb-scrub quarkdb-chaos
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )

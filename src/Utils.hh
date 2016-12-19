@@ -48,7 +48,7 @@ namespace quarkdb {
 
 extern std::mutex logMutex;
 #define TIME_NOW std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()
-#define ___log(message) { std::lock_guard<std::mutex> logLock(logMutex); \
+#define ___log(message) { std::lock_guard<std::mutex> logLock(quarkdb::logMutex); \
   std::cerr << "[" << TIME_NOW << "] " << message << std::endl; }
 
 #define DBG(message) ___log(__FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message)

@@ -55,3 +55,4 @@ rm -rf $RPM_BUILD_ROOT
 %{_libdir}/libXrdRedis.so
 %{_bindir}/quarkdb-journal
 %{_bindir}/quarkdb-scrub
+%{_bindir}/quarkdb-chaos
