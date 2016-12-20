@@ -28,7 +28,7 @@
 #include "XrdOfs/XrdOfsTrace.hh"
 #include <string>
 #include "Namespace.hh"
-#include <qclient/qclient.hh>
+#include <qclient/QClient.hh>
 
 XRDQUARKNAMESPACE_BEGIN
 

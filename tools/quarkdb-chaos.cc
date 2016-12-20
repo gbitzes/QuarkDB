@@ -25,7 +25,7 @@
 #include "Common.hh"
 #include "OptionUtils.hh"
 #include "Utils.hh"
-#include <qclient/qclient.hh>
+#include <qclient/QClient.hh>
 #include <thread>
 #include <random>
 #include "TestUtils.hh"

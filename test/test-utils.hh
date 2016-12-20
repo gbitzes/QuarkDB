@@ -33,7 +33,7 @@
 #include "raft/RaftDirector.hh"
 #include "raft/RaftGroup.hh"
 #include "Poller.hh"
-#include <qclient/qclient.hh>
+#include <qclient/QClient.hh>
 #include <gtest/gtest.h>
 
 #include <sys/types.h>

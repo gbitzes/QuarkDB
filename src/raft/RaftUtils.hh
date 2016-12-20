@@ -24,7 +24,7 @@
 #ifndef __QUARKDB_RAFT_PARSER_H__
 #define __QUARKDB_RAFT_PARSER_H__
 
-#include <qclient/qclient.hh>
+#include <qclient/QClient.hh>
 #include "RaftCommon.hh"
 #include "../Common.hh"
 #include "RaftState.hh"

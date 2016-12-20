@@ -25,7 +25,7 @@
 #define __QUARKDB_RAFT_TALKER_H__
 
 #include "../Common.hh"
-#include <qclient/qclient.hh>
+#include <qclient/QClient.hh>
 #include "RaftCommon.hh"
 #include <mutex>
 

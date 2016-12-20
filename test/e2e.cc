@@ -32,7 +32,7 @@
 #include "test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
-#include <qclient/qclient.hh>
+#include <qclient/QClient.hh>
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())

@@ -24,7 +24,7 @@
 #include "Poller.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
-#include <qclient/qclient.hh>
+#include <qclient/QClient.hh>
 
 using namespace quarkdb;
 using namespace qclient;
