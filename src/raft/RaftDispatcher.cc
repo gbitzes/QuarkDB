@@ -38,7 +38,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
   if(commit != 0) qdb_throw("commit should have been zero here: " << commit);
 
   auto it = redis_cmd_map.find(req[0]);
-  if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
+  if(it == redis_cmd_map.end()) return conn->err(SSTR("ERR unknown command " << quotes(req[0])));
 
   RedisCommand cmd = it->second.first;
   switch(cmd) {
@@ -51,7 +51,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
       if(req.size() != 2) return conn->errArgs(req[0]);
 
       LogIndex index;
-      if(!my_strtoll(req[1], index)) return conn->err(SSTR("could not parse " << req[1]));
+      if(!my_strtoll(req[1], index)) return conn->err(SSTR("ERR could not parse " << req[1]));
 
       RaftEntry entry;
       std::vector<std::string> ret;
@@ -128,12 +128,12 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogInde
 
       RaftServer srv;
       if(!parseServer(req[1], srv)) {
-        return conn->err(SSTR("cannot parse server: " << req[1]));
+        return conn->err(SSTR("ERR cannot parse server: " << req[1]));
       }
 
       RaftStateSnapshot snapshot = state.getSnapshot();
-      if(snapshot.status != RaftStatus::LEADER) return conn->err("not a leader");
-      if(srv == state.getMyself()) conn->err(SSTR("cannot perform membership changes on current leader"));
+      if(snapshot.status != RaftStatus::LEADER) return conn->err("ERR not a leader");
+      if(srv == state.getMyself()) conn->err("ERR cannot perform membership changes on current leader");
 
       std::string err;
       bool rc;

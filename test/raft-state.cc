@@ -136,7 +136,7 @@ TEST_F(Raft_State, T1) {
 
   std::string err;
   ASSERT_TRUE(journal.removeMember(6, myself, err));
-  ASSERT_TRUE(journal.setCommitIndex(1));
+  ASSERT_TRUE(journal.setCommitIndex(2));
 
   snapshot = {6, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE};
   ASSERT_EQ(state.getSnapshot(), snapshot);
@@ -156,7 +156,7 @@ TEST_F(Raft_State, T1) {
   // re-enter the cluster as an observer
   nodes.push_back(myself);
   ASSERT_TRUE(journal.addObserver(7, myself, err));
-  ASSERT_TRUE(journal.setCommitIndex(2));
+  ASSERT_TRUE(journal.setCommitIndex(3));
 
   // still cannot call election, not a full node
   ASSERT_FALSE(state.becomeCandidate(7));
@@ -164,7 +164,7 @@ TEST_F(Raft_State, T1) {
 
   // become full-node
   ASSERT_TRUE(journal.promoteObserver(7, myself, err));
-  ASSERT_TRUE(journal.setCommitIndex(3));
+  ASSERT_TRUE(journal.setCommitIndex(4));
 
   ASSERT_TRUE(state.observed(7, nodes[0]));
 
@@ -174,13 +174,13 @@ TEST_F(Raft_State, T1) {
   // push two changes to the log
   // mark the first as applied, the other as committed
   RedisRequest req = { "set", "qwerty", "asdf" };
-  ASSERT_TRUE(journal.append(4, 7, req));
-  req = { "set", "1234", "9876" };
   ASSERT_TRUE(journal.append(5, 7, req));
+  req = { "set", "1234", "9876" };
+  ASSERT_TRUE(journal.append(6, 7, req));
   ASSERT_TRUE(journal.setCommitIndex(4));
   ASSERT_FALSE(journal.setCommitIndex(0));
-  ASSERT_THROW(journal.setCommitIndex(6), FatalException);
-  ASSERT_TRUE(journal.setCommitIndex(5));
+  ASSERT_THROW(journal.setCommitIndex(7), FatalException);
+  ASSERT_TRUE(journal.setCommitIndex(6));
 
   // exit again..
   ASSERT_TRUE(journal.removeMember(7, nodes[2], err));
@@ -198,15 +198,15 @@ TEST_F(Raft_State, T1) {
   ASSERT_EQ(journal.getVotedFor(), RaftState::BLOCKED_VOTE);
 
   // verify we remember commit index
-  ASSERT_EQ(journal.getCommitIndex(), 5);
+  ASSERT_EQ(journal.getCommitIndex(), 6);
 
   // re-enter cluster
   nodes.push_back(myself);
 
-  ASSERT_TRUE(journal.setCommitIndex(6));
+  ASSERT_TRUE(journal.setCommitIndex(7));
   std::string err;
   ASSERT_TRUE(journal.addObserver(7, myself, err));
-  ASSERT_TRUE(journal.setCommitIndex(7));
+  ASSERT_TRUE(journal.setCommitIndex(8));
   ASSERT_TRUE(journal.promoteObserver(7, myself, err));
 
   // become leader

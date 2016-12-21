@@ -243,6 +243,8 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     }
 
     state.observed(resp.term, {});
+    if(snapshot.term < resp.term) continue;
+
     // Check: Does the target need resilvering?
     if(resp.logSize <= journal.getLogStart()) {
       nextIndex = journal.getLogSize();
@@ -276,7 +278,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
 
     // All checks have passed
     if(nextIndex+payloadSize != resp.logSize) {
-      qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize);
+      qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize << ", resp.term: " << resp.term << ", my term: " << snapshot.term << ", journal size: " << journal.getLogSize());
     }
 
     matchIndex.update(resp.logSize-1);

@@ -87,11 +87,11 @@ TEST_F(Raft_Replicator, do_simple_replication) {
 
   // populate #0's journal
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal(0)->append(i+1, 2, testreqs[i]));
+    ASSERT_TRUE(journal(0)->append(i+2, 2, testreqs[i]));
   }
 
   // verify #1 recognized #0 as leader and that replication was successful
-  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == (int64_t) testreqs.size()+1);
+  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == (int64_t) testreqs.size()+2);
 
   RaftStateSnapshot snapshot = state(1)->getSnapshot();
   ASSERT_EQ(snapshot.term, 2);
@@ -99,7 +99,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
 
   for(size_t i = 0; i < testreqs.size(); i++) {
     RaftEntry entry;
-    ASSERT_TRUE(dispatcher(1)->fetch(i+1, entry));
+    ASSERT_TRUE(dispatcher(1)->fetch(i+2, entry));
     ASSERT_EQ(entry.term, 2);
     ASSERT_EQ(entry.request, testreqs[i]);
   }
@@ -124,7 +124,39 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   RaftStateSnapshot snapshot = state(1)->getSnapshot();
   ASSERT_EQ(snapshot.term, 2);
   ASSERT_EQ(snapshot.leader, myself(0));
-  ASSERT_EQ(journal(1)->getLogSize(), 1);
+
+  RaftEntry entry;
+  journal(1)->fetch_or_die(1, entry);
+  ASSERT_EQ(entry.request, make_req("JOURNAL_LEADERSHIP_MARKER", SSTR(2), myself(0).toString()));
+  ASSERT_EQ(journal(1)->getLogSize(), 2);
+}
+
+TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
+  // through the addition of several inconsistent entries, a follower
+  // ended up with a larger journal than the leader
+
+  ASSERT_TRUE(state(0)->observed(2, {}));
+  ASSERT_TRUE(state(0)->becomeCandidate(2));
+  ASSERT_TRUE(state(0)->ascend(2));
+
+  ASSERT_TRUE(journal(1)->append(1, 0, make_req("supposed", "to", "be", "removed1")));
+  ASSERT_TRUE(journal(1)->append(2, 0, make_req("supposed", "to", "be", "removed2")));
+  ASSERT_TRUE(journal(1)->append(3, 0, make_req("supposed", "to", "be", "removed3")));
+
+  ASSERT_EQ(state(1)->getCurrentTerm(), 0);
+
+  // activate poller for #1
+  poller(1);
+
+  // launch!
+  ASSERT_TRUE(replicator(0)->launch(myself(1), state(0)->getSnapshot()));
+
+  // verify #1 recognized #0 as leader and that replication was successful
+  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == 2);
+
+  RaftStateSnapshot snapshot = state(1)->getSnapshot();
+  ASSERT_EQ(snapshot.term, 2);
+  ASSERT_EQ(snapshot.leader, myself(0));
 }
 
 TEST_F(Raft_Dispatcher, validate_initial_state) {
@@ -555,13 +587,13 @@ TEST_F(Raft_Director, achieve_natural_election) {
 
   // let's push a bunch of entries to the leader, and verify they get committed
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal(leaderID)->append(i+1, 0, testreqs[i]));
+    ASSERT_TRUE(journal(leaderID)->append(i+2, 1, testreqs[i]));
   }
 
   RETRY_ASSERT_TRUE(
-    journal(0)->getCommitIndex() == (int64_t) testreqs.size() &&
-    journal(1)->getCommitIndex() == (int64_t) testreqs.size() &&
-    journal(2)->getCommitIndex() == (int64_t) testreqs.size()
+    journal(0)->getCommitIndex() == (int64_t) testreqs.size()+1 &&
+    journal(1)->getCommitIndex() == (int64_t) testreqs.size()+1 &&
+    journal(2)->getCommitIndex() == (int64_t) testreqs.size()+1
   );
 
   // verify entries one by one, for all three journals
@@ -569,7 +601,7 @@ TEST_F(Raft_Director, achieve_natural_election) {
     for(size_t j = 0; j < 3; j++) {
       RaftEntry entry;
 
-      ASSERT_TRUE(journal(j)->fetch(i+1, entry).ok());
+      ASSERT_TRUE(journal(j)->fetch(i+2, entry).ok());
       ASSERT_EQ(entry.request, testreqs[i]);
     }
   }

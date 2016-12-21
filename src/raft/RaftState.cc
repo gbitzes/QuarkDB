@@ -169,6 +169,11 @@ bool RaftState::ascend(RaftTerm forTerm) {
     return false;
   }
 
+  if(!journal.appendLeadershipMarker(journal.getLogSize(), forTerm, myself)) {
+    qdb_warn("could not append leadership marker to journal for term " << forTerm << ", unable to ascend");
+    return false;
+  }
+
   leader = myself;
   updateStatus(RaftStatus::LEADER);
   qdb_event("Ascending as leader for term " << forTerm << ". Long may I reign.");

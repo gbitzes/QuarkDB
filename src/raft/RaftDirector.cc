@@ -91,6 +91,7 @@ void RaftDirector::main() {
 void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   RaftMembership membership = journal.getMembership();
   qdb_info("Starting replicator for membership epoch " << membership.epoch);
+  if(snapshot.leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
 
   RaftReplicator replicator(journal, stateMachine, state, raftClock.getTimeouts());
   for(const RaftServer& srv : membership.nodes) {

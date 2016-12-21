@@ -252,7 +252,7 @@ bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers,
   std::lock_guard<std::mutex> lock(contentMutex);
 
   if(commitIndex < membershipEpoch) {
-    err = SSTR("The current membership epoch has not been committed yet: " << membershipEpoch);
+    err = SSTR("ERR the current membership epoch has not been committed yet: " << membershipEpoch);
     return false;
   }
 
@@ -339,6 +339,10 @@ bool RaftJournal::appendNoLock(LogIndex index, RaftTerm term, const RedisRequest
 bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req) {
   std::lock_guard<std::mutex> lock(contentMutex);
   return appendNoLock(index, term, req);
+}
+
+bool RaftJournal::appendLeadershipMarker(LogIndex index, RaftTerm term, const RaftServer &leader) {
+  return append(index, term, {"JOURNAL_LEADERSHIP_MARKER", SSTR(term), leader.toString()});
 }
 
 void RaftJournal::trimUntil(LogIndex newLogStart) {
