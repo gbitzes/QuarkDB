@@ -587,7 +587,7 @@ TEST_F(Raft_Director, achieve_natural_election) {
 
   // let's push a bunch of entries to the leader, and verify they get committed
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal(leaderID)->append(i+2, 1, testreqs[i]));
+    ASSERT_TRUE(journal(leaderID)->append(i+2, snapshots[0].term, testreqs[i]));
   }
 
   RETRY_ASSERT_TRUE(
@@ -603,6 +603,7 @@ TEST_F(Raft_Director, achieve_natural_election) {
 
       ASSERT_TRUE(journal(j)->fetch(i+2, entry).ok());
       ASSERT_EQ(entry.request, testreqs[i]);
+      ASSERT_EQ(entry.term, snapshots[0].term);
     }
   }
 }
