@@ -56,3 +56,4 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/quarkdb-journal
 %{_bindir}/quarkdb-scrub
 %{_bindir}/quarkdb-chaos
+%{_includedir}/qclient
