@@ -42,7 +42,7 @@ add_library(XrdRedis SHARED
 )
 
 target_link_libraries(
-  XrdRedis
+  XrdRedis PUBLIC
   qclient
   bz2
   rocksdb
