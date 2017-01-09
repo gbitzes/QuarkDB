@@ -27,6 +27,7 @@ add_library(XrdRedis SHARED
   RocksDB.cc                 RocksDB.hh
   Commands.cc                Commands.hh
   Response.cc                Response.hh
+  Formatter.cc               Formatter.hh
   Dispatcher.cc              Dispatcher.hh
   Poller.cc                  Poller.hh
   Connection.cc              Connection.hh

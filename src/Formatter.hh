@@ -1,5 +1,5 @@
 //-----------------------------------------------------------------------
-// File: Response.cc
+// File: Formatter.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,52 +21,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "Response.hh"
+#ifndef __QUARKDB_FORMATTER_H__
+#define __QUARKDB_FORMATTER_H__
+
+#include <string>
+#include <rocksdb/status.h>
 #include "Utils.hh"
-#include "Formatter.hh"
 
-using namespace quarkdb;
+namespace quarkdb {
 
-LinkStatus Response::err(Link *link, const std::string &err) {
-  return link->Send(Formatter::err(err));
+class Formatter {
+public:
+  static std::string err(const std::string &msg);
+  static std::string errArgs(const std::string &cmd);
+  static std::string pong();
+  static std::string string(const std::string &str);
+  static std::string fromStatus(const rocksdb::Status &status);
+  static std::string status(const std::string &str);
+  static std::string ok();
+  static std::string null();
+  static std::string integer(int64_t number);
+  static std::string vector(const std::vector<std::string> &vec);
+  static std::string scan(const std::string &marker, const std::vector<std::string> &vec);
+};
+
 }
 
-LinkStatus Response::errArgs(Link *link, const std::string &cmd) {
-  return link->Send(Formatter::errArgs(cmd));
-}
-
-LinkStatus Response::pong(Link *link) {
-  return link->Send(Formatter::pong());
-}
-
-LinkStatus Response::string(Link *link, const std::string &str) {
-  return link->Send(Formatter::string(str));
-}
-
-LinkStatus Response::status(Link *link, const std::string &str) {
-  return link->Send(Formatter::status(str));
-}
-
-LinkStatus Response::ok(Link *link) {
-  return link->Send(Formatter::ok());
-}
-
-LinkStatus Response::null(Link *link) {
-  return link->Send(Formatter::null());
-}
-
-LinkStatus Response::integer(Link *link, int64_t number) {
-  return link->Send(Formatter::integer(number));
-}
-
-LinkStatus Response::fromStatus(Link *link, const rocksdb::Status &status) {
-  return link->Send(Formatter::fromStatus(status));
-}
-
-LinkStatus Response::vector(Link *link, const std::vector<std::string> &vec) {
-  return link->Send(Formatter::vector(vec));
-}
-
-LinkStatus Response::scan(Link *link, const std::string &marker, const std::vector<std::string> &vec) {
-  return link->Send(Formatter::scan(marker, vec));
-}
+#endif
