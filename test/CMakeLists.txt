@@ -1,9 +1,6 @@
-cmake_minimum_required(VERSION 2.6)
-
 #-------------------------------------------------------------------------------
 # Set-up gtest
 #-------------------------------------------------------------------------------
-
 set(GTEST "${CMAKE_SOURCE_DIR}/deps/googletest/googletest")
 set(GTEST_BINARY_DIR "${CMAKE_BINARY_DIR}/deps/googletest/googletest")
 add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
@@ -11,7 +8,6 @@ add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
 #-------------------------------------------------------------------------------
 # Build unit tests
 #-------------------------------------------------------------------------------
-
 add_executable(tests
   buffered-reader.cc
   configuration.cc
