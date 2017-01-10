@@ -50,6 +50,8 @@ enum class RedisCommand {
   HLEN,
   HVALS,
   HSCAN,
+  HSETNX,
+  HINCRBYFLOAT,
 
   SADD,
   SISMEMBER,

@@ -121,6 +121,12 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       if(existed.ok()) return conn->integer(0);
       return conn->integer(1);
     }
+    case RedisCommand::HSETNX: {
+      if(request.size() != 4) return errArgs(conn, request, commit);
+      bool outcome = store.hsetnx(request[1], request[2], request[3], commit);
+      return conn->integer(outcome);
+    }
+
     case RedisCommand::HEXISTS: {
       if(request.size() != 3) return errArgs(conn, request, commit);
       rocksdb::Status st = store.hexists(request[1], request[2]);
@@ -148,6 +154,13 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &request, Re
       rocksdb::Status st = store.hincrby(request[1], request[2], request[3], ret, commit);
       if(!st.ok()) return conn->fromStatus(st);
       return conn->integer(ret);
+    }
+    case RedisCommand::HINCRBYFLOAT: {
+      if(request.size() != 4) return errArgs(conn, request, commit);
+      double ret = 0;
+      rocksdb::Status st = store.hincrbyfloat(request[1], request[2], request[3], ret, commit);
+      if(!st.ok()) return conn->fromStatus(st);
+      return conn->string(std::to_string(ret));
     }
     case RedisCommand::HDEL: {
       if(request.size() <= 2) return errArgs(conn, request, commit);

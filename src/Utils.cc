@@ -25,6 +25,7 @@
 #include <endian.h>
 #include "Utils.hh"
 #include <memory.h>
+#include <math.h>
 #include <sys/stat.h>
 
 namespace quarkdb {
@@ -54,6 +55,16 @@ bool my_strtoll(const std::string &str, int64_t &ret) {
   }
   return true;
 }
+
+bool my_strtod(const std::string &str, double &ret) {
+  char *endptr = NULL;
+  ret = strtod(str.c_str(), &endptr);
+  if(endptr != str.c_str() + str.size() || ret == HUGE_VAL || ret == -HUGE_VAL) {
+    return false;
+  }
+  return true;
+}
+
 
 int64_t binaryStringToInt(const char* buff) {
   int64_t result;

@@ -59,7 +59,7 @@ std::string Formatter::integer(int64_t number) {
 
 std::string Formatter::fromStatus(const rocksdb::Status &status) {
   if(status.ok()) return Formatter::ok();
-  return Formatter::err(status.ToString());
+  return Formatter::err(SSTR("ERR " << status.ToString()));
 }
 
 std::string Formatter::vector(const std::vector<std::string> &vec) {

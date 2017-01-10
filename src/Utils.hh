@@ -75,6 +75,7 @@ std::string chopPath(const std::string &path);
 bool mkpath(const std::string &path, mode_t mode, std::string &err);
 void mkpath_or_die(const std::string &path, mode_t mode);
 bool my_strtoll(const std::string &str, int64_t &ret);
+bool my_strtod(const std::string &str, double &ret);
 std::vector<std::string> split(std::string data, std::string token);
 bool startswith(const std::string &str, const std::string &prefix);
 bool parseServer(const std::string &str, RaftServer &srv);

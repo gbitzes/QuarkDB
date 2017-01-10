@@ -189,6 +189,23 @@ rocksdb::Status RocksDB::hset(const std::string &key, const std::string &field, 
   return rocksdb::Status::OK();
 }
 
+bool RocksDB::hsetnx(const std::string &key, const std::string &field, const std::string &value, LogIndex index) {
+  std::string tkey = translate_key(kHash, key, field);
+
+  TransactionPtr tx = startTransaction();
+
+  std::string tmp;
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+  ASSERT_OK_OR_NOTFOUND(st);
+
+  if(st.IsNotFound()) {
+    THROW_ON_ERROR(tx->Put(tkey, value));
+  }
+
+  commitTransaction(tx, index);
+  return st.IsNotFound();
+}
+
 rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index) {
   std::string tkey = translate_key(kHash, key, field);
 
@@ -211,6 +228,34 @@ rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &fiel
   }
 
   result += incrbyInt64;
+
+  THROW_ON_ERROR(tx->Put(tkey, std::to_string(result)));
+  commitTransaction(tx, index);
+  return rocksdb::Status::OK();
+}
+
+rocksdb::Status RocksDB::hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index) {
+  std::string tkey = translate_key(kHash, key, field);
+
+  TransactionPtr tx = startTransaction();
+
+  double incrbyDouble;
+  if(!my_strtod(incrby, incrbyDouble)) {
+    commitTransaction(tx, index);
+    return rocksdb::Status::InvalidArgument("value is not a float or out of range");
+  }
+
+  std::string value;
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
+  ASSERT_OK_OR_NOTFOUND(st);
+
+  result = 0;
+  if(st.ok() && !my_strtod(value, result)) {
+    commitTransaction(tx, index);
+    return rocksdb::Status::InvalidArgument("hash value is not a float");
+  }
+
+  result += incrbyDouble;
 
   THROW_ON_ERROR(tx->Put(tkey, std::to_string(result)));
   commitTransaction(tx, index);

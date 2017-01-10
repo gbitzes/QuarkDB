@@ -115,6 +115,45 @@ TEST_F(Rocks_DB, test_hincrby) {
   ASSERT_EQ(result, -24);
 }
 
+TEST_F(Rocks_DB, test_hsetnx) {
+  ASSERT_EQ(rocksdb()->getLastApplied(), 0);
+
+  ASSERT_TRUE(rocksdb()->hsetnx("myhash", "field", "v1", 1));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 1);
+
+  ASSERT_FALSE(rocksdb()->hsetnx("myhash", "field", "v2", 2));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 2);
+
+  std::string value;
+  ASSERT_OK(rocksdb()->hget("myhash", "field", value));
+  ASSERT_EQ(value, "v1");
+}
+
+TEST_F(Rocks_DB, test_hincrbyfloat) {
+  ASSERT_EQ(rocksdb()->getLastApplied(), 0);
+
+  double result;
+  ASSERT_OK(rocksdb()->hincrbyfloat("myhash", "field", "0.5", result, 1));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 1);
+  ASSERT_EQ(result, 0.5);
+
+  std::string tmp;
+  ASSERT_OK(rocksdb()->hget("myhash", "field", tmp));
+  ASSERT_EQ(tmp, "0.500000");
+
+  ASSERT_OK(rocksdb()->hincrbyfloat("myhash", "field", "0.3", result, 2));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 2);
+
+  ASSERT_OK(rocksdb()->hget("myhash", "field", tmp));
+  ASSERT_EQ(tmp, "0.800000");
+  ASSERT_EQ(result, 0.8);
+
+  ASSERT_OK(rocksdb()->hset("myhash", "field2", "not-a-float", 3));
+  rocksdb::Status st = rocksdb()->hincrbyfloat("myhash", "field2", "0.1", result, 4);
+  ASSERT_EQ(st.ToString(), "Invalid argument: hash value is not a float");
+  ASSERT_EQ(rocksdb()->getLastApplied(), 4);
+}
+
 TEST_F(Rocks_DB, basic_sanity) {
   std::string buffer;
   std::vector<std::string> vec, vec2;

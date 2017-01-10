@@ -53,7 +53,9 @@ public:
   rocksdb::Status hkeys(const std::string &key, std::vector<std::string> &keys);
   rocksdb::Status hgetall(const std::string &key, std::vector<std::string> &res);
   rocksdb::Status hset(const std::string &key, const std::string &field, const std::string &value, LogIndex index = 0);
+  bool hsetnx(const std::string &key, const std::string &field, const std::string &value, LogIndex index = 0);
   rocksdb::Status hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index = 0);
+  rocksdb::Status hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index = 0);
   rocksdb::Status hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status hlen(const std::string &key, size_t &len);
   rocksdb::Status hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
