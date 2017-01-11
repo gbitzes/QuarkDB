@@ -39,7 +39,7 @@ public:
   RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc);
   DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit) override;
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);

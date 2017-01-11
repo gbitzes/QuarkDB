@@ -321,6 +321,8 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("hset", "hash2", "key1", "v1"));
   futures.emplace_back(tunnel(leaderID)->exec("exists", "hash", "hash2"));
   futures.emplace_back(tunnel(leaderID)->exec("del", "hash"));
+  futures.emplace_back(tunnel(leaderID)->exec("raft_info"));
+  futures.emplace_back(tunnel(leaderID)->exec("bad_command"));
   futures.emplace_back(tunnel(leaderID)->exec("exists", "hash"));
   futures.emplace_back(tunnel(leaderID)->exec("exists", "hash2"));
 
@@ -328,8 +330,10 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[1], 1);
   ASSERT_REPLY(futures[2], 2);
   ASSERT_REPLY(futures[3], 1);
-  ASSERT_REPLY(futures[4], 0);
-  ASSERT_REPLY(futures[5], 1);
+  // ignore futures[4]
+  ASSERT_REPLY(futures[5], "ERR unknown command 'bad_command'");
+  ASSERT_REPLY(futures[6], 0);
+  ASSERT_REPLY(futures[7], 1);
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {

@@ -34,18 +34,18 @@ namespace quarkdb {
 
 class Dispatcher {
 public:
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit = 0) = 0;
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
   virtual ~Dispatcher() {}
 };
 
 class RedisDispatcher : public Dispatcher {
 public:
   RedisDispatcher(RocksDB &rocksdb);
-
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req, LogIndex commit = 0);
-  LinkStatus dispatch(Connection *conn, RedisRequest &request, RedisCommand command, LogIndex commit = 0);
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  std::string dispatch(RedisRequest &req, LogIndex commit);
 private:
-  LinkStatus errArgs(Connection *conn, RedisRequest &request, LogIndex commit);
+  std::string errArgs(RedisRequest &request, LogIndex commit);
+  std::string dispatch(RedisRequest &request, RedisCommand command, LogIndex commit);
 
   RocksDB &store;
 };

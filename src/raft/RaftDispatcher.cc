@@ -22,7 +22,6 @@
  ************************************************************************/
 
 #include "RaftDispatcher.hh"
-#include "../Response.hh"
 #include "RaftUtils.hh"
 
 #include <random>
@@ -34,9 +33,7 @@ RaftDispatcher::RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, Ra
 : journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm) {
 }
 
-LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req, LogIndex commit) {
-  if(commit != 0) qdb_throw("commit should have been zero here: " << commit);
-
+LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
   if(it == redis_cmd_map.end()) return conn->err(SSTR("ERR unknown command " << quotes(req[0])));
 
@@ -164,22 +161,20 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   // control command, service even if unavailable
   if(type == CommandType::CONTROL) {
     return conn->appendReq(&redisDispatcher, std::move(req));
-    // return serviceRead(conn, req, cmd, type);
   }
 
   // if not leader, redirect
   RaftStateSnapshot snapshot = state.getSnapshot();
   if(snapshot.status != RaftStatus::LEADER) {
     if(snapshot.leader.empty()) {
-      return conn->appendError("ERR unavailable");
+      return conn->err("ERR unavailable");
     }
-    return conn->appendError(SSTR("MOVED 0 " << snapshot.leader.toString()));
+    return conn->err(SSTR("MOVED 0 " << snapshot.leader.toString()));
   }
 
   // read request, easy case
   if(type == CommandType::READ || type == CommandType::CONTROL) {
     return conn->appendReq(&redisDispatcher, std::move(req));
-    // return serviceRead(conn, req, cmd, type);
   }
 
   // write request, must append to raft log
@@ -189,7 +184,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   if(!journal.append(index, snapshot.term, req)) {
     qdb_critical("appending to journal failed for index = " << index <<
     " and term " << snapshot.term << " when servicing client request");
-    return conn->appendError("ERR unknown error");
+    return conn->err("ERR unknown error");
   }
 
   conn->appendReq(&redisDispatcher, std::move(req), index);
@@ -229,8 +224,7 @@ LinkStatus RaftDispatcher::applyOneCommit(LogIndex index) {
       qdb_throw("failed to fetch log entry " << index << " when applying commits");
     }
 
-    Connection devnull;
-    redisDispatcher.dispatch(&devnull, entry.request, index);
+    redisDispatcher.dispatch(entry.request, index);
     return 1;
   }
 

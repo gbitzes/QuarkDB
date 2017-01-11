@@ -1,5 +1,5 @@
-//-----------------------------------------------------------------------
-// File: Response.hh
+// ----------------------------------------------------------------------
+// File: response-formatter.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,31 +21,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RESPONSE_H__
-#define __QUARKDB_RESPONSE_H__
+#include "Formatter.hh"
+#include <gtest/gtest.h>
 
-#include "Common.hh"
-#include "Link.hh"
-#include <rocksdb/status.h>
-#include <string>
+using namespace quarkdb;
 
-namespace quarkdb {
-
-class Response {
-public:
-  static LinkStatus err(Link *link, const std::string &msg);
-  static LinkStatus errArgs(Link *link, const std::string &cmd);
-  static LinkStatus pong(Link *link);
-  static LinkStatus string(Link *link, const std::string &str);
-  static LinkStatus fromStatus(Link *link, const rocksdb::Status &status);
-  static LinkStatus status(Link *link, const std::string &str);
-  static LinkStatus ok(Link *link);
-  static LinkStatus null(Link *link);
-  static LinkStatus integer(Link *link, int64_t number);
-  static LinkStatus vector(Link *link, const std::vector<std::string> &vec);
-  static LinkStatus scan(Link *link, const std::string &marker, const std::vector<std::string> &vec);
-};
-
+TEST(Response, T1) {
+  ASSERT_EQ(Formatter::err("ERR test"), "-ERR test\r\n");
+  ASSERT_EQ(Formatter::ok(), "+OK\r\n");
+  ASSERT_EQ(Formatter::pong(), "+PONG\r\n");
+  ASSERT_EQ(Formatter::null(), "$-1\r\n");
+  ASSERT_EQ(Formatter::status("test"), "+test\r\n");
 }
-
-#endif

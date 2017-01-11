@@ -23,10 +23,8 @@
 
 #include "Connection.hh"
 #include "Dispatcher.hh"
+#include "Formatter.hh"
 using namespace quarkdb;
-
-// a "devnull" connection
-Connection::Connection() { }
 
 Connection::Connection(Link *l)
 : link(l) {
@@ -36,84 +34,77 @@ Connection::~Connection() {
   flushPending("ERR connection shutting down");
 }
 
+LinkStatus Connection::raw(std::string &&raw) {
+  return this->append(std::move(raw));
+}
+
 LinkStatus Connection::err(const std::string &msg) {
-  if(!link) return 1;
-  return Response::err(link, msg);
+  return this->append(Formatter::err(msg));
 }
 
 LinkStatus Connection::errArgs(const std::string &cmd) {
-  if(!link) return 1;
-  return Response::errArgs(link, cmd);
+  return this->append(Formatter::errArgs(cmd));
 }
 
 LinkStatus Connection::pong() {
-  if(!link) return 1;
-  return Response::pong(link);
+  return this->append(Formatter::pong());
 }
 
 LinkStatus Connection::string(const std::string &str) {
-  if(!link) return 1;
-  return Response::string(link, str);
+  return this->append(Formatter::string(str));
 }
 
 LinkStatus Connection::fromStatus(const rocksdb::Status &status) {
-  if(!link) return 1;
-  return Response::fromStatus(link, status);
+  return this->append(Formatter::fromStatus(status));
 }
 
 LinkStatus Connection::status(const std::string &msg) {
-  if(!link) return 1;
-  return Response::status(link, msg);
+  return this->append(Formatter::status(msg));
 }
 
 LinkStatus Connection::ok() {
-  if(!link) return 1;
-  return Response::ok(link);
+  return this->append(Formatter::ok());
 }
 
 LinkStatus Connection::null() {
-  if(!link) return 1;
-  return Response::null(link);
+  return this->append(Formatter::null());
 }
 
 LinkStatus Connection::integer(int64_t number) {
-  if(!link) return 1;
-  return Response::integer(link, number);
+  return this->append(Formatter::integer(number));
 }
 
 LinkStatus Connection::vector(const std::vector<std::string> &vec) {
-  if(!link) return 1;
-  return Response::vector(link, vec);
+  return this->append(Formatter::vector(vec));
 }
 
 LinkStatus Connection::scan(const std::string &marker, const std::vector<std::string> &vec) {
-  if(!link) return 1;
-  return Response::scan(link, marker, vec);
+  return this->append(Formatter::scan(marker, vec));
 }
 
 LinkStatus Connection::flushPending(const std::string &msg) {
   std::lock_guard<std::mutex> lock(mtx);
   while(!pending.empty()) {
-    this->err(msg);
+    this->send(Formatter::err(msg));
     pending.pop();
   }
   return 1;
 }
 
-LinkStatus Connection::appendError(const std::string &msg) {
+LinkStatus Connection::append(std::string &&raw) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(pending.empty()) return this->err(msg);
+  if(pending.empty()) return this->send(std::move(raw));
 
   // we're being blocked by a write, must queue
   PendingRequest req;
-  req.error = msg;
+  req.rawResp = std::move(raw);
   pending.push(std::move(req));
   return 1;
 }
 
-LinkStatus Connection::appendReq(Dispatcher *dispatcher, RedisRequest &&req, LogIndex index) {
+LinkStatus Connection::appendReq(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(pending.empty() && index < 0) return dispatcher->dispatch(this, req);
+  if(pending.empty() && index < 0) return this->send(dispatcher->dispatch(req, 0));
 
   if(index > 0) {
     if(index <= lastIndex) {
@@ -130,7 +121,12 @@ LinkStatus Connection::appendReq(Dispatcher *dispatcher, RedisRequest &&req, Log
   return 1;
 }
 
-LogIndex Connection::dispatchPending(Dispatcher *dispatcher, LogIndex commitIndex) {
+LinkStatus Connection::send(std::string &&raw) {
+  if(!link) return 1;
+  return link->Send(raw);
+}
+
+LogIndex Connection::dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
   std::lock_guard<std::mutex> lock(mtx);
 
   while(!pending.empty()) {
@@ -140,11 +136,11 @@ LogIndex Connection::dispatchPending(Dispatcher *dispatcher, LogIndex commitInde
       return req.index;
     }
 
-    if(!req.error.empty()) {
-      this->err(req.error);
+    if(!req.rawResp.empty()) {
+      this->send(std::move(req.rawResp));
     }
     else {
-      dispatcher->dispatch(this, req.req, commitIndex);
+      this->send(dispatcher->dispatch(req.req, commitIndex));
     }
 
     pending.pop();

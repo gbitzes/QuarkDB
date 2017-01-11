@@ -137,7 +137,7 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, XrdBuffManager *buffManage
   if(!attach(err)) qdb_critical(err);
 }
 
-LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req, LogIndex commit) {
+LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
   if(it == redis_cmd_map.end()) return conn->err(SSTR("ERR unknown command " << quotes(req[0])));
 
@@ -278,7 +278,7 @@ error:
       ScopedAdder<int64_t> adder(beingDispatched);
       if(!attached) return conn->err("node is detached from any backends");
 
-      return dispatcher->dispatch(conn, req, 0);
+      return dispatcher->dispatch(conn, req);
     }
   }
 }

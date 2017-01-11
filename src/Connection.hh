@@ -26,7 +26,6 @@
 
 #include "Link.hh"
 #include "RocksDB.hh"
-#include "Response.hh"
 #include <queue>
 
 namespace quarkdb {
@@ -41,13 +40,13 @@ namespace quarkdb {
 // case.
 //------------------------------------------------------------------------------
 
-class Dispatcher;
+class RedisDispatcher;
 class Connection {
 public:
   Connection(Link *link);
-  Connection();
   ~Connection();
 
+  LinkStatus raw(std::string &&raw);
   LinkStatus err(const std::string &msg);
   LinkStatus errArgs(const std::string &cmd);
   LinkStatus pong();
@@ -61,12 +60,15 @@ public:
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
 
   LinkStatus flushPending(const std::string &msg);
-  LinkStatus appendError(const std::string &msg);
-  LinkStatus appendReq(Dispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
-  LogIndex dispatchPending(Dispatcher *dispatcher, LogIndex commitIndex);
+
+  LinkStatus appendReq(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
+  LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
 
   bool raftAuthorization = false;
 private:
+  LinkStatus send(std::string && raw);
+  LinkStatus append(std::string &&raw);
+
   Link *link = nullptr;
   std::mutex mtx;
 
@@ -91,7 +93,7 @@ private:
 
   struct PendingRequest {
     RedisRequest req;
-    std::string error; // if not empty, we're just storing an error message for the client
+    std::string rawResp; // if not empty, we're just storing a raw, per-formatted response
     LogIndex index = -1; // the corresponding entry in the raft journal - only relevant for write requests
   };
 

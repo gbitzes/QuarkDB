@@ -22,7 +22,7 @@ add_executable(tests
   raft-talker.cc
   raft.cc
   redis-parser.cc
-  response.cc
+  formatter.cc
   rocksdb.cc
   test-utils.cc                 test-utils.hh
   tunnel.cc
