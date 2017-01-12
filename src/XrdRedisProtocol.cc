@@ -84,13 +84,13 @@ XrdRedisProtocol::XrdRedisProtocol()
 int XrdRedisProtocol::Process(XrdLink *lp) {
   if(inShutdown) { return -1; }
   ScopedAdder<int64_t> adder(inFlight);
-  if(inShutdown) { return -1; }
 
   if(!link) link = new Link(lp);
   if(!parser) parser = new RedisParser(link, bufferManager);
   if(!conn) conn = new Connection(link);
 
   while(true) {
+    if(inShutdown) { return -1; }
     LinkStatus status = parser->fetch(currentRequest);
     if(status == 0) return 1;     // slow link
     if(status < 0) return status; // error
