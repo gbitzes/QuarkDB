@@ -86,6 +86,7 @@ private:
   void commitTransaction(TransactionPtr &tx, LogIndex index);
 
   void retrieveLastApplied();
+  void ensureCompatibleFormat(bool justCreated);
   void remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx);
 
   rocksdb::TransactionDB* transactionDB = nullptr;

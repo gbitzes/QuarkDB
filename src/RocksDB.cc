@@ -23,6 +23,7 @@
 
 #include "RocksDB.hh"
 #include "Utils.hh"
+#include <sys/stat.h>
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/utilities/checkpoint.h>
@@ -33,15 +34,26 @@
 
 using namespace quarkdb;
 
+static bool directoryExists(const std::string &path) {
+  struct stat st;
+  if(stat(path.c_str(), &st) == 0 && (st.st_mode & S_IFDIR) != 0) {
+    return true;
+  }
+
+  return false;
+}
+
 RocksDB::RocksDB(const std::string &f) : filename(f) {
   qdb_info("Openning rocksdb database " << quotes(filename));
+  bool dirExists = directoryExists(filename);
 
   rocksdb::Options options;
-  options.create_if_missing = true;
+  options.create_if_missing = !dirExists;
   rocksdb::Status status = rocksdb::TransactionDB::Open(options, rocksdb::TransactionDBOptions(), filename, &transactionDB);
-  if(!status.ok()) throw FatalException(status.ToString());
+  if(!status.ok()) qdb_throw("Cannot open " << quotes(filename) << ":" << status.ToString());
 
   db = transactionDB->GetBaseDB();
+  ensureCompatibleFormat(!dirExists);
   retrieveLastApplied();
 }
 
@@ -60,7 +72,26 @@ void RocksDB::reset() {
     db->Delete(rocksdb::WriteOptions(), iter->key().ToString());
   }
 
+  ensureCompatibleFormat(true);
   retrieveLastApplied();
+}
+
+void RocksDB::ensureCompatibleFormat(bool justCreated) {
+  const std::string currentFormat("-1");
+
+  std::string format;
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), "__format", &format);
+
+  if(justCreated) {
+    if(!st.IsNotFound()) qdb_throw("Error when reading __format, which should not exist: " << st.ToString());
+
+    st = db->Put(rocksdb::WriteOptions(), "__format", currentFormat);
+    if(!st.ok()) qdb_throw("error when setting format: " << st.ToString());
+  }
+  else {
+    if(!st.ok()) qdb_throw("Cannot read __format: " << st.ToString());
+    if(format != currentFormat) qdb_throw("Asked to open RocksDB store with incompatible format (" << format << "), I can only handle " << currentFormat);
+  }
 }
 
 void RocksDB::retrieveLastApplied() {

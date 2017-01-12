@@ -258,7 +258,11 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::scan("0", members);
     }
-    default:
-      qdb_throw("ERR internal dispatching error for " << quotes(request[0]) << " - raft not enabled?");
+    default: {
+      std::string msg = SSTR("ERR internal dispatching error for " << quotes(request[0]) << " - raft not enabled?");
+      qdb_critical(msg);
+      return Formatter::err(msg);
+    }
+
   }
 }
