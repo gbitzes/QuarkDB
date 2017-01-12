@@ -88,7 +88,7 @@ TEST(Tunnel, T1) {
 
 TEST(QClient, T2) {
   // with handshake
-  QClient tunnel("localhost", 1234, false, {"RAFT_HANDSHAKE", "some-cluster-id"});
+  QClient tunnel("localhost", 1234, false, false, {"RAFT_HANDSHAKE", "some-cluster-id"});
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
