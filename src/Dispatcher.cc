@@ -113,22 +113,20 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
     case RedisCommand::HSET: {
       if(request.size() != 4) return errArgs(request, commit);
 
-      // Mild race condition here.. if the key doesn't exist, but another thread modifies
-      // it in the meantime the user gets a response of 1, not 0
-
-      rocksdb::Status existed = store.hexists(request[1], request[2]);
-      if(!existed.ok() && !existed.IsNotFound()) return Formatter::fromStatus(existed);
-
-      rocksdb::Status st = store.hset(request[1], request[2], request[3], commit);
+      bool fieldcreated;
+      rocksdb::Status st = store.hset(request[1], request[2], request[3], fieldcreated, commit);
       if(!st.ok()) return Formatter::fromStatus(st);
 
-      if(existed.ok()) return Formatter::integer(0);
-      return Formatter::integer(1);
+      return Formatter::integer(fieldcreated);
     }
     case RedisCommand::HSETNX: {
       if(request.size() != 4) return errArgs(request, commit);
-      bool outcome = store.hsetnx(request[1], request[2], request[3], commit);
-      return Formatter::integer(outcome);
+
+      bool fieldcreated;
+      rocksdb::Status st = store.hsetnx(request[1], request[2], request[3], fieldcreated, commit);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      return Formatter::integer(fieldcreated);
     }
     case RedisCommand::HEXISTS: {
       if(request.size() != 3) return errArgs(request, commit);

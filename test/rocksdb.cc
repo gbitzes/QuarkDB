@@ -42,7 +42,9 @@ TEST_F(Rocks_DB, test_write_transactions) {
   ASSERT_OK(rocksdb()->set("abc", "122", 2));
   ASSERT_EQ(rocksdb()->getLastApplied(), 2);
 
-  ASSERT_OK(rocksdb()->hset("myhash", "key1", "value", 3));
+  bool created;
+  ASSERT_OK(rocksdb()->hset("myhash", "key1", "value", created, 3));
+  ASSERT_TRUE(created);
   ASSERT_EQ(rocksdb()->getLastApplied(), 3);
 
   std::string tmp;
@@ -65,28 +67,31 @@ TEST_F(Rocks_DB, test_write_transactions) {
   ASSERT_EQ(count, 0);
   ASSERT_EQ(rocksdb()->getLastApplied(), 6);
 
-  ASSERT_OK(rocksdb()->hset("hash2", "key1", "v2", 7));
+  ASSERT_OK(rocksdb()->hset("hash2", "key1", "v2", created, 7));
+  ASSERT_TRUE(created);
   ASSERT_EQ(rocksdb()->getLastApplied(), 7);
+  ASSERT_NOT_OK(rocksdb()->set("hash2", "wrong type", 8));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 8);
 
   elem = {"hash2", "asdfasdfad"};
-  ASSERT_OK(rocksdb()->del(elem.begin(), elem.end(), count, 8));
+  ASSERT_OK(rocksdb()->del(elem.begin(), elem.end(), count, 9));
   ASSERT_EQ(count, 1);
-  ASSERT_EQ(rocksdb()->getLastApplied(), 8);
+  ASSERT_EQ(rocksdb()->getLastApplied(), 9);
 
   int64_t added;
   std::vector<std::string> elementsToAdd { "elem1", "elem2" };
-  ASSERT_OK(rocksdb()->sadd("set1", elementsToAdd.begin(), elementsToAdd.end(), added, 9));
+  ASSERT_OK(rocksdb()->sadd("set1", elementsToAdd.begin(), elementsToAdd.end(), added, 10));
   ASSERT_EQ(added, 2);
-  ASSERT_EQ(rocksdb()->getLastApplied(), 9);
+  ASSERT_EQ(rocksdb()->getLastApplied(), 10);
 
   int64_t removed;
   std::vector<std::string> elementsToRem { "elem2", "elem3" };
-  ASSERT_OK(rocksdb()->srem("set1", elementsToRem.begin(), elementsToRem.end(), removed, 10));
+  ASSERT_OK(rocksdb()->srem("set1", elementsToRem.begin(), elementsToRem.end(), removed, 11));
   ASSERT_EQ(removed, 1);
-  ASSERT_EQ(rocksdb()->getLastApplied(), 10);
-
-  ASSERT_OK(rocksdb()->noop(11));
   ASSERT_EQ(rocksdb()->getLastApplied(), 11);
+
+  ASSERT_OK(rocksdb()->noop(12));
+  ASSERT_EQ(rocksdb()->getLastApplied(), 12);
 }
 
 TEST_F(Rocks_DB, test_hincrby) {
@@ -104,7 +109,9 @@ TEST_F(Rocks_DB, test_hincrby) {
   ASSERT_EQ(result, 6);
   ASSERT_EQ(rocksdb()->getLastApplied(), 3);
 
-  ASSERT_OK(rocksdb()->hset("myhash", "str", "asdf", 4));
+  bool created;
+  ASSERT_OK(rocksdb()->hset("myhash", "str", "asdf", created, 4));
+  ASSERT_TRUE(created);
   ASSERT_EQ(rocksdb()->getLastApplied(), 4);
 
   ASSERT_NOT_OK(rocksdb()->hincrby("myhash", "str", "5", result, 5));
@@ -118,10 +125,13 @@ TEST_F(Rocks_DB, test_hincrby) {
 TEST_F(Rocks_DB, test_hsetnx) {
   ASSERT_EQ(rocksdb()->getLastApplied(), 0);
 
-  ASSERT_TRUE(rocksdb()->hsetnx("myhash", "field", "v1", 1));
+  bool created;
+  ASSERT_OK(rocksdb()->hsetnx("myhash", "field", "v1", created, 1));
+  ASSERT_TRUE(created);
   ASSERT_EQ(rocksdb()->getLastApplied(), 1);
 
-  ASSERT_FALSE(rocksdb()->hsetnx("myhash", "field", "v2", 2));
+  ASSERT_OK(rocksdb()->hsetnx("myhash", "field", "v2", created, 2));
+  ASSERT_FALSE(created);
   ASSERT_EQ(rocksdb()->getLastApplied(), 2);
 
   std::string value;
@@ -148,7 +158,9 @@ TEST_F(Rocks_DB, test_hincrbyfloat) {
   ASSERT_EQ(tmp, "0.800000");
   ASSERT_EQ(result, 0.8);
 
-  ASSERT_OK(rocksdb()->hset("myhash", "field2", "not-a-float", 3));
+  bool created;
+  ASSERT_OK(rocksdb()->hset("myhash", "field2", "not-a-float", created, 3));
+  ASSERT_TRUE(created);
   rocksdb::Status st = rocksdb()->hincrbyfloat("myhash", "field2", "0.1", result, 4);
   ASSERT_EQ(st.ToString(), "Invalid argument: hash value is not a float");
   ASSERT_EQ(rocksdb()->getLastApplied(), 4);
@@ -231,9 +243,13 @@ TEST_F(Rocks_DB, basic_sanity) {
   ASSERT_EQ(vec, vec2);
 
   ASSERT_NOTFOUND(rocksdb()->hget("myhash", "123", buffer));
-  ASSERT_OK(rocksdb()->hset("myhash", "abc", "123"));
-  ASSERT_OK(rocksdb()->hset("myhash", "abc", "234"));
-  ASSERT_OK(rocksdb()->hset("myhash", "abc", "345"));
+  bool created;
+  ASSERT_OK(rocksdb()->hset("myhash", "abc", "123", created));
+  ASSERT_TRUE(created);
+  ASSERT_OK(rocksdb()->hset("myhash", "abc", "234", created));
+  ASSERT_FALSE(created);
+  ASSERT_OK(rocksdb()->hset("myhash", "abc", "345", created));
+  ASSERT_FALSE(created);
 
   ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 1u);
@@ -241,7 +257,8 @@ TEST_F(Rocks_DB, basic_sanity) {
   ASSERT_OK(rocksdb()->hget("myhash", "abc", buffer));
   ASSERT_EQ(buffer, "345");
 
-  ASSERT_OK(rocksdb()->hset("myhash", "qqq", "ppp"));
+  ASSERT_OK(rocksdb()->hset("myhash", "qqq", "ppp", created));
+  ASSERT_TRUE(created);
   ASSERT_OK(rocksdb()->hlen("myhash", size));
   ASSERT_EQ(size, 2u);
 
@@ -284,7 +301,9 @@ TEST_F(Rocks_DB, basic_sanity) {
 TEST_F(Rocks_DB, hscan) {
   std::vector<std::string> vec;
   for(size_t i = 1; i < 10; i++) {
-    ASSERT_OK(rocksdb()->hset("hash", SSTR("f" << i), SSTR("v" << i)));
+    bool created;
+    ASSERT_OK(rocksdb()->hset("hash", SSTR("f" << i), SSTR("v" << i), created));
+    ASSERT_TRUE(created);
   }
 
   std::string newcursor;

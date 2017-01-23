@@ -77,7 +77,7 @@ void RocksDB::reset() {
 }
 
 void RocksDB::ensureCompatibleFormat(bool justCreated) {
-  const std::string currentFormat("-1");
+  const std::string currentFormat("0");
 
   std::string format;
   rocksdb::Status st = db->Get(rocksdb::ReadOptions(), "__format", &format);
@@ -115,13 +115,6 @@ LogIndex RocksDB::getLastApplied() {
   return lastApplied;
 }
 
-enum RedisKeyType {
-  kString = 'a',
-  kHash = 'b',
-  kSet = 'c',
-  kInternal = '_'
-};
-
 // it's rare to have to escape a key, most don't contain #
 // so don't make a copy, just change the existing string
 static void escape(std::string &str) {
@@ -138,57 +131,130 @@ static void escape(std::string &str) {
 }
 
 // given a rocksdb key (might also contain a field),
-// extract the original redis key
-static std::string extract_key(std::string &tkey) {
-  std::string key;
-  key.reserve(tkey.size());
+// extract the original redis key.
+// Currently not needed
+// static std::string extract_key(std::string &tkey) {
+//   std::string key;
+//   key.reserve(tkey.size());
+//
+//   for(size_t i = 1; i < tkey.size(); i++) {
+//     // escaped hash?
+//     if(i != tkey.size() - 1 && tkey[i] == '|' && tkey[i+1] == '#') {
+//       key.append(1, '#');
+//       i++;
+//       continue;
+//     }
+//     // boundary?
+//     if(tkey[i] == '#') {
+//       break;
+//     }
+//
+//     key.append(1, tkey[i]);
+//   }
+//
+//   return key;
+// }
 
-  for(size_t i = 1; i < tkey.size(); i++) {
-    // escaped hash?
-    if(i != tkey.size() - 1 && tkey[i] == '|' && tkey[i+1] == '#') {
-      key.append(1, '#');
-      i++;
-      continue;
-    }
-    // boundary?
-    if(tkey[i] == '#') {
-      break;
-    }
-
-    key.append(1, tkey[i]);
-  }
-
-  return key;
-}
-
-static std::string translate_key(const RedisKeyType type, const std::string &key) {
+static std::string translate_key(const RocksDB::KeyType type, const std::string &key) {
   std::string escaped = key;
   escape(escaped);
 
-  return std::string(1, type) + escaped;
+  return std::string(1, char(type)) + escaped;
 }
 
-static std::string translate_key(const RedisKeyType type, const std::string &key, const std::string &field) {
+static std::string translate_key(const RocksDB::KeyType type, const std::string &key, const std::string &field) {
   std::string translated = translate_key(type, key) + "#" + field;
   return translated;
 }
 
+static rocksdb::Status wrong_type() {
+  return rocksdb::Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
+}
+
+std::string RocksDB::KeyDescriptor::serialize() const {
+  return SSTR(char(this->keytype) << "-" << intToBinaryString(this->size));
+}
+
+RocksDB::KeyDescriptor RocksDB::KeyDescriptor::construct(const rocksdb::Status &st, const std::string &str, std::string &&dkey) {
+  KeyDescriptor keyinfo;
+  keyinfo.dkey = std::move(dkey);
+
+  if(st.IsNotFound()) {
+    keyinfo.exists = false;
+    keyinfo.size = 0;
+    return keyinfo;
+  }
+
+  if(!st.ok()) qdb_throw("unexpected rocksdb status when inspecting KeyType entry " << keyinfo.dkey << ": " << st.ToString());
+  keyinfo.exists = true;
+  if(str.size() != 10) qdb_throw("unable to parse keyInfo, unexpected size, was expecting 10: " << str);
+
+  if(str[0] == char(KeyType::kString)) {
+    keyinfo.keytype = KeyType::kString;
+  }
+  else if(str[0] == char(KeyType::kHash)) {
+    keyinfo.keytype = KeyType::kHash;
+  }
+  else if(str[0] == char(KeyType::kSet)) {
+    keyinfo.keytype = KeyType::kSet;
+  }
+  else {
+    qdb_throw("unable to parse keyInfo, unknown key type: '" << str[0] << "'");
+  }
+
+  if(str[1] != '-') qdb_throw("unable to parse keyInfo, unexpected char for key type descriptor, expected '-': " << str[1]);
+  keyinfo.size = binaryStringToInt(str.c_str()+2);
+  return keyinfo;
+}
+
+RocksDB::KeyDescriptor RocksDB::getKeyDescriptor(const std::string &redisKey) {
+  std::string tmp;
+  std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), dkey, &tmp);
+  return KeyDescriptor::construct(st, tmp, std::move(dkey));
+}
+
+RocksDB::KeyDescriptor RocksDB::getKeyDescriptor(RocksDB::Snapshot &snapshot, const std::string &redisKey) {
+  std::string tmp;
+  std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
+  rocksdb::Status st = db->Get(snapshot.opts(), dkey, &tmp);
+  return KeyDescriptor::construct(st, tmp, std::move(dkey));
+}
+
+RocksDB::KeyDescriptor RocksDB::lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey) {
+  std::string tmp, tkey;
+  tkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+  return KeyDescriptor::construct(st, tmp, std::move(tkey));
+}
+
+bool RocksDB::assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype) {
+  KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
+  if(keyinfo.exists && keyinfo.keytype != keytype) return false;
+  return true;
+}
+
 rocksdb::Status RocksDB::hget(const std::string &key, const std::string &field, std::string &value) {
-  std::string tkey = translate_key(kHash, key, field);
-  return db->Get(rocksdb::ReadOptions(), tkey, &value);
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+
+  std::string tkey = translate_key(KeyType::kHash, key, field);
+  return db->Get(snapshot.opts(), tkey, &value);
 }
 
 rocksdb::Status RocksDB::hexists(const std::string &key, const std::string &field) {
-  std::string tkey = translate_key(kHash, key, field);
-  std::string value;
-  return db->Get(rocksdb::ReadOptions(), tkey, &value);
+  std::string tmp;
+  return this->hget(key, field, tmp);
 }
 
 rocksdb::Status RocksDB::hkeys(const std::string &key, std::vector<std::string> &keys) {
-  std::string tkey = translate_key(kHash, key) + "#";
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+
+  std::string tkey = translate_key(KeyType::kHash, key) + "#";
   keys.clear();
 
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(db->NewIterator(snapshot.opts()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -198,10 +264,13 @@ rocksdb::Status RocksDB::hkeys(const std::string &key, std::vector<std::string> 
 }
 
 rocksdb::Status RocksDB::hgetall(const std::string &key, std::vector<std::string> &res) {
-  std::string tkey = translate_key(kHash, key) + "#";
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+
+  std::string tkey = translate_key(KeyType::kHash, key) + "#";
   res.clear();
 
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(db->NewIterator(snapshot.opts()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -211,130 +280,138 @@ rocksdb::Status RocksDB::hgetall(const std::string &key, std::vector<std::string
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::hset(const std::string &key, const std::string &field, const std::string &value, LogIndex index) {
-  std::string tkey = translate_key(kHash, key, field);
 
-  TransactionPtr tx = startTransaction();
-  THROW_ON_ERROR(tx->Put(tkey, value));
+rocksdb::Status RocksDB::wrongKeyType(TransactionPtr &tx, LogIndex index) {
   commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  return wrong_type();
 }
 
-bool RocksDB::hsetnx(const std::string &key, const std::string &field, const std::string &value, LogIndex index) {
-  std::string tkey = translate_key(kHash, key, field);
-
+rocksdb::Status RocksDB::hset(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
-  std::string tmp;
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
-  ASSERT_OK_OR_NOTFOUND(st);
+  WriteOperation operation(tx, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(tx, index);
 
-  if(st.IsNotFound()) {
-    THROW_ON_ERROR(tx->Put(tkey, value));
+  fieldcreated = !operation.fieldExists(field);
+  int64_t newsize = operation.keySize() + fieldcreated;
+
+  operation.writeField(field, value);
+  operation.finalize(newsize);
+
+  return finalize(tx, index);
+}
+
+rocksdb::Status RocksDB::hsetnx(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
+  TransactionPtr tx = startTransaction();
+
+  WriteOperation operation(tx, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
+  fieldcreated = !operation.fieldExists(field);
+  int64_t newsize = operation.keySize() + fieldcreated;
+
+  if(fieldcreated) {
+    operation.writeField(field, value);
   }
 
-  commitTransaction(tx, index);
-  return st.IsNotFound();
+  operation.finalize(newsize);
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index) {
-  std::string tkey = translate_key(kHash, key, field);
-
   TransactionPtr tx = startTransaction();
 
   int64_t incrbyInt64;
   if(!my_strtoll(incrby, incrbyInt64)) {
-    commitTransaction(tx, index);
-    return rocksdb::Status::InvalidArgument("value is not an integer or out of range");
+    return malformedRequest(tx, index, "value is not an integer or out of range");
   }
 
+  WriteOperation operation(tx, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
+  std::string tkey = translate_key(KeyType::kHash, key, field);
+
   std::string value;
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
-  ASSERT_OK_OR_NOTFOUND(st);
+  bool exists = operation.getField(field, value);
 
   result = 0;
-  if(st.ok() && !my_strtoll(value, result)) {
-    commitTransaction(tx, index);
-    return rocksdb::Status::InvalidArgument("hash value is not an integer");
+  if(exists && !my_strtoll(value, result)) {
+    operation.finalize(operation.keySize());
+    return malformedRequest(tx, index, "hash value is not an integer");
   }
 
   result += incrbyInt64;
 
-  THROW_ON_ERROR(tx->Put(tkey, std::to_string(result)));
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  operation.writeField(field, std::to_string(result));
+  operation.finalize(operation.keySize() + !exists);
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index) {
-  std::string tkey = translate_key(kHash, key, field);
-
   TransactionPtr tx = startTransaction();
 
-  double incrbyDouble;
-  if(!my_strtod(incrby, incrbyDouble)) {
-    commitTransaction(tx, index);
-    return rocksdb::Status::InvalidArgument("value is not a float or out of range");
+  double incrByDouble;
+  if(!my_strtod(incrby, incrByDouble)) {
+    return malformedRequest(tx, index, "value is not a float or out of range");
   }
+
+  WriteOperation operation(tx, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
+  std::string tkey = translate_key(KeyType::kHash, key, field);
 
   std::string value;
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
-  ASSERT_OK_OR_NOTFOUND(st);
+  bool exists = operation.getField(field, value);
 
   result = 0;
-  if(st.ok() && !my_strtod(value, result)) {
-    commitTransaction(tx, index);
-    return rocksdb::Status::InvalidArgument("hash value is not a float");
+  if(exists && !my_strtod(value, result)) {
+    operation.finalize(operation.keySize());
+    return malformedRequest(tx, index, "hash value is not a float");
   }
 
-  result += incrbyDouble;
+  result += incrByDouble;
 
-  THROW_ON_ERROR(tx->Put(tkey, std::to_string(result)));
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  operation.writeField(field, std::to_string(result));
+  operation.finalize(operation.keySize() + !exists);
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
   TransactionPtr tx = startTransaction();
 
+  WriteOperation operation(tx, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
   for(VecIterator it = start; it != end; it++) {
-    std::string tkey = translate_key(kHash, key, *it);
-
-    std::string value;
-    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &value);
-
-    if(st.ok()) {
-      removed++;
-      THROW_ON_ERROR(tx->Delete(tkey));
-    }
-    else if(!st.IsNotFound()) {
-      qdb_throw("unexpected rocksdb status: " << st.ToString());
-    }
+    removed += operation.deleteField(*it);
   }
 
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  int64_t newsize = operation.keySize() - removed;
+  operation.finalize(newsize);
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::hlen(const std::string &key, size_t &len) {
   len = 0;
 
-  std::string tkey = translate_key(kHash, key) + "#";
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
-  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
-    if(!startswith(iter->key().ToString(), tkey)) break;
-    len++;
-  }
+  KeyDescriptor keyinfo = getKeyDescriptor(key);
+  if(keyinfo.exists && keyinfo.keytype != KeyType::kHash) return wrong_type();
+
+  len = keyinfo.size;
   return rocksdb::Status::OK();
 }
 
 rocksdb::Status RocksDB::hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
-  std::string prefix = translate_key(kHash, key) + "#";
-  std::string tkey = translate_key(kHash, key, cursor);
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+
+  std::string prefix = translate_key(KeyType::kHash, key) + "#";
+  std::string tkey = translate_key(KeyType::kHash, key, cursor);
   res.clear();
 
   newCursor = "";
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(db->NewIterator(snapshot.opts()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
@@ -354,10 +431,13 @@ rocksdb::Status RocksDB::hscan(const std::string &key, const std::string &cursor
 }
 
 rocksdb::Status RocksDB::hvals(const std::string &key, std::vector<std::string> &vals) {
-  std::string tkey = translate_key(kHash, key) + "#";
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+
+  std::string tkey = translate_key(KeyType::kHash, key) + "#";
   vals.clear();
 
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(db->NewIterator(snapshot.opts()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -370,60 +450,54 @@ rocksdb::Status RocksDB::sadd(const std::string &key, const VecIterator &start, 
   added = 0;
   TransactionPtr tx = startTransaction();
 
+  WriteOperation operation(tx, key, KeyType::kSet);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
   for(VecIterator it = start; it != end; it++) {
-    std::string tkey = translate_key(kSet, key, *it);
-
-    std::string tmp;
-    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
-
-    if(st.IsNotFound()) {
+    bool exists = operation.fieldExists(*it);
+    if(!exists) {
+      operation.writeField(*it, "1");
       added++;
-      THROW_ON_ERROR(tx->Put(tkey, "1"));
-    }
-    else if(!st.ok()) {
-      qdb_throw("unexpected rocksdb status: " << st.ToString());
     }
   }
 
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  operation.finalize(operation.keySize() + added);
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::sismember(const std::string &key, const std::string &element) {
-  std::string tkey = translate_key(kSet, key, element);
+  Snapshot snapshot(db);
+  KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
+  if(keyinfo.exists && keyinfo.keytype != KeyType::kSet) return wrong_type();
+  std::string tkey = translate_key(KeyType::kSet, key, element);
 
   std::string tmp;
-  return db->Get(rocksdb::ReadOptions(), tkey, &tmp);
+  return db->Get(snapshot.opts(), tkey, &tmp);
 }
 
 rocksdb::Status RocksDB::srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
   TransactionPtr tx = startTransaction();
 
+  WriteOperation operation(tx, key, KeyType::kSet);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
   for(VecIterator it = start; it != end; it++) {
-    std::string tkey = translate_key(kSet, key, *it);
-
-    std::string tmp;
-    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
-
-    if(st.ok()) {
-      removed++;
-      THROW_ON_ERROR(tx->Delete(tkey));
-    }
-    else if(!st.IsNotFound()) {
-      qdb_throw("unexpected rocksdb status: " << st.ToString());
-    }
+    removed += operation.deleteField(*it);
   }
 
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  operation.finalize(operation.keySize() - removed);
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::smembers(const std::string &key, std::vector<std::string> &members) {
-  std::string tkey = translate_key(kSet, key) + "#";
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
+
+  std::string tkey = translate_key(KeyType::kSet, key) + "#";
   members.clear();
 
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(db->NewIterator(snapshot.opts()));
   for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!startswith(tmp, tkey)) break;
@@ -433,29 +507,156 @@ rocksdb::Status RocksDB::smembers(const std::string &key, std::vector<std::strin
 }
 
 rocksdb::Status RocksDB::scard(const std::string &key, size_t &count) {
-  std::string tkey = translate_key(kSet, key) + "#";
   count = 0;
 
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
-  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
-    if(!startswith(iter->key().ToString(), tkey)) break;
-    count++;
-  }
+  KeyDescriptor keyinfo = getKeyDescriptor(key);
+  if(keyinfo.exists && keyinfo.keytype != KeyType::kSet) return wrong_type();
+
+  count = keyinfo.size;
   return rocksdb::Status::OK();
+}
+
+RocksDB::WriteOperation::~WriteOperation() {
+  if(!finalized) {
+    std::cerr << "WriteOperation being destroyed without having been finalized" << std::endl;
+    std::terminate();
+  }
+}
+
+RocksDB::WriteOperation::WriteOperation(RocksDB::TransactionPtr &tx_, const std::string &key, const KeyType &type)
+: tx(tx_), redisKey(key), expectedType(type) {
+
+  std::string tmp, dkey;
+  dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dkey, &tmp);
+  keyinfo = KeyDescriptor::construct(st, tmp, std::move(dkey));
+
+  redisKeyExists = keyinfo.exists;
+  isValid = (!keyinfo.exists) || (keyinfo.keytype == type);
+
+  if(!keyinfo.exists && isValid) {
+    keyinfo.keytype = expectedType;
+  }
+
+  finalized = !isValid;
+}
+
+bool RocksDB::WriteOperation::valid() {
+  return isValid;
+}
+
+bool RocksDB::WriteOperation::keyExists() {
+  return redisKeyExists;
+}
+
+bool RocksDB::WriteOperation::getField(const std::string &field, std::string &out) {
+  assertWritable();
+
+  std::string tkey = translate_key(keyinfo.keytype, redisKey, field);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &out);
+  ASSERT_OK_OR_NOTFOUND(st);
+  return st.ok();
+}
+
+int64_t RocksDB::WriteOperation::keySize() {
+  return keyinfo.size;
+}
+
+void RocksDB::WriteOperation::assertWritable() {
+  if(!isValid) qdb_throw("WriteOperation not valid!");
+  if(finalized) qdb_throw("WriteOperation already finalized!");
+}
+
+void RocksDB::WriteOperation::write(const std::string &value) {
+  assertWritable();
+
+  if(keyinfo.keytype != KeyType::kString) {
+    qdb_throw("writing without a field makes sense only for strings");
+  }
+
+  std::string tkey = translate_key(keyinfo.keytype, redisKey);
+  THROW_ON_ERROR(tx->Put(tkey, value));
+}
+
+void RocksDB::WriteOperation::writeField(const std::string &field, const std::string &value) {
+  assertWritable();
+
+  if(keyinfo.keytype != KeyType::kHash && keyinfo.keytype != KeyType::kSet) {
+    qdb_throw("writing with a field makes sense only for hashes and sets");
+  }
+
+  std::string tkey = translate_key(keyinfo.keytype, redisKey, field);
+  THROW_ON_ERROR(tx->Put(tkey, value));
+}
+
+void RocksDB::WriteOperation::finalize(int64_t newsize) {
+  assertWritable();
+
+  if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
+  keyinfo.size = newsize;
+
+  if(newsize == 0) {
+    THROW_ON_ERROR(tx->Delete(keyinfo.dkey));
+  }
+  else {
+    THROW_ON_ERROR(tx->Put(keyinfo.dkey, keyinfo.serialize()));
+  }
+
+  finalized = true;
+}
+
+bool RocksDB::WriteOperation::fieldExists(const std::string &field) {
+  assertWritable();
+
+  std::string tmp;
+  return getField(field, tmp);
+}
+
+bool RocksDB::WriteOperation::deleteField(const std::string &field) {
+  assertWritable();
+
+  std::string tmp;
+  std::string tkey = translate_key(keyinfo.keytype, redisKey, field);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+  ASSERT_OK_OR_NOTFOUND(st);
+
+  if(st.ok()) THROW_ON_ERROR(tx->Delete(tkey));
+  return st.ok();
 }
 
 rocksdb::Status RocksDB::set(const std::string& key, const std::string& value, LogIndex index) {
-  std::string tkey = translate_key(kString, key);
-
   TransactionPtr tx = startTransaction();
-  RETURN_ON_ERROR(tx->Put(tkey, value));
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+
+  WriteOperation operation(tx, key, KeyType::kString);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
+  operation.write(value);
+  operation.finalize(value.size());
+
+  return finalize(tx, index);
+}
+
+RocksDB::Snapshot::Snapshot(rocksdb::DB *db_) {
+  db = db_;
+  snapshot = db->GetSnapshot();
+  if(snapshot == nullptr) qdb_throw("unable to take db snapshot");
+  options.snapshot = snapshot;
+}
+
+RocksDB::Snapshot::~Snapshot() {
+  db->ReleaseSnapshot(snapshot);
+}
+
+rocksdb::ReadOptions& RocksDB::Snapshot::opts() {
+  return options;
 }
 
 rocksdb::Status RocksDB::get(const std::string &key, std::string &value) {
-  std::string tkey = translate_key(kString, key);
-  return db->Get(rocksdb::ReadOptions(), tkey, &value);
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kString)) return wrong_type();
+
+  std::string tkey = translate_key(KeyType::kString, key);
+  return db->Get(snapshot.opts(), tkey, &value);
 }
 
 void RocksDB::remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx) {
@@ -467,14 +668,10 @@ void RocksDB::remove_all_with_prefix(const std::string &prefix, int64_t &removed
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
     if(!startswith(key, prefix)) break;
-    if(key.size() > 0 && key[0] == kInternal) continue;
+    if(key.size() > 0 && key[0] == char(InternalKeyType::kInternal)) continue;
 
-    rocksdb::Status st = tx->Delete(key);
-
-    // not found is still a valid case, because a different thread might have removed
-    // the key in-between
-    if(st.ok()) removed++;
-    else if(!st.IsNotFound()) qdb_throw("unexpected rocksdb status: " << st.ToString());
+    THROW_ON_ERROR(tx->Delete(key));
+    removed++;
   }
 }
 
@@ -483,64 +680,36 @@ rocksdb::Status RocksDB::del(const VecIterator &start, const VecIterator &end, i
   TransactionPtr tx = startTransaction();
 
   for(VecIterator it = start; it != end; it++) {
-    std::string tmp;
-    std::string tkey;
+    KeyDescriptor keyInfo = lockKeyDescriptor(tx, *it);
+    if(!keyInfo.exists) continue;
 
-    // is it a string?
-    tkey = translate_key(kString, *it);
-    rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
-    ASSERT_OK_OR_NOTFOUND(st);
-    if(st.ok()) {
-      removed++;
+    std::string tkey, tmp;
+
+    if(keyInfo.keytype == KeyType::kString) {
+      tkey = translate_key(KeyType::kString, *it);
+      THROW_ON_ERROR(tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp));
       THROW_ON_ERROR(tx->Delete(tkey));
-      continue;
+    }
+    else if(keyInfo.keytype == KeyType::kHash || keyInfo.keytype == KeyType::kSet) {
+      tkey = translate_key(keyInfo.keytype, *it) + "#";
+      int64_t count = 0;
+      remove_all_with_prefix(tkey, count, tx);
+      if(count != keyInfo.size) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.size);
+    }
+    else {
+      qdb_throw("should never happen");
     }
 
-    int64_t count = 0;
-    // is it a hash?
-    tkey = translate_key(kHash, *it) + "#";
-    remove_all_with_prefix(tkey, count, tx);
-    if(count > 0) {
-      removed++;
-      continue;
-    }
-
-    // is it a set?
-    tkey = translate_key(kSet, *it) + "#";
-    remove_all_with_prefix(tkey, count, tx);
-    if(count > 0) {
-      removed++;
-      continue;
-    }
+    removed++;
+    THROW_ON_ERROR(tx->Delete(keyInfo.dkey));
   }
 
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::exists(const std::string &key) {
-  std::string tmp;
-
-  // is it a string?
-  std::string str_key = translate_key(kString, key);
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), str_key, &tmp);
-  if(st.ok() || !st.IsNotFound()) return st;
-
-  // is it a hash?
-  std::string hash_key = translate_key(kHash, key) + "#";
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
-  iter->Seek(hash_key);
-  if(iter->Valid() && startswith(iter->key().ToString(), hash_key)) {
-    return rocksdb::Status::OK();
-  }
-
-  // is it a set?
-  std::string set_key = translate_key(kSet, key) + "#";
-  iter = IteratorPtr(db->NewIterator(rocksdb::ReadOptions()));
-  iter->Seek(set_key);
-  if(iter->Valid() && startswith(iter->key().ToString(), set_key)) {
-    return rocksdb::Status::OK();
-  }
+  KeyDescriptor keyinfo = getKeyDescriptor(key);
+  if(keyinfo.exists) return rocksdb::Status::OK();
   return rocksdb::Status::NotFound();
 }
 
@@ -549,19 +718,17 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
 
   bool allkeys = (pattern.length() == 1 && pattern[0] == '*');
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
-  std::string previous;
-  for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {
-    std::string tmp = iter->key().ToString();
-    std::string redis_key = extract_key(tmp);
 
-    if(redis_key != previous && redis_key[0] != kInternal) {
-      if(allkeys || stringmatchlen(pattern.c_str(), pattern.length(),
-                                   redis_key.c_str(), redis_key.length(), 0)) {
-        result.push_back(redis_key);
-      }
+  std::string searchPrefix(1, char(InternalKeyType::kDescriptor));
+  for(iter->Seek(searchPrefix); iter->Valid(); iter->Next()) {
+    std::string rkey = iter->key().ToString();
+    if(rkey.size() == 0 || rkey[0] != char(InternalKeyType::kDescriptor)) break;
+
+    if(allkeys || stringmatchlen(pattern.c_str(), pattern.length(), rkey.c_str()+1, rkey.length()-1, 0)) {
+      result.push_back(rkey.substr(1));
     }
-    previous = redis_key;
   }
+
   return rocksdb::Status::OK();
 }
 
@@ -569,8 +736,7 @@ rocksdb::Status RocksDB::flushall(LogIndex index) {
   int64_t tmp;
   TransactionPtr tx = startTransaction();
   remove_all_with_prefix("", tmp, tx);
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
+  return finalize(tx, index);
 }
 
 rocksdb::Status RocksDB::checkpoint(const std::string &path) {
@@ -589,8 +755,17 @@ RocksDB::TransactionPtr RocksDB::startTransaction() {
 
 rocksdb::Status RocksDB::noop(LogIndex index) {
   TransactionPtr tx = startTransaction();
+  return finalize(tx, index);
+}
+
+rocksdb::Status RocksDB::finalize(TransactionPtr &tx, LogIndex index) {
   commitTransaction(tx, index);
   return rocksdb::Status::OK();
+}
+
+rocksdb::Status RocksDB::malformedRequest(TransactionPtr &tx, LogIndex index, std::string message) {
+  commitTransaction(tx, index);
+  return rocksdb::Status::InvalidArgument(message);
 }
 
 void RocksDB::commitTransaction(TransactionPtr &tx, LogIndex index) {

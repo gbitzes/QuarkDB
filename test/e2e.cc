@@ -271,6 +271,21 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("hset", "myhash", "a", "d"));
   futures.emplace_back(tunnel(leaderID)->exec("hdel", "myhash", "a", "b", "b"));
   futures.emplace_back(tunnel(leaderID)->exec("hdel", "myhash", "a"));
+  futures.emplace_back(tunnel(leaderID)->exec("sadd", "myhash", "wrongtype"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "myhash"));
+  futures.emplace_back(tunnel(leaderID)->exec("hdel", "myhash", "c"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "myhash"));
+  futures.emplace_back(tunnel(leaderID)->exec("sadd", "myhash", "wrongtype"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "myhash"));
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "myhash", "a", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("srem", "myhash", "wrongtype"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "myhash"));
+  futures.emplace_back(tunnel(leaderID)->exec("hset", "myhash", "a", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("hexists", "myhash", "a"));
+  futures.emplace_back(tunnel(leaderID)->exec("hexists", "myhash", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("sismember", "myhash", "b"));
+  futures.emplace_back(tunnel(leaderID)->exec("scard", "myhash"));
+  futures.emplace_back(tunnel(leaderID)->exec("scard", "does-not-exist"));
 
   ASSERT_REPLY(futures[0], 1);
   ASSERT_REPLY(futures[1], 1);
@@ -278,6 +293,21 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[3], 0);
   ASSERT_REPLY(futures[4], 2);
   ASSERT_REPLY(futures[5], 0);
+  ASSERT_REPLY(futures[6], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(futures[7], 1);
+  ASSERT_REPLY(futures[8], 1);
+  ASSERT_REPLY(futures[9], 0);
+  ASSERT_REPLY(futures[10], 1);
+  ASSERT_REPLY(futures[11], 1);
+  ASSERT_REPLY(futures[12], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(futures[13], 1);
+  ASSERT_REPLY(futures[14], 0);
+  ASSERT_REPLY(futures[15], 1);
+  ASSERT_REPLY(futures[16], 1);
+  ASSERT_REPLY(futures[17], 0);
+  ASSERT_REPLY(futures[18], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(futures[19], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(futures[20], 0);
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("set", "mystring", "asdf"));
@@ -288,7 +318,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset"));
 
   ASSERT_REPLY(futures[0], "OK");
-  ASSERT_REPLY(futures[1], make_req("mystring", "myhash", "myset"));
+  ASSERT_REPLY(futures[1], make_req("myhash", "myset", "mystring"));
   ASSERT_REPLY(futures[2], 4);
   ASSERT_REPLY(futures[3], 3);
   ASSERT_REPLY(futures[4], 0);

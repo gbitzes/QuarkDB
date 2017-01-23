@@ -52,8 +52,8 @@ public:
   rocksdb::Status hexists(const std::string &key, const std::string &field);
   rocksdb::Status hkeys(const std::string &key, std::vector<std::string> &keys);
   rocksdb::Status hgetall(const std::string &key, std::vector<std::string> &res);
-  rocksdb::Status hset(const std::string &key, const std::string &field, const std::string &value, LogIndex index = 0);
-  bool hsetnx(const std::string &key, const std::string &field, const std::string &value, LogIndex index = 0);
+  rocksdb::Status hset(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index = 0);
+  rocksdb::Status hsetnx(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index = 0);
   rocksdb::Status hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index = 0);
   rocksdb::Status hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index = 0);
   rocksdb::Status hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
@@ -79,16 +79,89 @@ public:
   // Checkpoint for online backups
   //----------------------------------------------------------------------------
   rocksdb::Status checkpoint(const std::string &path);
+
+  enum class KeyType : char {
+    kString = 'a',
+    kHash = 'b',
+    kSet = 'c'
+  };
+
+  enum class InternalKeyType : char {
+    kInternal = '_',
+    kDescriptor = 'd'
+  };
+
 private:
-  LogIndex lastApplied;
+  class Snapshot {
+  public:
+    Snapshot(rocksdb::DB *db);
+    ~Snapshot();
+    rocksdb::ReadOptions& opts();
+  private:
+    rocksdb::DB *db;
+    const rocksdb::Snapshot *snapshot;
+    rocksdb::ReadOptions options;
+    DISALLOW_COPY_AND_ASSIGN(Snapshot);
+  };
 
   TransactionPtr startTransaction();
   void commitTransaction(TransactionPtr &tx, LogIndex index);
+  rocksdb::Status finalize(TransactionPtr &tx, LogIndex index);
+  rocksdb::Status malformedRequest(TransactionPtr &tx, LogIndex index, std::string message);
+  bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
+
+  struct KeyDescriptor {
+    bool exists;
+    std::string dkey;
+    KeyType keytype;
+    int64_t size;
+
+    std::string serialize() const;
+    static KeyDescriptor construct(const rocksdb::Status &st, const std::string &str, std::string &&tkey);
+  };
+
+  class WriteOperation {
+  public:
+    WriteOperation(TransactionPtr &tx, const std::string &key, const KeyType &type);
+    ~WriteOperation();
+
+    bool valid();
+    bool keyExists();
+    bool getField(const std::string &field, std::string &out);
+    int64_t keySize();
+
+    void assertWritable();
+
+    void write(const std::string &value);
+    void writeField(const std::string &field, const std::string &value);
+    bool fieldExists(const std::string &field);
+    bool deleteField(const std::string &field);
+
+    void finalize(int64_t newsize);
+  private:
+    TransactionPtr &tx;
+    const std::string &redisKey;
+
+    KeyType expectedType;
+    KeyDescriptor keyinfo;
+
+    bool redisKeyExists;
+    bool isValid = false;
+    bool finalized = false;
+  };
+  friend class WriteOperation;
+
+  KeyDescriptor getKeyDescriptor(const std::string &redisKey);
+  KeyDescriptor getKeyDescriptor(Snapshot &snapshot, const std::string &redisKey);
+  KeyDescriptor lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey);
+
+  rocksdb::Status wrongKeyType(TransactionPtr &tx, LogIndex index);
 
   void retrieveLastApplied();
   void ensureCompatibleFormat(bool justCreated);
   void remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx);
 
+  LogIndex lastApplied;
   rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;
   const std::string filename;
