@@ -37,7 +37,7 @@
 
 #include "Configuration.hh"
 #include "RedisParser.hh"
-#include "RocksDB.hh"
+#include "StateMachine.hh"
 #include "Dispatcher.hh"
 #include "raft/RaftJournal.hh"
 #include "raft/RaftState.hh"

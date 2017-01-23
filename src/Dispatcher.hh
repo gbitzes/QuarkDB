@@ -27,7 +27,6 @@
 #include "Common.hh"
 #include "Link.hh"
 #include "Commands.hh"
-#include "RocksDB.hh"
 #include "Connection.hh"
 
 namespace quarkdb {
@@ -38,16 +37,18 @@ public:
   virtual ~Dispatcher() {}
 };
 
+class StateMachine;
+
 class RedisDispatcher : public Dispatcher {
 public:
-  RedisDispatcher(RocksDB &rocksdb);
+  RedisDispatcher(StateMachine &rocksdb);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   std::string dispatch(RedisRequest &req, LogIndex commit);
 private:
   std::string errArgs(RedisRequest &request, LogIndex commit);
   std::string dispatch(RedisRequest &request, RedisCommand command, LogIndex commit);
 
-  RocksDB &store;
+  StateMachine &store;
 };
 
 }

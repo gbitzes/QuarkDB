@@ -27,7 +27,7 @@
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
+RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc)
 : dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc) {
   mainThread = std::thread(&RaftDirector::main, this);
   commitApplier = std::thread(&RaftDirector::applyCommits, this);

@@ -49,7 +49,7 @@ protected:
     ASSERT_EQ(tmp, reply);
   }
 
-  RocksDB store;
+  StateMachine store;
   Link link;
   Connection conn;
   XrdBuffManager bufferManager;

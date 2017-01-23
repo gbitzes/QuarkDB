@@ -74,15 +74,15 @@ public:
   virtual void SetUp() override;
   virtual void TearDown() override;
 
-  // initialize a clean rocksdb database or journal. The connection is cached,
-  // because even if rocksdb is local, it takes a long time to open one.
+  // initialize a clean state machine or journal. The connection is cached,
+  // because even if rocksdb is local, it takes a long time to open.
   // (often 50+ ms)
-  RocksDB *getRocksDB(const std::string &path);
+  StateMachine *getStateMachine(const std::string &path);
   RaftJournal *getJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   const std::string testdir = "/tmp/quarkdb-tests";
   static RaftServer server(int id);
 private:
-  std::map<std::string, RocksDB*> rocksdbCache;
+  std::map<std::string, StateMachine*> smCache;
   std::map<std::string, RaftJournal*> journalCache;
 };
 extern GlobalEnv &commonState;
@@ -119,7 +119,7 @@ public:
   TestCluster(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   ~TestCluster();
 
-  RocksDB* rocksdb(int id = 0);
+  StateMachine* stateMachine(int id = 0);
   RaftJournal* journal(int id = 0);
   RaftDispatcher *dispatcher(int id = 0);
   RaftState *state(int id = 0);

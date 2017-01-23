@@ -27,7 +27,7 @@
 #include "Dispatcher.hh"
 #include "Configuration.hh"
 #include "RedisParser.hh"
-#include "RocksDB.hh"
+#include "StateMachine.hh"
 #include "Dispatcher.hh"
 #include "raft/RaftJournal.hh"
 #include "raft/RaftState.hh"
@@ -80,7 +80,7 @@ public:
 private:
   Configuration configuration;
   RaftGroup* raftgroup = nullptr;
-  RocksDB *rocksdb = nullptr;
+  StateMachine *stateMachine = nullptr;
   Dispatcher* dispatcher = nullptr;
 
   XrdBuffManager *bufferManager = nullptr; // owned by xrootd, not me

@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "StateMachine.hh"
 #include "QuarkDBNode.hh"
 #include "Version.hh"
 #include <sys/stat.h>
@@ -50,10 +51,10 @@ void QuarkDBNode::detach() {
     delete raftgroup;
     raftgroup = nullptr;
   }
-  else if(rocksdb) {
-    qdb_info("Shutting down the main rocksdb store.");
-    delete rocksdb;
-    rocksdb = nullptr;
+  else if(stateMachine) {
+    qdb_info("Shutting down the state machine.");
+    delete stateMachine;
+    stateMachine = nullptr;
 
     delete dispatcher;
     dispatcher = nullptr;
@@ -101,8 +102,8 @@ bool QuarkDBNode::attach(std::string &err) {
   }
 
   if(configuration.getMode() == Mode::standalone) {
-    rocksdb = new RocksDB(configuration.getStateMachine());
-    dispatcher = new RedisDispatcher(*rocksdb);
+    stateMachine = new StateMachine(configuration.getStateMachine());
+    dispatcher = new RedisDispatcher(*stateMachine);
   }
   else if(configuration.getMode() == Mode::raft) {
     raftgroup = new RaftGroup(configuration.getDatabase(), configuration.getMyself(), timeouts);

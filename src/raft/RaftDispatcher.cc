@@ -29,7 +29,7 @@
 
 using namespace quarkdb;
 
-RaftDispatcher::RaftDispatcher(RaftJournal &jour, RocksDB &sm, RaftState &st, RaftClock &rc)
+RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc)
 : journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm) {
 }
 

@@ -137,7 +137,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   // make sure the log entry has been propagated to all nodes
   for(size_t i = 0; i < 3; i++) {
     std::string value;
-    RETRY_ASSERT_TRUE(rocksdb(i)->get("asdf", value).ok() && value == "3456");
+    RETRY_ASSERT_TRUE(stateMachine(i)->get("asdf", value).ok() && value == "3456");
   }
 
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "qwerty", "789"), "OK");
@@ -189,7 +189,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   ASSERT_FALSE(dispatcher()->checkpoint(checkpointPath, err)); // exists already
 
   // pretty expensive to open two extra databases, but necessary
-  RocksDB checkpointSM(SSTR(checkpointPath << "/state-machine"));
+  StateMachine checkpointSM(SSTR(checkpointPath << "/state-machine"));
 
   std::string tmp;
   ASSERT_OK(checkpointSM.get("client3", tmp));

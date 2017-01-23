@@ -19,7 +19,7 @@ add_library(XrdRedis SHARED
   Link.cc                    Link.hh
   BufferedReader.cc          BufferedReader.hh
   RedisParser.cc             RedisParser.hh
-  RocksDB.cc                 RocksDB.hh
+  StateMachine.cc            StateMachine.hh
   Commands.cc                Commands.hh
   Formatter.cc               Formatter.hh
   Dispatcher.cc              Dispatcher.hh

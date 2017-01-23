@@ -34,9 +34,9 @@ using namespace qclient;
 class tPoller : public TestCluster3Nodes {};
 
 TEST_F(tPoller, T1) {
-  RedisDispatcher dispatcher(*rocksdb());
+  RedisDispatcher dispatcher(*stateMachine());
 
-  Poller rocksdbPoller(myself().port, &dispatcher);
+  Poller smPoller(myself().port, &dispatcher);
 
   // start first connection
   QClient tunnel(myself().hostname, myself().port);
@@ -63,7 +63,7 @@ TEST_F(tPoller, T1) {
 }
 
 TEST_F(tPoller, test_reconnect) {
-  RedisDispatcher dispatcher(*rocksdb());
+  RedisDispatcher dispatcher(*stateMachine());
 
   QClient tunnel(myself().hostname, myself().port);
 

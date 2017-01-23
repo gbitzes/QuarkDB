@@ -24,7 +24,7 @@
 #ifndef __QUARKDB_RAFT_REPLICATOR_H__
 #define __QUARKDB_RAFT_REPLICATOR_H__
 
-#include "../RocksDB.hh"
+#include "../StateMachine.hh"
 #include "RaftJournal.hh"
 #include "RaftState.hh"
 #include "RaftTimeouts.hh"
@@ -39,7 +39,7 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 class RaftReplicator {
 public:
-  RaftReplicator(RaftJournal &journal, RocksDB &stateMachine, RaftState &state, const RaftTimeouts t);
+  RaftReplicator(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, const RaftTimeouts t);
   ~RaftReplicator();
 
   bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
@@ -50,7 +50,7 @@ private:
     std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
 
   RaftJournal &journal;
-  RocksDB &stateMachine;
+  StateMachine &stateMachine;
   RaftState &state;
 
   RaftCommitTracker commitTracker;

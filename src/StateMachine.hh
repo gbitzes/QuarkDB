@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RocksDB.hh
+// File: StateMachine.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -33,11 +33,11 @@
 
 namespace quarkdb {
 
-class RocksDB {
+class StateMachine {
 public:
-  RocksDB(const std::string &filename);
-  virtual ~RocksDB();
-  DISALLOW_COPY_AND_ASSIGN(RocksDB);
+  StateMachine(const std::string &filename);
+  virtual ~StateMachine();
+  DISALLOW_COPY_AND_ASSIGN(StateMachine);
   void reset();
 
   using VecIterator = std::vector<std::string>::const_iterator;

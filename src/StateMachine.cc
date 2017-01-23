@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RocksDB.cc
+// File: StateMachine.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RocksDB.hh"
+#include "StateMachine.hh"
 #include "Utils.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
@@ -43,7 +43,7 @@ static bool directoryExists(const std::string &path) {
   return false;
 }
 
-RocksDB::RocksDB(const std::string &f) : filename(f) {
+StateMachine::StateMachine(const std::string &f) : filename(f) {
   qdb_info("Openning rocksdb database " << quotes(filename));
   bool dirExists = directoryExists(filename);
 
@@ -57,7 +57,7 @@ RocksDB::RocksDB(const std::string &f) : filename(f) {
   retrieveLastApplied();
 }
 
-RocksDB::~RocksDB() {
+StateMachine::~StateMachine() {
   if(transactionDB) {
     qdb_info("Closing rocksdb database " << quotes(filename));
     delete transactionDB;
@@ -66,7 +66,7 @@ RocksDB::~RocksDB() {
   }
 }
 
-void RocksDB::reset() {
+void StateMachine::reset() {
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {
     db->Delete(rocksdb::WriteOptions(), iter->key().ToString());
@@ -76,7 +76,7 @@ void RocksDB::reset() {
   retrieveLastApplied();
 }
 
-void RocksDB::ensureCompatibleFormat(bool justCreated) {
+void StateMachine::ensureCompatibleFormat(bool justCreated) {
   const std::string currentFormat("0");
 
   std::string format;
@@ -90,11 +90,11 @@ void RocksDB::ensureCompatibleFormat(bool justCreated) {
   }
   else {
     if(!st.ok()) qdb_throw("Cannot read __format: " << st.ToString());
-    if(format != currentFormat) qdb_throw("Asked to open RocksDB store with incompatible format (" << format << "), I can only handle " << currentFormat);
+    if(format != currentFormat) qdb_throw("Asked to open a state machine with incompatible format (" << format << "), I can only handle " << currentFormat);
   }
 }
 
-void RocksDB::retrieveLastApplied() {
+void StateMachine::retrieveLastApplied() {
   std::string tmp;
   rocksdb::Status st = db->Get(rocksdb::ReadOptions(), "__last-applied", &tmp);
 
@@ -111,7 +111,7 @@ void RocksDB::retrieveLastApplied() {
   }
 }
 
-LogIndex RocksDB::getLastApplied() {
+LogIndex StateMachine::getLastApplied() {
   return lastApplied;
 }
 
@@ -155,14 +155,14 @@ static void escape(std::string &str) {
 //   return key;
 // }
 
-static std::string translate_key(const RocksDB::KeyType type, const std::string &key) {
+static std::string translate_key(const StateMachine::KeyType type, const std::string &key) {
   std::string escaped = key;
   escape(escaped);
 
   return std::string(1, char(type)) + escaped;
 }
 
-static std::string translate_key(const RocksDB::KeyType type, const std::string &key, const std::string &field) {
+static std::string translate_key(const StateMachine::KeyType type, const std::string &key, const std::string &field) {
   std::string translated = translate_key(type, key) + "#" + field;
   return translated;
 }
@@ -171,11 +171,11 @@ static rocksdb::Status wrong_type() {
   return rocksdb::Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
 }
 
-std::string RocksDB::KeyDescriptor::serialize() const {
+std::string StateMachine::KeyDescriptor::serialize() const {
   return SSTR(char(this->keytype) << "-" << intToBinaryString(this->size));
 }
 
-RocksDB::KeyDescriptor RocksDB::KeyDescriptor::construct(const rocksdb::Status &st, const std::string &str, std::string &&dkey) {
+StateMachine::KeyDescriptor StateMachine::KeyDescriptor::construct(const rocksdb::Status &st, const std::string &str, std::string &&dkey) {
   KeyDescriptor keyinfo;
   keyinfo.dkey = std::move(dkey);
 
@@ -207,34 +207,34 @@ RocksDB::KeyDescriptor RocksDB::KeyDescriptor::construct(const rocksdb::Status &
   return keyinfo;
 }
 
-RocksDB::KeyDescriptor RocksDB::getKeyDescriptor(const std::string &redisKey) {
+StateMachine::KeyDescriptor StateMachine::getKeyDescriptor(const std::string &redisKey) {
   std::string tmp;
   std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
   rocksdb::Status st = db->Get(rocksdb::ReadOptions(), dkey, &tmp);
   return KeyDescriptor::construct(st, tmp, std::move(dkey));
 }
 
-RocksDB::KeyDescriptor RocksDB::getKeyDescriptor(RocksDB::Snapshot &snapshot, const std::string &redisKey) {
+StateMachine::KeyDescriptor StateMachine::getKeyDescriptor(StateMachine::Snapshot &snapshot, const std::string &redisKey) {
   std::string tmp;
   std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
   rocksdb::Status st = db->Get(snapshot.opts(), dkey, &tmp);
   return KeyDescriptor::construct(st, tmp, std::move(dkey));
 }
 
-RocksDB::KeyDescriptor RocksDB::lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey) {
+StateMachine::KeyDescriptor StateMachine::lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey) {
   std::string tmp, tkey;
   tkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
   rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
   return KeyDescriptor::construct(st, tmp, std::move(tkey));
 }
 
-bool RocksDB::assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype) {
+bool StateMachine::assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype) {
   KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
   if(keyinfo.exists && keyinfo.keytype != keytype) return false;
   return true;
 }
 
-rocksdb::Status RocksDB::hget(const std::string &key, const std::string &field, std::string &value) {
+rocksdb::Status StateMachine::hget(const std::string &key, const std::string &field, std::string &value) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
@@ -242,12 +242,12 @@ rocksdb::Status RocksDB::hget(const std::string &key, const std::string &field, 
   return db->Get(snapshot.opts(), tkey, &value);
 }
 
-rocksdb::Status RocksDB::hexists(const std::string &key, const std::string &field) {
+rocksdb::Status StateMachine::hexists(const std::string &key, const std::string &field) {
   std::string tmp;
   return this->hget(key, field, tmp);
 }
 
-rocksdb::Status RocksDB::hkeys(const std::string &key, std::vector<std::string> &keys) {
+rocksdb::Status StateMachine::hkeys(const std::string &key, std::vector<std::string> &keys) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
@@ -263,7 +263,7 @@ rocksdb::Status RocksDB::hkeys(const std::string &key, std::vector<std::string> 
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::hgetall(const std::string &key, std::vector<std::string> &res) {
+rocksdb::Status StateMachine::hgetall(const std::string &key, std::vector<std::string> &res) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
@@ -281,12 +281,12 @@ rocksdb::Status RocksDB::hgetall(const std::string &key, std::vector<std::string
 }
 
 
-rocksdb::Status RocksDB::wrongKeyType(TransactionPtr &tx, LogIndex index) {
+rocksdb::Status StateMachine::wrongKeyType(TransactionPtr &tx, LogIndex index) {
   commitTransaction(tx, index);
   return wrong_type();
 }
 
-rocksdb::Status RocksDB::hset(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
+rocksdb::Status StateMachine::hset(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
   WriteOperation operation(tx, key, KeyType::kHash);
@@ -301,7 +301,7 @@ rocksdb::Status RocksDB::hset(const std::string &key, const std::string &field, 
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::hsetnx(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
+rocksdb::Status StateMachine::hsetnx(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
   WriteOperation operation(tx, key, KeyType::kHash);
@@ -318,7 +318,7 @@ rocksdb::Status RocksDB::hsetnx(const std::string &key, const std::string &field
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index) {
+rocksdb::Status StateMachine::hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
   int64_t incrbyInt64;
@@ -347,7 +347,7 @@ rocksdb::Status RocksDB::hincrby(const std::string &key, const std::string &fiel
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index) {
+rocksdb::Status StateMachine::hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
   double incrByDouble;
@@ -376,7 +376,7 @@ rocksdb::Status RocksDB::hincrbyfloat(const std::string &key, const std::string 
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
+rocksdb::Status StateMachine::hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
   TransactionPtr tx = startTransaction();
 
@@ -392,7 +392,7 @@ rocksdb::Status RocksDB::hdel(const std::string &key, const VecIterator &start, 
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::hlen(const std::string &key, size_t &len) {
+rocksdb::Status StateMachine::hlen(const std::string &key, size_t &len) {
   len = 0;
 
   KeyDescriptor keyinfo = getKeyDescriptor(key);
@@ -402,7 +402,7 @@ rocksdb::Status RocksDB::hlen(const std::string &key, size_t &len) {
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
+rocksdb::Status StateMachine::hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
@@ -430,7 +430,7 @@ rocksdb::Status RocksDB::hscan(const std::string &key, const std::string &cursor
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::hvals(const std::string &key, std::vector<std::string> &vals) {
+rocksdb::Status StateMachine::hvals(const std::string &key, std::vector<std::string> &vals) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
@@ -446,7 +446,7 @@ rocksdb::Status RocksDB::hvals(const std::string &key, std::vector<std::string> 
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::sadd(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added, LogIndex index) {
+rocksdb::Status StateMachine::sadd(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added, LogIndex index) {
   added = 0;
   TransactionPtr tx = startTransaction();
 
@@ -465,7 +465,7 @@ rocksdb::Status RocksDB::sadd(const std::string &key, const VecIterator &start, 
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::sismember(const std::string &key, const std::string &element) {
+rocksdb::Status StateMachine::sismember(const std::string &key, const std::string &element) {
   Snapshot snapshot(db);
   KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
   if(keyinfo.exists && keyinfo.keytype != KeyType::kSet) return wrong_type();
@@ -475,7 +475,7 @@ rocksdb::Status RocksDB::sismember(const std::string &key, const std::string &el
   return db->Get(snapshot.opts(), tkey, &tmp);
 }
 
-rocksdb::Status RocksDB::srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
+rocksdb::Status StateMachine::srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
   TransactionPtr tx = startTransaction();
 
@@ -490,7 +490,7 @@ rocksdb::Status RocksDB::srem(const std::string &key, const VecIterator &start, 
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::smembers(const std::string &key, std::vector<std::string> &members) {
+rocksdb::Status StateMachine::smembers(const std::string &key, std::vector<std::string> &members) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
 
@@ -506,7 +506,7 @@ rocksdb::Status RocksDB::smembers(const std::string &key, std::vector<std::strin
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::scard(const std::string &key, size_t &count) {
+rocksdb::Status StateMachine::scard(const std::string &key, size_t &count) {
   count = 0;
 
   KeyDescriptor keyinfo = getKeyDescriptor(key);
@@ -516,14 +516,14 @@ rocksdb::Status RocksDB::scard(const std::string &key, size_t &count) {
   return rocksdb::Status::OK();
 }
 
-RocksDB::WriteOperation::~WriteOperation() {
+StateMachine::WriteOperation::~WriteOperation() {
   if(!finalized) {
     std::cerr << "WriteOperation being destroyed without having been finalized" << std::endl;
     std::terminate();
   }
 }
 
-RocksDB::WriteOperation::WriteOperation(RocksDB::TransactionPtr &tx_, const std::string &key, const KeyType &type)
+StateMachine::WriteOperation::WriteOperation(StateMachine::TransactionPtr &tx_, const std::string &key, const KeyType &type)
 : tx(tx_), redisKey(key), expectedType(type) {
 
   std::string tmp, dkey;
@@ -541,15 +541,15 @@ RocksDB::WriteOperation::WriteOperation(RocksDB::TransactionPtr &tx_, const std:
   finalized = !isValid;
 }
 
-bool RocksDB::WriteOperation::valid() {
+bool StateMachine::WriteOperation::valid() {
   return isValid;
 }
 
-bool RocksDB::WriteOperation::keyExists() {
+bool StateMachine::WriteOperation::keyExists() {
   return redisKeyExists;
 }
 
-bool RocksDB::WriteOperation::getField(const std::string &field, std::string &out) {
+bool StateMachine::WriteOperation::getField(const std::string &field, std::string &out) {
   assertWritable();
 
   std::string tkey = translate_key(keyinfo.keytype, redisKey, field);
@@ -558,16 +558,16 @@ bool RocksDB::WriteOperation::getField(const std::string &field, std::string &ou
   return st.ok();
 }
 
-int64_t RocksDB::WriteOperation::keySize() {
+int64_t StateMachine::WriteOperation::keySize() {
   return keyinfo.size;
 }
 
-void RocksDB::WriteOperation::assertWritable() {
+void StateMachine::WriteOperation::assertWritable() {
   if(!isValid) qdb_throw("WriteOperation not valid!");
   if(finalized) qdb_throw("WriteOperation already finalized!");
 }
 
-void RocksDB::WriteOperation::write(const std::string &value) {
+void StateMachine::WriteOperation::write(const std::string &value) {
   assertWritable();
 
   if(keyinfo.keytype != KeyType::kString) {
@@ -578,7 +578,7 @@ void RocksDB::WriteOperation::write(const std::string &value) {
   THROW_ON_ERROR(tx->Put(tkey, value));
 }
 
-void RocksDB::WriteOperation::writeField(const std::string &field, const std::string &value) {
+void StateMachine::WriteOperation::writeField(const std::string &field, const std::string &value) {
   assertWritable();
 
   if(keyinfo.keytype != KeyType::kHash && keyinfo.keytype != KeyType::kSet) {
@@ -589,7 +589,7 @@ void RocksDB::WriteOperation::writeField(const std::string &field, const std::st
   THROW_ON_ERROR(tx->Put(tkey, value));
 }
 
-void RocksDB::WriteOperation::finalize(int64_t newsize) {
+void StateMachine::WriteOperation::finalize(int64_t newsize) {
   assertWritable();
 
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
@@ -605,14 +605,14 @@ void RocksDB::WriteOperation::finalize(int64_t newsize) {
   finalized = true;
 }
 
-bool RocksDB::WriteOperation::fieldExists(const std::string &field) {
+bool StateMachine::WriteOperation::fieldExists(const std::string &field) {
   assertWritable();
 
   std::string tmp;
   return getField(field, tmp);
 }
 
-bool RocksDB::WriteOperation::deleteField(const std::string &field) {
+bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   assertWritable();
 
   std::string tmp;
@@ -624,7 +624,7 @@ bool RocksDB::WriteOperation::deleteField(const std::string &field) {
   return st.ok();
 }
 
-rocksdb::Status RocksDB::set(const std::string& key, const std::string& value, LogIndex index) {
+rocksdb::Status StateMachine::set(const std::string& key, const std::string& value, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
   WriteOperation operation(tx, key, KeyType::kString);
@@ -636,22 +636,22 @@ rocksdb::Status RocksDB::set(const std::string& key, const std::string& value, L
   return finalize(tx, index);
 }
 
-RocksDB::Snapshot::Snapshot(rocksdb::DB *db_) {
+StateMachine::Snapshot::Snapshot(rocksdb::DB *db_) {
   db = db_;
   snapshot = db->GetSnapshot();
   if(snapshot == nullptr) qdb_throw("unable to take db snapshot");
   options.snapshot = snapshot;
 }
 
-RocksDB::Snapshot::~Snapshot() {
+StateMachine::Snapshot::~Snapshot() {
   db->ReleaseSnapshot(snapshot);
 }
 
-rocksdb::ReadOptions& RocksDB::Snapshot::opts() {
+rocksdb::ReadOptions& StateMachine::Snapshot::opts() {
   return options;
 }
 
-rocksdb::Status RocksDB::get(const std::string &key, std::string &value) {
+rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kString)) return wrong_type();
 
@@ -659,7 +659,7 @@ rocksdb::Status RocksDB::get(const std::string &key, std::string &value) {
   return db->Get(snapshot.opts(), tkey, &value);
 }
 
-void RocksDB::remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx) {
+void StateMachine::remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx) {
   removed = 0;
 
   std::string tmp;
@@ -675,7 +675,7 @@ void RocksDB::remove_all_with_prefix(const std::string &prefix, int64_t &removed
   }
 }
 
-rocksdb::Status RocksDB::del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
+rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
   TransactionPtr tx = startTransaction();
 
@@ -707,13 +707,13 @@ rocksdb::Status RocksDB::del(const VecIterator &start, const VecIterator &end, i
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::exists(const std::string &key) {
+rocksdb::Status StateMachine::exists(const std::string &key) {
   KeyDescriptor keyinfo = getKeyDescriptor(key);
   if(keyinfo.exists) return rocksdb::Status::OK();
   return rocksdb::Status::NotFound();
 }
 
-rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::string> &result) {
+rocksdb::Status StateMachine::keys(const std::string &pattern, std::vector<std::string> &result) {
   result.clear();
 
   bool allkeys = (pattern.length() == 1 && pattern[0] == '*');
@@ -732,14 +732,14 @@ rocksdb::Status RocksDB::keys(const std::string &pattern, std::vector<std::strin
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::flushall(LogIndex index) {
+rocksdb::Status StateMachine::flushall(LogIndex index) {
   int64_t tmp;
   TransactionPtr tx = startTransaction();
   remove_all_with_prefix("", tmp, tx);
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::checkpoint(const std::string &path) {
+rocksdb::Status StateMachine::checkpoint(const std::string &path) {
   rocksdb::Checkpoint *checkpoint = nullptr;
   RETURN_ON_ERROR(rocksdb::Checkpoint::Create(db, &checkpoint));
 
@@ -749,26 +749,26 @@ rocksdb::Status RocksDB::checkpoint(const std::string &path) {
   return st;
 }
 
-RocksDB::TransactionPtr RocksDB::startTransaction() {
+StateMachine::TransactionPtr StateMachine::startTransaction() {
   return TransactionPtr(transactionDB->BeginTransaction(rocksdb::WriteOptions()));
 }
 
-rocksdb::Status RocksDB::noop(LogIndex index) {
+rocksdb::Status StateMachine::noop(LogIndex index) {
   TransactionPtr tx = startTransaction();
   return finalize(tx, index);
 }
 
-rocksdb::Status RocksDB::finalize(TransactionPtr &tx, LogIndex index) {
+rocksdb::Status StateMachine::finalize(TransactionPtr &tx, LogIndex index) {
   commitTransaction(tx, index);
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status RocksDB::malformedRequest(TransactionPtr &tx, LogIndex index, std::string message) {
+rocksdb::Status StateMachine::malformedRequest(TransactionPtr &tx, LogIndex index, std::string message) {
   commitTransaction(tx, index);
   return rocksdb::Status::InvalidArgument(message);
 }
 
-void RocksDB::commitTransaction(TransactionPtr &tx, LogIndex index) {
+void StateMachine::commitTransaction(TransactionPtr &tx, LogIndex index) {
   if(index <= 0 && lastApplied > 0) qdb_throw("provided invalid index for version-tracked database: " << index << ", current last applied: " << lastApplied);
 
   if(index > 0) {

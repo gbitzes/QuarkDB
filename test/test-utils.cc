@@ -49,10 +49,10 @@ std::vector<RedisRequest> testreqs = {
 };
 
 void GlobalEnv::TearDown() {
-  for(auto& kv : rocksdbCache) {
+  for(auto& kv : smCache) {
     delete kv.second;
   }
-  rocksdbCache.clear();
+  smCache.clear();
 
   for(auto& kv : journalCache) {
     delete kv.second;
@@ -60,12 +60,12 @@ void GlobalEnv::TearDown() {
   journalCache.clear();
 }
 
-RocksDB* GlobalEnv::getRocksDB(const std::string &path) {
-  RocksDB *ret = rocksdbCache[path];
+StateMachine* GlobalEnv::getStateMachine(const std::string &path) {
+  StateMachine *ret = smCache[path];
   if(ret == nullptr) {
     mkpath_or_die(path, 0755);
-    ret = new RocksDB(path);
-    rocksdbCache[path] = ret;
+    ret = new StateMachine(path);
+    smCache[path] = ret;
   }
 
   ret->reset();
@@ -117,8 +117,8 @@ RaftClusterID TestCluster::clusterID() {
   return clusterid;
 }
 
-RocksDB* TestCluster::rocksdb(int id) {
-  return node(id)->group()->rocksdb();
+StateMachine* TestCluster::stateMachine(int id) {
+  return node(id)->group()->stateMachine();
 }
 
 RaftJournal* TestCluster::journal(int id) {
@@ -202,9 +202,9 @@ int TestCluster::getLeaderID() {
 TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)
 : myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
-  RocksDB *rocksdbPtr = commonState.getRocksDB(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/state-machine"));
+  StateMachine *smPtr = commonState.getStateMachine(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/state-machine"));
   RaftJournal *journalPtr = commonState.getJournal(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/raft-journal"), clusterID, initialNodes);
-  raftgroup = new RaftGroup(*journalPtr, *rocksdbPtr, myself(), aggressiveTimeouts);
+  raftgroup = new RaftGroup(*journalPtr, *smPtr, myself(), aggressiveTimeouts);
 }
 
 RaftGroup* TestNode::group() {

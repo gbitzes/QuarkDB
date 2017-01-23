@@ -27,7 +27,7 @@
 
 using namespace quarkdb;
 
-RedisDispatcher::RedisDispatcher(RocksDB &rocksdb) : store(rocksdb) {
+RedisDispatcher::RedisDispatcher(StateMachine &rocksdb) : store(rocksdb) {
 }
 
 LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req) {

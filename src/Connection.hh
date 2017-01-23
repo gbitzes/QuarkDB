@@ -25,7 +25,7 @@
 #define __QUARKDB_CONNECTION_H__
 
 #include "Link.hh"
-#include "RocksDB.hh"
+#include "StateMachine.hh"
 #include <queue>
 
 namespace quarkdb {

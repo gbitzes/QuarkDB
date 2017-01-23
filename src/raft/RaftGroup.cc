@@ -26,28 +26,28 @@
 #include "RaftTimeouts.hh"
 #include "RaftDirector.hh"
 #include "RaftReplicator.hh"
-#include "../RocksDB.hh"
+#include "../StateMachine.hh"
 #include "RaftGroup.hh"
 using namespace quarkdb;
 
 RaftGroup::RaftGroup(const std::string &database, const RaftServer &myself, const RaftTimeouts &t)
 : me(myself), timeouts(t) {
   journalptr = new RaftJournal(pathJoin(database, "raft-journal"));
-  rocksdbptr = new RocksDB(pathJoin(database, "state-machine"));
+  smptr = new StateMachine(pathJoin(database, "state-machine"));
 }
 
-RaftGroup::RaftGroup(RaftJournal &journal, RocksDB &stateMachine, const RaftServer &myself, const RaftTimeouts &t)
+RaftGroup::RaftGroup(RaftJournal &journal, StateMachine &stateMachine, const RaftServer &myself, const RaftTimeouts &t)
 : me(myself), timeouts(t) {
   injectedDatabases = true;
   journalptr = &journal;
-  rocksdbptr = &stateMachine;
+  smptr = &stateMachine;
 }
 
 RaftGroup::~RaftGroup() {
   spindown();
   if(!injectedDatabases) {
     delete journalptr;
-    delete rocksdbptr;
+    delete smptr;
   }
 }
 
@@ -68,9 +68,9 @@ RaftServer RaftGroup::myself() {
   return me;
 }
 
-RocksDB* RaftGroup::rocksdb() {
+StateMachine* RaftGroup::stateMachine() {
   // always available
-  return rocksdbptr;
+  return smptr;
 }
 
 RaftJournal* RaftGroup::journal() {
@@ -80,7 +80,7 @@ RaftJournal* RaftGroup::journal() {
 
 RaftDispatcher* RaftGroup::dispatcher() {
   if(dispatcherptr == nullptr) {
-    dispatcherptr = new RaftDispatcher(*journal(), *rocksdb(), *state(), *raftclock());
+    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock());
   }
   return dispatcherptr;
 }
@@ -101,14 +101,14 @@ RaftState* RaftGroup::state() {
 
 RaftDirector* RaftGroup::director() {
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*dispatcher(), *journal(), *rocksdb(), *state(), *raftclock());
+    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *raftclock());
   }
   return directorptr;
 }
 
 RaftReplicator* RaftGroup::replicator() {
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *rocksdb(), *state(), raftclock()->getTimeouts());
+    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), raftclock()->getTimeouts());
   }
   return replicatorptr;
 }

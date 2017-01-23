@@ -36,18 +36,18 @@ namespace quarkdb {
 // owned by us.
 //------------------------------------------------------------------------------
 
-class RocksDB; class RaftJournal; class RaftDispatcher;
+class StateMachine; class RaftJournal; class RaftDispatcher;
 class RaftState; class RaftReplicator; class RaftClock;
 class RaftDirector;
 
 class RaftGroup {
 public:
   RaftGroup(const std::string &path, const RaftServer &myself, const RaftTimeouts &t);
-  RaftGroup(RaftJournal &journal, RocksDB &stateMachine, const RaftServer &myself, const RaftTimeouts &t);
+  RaftGroup(RaftJournal &journal, StateMachine &stateMachine, const RaftServer &myself, const RaftTimeouts &t);
   DISALLOW_COPY_AND_ASSIGN(RaftGroup);
   ~RaftGroup();
 
-  RocksDB *rocksdb();
+  StateMachine *stateMachine();
   RaftJournal *journal();
   RaftDispatcher *dispatcher();
   RaftState *state();
@@ -63,7 +63,7 @@ private:
   const RaftServer me;
   const RaftTimeouts timeouts;
 
-  RocksDB *rocksdbptr = nullptr;
+  StateMachine *smptr = nullptr;
   RaftJournal *journalptr = nullptr;
   RaftDispatcher *dispatcherptr = nullptr;
   RaftReplicator *replicatorptr = nullptr;

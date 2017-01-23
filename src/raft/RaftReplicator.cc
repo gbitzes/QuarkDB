@@ -31,7 +31,7 @@
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, RocksDB &sm, RaftState &state_, const RaftTimeouts t)
+RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, const RaftTimeouts t)
 : journal(journal_), stateMachine(sm), state(state_), commitTracker(journal, (journal.getNodes().size()/2)+1), timeouts(t) {
 
 }

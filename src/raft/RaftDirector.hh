@@ -24,7 +24,7 @@
 #ifndef __QUARKDB_RAFT_DIRECTOR_H__
 #define __QUARKDB_RAFT_DIRECTOR_H__
 
-#include "../RocksDB.hh"
+#include "../StateMachine.hh"
 #include "RaftJournal.hh"
 #include "RaftState.hh"
 #include "RaftTimeouts.hh"
@@ -35,7 +35,7 @@ namespace quarkdb {
 
 class RaftDirector {
 public:
-  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, RocksDB &stateMachine, RaftState &state, RaftClock &rc);
+  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftClock &rc);
   ~RaftDirector();
   DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
@@ -48,7 +48,7 @@ private:
 
   RaftDispatcher &dispatcher;
   RaftJournal &journal;
-  RocksDB &stateMachine;
+  StateMachine &stateMachine;
   RaftState &state;
   RaftClock &raftClock;
 

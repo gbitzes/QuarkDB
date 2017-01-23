@@ -33,7 +33,7 @@ class tConnection : public TestCluster3Nodes {};
 TEST_F(tConnection, basic_sanity) {
   const int BUFFER_SIZE = 1024;
   char buffer[BUFFER_SIZE];
-  RedisDispatcher dispatcher(*rocksdb());
+  RedisDispatcher dispatcher(*stateMachine());
 
   Link link;
   Connection conn(&link);
@@ -51,7 +51,7 @@ TEST_F(tConnection, basic_sanity) {
 
   // verify the request has NOT been dispatched yet
   std::string tmp;
-  ASSERT_FALSE(rocksdb()->get("abc", tmp).ok());
+  ASSERT_FALSE(stateMachine()->get("abc", tmp).ok());
 
   conn.appendReq(&dispatcher, {"get", "abc"});
   ASSERT_EQ(link.Recv(buffer, BUFFER_SIZE, 0), 0); // "set" is blocking any replies
@@ -66,12 +66,12 @@ TEST_F(tConnection, basic_sanity) {
   conn.appendReq(&dispatcher, {"get", "abc"});
   ASSERT_EQ(link.Recv(buffer, BUFFER_SIZE, 0), 0); // "set" is blocking any replies
 
-  ASSERT_TRUE(rocksdb()->get("abc", tmp).ok());
+  ASSERT_TRUE(stateMachine()->get("abc", tmp).ok());
   ASSERT_EQ(tmp, "qwerty");
 
   ASSERT_EQ(conn.dispatchPending(&dispatcher, 2), -1);
 
-  ASSERT_TRUE(rocksdb()->get("abc", tmp).ok());
+  ASSERT_TRUE(stateMachine()->get("abc", tmp).ok());
   ASSERT_EQ(tmp, "12345");
 
   len = link.Recv(buffer, BUFFER_SIZE, 0);
