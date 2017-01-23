@@ -59,10 +59,10 @@ TEST(Configuration, T3) {
   Configuration config;
   std::string c;
 
-  // specifying a raft-only directive with rocksdb
+  // specifying a raft-only directive when standalone
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
-      "redis.mode rocksdb\n"
+      "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.myself server1:7776\n"
       "fi\n";
@@ -76,13 +76,13 @@ TEST(Configuration, T4) {
 
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
-      "redis.mode rocksdb\n"
+      "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.trace info\n"
       "fi\n";
 
   ASSERT_TRUE(Configuration::fromString(c, config));
-  ASSERT_EQ(config.getMode(), Mode::rocksdb);
+  ASSERT_EQ(config.getMode(), Mode::standalone);
   ASSERT_EQ(config.getDatabase(), "/home/user/mydb");
   ASSERT_EQ(config.getTraceLevel(), TraceLevel::info);
 }
@@ -94,7 +94,7 @@ TEST(Configuration, T5) {
   // missing database
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
-      "redis.mode rocksdb\n"
+      "redis.mode standalone\n"
       "fi\n";
 
   ASSERT_FALSE(Configuration::fromString(c, config));
@@ -121,7 +121,7 @@ TEST(Configuration, T7) {
   // unknown directive
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
-      "redis.mode rocksdb\n"
+      "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.blublu something\n"
       "fi\n";
@@ -136,7 +136,7 @@ TEST(Configuration, T8) {
   // unknown trace level
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
-      "redis.mode rocksdb\n"
+      "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.trace wrong\n"
       "fi\n";
@@ -150,7 +150,7 @@ TEST(Configuration, T9) {
 
   c = "if exec xrootd\n"
       "xrd.protocol redis:7776 libXrdRedis.so\n"
-      "redis.mode rocksdb\n"
+      "redis.mode standalone\n"
       "redis.database /home/user/mydb/\n"
       "redis.trace info\n"
       "fi\n";

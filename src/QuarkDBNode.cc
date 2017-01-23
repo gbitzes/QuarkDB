@@ -100,7 +100,7 @@ bool QuarkDBNode::attach(std::string &err) {
     return false;
   }
 
-  if(configuration.getMode() == Mode::rocksdb) {
+  if(configuration.getMode() == Mode::standalone) {
     rocksdb = new RocksDB(configuration.getStateMachine());
     dispatcher = new RedisDispatcher(*rocksdb);
   }

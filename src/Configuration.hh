@@ -35,7 +35,7 @@
 namespace quarkdb {
 
 enum class Mode {
-  rocksdb = 0,
+  standalone = 0,
   raft = 1
 };
 

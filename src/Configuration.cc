@@ -61,8 +61,8 @@ static bool fetchSingle(XrdOucStream &stream, std::string &dest) {
 }
 
 static bool parseMode(const std::string &buffer, Mode &mode) {
-  if(buffer == "rocksdb") {
-    mode = Mode::rocksdb;
+  if(buffer == "standalone") {
+    mode = Mode::standalone;
   }
   else if(buffer == "raft") {
     mode = Mode::raft;

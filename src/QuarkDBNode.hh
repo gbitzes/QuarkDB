@@ -38,7 +38,7 @@
 namespace quarkdb {
 
 inline std::string modeToString(const Mode &mode) {
-  if(mode == Mode::rocksdb) {
+  if(mode == Mode::standalone) {
     return "STANDALONE";
   }
   if(mode == Mode::raft) {
