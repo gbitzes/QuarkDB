@@ -174,6 +174,10 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::QUARKDB_INFO: {
       return conn->vector(this->info().toVector());
     }
+    case RedisCommand::QUARKDB_STATS: {
+      if(!attached) return conn->err("node is detached from any backends");
+      return conn->vector(split(stateMachine->statistics(), "\n"));
+    }
     case RedisCommand::QUARKDB_DETACH: {
       detach();
       return conn->ok();

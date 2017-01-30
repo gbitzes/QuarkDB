@@ -749,6 +749,12 @@ rocksdb::Status StateMachine::checkpoint(const std::string &path) {
   return st;
 }
 
+std::string StateMachine::statistics() {
+  std::string stats;
+  db->GetProperty("rocksdb.stats", &stats);
+  return stats;
+}
+
 StateMachine::TransactionPtr StateMachine::startTransaction() {
   return TransactionPtr(transactionDB->BeginTransaction(rocksdb::WriteOptions()));
 }
