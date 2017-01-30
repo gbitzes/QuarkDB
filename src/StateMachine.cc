@@ -27,6 +27,8 @@
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/utilities/checkpoint.h>
+#include <rocksdb/filter_policy.h>
+#include <rocksdb/table.h>
 
 #define RETURN_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) return st2; }
 #define THROW_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) qdb_throw(st2.ToString()); }
@@ -44,11 +46,17 @@ static bool directoryExists(const std::string &path) {
 }
 
 StateMachine::StateMachine(const std::string &f) : filename(f) {
-  qdb_info("Openning rocksdb database " << quotes(filename));
+  qdb_info("Openning state machine database " << quotes(filename));
   bool dirExists = directoryExists(filename);
 
   rocksdb::Options options;
+  rocksdb::BlockBasedTableOptions table_options;
+  table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(32, false));
+  table_options.block_size = 16 * 1024;
+
   options.create_if_missing = !dirExists;
+  options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+
   rocksdb::Status status = rocksdb::TransactionDB::Open(options, rocksdb::TransactionDBOptions(), filename, &transactionDB);
   if(!status.ok()) qdb_throw("Cannot open " << quotes(filename) << ":" << status.ToString());
 
