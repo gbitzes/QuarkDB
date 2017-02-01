@@ -33,7 +33,7 @@ BufferedReader::BufferedReader(Link *lp, XrdBuffManager *bpool, size_t bsize)
   buffers.push_back(bufferPool->Obtain(buffer_size));
 }
 
-LinkStatus BufferedReader::readFromLink() {
+LinkStatus BufferedReader::readFromLink(size_t limit) {
   int total_bytes = 0;
   while(true) {
     // how many bytes can I write to the end of the last buffer?
@@ -53,6 +53,8 @@ LinkStatus BufferedReader::readFromLink() {
     // we have more data to read, but no more space. Need to allocate buffer
     buffers.push_back(bufferPool->Obtain(buffer_size));
     position_write = 0;
+
+    if(total_bytes > (int) limit) return total_bytes;
   }
 }
 
@@ -66,7 +68,7 @@ LinkStatus BufferedReader::canConsume(size_t len) {
   if(available_bytes >= len) return available_bytes;
 
   // since we don't have enough bytes, try to read from the link
-  int rlink = readFromLink();
+  int rlink = readFromLink(len - available_bytes);
   if(rlink < 0) return rlink; // an error occurred, propagate
 
   available_bytes += rlink;

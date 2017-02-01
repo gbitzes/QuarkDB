@@ -69,9 +69,10 @@ private:
 
 
   //----------------------------------------------------------------------------
-  // Read from the link as much data as is currently available
+  // Read from the link as much data as is currently available, up to some
+  // limit. We might exceed this limit internally, but not by much.
   //----------------------------------------------------------------------------
-  LinkStatus readFromLink();
+  LinkStatus readFromLink(size_t limit);
 
   //----------------------------------------------------------------------------
   // Is it possible to consume len bytes?
