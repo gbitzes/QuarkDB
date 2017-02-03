@@ -8,8 +8,6 @@ macro(buildRocksDB)
     BUILD_IN_SOURCE 1
     BUILD_COMMAND bash -c "export PORTABLE=1 && export DISABLE_JEMALLOC=1 && export OPT='-fPIC -DNDEBUG -O3' && make static_lib"
     INSTALL_COMMAND ""
-    LOG_DOWNLOAD ON
-    LOG_BUILD ON
   )
 
   ExternalProject_Get_Property(BuildRocksDB source_dir)
