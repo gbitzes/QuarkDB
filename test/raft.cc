@@ -582,7 +582,9 @@ TEST_F(Raft_Director, achieve_natural_election) {
 
   ASSERT_EQ(snapshots[leaderID].status, RaftStatus::LEADER);
   for(int i = 0; i < 3; i++) {
-    if(i != leaderID) ASSERT_EQ(snapshots[i].status, RaftStatus::FOLLOWER) << i;
+    if(i != leaderID) {
+      ASSERT_EQ(snapshots[i].status, RaftStatus::FOLLOWER) << i;
+    }
   }
 
   // let's push a bunch of entries to the leader, and verify they get committed

@@ -1,0 +1,37 @@
+diff --git a/util/thread_local.h b/util/thread_local.h
+index 5806b54..f0af750 100644
+--- a/util/thread_local.h
++++ b/util/thread_local.h
+@@ -13,6 +13,7 @@
+ #include <memory>
+ #include <unordered_map>
+ #include <vector>
++#include <functional>
+ 
+ #include "util/autovector.h"
+ #include "port/port.h"
+diff --git a/utilities/persistent_cache/block_cache_tier_file.h b/utilities/persistent_cache/block_cache_tier_file.h
+index c2311ff..c77d1d7 100644
+--- a/utilities/persistent_cache/block_cache_tier_file.h
++++ b/utilities/persistent_cache/block_cache_tier_file.h
+@@ -10,6 +10,7 @@
+ #include <memory>
+ #include <string>
+ #include <vector>
++#include <functional>
+ 
+ #include "rocksdb/comparator.h"
+ #include "rocksdb/env.h"
+diff --git a/utilities/persistent_cache/hash_table_evictable.h b/utilities/persistent_cache/hash_table_evictable.h
+index da13c0e..0b68385 100644
+--- a/utilities/persistent_cache/hash_table_evictable.h
++++ b/utilities/persistent_cache/hash_table_evictable.h
+@@ -7,6 +7,8 @@
+ 
+ #ifndef ROCKSDB_LITE
+ 
++#include <functional>
++
+ #include "util/random.h"
+ #include "utilities/persistent_cache/hash_table.h"
+ #include "utilities/persistent_cache/lrulist.h"
