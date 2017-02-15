@@ -44,6 +44,7 @@ target_link_libraries(
   XrdRedis PUBLIC
   qclient
   bz2
+  z
   rocksdb
   # libasan.a
   ${XROOTD_CL_LIBRARY}
