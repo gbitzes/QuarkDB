@@ -114,7 +114,7 @@ private:
 
 // Contains everything needed to simulate a cluster with an arbitrary number of nodes.
 // Everything is initialized lazily, including the nodes of the cluster themselves.
-class TestCluster : public ::testing::Test {
+class TestCluster {
 public:
   TestCluster(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   ~TestCluster();
@@ -169,7 +169,7 @@ private:
   std::map<int, TestNode*> testnodes;
 };
 
-// Convenience class. Want to run tests on a simulated cluster of 3 nodes?
+// Convenience classes. Want to run tests on a simulated cluster of 3 nodes?
 // Inherit your test fixture from here.
 class TestCluster3Nodes : public TestCluster {
 public:
@@ -190,6 +190,9 @@ public:
     GlobalEnv::server(4)
   }) { };
 };
+
+class TestCluster3NodesFixture : public TestCluster3Nodes, public ::testing::Test {};
+class TestCluster5NodesFixture : public TestCluster5Nodes, public ::testing::Test {};
 
 class SocketListener {
 private:

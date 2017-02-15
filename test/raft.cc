@@ -35,12 +35,12 @@ using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
 #define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
 
-class Raft_Replicator : public TestCluster3Nodes {};
-class Raft_Voting : public TestCluster3Nodes {};
-class Raft_Dispatcher : public TestCluster3Nodes {};
-class Raft_Election : public TestCluster3Nodes {};
-class Raft_Director : public TestCluster3Nodes {};
-class Raft_CommitTracker : public TestCluster3Nodes {};
+class Raft_Replicator : public TestCluster3NodesFixture {};
+class Raft_Voting : public TestCluster3NodesFixture {};
+class Raft_Dispatcher : public TestCluster3NodesFixture {};
+class Raft_Election : public TestCluster3NodesFixture {};
+class Raft_Director : public TestCluster3NodesFixture {};
+class Raft_CommitTracker : public TestCluster3NodesFixture {};
 
 TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));

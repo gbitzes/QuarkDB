@@ -31,7 +31,7 @@ using namespace qclient;
 
 #define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
 
-class tPoller : public TestCluster3Nodes {};
+class tPoller : public TestCluster3NodesFixture {};
 
 TEST_F(tPoller, T1) {
   RedisDispatcher dispatcher(*stateMachine());

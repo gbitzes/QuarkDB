@@ -31,9 +31,9 @@ using namespace quarkdb;
 #define ASSERT_NOTFOUND(msg) ASSERT_TRUE(msg.IsNotFound())
 #define ASSERT_NOT_OK(msg) ASSERT_FALSE(msg.ok())
 
-class Rocks_DB : public TestCluster3Nodes {};
+class State_Machine : public TestCluster3NodesFixture {};
 
-TEST_F(Rocks_DB, test_write_transactions) {
+TEST_F(State_Machine, test_write_transactions) {
   ASSERT_EQ(stateMachine()->getLastApplied(), 0);
 
   ASSERT_THROW(stateMachine()->set("abc", "123", 2), FatalException);
@@ -94,7 +94,7 @@ TEST_F(Rocks_DB, test_write_transactions) {
   ASSERT_EQ(stateMachine()->getLastApplied(), 12);
 }
 
-TEST_F(Rocks_DB, test_hincrby) {
+TEST_F(State_Machine, test_hincrby) {
   ASSERT_EQ(stateMachine()->getLastApplied(), 0);
 
   int64_t result;
@@ -122,7 +122,7 @@ TEST_F(Rocks_DB, test_hincrby) {
   ASSERT_EQ(result, -24);
 }
 
-TEST_F(Rocks_DB, test_hsetnx) {
+TEST_F(State_Machine, test_hsetnx) {
   ASSERT_EQ(stateMachine()->getLastApplied(), 0);
 
   bool created;
@@ -139,7 +139,7 @@ TEST_F(Rocks_DB, test_hsetnx) {
   ASSERT_EQ(value, "v1");
 }
 
-TEST_F(Rocks_DB, test_hincrbyfloat) {
+TEST_F(State_Machine, test_hincrbyfloat) {
   ASSERT_EQ(stateMachine()->getLastApplied(), 0);
 
   double result;
@@ -166,7 +166,7 @@ TEST_F(Rocks_DB, test_hincrbyfloat) {
   ASSERT_EQ(stateMachine()->getLastApplied(), 4);
 }
 
-TEST_F(Rocks_DB, basic_sanity) {
+TEST_F(State_Machine, basic_sanity) {
   std::string buffer;
   std::vector<std::string> vec, vec2;
 
@@ -298,7 +298,7 @@ TEST_F(Rocks_DB, basic_sanity) {
   ASSERT_NOTFOUND(stateMachine()->hexists("myhash", "val"));
 }
 
-TEST_F(Rocks_DB, hscan) {
+TEST_F(State_Machine, hscan) {
   std::vector<std::string> vec;
   for(size_t i = 1; i < 10; i++) {
     bool created;

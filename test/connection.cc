@@ -28,7 +28,7 @@
 
 using namespace quarkdb;
 
-class tConnection : public TestCluster3Nodes {};
+class tConnection : public TestCluster3NodesFixture {};
 
 TEST_F(tConnection, basic_sanity) {
   const int BUFFER_SIZE = 1024;

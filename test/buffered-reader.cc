@@ -47,7 +47,8 @@ protected:
 
 INSTANTIATE_TEST_CASE_P(TryVariousBufferSizes,
                         Buffered_Reader,
-                        ::testing::Values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 100, 200));
+                        ::testing::Values(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 20, 100, 200),
+                        ::testing::PrintToStringParamName());
 
 TEST_P(Buffered_Reader, T1) {
   ASSERT_EQ(link.Send("adfadfaF"), 8);

@@ -39,8 +39,8 @@ using namespace quarkdb;
 #define ASSERT_REPLY(reply, val) { assert_reply(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 #define ASSERT_ERR(reply, val) { assert_error(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 
-class Raft_e2e : public TestCluster3Nodes {};
-class Raft_e2e5 : public TestCluster5Nodes {};
+class Raft_e2e : public TestCluster3NodesFixture {};
+class Raft_e2e5 : public TestCluster5NodesFixture {};
 
 void assert_error(const redisReplyPtr &reply, const std::string &err) {
   ASSERT_NE(reply, nullptr);
