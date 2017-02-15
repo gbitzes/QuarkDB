@@ -29,6 +29,14 @@ using namespace quarkdb;
 
 class hset : public TestCluster3Nodes, public ::testing::TestWithParam<int> {
 public:
+  void processRangeRedis(size_t start, size_t end, int port) {
+    qclient::QClient tunn("localhost", port);
+    for(size_t i = start; i < end; i++) {
+      tunn.exec("hset", SSTR("key-" << i), "field", "some_contents");
+    }
+    tunn.exec("ping").get(); // receive all responses
+  }
+
   void processRange(size_t start, size_t end) {
     for(size_t i = start; i < end; i++) {
       bool created;
@@ -56,6 +64,36 @@ TEST_P(hset, directly_without_redis_protocol) {
     size_t end = (number_of_inserts / GetParam()) * (i+1);
 
     threads.emplace_back(&hset::processRange, this, start, end);
+    qdb_info("Thread #" << i << " was assigned to range [" << start << "-" << end << ")");
+  }
+
+  for(size_t i = 0; i < threads.size(); i++) {
+    threads[i].join();
+  }
+  qdb_info("Benchmark has ended");
+
+  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count();
+  qdb_info("Rate: " << (float) number_of_inserts / ((float) duration / (float) 1000) << " Hz");
+}
+
+TEST_P(hset, through_redis_protocol) {
+  size_t number_of_inserts = 1000000;
+  stateMachine(); // initialize
+
+  auto startTime = std::chrono::high_resolution_clock::now();
+
+  RedisDispatcher disp(*stateMachine());
+  int port = 34567;
+  Poller poll(port, &disp);
+  qclient::QClient tunn("localhost", port);
+
+  qdb_info("Starting benchmark: issue HSET " << number_of_inserts << " times through the redis protocol, " << GetParam() << " threads");
+  std::vector<std::thread> threads;
+  for(size_t i = 0; i < (size_t) GetParam(); i++) {
+    size_t start = (number_of_inserts / GetParam()) * i;
+    size_t end = (number_of_inserts / GetParam()) * (i+1);
+
+    threads.emplace_back(&hset::processRangeRedis, this, start, end, port);
     qdb_info("Thread #" << i << " was assigned to range [" << start << "-" << end << ")");
   }
 
