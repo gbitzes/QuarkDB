@@ -53,6 +53,7 @@ struct cmdMapInit {
     redis_cmd_map["set"] = {RedisCommand::SET, CommandType::WRITE};
     redis_cmd_map["del"] =  {RedisCommand::DEL, CommandType::WRITE};
     redis_cmd_map["hset"] =  {RedisCommand::HSET, CommandType::WRITE};
+    redis_cmd_map["hmset"] =  {RedisCommand::HMSET, CommandType::WRITE};
     redis_cmd_map["hsetnx"] = {RedisCommand::HSETNX, CommandType::WRITE};
     redis_cmd_map["hincrby"] = {RedisCommand::HINCRBY, CommandType::WRITE};
     redis_cmd_map["hincrbyfloat"] = {RedisCommand::HINCRBYFLOAT, CommandType::WRITE};

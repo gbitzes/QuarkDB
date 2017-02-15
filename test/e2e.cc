@@ -364,6 +364,33 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[5], "ERR unknown command 'bad_command'");
   ASSERT_REPLY(futures[6], 0);
   ASSERT_REPLY(futures[7], 1);
+
+  futures.clear();
+  futures.emplace_back(tunnel(leaderID)->exec("hmset", "hmset_test", "f1", "v1", "f2", "v2"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "hmset_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("hmset", "test"));
+  futures.emplace_back(tunnel(leaderID)->exec("hmset", "hmset_test", "f2", "v3", "f4"));
+  futures.emplace_back(tunnel(leaderID)->exec("hget", "hmset_test", "f1"));
+  futures.emplace_back(tunnel(leaderID)->exec("hlen", "hmset_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("hmset", "hmset_test", "f2", "value2", "f3", "value3"));
+  futures.emplace_back(tunnel(leaderID)->exec("hlen", "hmset_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("hget", "hmset_test", "f2"));
+  futures.emplace_back(tunnel(leaderID)->exec("hmset", "hmset_test", "f3", "v3"));
+  futures.emplace_back(tunnel(leaderID)->exec("hget", "hmset_test", "f3"));
+  futures.emplace_back(tunnel(leaderID)->exec("hlen", "hmset_test"));
+
+  ASSERT_REPLY(futures[0], "OK");
+  ASSERT_REPLY(futures[1], 1);
+  ASSERT_REPLY(futures[2], "ERR wrong number of arguments for 'hmset' command");
+  ASSERT_REPLY(futures[3], "ERR wrong number of arguments for 'hmset' command");
+  ASSERT_REPLY(futures[4], "v1");
+  ASSERT_REPLY(futures[5], 2);
+  ASSERT_REPLY(futures[6], "OK");
+  ASSERT_REPLY(futures[7], 3);
+  ASSERT_REPLY(futures[8], "value2");
+  ASSERT_REPLY(futures[9], "OK");
+  ASSERT_REPLY(futures[10], "v3");
+  ASSERT_REPLY(futures[11], 3);
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {

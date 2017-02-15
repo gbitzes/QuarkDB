@@ -42,6 +42,7 @@ enum class RedisCommand {
 
   HGET,
   HSET,
+  HMSET,
   HEXISTS,
   HKEYS,
   HGETALL,

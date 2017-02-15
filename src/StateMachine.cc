@@ -309,6 +309,23 @@ rocksdb::Status StateMachine::hset(const std::string &key, const std::string &fi
   return finalize(tx, index);
 }
 
+rocksdb::Status StateMachine::hmset(const std::string &key, const VecIterator &start, const VecIterator &end, LogIndex index) {
+  if((end - start) % 2 != 0) qdb_throw("hmset: distance between start and end iterators must be an even number");
+  TransactionPtr tx = startTransaction();
+
+  WriteOperation operation(tx, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(tx, index);
+
+  int64_t newsize = operation.keySize();
+  for(VecIterator it = start; it != end; it += 2) {
+    newsize += !operation.fieldExists(*it);
+    operation.writeField(*it, *(it+1));
+  }
+
+  operation.finalize(newsize);
+  return finalize(tx, index);
+}
+
 rocksdb::Status StateMachine::hsetnx(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
@@ -601,12 +618,12 @@ void StateMachine::WriteOperation::finalize(int64_t newsize) {
   assertWritable();
 
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
-  keyinfo.size = newsize;
 
   if(newsize == 0) {
     THROW_ON_ERROR(tx->Delete(keyinfo.dkey));
   }
-  else {
+  else if(keyinfo.size != newsize) {
+    keyinfo.size = newsize;
     THROW_ON_ERROR(tx->Put(keyinfo.dkey, keyinfo.serialize()));
   }
 

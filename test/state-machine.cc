@@ -323,3 +323,25 @@ TEST_F(State_Machine, hscan) {
   ASSERT_TRUE(vec.empty());
   ASSERT_EQ(newcursor, "");
 }
+
+TEST_F(State_Machine, hmset) {
+  std::vector<std::string> vec;
+  for(size_t i = 1; i <= 3; i++) {
+    vec.push_back(SSTR("f" << i));
+    vec.push_back(SSTR("v" << i));
+  }
+
+  ASSERT_OK(stateMachine()->hmset("hash", vec.begin(), vec.end()));
+
+  for(size_t i = 1; i <= 3; i++) {
+    std::string tmp;
+    ASSERT_OK(stateMachine()->hget("hash", SSTR("f" << i), tmp));
+    ASSERT_EQ(tmp, SSTR("v" << i));
+  }
+
+  size_t size;
+  ASSERT_OK(stateMachine()->hlen("hash", size));
+  ASSERT_EQ(size, 3u);
+
+  ASSERT_THROW(stateMachine()->hmset("hash", vec.begin()+1, vec.end()), FatalException);
+}

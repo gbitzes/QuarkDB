@@ -128,6 +128,12 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
 
       return Formatter::integer(fieldcreated);
     }
+    case RedisCommand::HMSET: {
+      if(request.size() <= 3 || request.size() % 2 != 0) return errArgs(request, commit);
+      rocksdb::Status st = store.hmset(request[1], request.begin()+2, request.end(), commit);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::ok();
+    }
     case RedisCommand::HEXISTS: {
       if(request.size() != 3) return errArgs(request, commit);
       rocksdb::Status st = store.hexists(request[1], request[2]);
