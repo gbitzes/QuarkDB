@@ -28,6 +28,8 @@ BuildRequires: hiredis
 BuildRequires: hiredis-devel
 BuildRequires: bzip2-devel
 BuildRequires: python
+BuildRequires: zlib-static
+BuildRequires: zlib-devel
 
 Requires: xrootd
 
