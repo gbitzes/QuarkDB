@@ -85,17 +85,11 @@ int XrdRedisProtocol::Process(XrdLink *lp) {
   ScopedAdder<int64_t> adder(inFlight);
 
   if(!link) link = new Link(lp);
-  if(!parser) parser = new RedisParser(link);
   if(!conn) conn = new Connection(link);
 
-  while(true) {
-    if(inShutdown) { return -1; }
-    LinkStatus status = parser->fetch(currentRequest);
-    if(status == 0) return 1;     // slow link
-    if(status < 0) return status; // error
-
-    quarkdbNode->dispatch(conn, currentRequest);
-  }
+  LinkStatus status = conn->processRequests(quarkdbNode, inShutdown);
+  if(inShutdown) return -1;
+  return status;
 }
 
 XrdProtocol* XrdRedisProtocol::Match(XrdLink *lp) {
@@ -111,10 +105,6 @@ XrdProtocol* XrdRedisProtocol::Match(XrdLink *lp) {
 }
 
 void XrdRedisProtocol::Reset() {
-  if(parser) {
-    delete parser;
-    parser = nullptr;
-  }
   if(conn) {
     delete conn;
     conn = nullptr;

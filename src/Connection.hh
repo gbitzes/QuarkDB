@@ -26,7 +26,10 @@
 
 #include "Link.hh"
 #include "StateMachine.hh"
+#include "RedisParser.hh"
 #include <queue>
+
+#define OUTPUT_BUFFER_SIZE (16*1024)
 
 namespace quarkdb {
 
@@ -40,6 +43,7 @@ namespace quarkdb {
 // case.
 //------------------------------------------------------------------------------
 
+class Dispatcher;
 class RedisDispatcher;
 class Connection {
 public:
@@ -65,12 +69,23 @@ public:
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
 
   bool raftAuthorization = false;
+
+  LinkStatus processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop);
+  void setResponseBuffering(bool value);
+  void flush();
 private:
   LinkStatus send(std::string && raw);
   LinkStatus append(std::string &&raw);
 
   Link *link = nullptr;
   std::mutex mtx;
+
+  RedisRequest currentRequest;
+  RedisParser parser;
+
+  bool bufferingActive = true;
+  char buffer[OUTPUT_BUFFER_SIZE];
+  int bufferedBytes = 0;
 
   //----------------------------------------------------------------------------
   // Information about a pending request, which can be either a read or a write.
@@ -99,7 +114,17 @@ private:
 
   LogIndex lastIndex = -1;
   std::queue<PendingRequest> pending;
+
+  class FlushGuard {
+  public:
+    FlushGuard(Connection *c) : conn(c) { }
+    ~FlushGuard() { conn->flush(); }
+  private:
+    Connection *conn;
+  };
+
 };
+
 
 }
 

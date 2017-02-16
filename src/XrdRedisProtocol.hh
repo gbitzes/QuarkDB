@@ -72,10 +72,8 @@ public:
 private:
   /// The link we are bound to
   Link *link = nullptr;
-  RedisParser *parser = nullptr;
   Connection *conn = nullptr;
 
-  RedisRequest currentRequest;
   void Reset();
 protected:
   static QuarkDBNode *quarkdbNode;

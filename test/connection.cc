@@ -37,6 +37,7 @@ TEST_F(tConnection, basic_sanity) {
 
   Link link;
   Connection conn(&link);
+  conn.setResponseBuffering(false);
 
   conn.appendReq(&dispatcher, {"get", "abc"});
   int len = link.Recv(buffer, BUFFER_SIZE, 0);

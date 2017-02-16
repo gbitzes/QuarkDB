@@ -94,7 +94,6 @@ Poller::~Poller() {
 
 void Poller::worker(int fd, Dispatcher *dispatcher) {
   Link link(fd);
-  RedisParser parser(&link);
   Connection conn(&link);
 
   struct pollfd polls[2];
@@ -105,8 +104,6 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
   polls[1].fd = shutdownFD.getFD();
   polls[1].events = POLLIN;
   polls[1].revents = 0;
-
-  RedisRequest currentRequest;
 
   while(!shutdown) {
     poll(polls, 2, -1);
@@ -123,11 +120,8 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
       }
     }
 
-    while(true) {
-      LinkStatus status = parser.fetch(currentRequest);
-      if(status <= 0) break;
-      dispatcher->dispatch(&conn, currentRequest);
-    }
+    LinkStatus status = conn.processRequests(dispatcher, shutdown);
+    if(status <= 0) break;
 
     if( (polls[0].revents & POLLERR) || (polls[0].revents & POLLHUP) ) {
       break;

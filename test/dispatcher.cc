@@ -39,6 +39,7 @@ protected:
     dispatcher(store) {
 
     store.flushall();
+    conn.setResponseBuffering(false);
   }
 
   void assert_reply(RedisRequest &&request, const std::string &reply) {

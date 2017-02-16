@@ -27,7 +27,7 @@
 using namespace quarkdb;
 
 Connection::Connection(Link *l)
-: link(l) {
+: link(l), parser(l) {
 }
 
 Connection::~Connection() {
@@ -88,6 +88,7 @@ LinkStatus Connection::flushPending(const std::string &msg) {
     this->send(Formatter::err(msg));
     pending.pop();
   }
+  flush();
   return 1;
 }
 
@@ -121,13 +122,50 @@ LinkStatus Connection::appendReq(RedisDispatcher *dispatcher, RedisRequest &&req
   return 1;
 }
 
+void Connection::flush() {
+  if(!link) return;
+  if(bufferedBytes == 0) return;
+
+  link->Send(buffer, bufferedBytes);
+  bufferedBytes = 0;
+  return;
+}
+
+LinkStatus Connection::processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop) {
+  FlushGuard guard(this);
+  while(!stop) {
+    LinkStatus status = parser.fetch(currentRequest);
+    if(status == 0) return 1; // slow link
+    if(status < 0) return status; // error
+    dispatcher->dispatch(this, currentRequest);
+  }
+  return 1;
+}
+
+void Connection::setResponseBuffering(bool value) {
+  bufferingActive = value;
+  if(!bufferingActive) flush();
+}
+
 LinkStatus Connection::send(std::string &&raw) {
   if(!link) return 1;
-  return link->Send(raw);
+  if(!bufferingActive) return link->Send(raw);
+
+  if(raw.size() + bufferedBytes > OUTPUT_BUFFER_SIZE) {
+    this->flush();
+    if(raw.size() > OUTPUT_BUFFER_SIZE) {
+      return link->Send(raw); // response too large for output buffer
+    }
+  }
+
+  memcpy(buffer + bufferedBytes, raw.c_str(), raw.size());
+  bufferedBytes += raw.size();
+  return 1;
 }
 
 LogIndex Connection::dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
   std::lock_guard<std::mutex> lock(mtx);
+  FlushGuard guard(this);
 
   while(!pending.empty()) {
     PendingRequest &req = pending.front();
