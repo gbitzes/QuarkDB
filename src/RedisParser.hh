@@ -32,7 +32,7 @@ namespace quarkdb {
 
 class RedisParser {
 public:
-  RedisParser(Link *link, XrdBuffManager *bpool);
+  RedisParser(Link *link);
 
   //----------------------------------------------------------------------------
   // Resumable function to fetch a request from the link.

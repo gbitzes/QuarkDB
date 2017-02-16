@@ -35,8 +35,7 @@ protected:
   Dispatcher_()
   : store("/tmp/rocksdb-testdb"),
     conn(&link),
-    bufferManager(NULL, NULL),
-    reader(&link, &bufferManager),
+    reader(&link),
     dispatcher(store) {
 
     store.flushall();
@@ -52,7 +51,6 @@ protected:
   StateMachine store;
   Link link;
   Connection conn;
-  XrdBuffManager bufferManager;
   BufferedReader reader;
   RedisDispatcher dispatcher;
   std::string buffer;

@@ -26,11 +26,11 @@
 
 using namespace quarkdb;
 
-BufferedReader::BufferedReader(Link *lp, XrdBuffManager *bpool, size_t bsize)
-: link(lp), bufferPool(bpool), buffer_size(bsize) {
+BufferedReader::BufferedReader(Link *lp, size_t bsize)
+: link(lp), buffer_size(bsize) {
   position_read = 0;
   position_write = 0;
-  buffers.push_back(bufferPool->Obtain(buffer_size));
+  buffers.push_back((char*) malloc(buffer_size));
 }
 
 LinkStatus BufferedReader::readFromLink(size_t limit) {
@@ -40,7 +40,7 @@ LinkStatus BufferedReader::readFromLink(size_t limit) {
     int available_space = buffer_size - position_write;
 
     // non-blocking read
-    LinkStatus rlen = link->Recv(buffers.back()->buff + position_write, available_space, 0);
+    LinkStatus rlen = link->Recv(buffers.back() + position_write, available_space, 0);
     if(rlen < 0) return rlen; // an error occured, propagate to caller
 
     total_bytes += rlen;
@@ -51,7 +51,7 @@ LinkStatus BufferedReader::readFromLink(size_t limit) {
     }
 
     // we have more data to read, but no more space. Need to allocate buffer
-    buffers.push_back(bufferPool->Obtain(buffer_size));
+    buffers.push_back((char*) malloc(buffer_size));
     position_write = 0;
 
     if(total_bytes > (int) limit) return total_bytes;
@@ -95,13 +95,13 @@ LinkStatus BufferedReader::consume(size_t len, std::string &str) {
 
     // add them
     qdb_debug("Appending " << available_bytes << " bytes to str");
-    str.append(buffers.front()->buff + position_read, available_bytes);
+    str.append(buffers.front() + position_read, available_bytes);
     position_read += available_bytes;
 
     if(position_read >= buffer_size) {
       qdb_debug("An entire buffer has been consumed, releasing");
       // an entire buffer has been consumed
-      bufferPool->Release(buffers.front());
+      free(buffers.front());
       buffers.pop_front();
       position_read = 0;
     }

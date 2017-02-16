@@ -93,9 +93,8 @@ Poller::~Poller() {
 }
 
 void Poller::worker(int fd, Dispatcher *dispatcher) {
-  XrdBuffManager bufferManager(NULL, NULL);
   Link link(fd);
-  RedisParser parser(&link, &bufferManager);
+  RedisParser parser(&link);
   Connection conn(&link);
 
   struct pollfd polls[2];

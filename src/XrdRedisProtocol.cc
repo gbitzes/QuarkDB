@@ -40,7 +40,6 @@ XrdSysError XrdRedisProtocol::eDest(0, "redis");
 
 const char *XrdRedisTraceID = "XrdRedis";
 XrdOucTrace *XrdRedisTrace = 0;
-XrdBuffManager *XrdRedisProtocol::bufferManager = 0;
 QuarkDBNode *XrdRedisProtocol::quarkdbNode = 0;
 std::atomic<bool> XrdRedisProtocol::inShutdown {false};
 std::atomic<int64_t> XrdRedisProtocol::inFlight {0};
@@ -86,7 +85,7 @@ int XrdRedisProtocol::Process(XrdLink *lp) {
   ScopedAdder<int64_t> adder(inFlight);
 
   if(!link) link = new Link(lp);
-  if(!parser) parser = new RedisParser(link, bufferManager);
+  if(!parser) parser = new RedisParser(link);
   if(!conn) conn = new Connection(link);
 
   while(true) {
@@ -144,7 +143,6 @@ static void handle_sigint(int sig) {
 }
 
 int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
-  bufferManager = pi->BPool;
   eDest.logger(pi->eDest->logger());
 
   char* rdf = (parms && *parms ? parms : pi->ConfigFN);
@@ -158,7 +156,7 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
     return 0;
   }
 
-  quarkdbNode = new QuarkDBNode(configuration, bufferManager, inFlight);
+  quarkdbNode = new QuarkDBNode(configuration, inFlight);
   std::thread(&XrdRedisProtocol::shutdownMonitor).detach();
   signal(SIGINT, handle_sigint);
   signal(SIGTERM, handle_sigint);

@@ -30,13 +30,12 @@
 #include "Link.hh"
 
 #include "Xrd/XrdLink.hh"
-#include "Xrd/XrdBuffer.hh"
 
 namespace quarkdb {
 
 class BufferedReader {
 public:
-  BufferedReader(Link *lp, XrdBuffManager *bpool, size_t bsize = 1024 * 32);
+  BufferedReader(Link *lp, size_t bsize = 1024 * 32);
 
   //----------------------------------------------------------------------------
   // Read exactly len bytes from the link. An all-or-nothing operation -
@@ -48,21 +47,13 @@ private:
   Link *link;
 
   //----------------------------------------------------------------------------
-  // Buffer manager that recycles memory buffers
-  //----------------------------------------------------------------------------
-  XrdBuffManager *bufferPool;
-
-  //----------------------------------------------------------------------------
   // We use a deque of buffers for reading from the socket.
   // We always append new buffers to this deque - once a buffer is full, we
   // allocate a new one. Once the contents of a buffer have been parsed, we
   // release it.
-  //
-  // The buffer manager will take care of recycling the memory and prevent
-  // unnecessary alloactions.
   //----------------------------------------------------------------------------
 
-  std::deque<XrdBuffer*> buffers;
+  std::deque<char*> buffers;
   size_t position_read; // always points to the buffer at the front
   size_t position_write; // always points to the buffer at the end
   const size_t buffer_size;

@@ -30,17 +30,14 @@ using namespace quarkdb;
 class Buffered_Reader : public ::testing::TestWithParam<int> {
 protected:
   virtual void SetUp() {
-    bufferManager = new XrdBuffManager(NULL, NULL);
-    reader = new BufferedReader(&link, bufferManager, GetParam());
+    reader = new BufferedReader(&link, GetParam());
   }
 
   virtual void TearDown() {
     delete reader;
-    delete bufferManager;
   }
 
   Link link;
-  XrdBuffManager *bufferManager;
   BufferedReader *reader;
   std::string buffer;
 };

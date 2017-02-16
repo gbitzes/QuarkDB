@@ -29,13 +29,11 @@ using namespace quarkdb;
 class Redis_Parser : public ::testing::Test {
 protected:
   virtual void SetUp() {
-    bufferManager = new XrdBuffManager(NULL, NULL);
-    parser = new RedisParser(&link, bufferManager);
+    parser = new RedisParser(&link);
   }
 
   virtual void TearDown() {
     delete parser;
-    delete bufferManager;
   }
 
   void simulateBadConnection(const std::string &str, size_t bytes) {
@@ -63,7 +61,6 @@ protected:
   }
 
   Link link;
-  XrdBuffManager *bufferManager;
   RedisParser *parser;
   RedisRequest request;
 };

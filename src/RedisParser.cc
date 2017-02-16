@@ -26,7 +26,7 @@
 
 using namespace quarkdb;
 
-RedisParser::RedisParser(Link *l, XrdBuffManager *bpool) : reader(l, bpool) {
+RedisParser::RedisParser(Link *l) : reader(l) {
 }
 
 int RedisParser::fetch(RedisRequest &req) {

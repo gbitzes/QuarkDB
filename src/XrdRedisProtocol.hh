@@ -28,7 +28,6 @@
 #include "XrdSys/XrdSysError.hh"
 #include "XrdSys/XrdSysPthread.hh"
 #include "Xrd/XrdLink.hh"
-#include "Xrd/XrdBuffer.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdOuc/XrdOucStream.hh"
 
@@ -79,7 +78,6 @@ private:
   RedisRequest currentRequest;
   void Reset();
 protected:
-  static XrdBuffManager *bufferManager;
   static QuarkDBNode *quarkdbNode;
 
   static void shutdownMonitor();

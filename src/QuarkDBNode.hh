@@ -71,7 +71,7 @@ struct QuarkDBInfo {
 
 class QuarkDBNode : public Dispatcher {
 public:
-  QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t = defaultTimeouts);
+  QuarkDBNode(const Configuration &config, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t = defaultTimeouts);
   ~QuarkDBNode();
 
   void detach();
@@ -82,8 +82,6 @@ private:
   RaftGroup* raftgroup = nullptr;
   StateMachine *stateMachine = nullptr;
   Dispatcher* dispatcher = nullptr;
-
-  XrdBuffManager *bufferManager = nullptr; // owned by xrootd, not me
 
   QuarkDBInfo info();
 

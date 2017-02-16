@@ -40,8 +40,7 @@ TEST(RaftTalker, T1) {
   ASSERT_GT(s2, 0);
 
   Link link(s2);
-  XrdBuffManager bufferManager(NULL, NULL);
-  RedisParser parser(&link, &bufferManager);
+  RedisParser parser(&link);
 
   RedisRequest req;
 

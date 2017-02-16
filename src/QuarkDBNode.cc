@@ -130,8 +130,8 @@ void QuarkDBNode::cancelResilvering() {
   resilvering = false;
 }
 
-QuarkDBNode::QuarkDBNode(const Configuration &config, XrdBuffManager *buffManager, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t)
-: configuration(config), bufferManager(buffManager), inFlight(inFlight_), timeouts(t) {
+QuarkDBNode::QuarkDBNode(const Configuration &config, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t)
+: configuration(config), inFlight(inFlight_), timeouts(t) {
   cancelResilvering();
 
   std::string err;
