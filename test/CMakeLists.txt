@@ -8,7 +8,7 @@ add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
 #-------------------------------------------------------------------------------
 # Build unit tests
 #-------------------------------------------------------------------------------
-add_executable(tests
+add_executable(quarkdb-tests
   buffered-reader.cc
   configuration.cc
   connection.cc
@@ -32,7 +32,7 @@ add_executable(tests
 #-------------------------------------------------------------------------------
 # Build bench tool
 #-------------------------------------------------------------------------------
-add_executable(bench
+add_executable(quarkdb-bench
   bench/hset.cc
   test-utils.cc                 test-utils.hh
 )
@@ -44,16 +44,27 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/deps/qclient/include
 )
 
-target_link_libraries(tests
+#-------------------------------------------------------------------------------
+# Link
+#-------------------------------------------------------------------------------
+target_link_libraries(quarkdb-tests
   XrdRedis
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
 )
 
-target_link_libraries(bench
+target_link_libraries(quarkdb-bench
   XrdRedis
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
+)
+
+#-------------------------------------------------------------------------------
+# Install
+#-------------------------------------------------------------------------------
+install(
+  TARGETS quarkdb-tests quarkdb-bench
+  RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )
