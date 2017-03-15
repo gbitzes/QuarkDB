@@ -27,7 +27,7 @@
 using namespace quarkdb;
 
 Connection::Connection(Link *l)
-: link(l), parser(l) {
+: writer(l), link(l), parser(l) {
 }
 
 Connection::~Connection() {
@@ -85,16 +85,16 @@ LinkStatus Connection::scan(const std::string &marker, const std::vector<std::st
 LinkStatus Connection::flushPending(const std::string &msg) {
   std::lock_guard<std::mutex> lock(mtx);
   while(!pending.empty()) {
-    this->send(Formatter::err(msg));
+    writer.send(Formatter::err(msg));
     pending.pop();
   }
-  flush();
+  writer.flush();
   return 1;
 }
 
 LinkStatus Connection::append(std::string &&raw) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(pending.empty()) return this->send(std::move(raw));
+  if(pending.empty()) return writer.send(std::move(raw));
 
   // we're being blocked by a write, must queue
   PendingRequest req;
@@ -105,7 +105,7 @@ LinkStatus Connection::append(std::string &&raw) {
 
 LinkStatus Connection::appendReq(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(pending.empty() && index < 0) return this->send(dispatcher->dispatch(req, 0));
+  if(pending.empty() && index < 0) return writer.send(dispatcher->dispatch(req, 0));
 
   if(index > 0) {
     if(index <= lastIndex) {
@@ -122,17 +122,8 @@ LinkStatus Connection::appendReq(RedisDispatcher *dispatcher, RedisRequest &&req
   return 1;
 }
 
-void Connection::flush() {
-  if(!link) return;
-  if(bufferedBytes == 0) return;
-
-  link->Send(buffer, bufferedBytes);
-  bufferedBytes = 0;
-  return;
-}
-
 LinkStatus Connection::processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop) {
-  FlushGuard guard(this);
+  BufferedWriter::FlushGuard guard(&writer);
   while(!stop) {
     LinkStatus status = parser.fetch(currentRequest);
     if(status == 0) return 1; // slow link
@@ -143,29 +134,12 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const std::atomic
 }
 
 void Connection::setResponseBuffering(bool value) {
-  bufferingActive = value;
-  if(!bufferingActive) flush();
-}
-
-LinkStatus Connection::send(std::string &&raw) {
-  if(!link) return 1;
-  if(!bufferingActive) return link->Send(raw);
-
-  if(raw.size() + bufferedBytes > OUTPUT_BUFFER_SIZE) {
-    this->flush();
-    if(raw.size() > OUTPUT_BUFFER_SIZE) {
-      return link->Send(raw); // response too large for output buffer
-    }
-  }
-
-  memcpy(buffer + bufferedBytes, raw.c_str(), raw.size());
-  bufferedBytes += raw.size();
-  return 1;
+  writer.setActive(value);
 }
 
 LogIndex Connection::dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
   std::lock_guard<std::mutex> lock(mtx);
-  FlushGuard guard(this);
+  BufferedWriter::FlushGuard guard(&writer);
 
   while(!pending.empty()) {
     PendingRequest &req = pending.front();
@@ -175,10 +149,10 @@ LogIndex Connection::dispatchPending(RedisDispatcher *dispatcher, LogIndex commi
     }
 
     if(!req.rawResp.empty()) {
-      this->send(std::move(req.rawResp));
+      writer.send(std::move(req.rawResp));
     }
     else {
-      this->send(dispatcher->dispatch(req.req, commitIndex));
+      writer.send(dispatcher->dispatch(req.req, commitIndex));
     }
 
     pending.pop();

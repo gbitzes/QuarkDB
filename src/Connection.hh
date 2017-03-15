@@ -27,6 +27,7 @@
 #include "Link.hh"
 #include "StateMachine.hh"
 #include "RedisParser.hh"
+#include "BufferedWriter.hh"
 #include <queue>
 
 #define OUTPUT_BUFFER_SIZE (16*1024)
@@ -64,17 +65,14 @@ public:
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
 
   LinkStatus flushPending(const std::string &msg);
-
   LinkStatus appendReq(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
 
   bool raftAuthorization = false;
-
   LinkStatus processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop);
   void setResponseBuffering(bool value);
-  void flush();
 private:
-  LinkStatus send(std::string && raw);
+  BufferedWriter writer;
   LinkStatus append(std::string &&raw);
 
   Link *link = nullptr;
@@ -82,10 +80,6 @@ private:
 
   RedisRequest currentRequest;
   RedisParser parser;
-
-  bool bufferingActive = true;
-  char buffer[OUTPUT_BUFFER_SIZE];
-  int bufferedBytes = 0;
 
   //----------------------------------------------------------------------------
   // Information about a pending request, which can be either a read or a write.
@@ -114,15 +108,6 @@ private:
 
   LogIndex lastIndex = -1;
   std::queue<PendingRequest> pending;
-
-  class FlushGuard {
-  public:
-    FlushGuard(Connection *c) : conn(c) { }
-    ~FlushGuard() { conn->flush(); }
-  private:
-    Connection *conn;
-  };
-
 };
 
 

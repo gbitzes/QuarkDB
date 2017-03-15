@@ -18,6 +18,7 @@ add_library(XrdRedis SHARED
                              Common.hh
   Link.cc                    Link.hh
   BufferedReader.cc          BufferedReader.hh
+  BufferedWriter.cc          BufferedWriter.hh
   RedisParser.cc             RedisParser.hh
   StateMachine.cc            StateMachine.hh
   Commands.cc                Commands.hh
@@ -46,7 +47,6 @@ target_link_libraries(
   bz2
   z
   rocksdb
-  # libasan.a
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${BACKWARD_LIBRARIES}
