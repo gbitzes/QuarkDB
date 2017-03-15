@@ -33,6 +33,13 @@ BufferedReader::BufferedReader(Link *lp, size_t bsize)
   buffers.push_back((char*) malloc(buffer_size));
 }
 
+BufferedReader::~BufferedReader() {
+  while(!buffers.empty()) {
+    free(buffers.front());
+    buffers.pop_front();
+  }
+}
+
 LinkStatus BufferedReader::readFromLink(size_t limit) {
   int total_bytes = 0;
   while(true) {

@@ -36,6 +36,7 @@ namespace quarkdb {
 class BufferedReader {
 public:
   BufferedReader(Link *lp, size_t bsize = 1024 * 32);
+  ~BufferedReader();
 
   //----------------------------------------------------------------------------
   // Read exactly len bytes from the link. An all-or-nothing operation -
