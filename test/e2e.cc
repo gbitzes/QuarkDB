@@ -101,9 +101,18 @@ TEST_F(Raft_e2e, coup) {
   ASSERT_LE(leaderID, 2);
 
   int instigator = (leaderID+1)%3;
-  ASSERT_REPLY(tunnel(instigator)->exec("RAFT_ATTEMPT_COUP"), "vive la revolution");
-  RETRY_ASSERT_TRUE(instigator == getLeaderID());
-  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  for(int i = 1; i < 10; i++) {
+    RaftTerm term = state(instigator)->getCurrentTerm();
+    ASSERT_REPLY(tunnel(instigator)->exec("RAFT_ATTEMPT_COUP"), "vive la revolution");
+    RETRY_ASSERT_TRUE(state(instigator)->getCurrentTerm() > term);
+    RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+    if(instigator == getLeaderID()) {
+      qdb_info("Successful coup in " << i << " attempts");
+      return; // pass test
+    }
+  }
+  ASSERT_TRUE(false) << "Test has failed";
 }
 
 TEST_F(Raft_e2e, simultaneous_clients) {
