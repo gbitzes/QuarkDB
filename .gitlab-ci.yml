@@ -1,0 +1,58 @@
+stages:
+- build
+- test
+
+cc7:
+  stage: build
+  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  script:
+    - yum install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils
+    - packaging/gitlab-build.sh
+    - mkdir ${CI_BUILD_NAME}
+    - cp -r /root/rpmbuild/RPMS build/SRPMS ${CI_BUILD_NAME}
+  artifacts:
+    paths:
+    - "$CI_BUILD_NAME"
+
+fedora24:
+  stage: build
+  image: fedora:24
+  script:
+    - dnf install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils
+    - packaging/gitlab-build.sh
+    - mkdir ${CI_BUILD_NAME}
+    - cp -r /root/rpmbuild/RPMS build/SRPMS ${CI_BUILD_NAME}
+  artifacts:
+    paths:
+    - "$CI_BUILD_NAME"
+
+fedora-rawhide:
+  stage: build
+  image: fedora:rawhide
+  script:
+    - dnf install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils
+    - echo -e '[xrootd]\nname=XRootD CERN\nbaseurl=http://dss-ci-repo.web.cern.ch/dss-ci-repo/xrootd/release/fc-rawhide/x86_64/\ngpgcheck=0\nenabled=1\npriority=1' >> /etc/yum.repos.d/xrootd.repo
+    - packaging/gitlab-build.sh
+    - mkdir ${CI_BUILD_NAME}
+    - cp -r /root/rpmbuild/RPMS build/SRPMS ${CI_BUILD_NAME}
+  artifacts:
+    paths:
+    - "$CI_BUILD_NAME"
+
+cc7-test:
+  stage: test
+  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  dependencies:
+  - cc7
+  script:
+    - yum -y localinstall cc7/RPMS/*
+    - quarkdb-tests
+
+fedora24-test:
+  stage: test
+  image: fedora:24
+  dependencies:
+  - fedora24
+  script:
+    - dnf -y install fedora24/RPMS/*
+    - quarkdb-tests
