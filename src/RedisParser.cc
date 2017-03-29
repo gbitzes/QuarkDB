@@ -77,7 +77,7 @@ int RedisParser::readInteger(char prefix) {
   }
 
   if(current_integer[0] != prefix) {
-    qdb_warn("Redis protocol error, expected an integer with preceeding " << quotes(prefix) << ", received " << quotes(current_integer[0] << " instead"));
+    qdb_warn("Redis protocol error, expected an integer with preceeding " << quotes(prefix) << ", received " << quotes(current_integer[0]) << " instead (byte in decimal: " << int(current_integer[0]) << ")");
     return -1;
   }
 
