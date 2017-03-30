@@ -106,8 +106,13 @@ void RaftCommitTracker::recalculateCommitIndex() {
   LogIndex journalCommitIndex = journal.getCommitIndex();
   if(sortedVector[threshold] < journalCommitIndex) {
     qdb_warn("calculated a commitIndex which is smaller than journal.commitIndex: " << sortedVector[threshold] << ", " << journalCommitIndex << ". Will be unable to commit new entries until this is resolved.");
+    commitIndexLagging = true;
   }
   else {
+    if(commitIndexLagging) {
+      qdb_info("commitIndex no longer lagging behind journal.commitIndex, committing of new entries is now possible again.");
+      commitIndexLagging = false;
+    }
     commitIndex = sortedVector[threshold];
     journal.setCommitIndex(commitIndex);
   }

@@ -76,6 +76,7 @@ private:
 
   std::map<RaftServer, LogIndex> matchIndex;
   LogIndex commitIndex = 0;
+  bool commitIndexLagging = false;
 
 
   void deregister(RaftMatchIndexTracker &tracker);
