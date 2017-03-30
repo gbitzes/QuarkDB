@@ -26,6 +26,7 @@
 
 #include <sstream>
 #include "Xrd/XrdLink.hh"
+#include <qclient/QClient.hh>
 
 namespace quarkdb {
 
@@ -45,9 +46,11 @@ using LinkStatus = int;
 
 class Link {
 public:
-  Link(XrdLink *lp) : link(lp) {}
-  Link() {}
-  Link(int fd_);
+  Link(const qclient::TlsConfig &tlsconfig_);
+
+  Link(XrdLink *lp, qclient::TlsConfig tlsconfig = {} );
+  Link() : Link(qclient::TlsConfig()) {}
+  Link(int fd_, qclient::TlsConfig tlsconfig = {} );
   ~Link();
 
   LinkStatus Recv(char *buff, int blen, int timeout);
@@ -57,6 +60,9 @@ public:
   // not present in XrdLink, but convenient
   LinkStatus Send(const std::string &str);
 private:
+  qclient::TlsConfig tlsconfig;
+  qclient::TlsFilter tlsfilter;
+
   std::stringstream stream;
   XrdLink *link = nullptr;
   int fd = -1;
@@ -68,6 +74,11 @@ private:
   LinkStatus fdRecv(char *buff, int blen, int timeout);
   LinkStatus fdSend(const char *buff, int blen);
   LinkStatus fdClose(int defer = 0);
+
+  LinkStatus rawRecv(char *buff, int blen, int timeout);
+  LinkStatus rawSend(const char *buff, int blen);
+
+  qclient::RecvStatus recvStatus(char *buff, int blen, int timeout);
 };
 
 }

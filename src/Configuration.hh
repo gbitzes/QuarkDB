@@ -46,18 +46,22 @@ public:
   static bool fromString(const std::string &str, Configuration &out);
   bool isValid();
 
-  Mode getMode() { return mode; }
-  std::string getDatabase() { return database; }
-  TraceLevel getTraceLevel() { return trace; }
+  Mode getMode() const { return mode; }
+  std::string getDatabase() const { return database; }
+  TraceLevel getTraceLevel() const { return trace; }
+  std::string getCertificatePath() const { return certificatePath; }
+  std::string getKeyPath() const { return keyPath; }
 
-  RaftServer getMyself() { return myself; }
+  RaftServer getMyself() const { return myself; }
 
-  std::string getStateMachine() { return SSTR(database << "/state-machine"); }
-  std::string getRaftJournal() { return SSTR(database << "/raft-journal"); }
+  std::string getStateMachine() const { return SSTR(database << "/state-machine"); }
+  std::string getRaftJournal() const { return SSTR(database << "/raft-journal"); }
 private:
   Mode mode;
   std::string database;
   TraceLevel trace = TraceLevel::info;
+  std::string certificatePath;
+  std::string keyPath;
 
   // raft options
   RaftServer myself;

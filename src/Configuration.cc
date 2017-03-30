@@ -122,6 +122,12 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       else if(!strcmp("trace", option)) {
         success = fetchSingle(stream, buffer) && parseTraceLevel(buffer, out.trace);
       }
+      else if(!strcmp("certificate", option)) {
+        success = fetchSingle(stream, out.certificatePath);
+      }
+      else if(!strcmp("key", option)) {
+        success = fetchSingle(stream, out.keyPath);
+      }
       else {
         qdb_log("Error when parsing configuration - unknown option " << quotes(option));
         return false;
@@ -170,6 +176,11 @@ bool Configuration::isValid() {
 
   if(database[database.size()-1] == '/') {
     qdb_log("redis.database cannot contain trailing slashes");
+    return false;
+  }
+
+  if(certificatePath.empty() != keyPath.empty()) {
+    qdb_log("Both the TLS certificate and key must be supplied.");
     return false;
   }
 

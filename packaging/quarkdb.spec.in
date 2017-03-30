@@ -30,6 +30,7 @@ BuildRequires: bzip2-devel
 BuildRequires: python
 BuildRequires: zlib-static
 BuildRequires: zlib-devel
+BuildRequires: openssl-devel
 
 Requires: xrootd
 

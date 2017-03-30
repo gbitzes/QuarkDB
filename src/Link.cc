@@ -27,34 +27,73 @@
 #include "Link.hh"
 #include "Common.hh"
 #include "Utils.hh"
+#include <openssl/ssl.h>
+#include <openssl/err.h>
 
 using namespace quarkdb;
 
-Link::Link(int fd_)
-: fd(fd_) {
+using std::placeholders::_1;
+using std::placeholders::_2;
+using std::placeholders::_3;
+
+qclient::RecvStatus Link::recvStatus(char *buff, int blen, int timeout) {
+  int rc = this->rawRecv(buff, blen, timeout);
+  if(rc == 0) return qclient::RecvStatus(true, 0, 0); // no pending data to read
+  if(rc < 0) return qclient::RecvStatus(false, rc, 0); // connection error
+  return qclient::RecvStatus(true, 0, rc); // return data
+}
+
+Link::Link(const qclient::TlsConfig &tlsconfig_)
+: tlsconfig(tlsconfig_), tlsfilter(tlsconfig, qclient::FilterType::SERVER, std::bind(&Link::recvStatus, this, _1, _2, _3), std::bind(&Link::rawSend, this, _1, _2)) {
+
+}
+
+Link::Link(int fd_, qclient::TlsConfig tlsconfig_)
+: Link(tlsconfig_) {
+  fd = fd_;
   fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
+}
+
+Link::Link(XrdLink *lp, qclient::TlsConfig tlsconfig_)
+: Link(tlsconfig_) {
+  link = lp;
 }
 
 Link::~Link() {
   Close();
 }
 
-LinkStatus Link::Recv(char *buff, int blen, int timeout) {
+LinkStatus Link::rawRecv(char *buff, int blen, int timeout) {
   if(link) return link->Recv(buff, blen, timeout);
   if(fd >= 0) return fdRecv(buff, blen, timeout);
   return streamRecv(buff, blen, timeout);
 }
 
+LinkStatus Link::Recv(char *buff, int blen, int timeout) {
+  if(tlsconfig.active) {
+    qclient::RecvStatus status = tlsfilter.recv(buff, blen, timeout);
+    if(!status.connectionAlive) return -1;
+    return status.bytesRead;
+  }
+  return rawRecv(buff, blen, timeout);
+}
+
 LinkStatus Link::Close(int defer) {
+  if(tlsconfig.active) tlsfilter.close(defer);
   if(link) return link->Close(defer);
   if(fd >= 0) return fdClose(defer);
   return streamClose(defer);
 }
 
-LinkStatus Link::Send(const char *buff, int blen) {
+LinkStatus Link::rawSend(const char *buff, int blen) {
   if(link) return link->Send(buff, blen);
   if(fd >= 0) return fdSend(buff, blen);
   return streamSend(buff, blen);
+}
+
+LinkStatus Link::Send(const char *buff, int blen) {
+  if(tlsconfig.active) return tlsfilter.send(buff, blen);
+  return rawSend(buff, blen);
 }
 
 LinkStatus Link::Send(const std::string &str) {

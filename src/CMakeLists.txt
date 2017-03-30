@@ -47,6 +47,7 @@ target_link_libraries(
   bz2
   z
   rocksdb
+  ssl
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${BACKWARD_LIBRARIES}

@@ -41,7 +41,7 @@ XrdProtocol *XrdgetProtocol(const char *pname, char *parms,
     return 0;
   }
 
-  XrdProtocol *protocol = (XrdProtocol*) new quarkdb::XrdRedisProtocol();
+  XrdProtocol *protocol = (XrdProtocol*) new quarkdb::XrdRedisProtocol(false);
   pi->eDest->Say("------ redis protocol initialization completed.");
   return protocol;
 }

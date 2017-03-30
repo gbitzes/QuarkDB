@@ -45,6 +45,7 @@ public:
   std::future<redisReplyPtr> fetch(LogIndex index);
 private:
   const RaftClusterID clusterID;
+  TlsConfig tlsconfig;
   QClient tunnel;
 };
 

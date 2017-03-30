@@ -93,7 +93,17 @@ Poller::~Poller() {
 }
 
 void Poller::worker(int fd, Dispatcher *dispatcher) {
-  Link link(fd);
+  qclient::TlsConfig tlsconfig;
+
+  // peek first byte to determine if TLS is active
+  char buffer[2];
+
+  int ret = recv(fd, buffer, 1, MSG_PEEK);
+  if(ret != 1) qdb_throw("unexpected result from recv: " << ret);
+
+  tlsconfig.active = (buffer[0] != '*');
+  qdb_info("poller, tls: " << tlsconfig.active);
+  Link link(fd, tlsconfig);
   Connection conn(&link);
 
   struct pollfd polls[2];

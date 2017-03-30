@@ -77,6 +77,10 @@ public:
   void detach();
   bool attach(std::string &err);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+
+  const Configuration& getConfiguration() {
+    return configuration;
+  }
 private:
   Configuration configuration;
   RaftGroup* raftgroup = nullptr;

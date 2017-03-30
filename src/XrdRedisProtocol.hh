@@ -48,6 +48,8 @@ namespace quarkdb {
 
 class XrdRedisProtocol : public XrdProtocol {
 public:
+  XrdRedisProtocol(bool tls);
+
   /// Read and apply the configuration
   static int Configure(char *parms, XrdProtocol_Config *pi);
 
@@ -74,6 +76,7 @@ private:
   Link *link = nullptr;
   Connection *conn = nullptr;
 
+  qclient::TlsConfig tlsconfig;
   void Reset();
 protected:
   static QuarkDBNode *quarkdbNode;

@@ -75,16 +75,24 @@ void XrdRedisProtocol::shutdownMonitor() {
 // XrdRedisProtocol class
 //------------------------------------------------------------------------------
 
-XrdRedisProtocol::XrdRedisProtocol()
+XrdRedisProtocol::XrdRedisProtocol(bool tls)
 : XrdProtocol("Redis protocol handler") {
   Reset();
+
+  tlsconfig.active = tls;
+  if(tls) {
+    tlsconfig.certificatePath = quarkdbNode->getConfiguration().getCertificatePath();
+    tlsconfig.keyPath = quarkdbNode->getConfiguration().getKeyPath();
+  }
 }
 
 int XrdRedisProtocol::Process(XrdLink *lp) {
   if(inShutdown) { return -1; }
   ScopedAdder<int64_t> adder(inFlight);
 
-  if(!link) link = new Link(lp);
+  // TODO log client DN
+  if(!link && tlsconfig.active) qdb_info("handling TLS connection. Security is intensifying");
+  if(!link) link = new Link(lp, tlsconfig);
   if(!conn) conn = new Connection(link);
 
   LinkStatus status = conn->processRequests(quarkdbNode, inShutdown);
@@ -93,15 +101,23 @@ int XrdRedisProtocol::Process(XrdLink *lp) {
 }
 
 XrdProtocol* XrdRedisProtocol::Match(XrdLink *lp) {
-  char buffer[4];
+  char buffer[2];
 
   // Peek at the first bytes of data
   int dlen = lp->Peek(buffer, (int) sizeof (buffer), 10000);
   if(dlen <= 0) return nullptr;
-  if(buffer[0] != '*') return nullptr;
 
-  XrdRedisProtocol *rp = new XrdRedisProtocol();
-  return rp;
+  if(buffer[0] != '*') {
+    // This is probably a TLS connection. Reject if there's no certificate
+    // configured.
+    if(quarkdbNode->getConfiguration().getCertificatePath().empty()) {
+      return nullptr;
+    }
+
+    return new XrdRedisProtocol(true);
+  }
+
+  return new XrdRedisProtocol(false); // TLS not enabled
 }
 
 void XrdRedisProtocol::Reset() {
@@ -142,7 +158,7 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
   if(!success) return 0;
 
   if(configuration.getMode() == Mode::raft && pi->Port != configuration.getMyself().port) {
-    std::cerr << "configuration error: xrootd listening port doesn't match redis.myself" << std::endl;
+    qdb_throw("configuration error: xrootd listening port doesn't match redis.myself");
     return 0;
   }
 

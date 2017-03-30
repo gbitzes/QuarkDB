@@ -26,7 +26,7 @@
 using namespace quarkdb;
 
 RaftTalker::RaftTalker(const RaftServer &server, const RaftClusterID &clusterID_)
-: clusterID(clusterID_), tunnel(server.hostname, server.port, false, false, {"RAFT_HANDSHAKE", STRINGIFY(VERSION_FULL), clusterID}) {
+: clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", STRINGIFY(VERSION_FULL), clusterID}) {
 
 }
 
