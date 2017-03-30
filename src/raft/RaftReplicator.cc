@@ -239,7 +239,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     if(!online) {
       // Print an event if the target just came back online
       online = true;
-      qdb_event("Replication target " << target.toString() << " came back online. Outcome: " << resp.outcome << ", logsize: " << resp.logSize);
+      qdb_event("Replication target " << target.toString() << " came back online. Log size: " << resp.logSize << ", lagging " << (journal.getLogSize() - resp.logSize) << " entries behind mine. (approximate)");
     }
 
     state.observed(resp.term, {});
