@@ -76,14 +76,25 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
 
   qdb_info("No longer accepting replies to vote requests, time to make a tally.");
 
-  size_t tally = 0;
+  size_t granted = 0;
+  size_t refused = 0;
+  size_t veto = 0;
+
   for(size_t i = 0; i < replies.size(); i++) {
     RaftVoteResponse resp;
     if(!RaftParser::voteResponse(replies[i], resp)) {
       qdb_critical("unable to parse a vote response, ignoring");
     }
     else {
-      if(resp.granted) tally++;
+      if(resp.vote == RaftVote::GRANTED) {
+        granted++;
+      }
+      else if(resp.vote == RaftVote::REFUSED) {
+        refused++;
+      }
+      else if(resp.vote == RaftVote::VETO) {
+        veto++;
+      }
       state.observed(resp.term, {});
     }
   }
@@ -93,9 +104,13 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
   }
 
   std::string description = SSTR("Contacted " << futures.size() << " nodes, received "
-    << replies.size() << " replies with a tally of " << tally << " positive votes.");
+    << replies.size() << " replies with a tally of " << granted << " positive votes, " << refused << " refused votes, and " << veto << " vetoes.");
 
-  if(tally+1 >= (state.getNodes().size() / 2)+1 ) {
+  if(granted+1 >= (state.getNodes().size() / 2)+1 ) {
+    if(veto > 0) {
+      qdb_critical("Election round unsuccessful for term " << votereq.term << " because of vetoes, even though I received a quorum of positive votes. (!!!) " << description);
+      return false;
+    }
     qdb_event("Election round successful for term " << votereq.term << ". " << description);
     return state.ascend(votereq.term);
   }
@@ -198,9 +213,18 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
   if(!my_strtoll(tmp, dest.term)) return false;
 
   tmp = std::string(source->element[1]->str, source->element[1]->len);
-  if(tmp == "0") dest.granted = false;
-  else if(tmp == "1") dest.granted = true;
-  else return false;
+  if(tmp == "granted") {
+    dest.vote = RaftVote::GRANTED;
+  }
+  else if(tmp == "refused") {
+    dest.vote = RaftVote::REFUSED;
+  }
+  else if(tmp == "veto") {
+    dest.vote = RaftVote::VETO;
+  }
+  else {
+    return false; // parse error
+  }
 
   return true;
 }

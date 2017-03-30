@@ -133,6 +133,11 @@ public:
   // spin up a node
   void spinup(int id);
 
+  // In some tests, the latency of opening rocksdb can kill us, since by the
+  // time the db is open raft starts timing out.
+  // This function will prepare a node, so that spinning it up later is instant.
+  void prepare(int id);
+
   // initialize nodes using information passed on the nodes variable, except if srv is set
   TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);

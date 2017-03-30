@@ -93,14 +93,33 @@ struct RaftVoteRequest {
   RaftTerm lastTerm;
 };
 
+enum class RaftVote {
+  VETO = -1,
+  REFUSED = 0,
+  GRANTED = 1
+};
+
 struct RaftVoteResponse {
   RaftTerm term;
-  bool granted;
+  RaftVote vote;
 
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
     ret.push_back(std::to_string(term));
-    ret.push_back(std::to_string(granted));
+
+    if(vote == RaftVote::GRANTED) {
+      ret.push_back("granted");
+    }
+    else if(vote == RaftVote::REFUSED) {
+      ret.push_back("refused");
+    }
+    else if(vote == RaftVote::VETO) {
+      ret.push_back("veto");
+    }
+    else {
+      qdb_throw("unable to convert vote to string in RaftVoteResponse::toVector");
+    }
+
     return ret;
   }
 

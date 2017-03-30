@@ -327,7 +327,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
     RaftStateSnapshot snapshot = state.getSnapshot();
     if(!snapshot.leader.empty()) {
       qdb_critical("Non-voting " << req.candidate.toString() << " attempted to disrupt the cluster by starting an election for term " << req.term << ". Ignoring its request.");
-      return {snapshot.term, false};
+      return {snapshot.term, RaftVote::VETO};
     }
     qdb_warn("Non-voting " << req.candidate.toString() << " is requesting a vote, even though it is not a voting member of the cluster as far I know. Will still process its request, since I have no leader.");
   }
@@ -335,44 +335,93 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   state.observed(req.term, {});
   RaftStateSnapshot snapshot = state.getSnapshot();
 
+  //----------------------------------------------------------------------------
+  // If the contacting node were to be elected, would they potentially overwrite
+  // any of my committed entries?
+  //
+  // Raft should prevent this, but let's be extra paranoid and send a 'veto'
+  // vote if that's the case. Even a single 'veto' response will prevent a node
+  // from ascending, even if they have a quorum of positive votes.
+  //
+  // If this safety mechanism doesn't work for some reason (the network loses
+  // the message, or whatever), this node will simply crash later on
+  // with an exception instead of overwriting committed entries, in case the
+  // candidate does ascend.
+  //
+  // Under normal circumstances, a 'veto' vote should never affect the outcome
+  // of an election, and it ought to be identical to a 'refused' vote.
+  //----------------------------------------------------------------------------
+
+  if(req.lastIndex <= journal.getCommitIndex()) {
+    if(req.lastIndex < journal.getLogStart()) {
+      qdb_event("Vetoing vote request from " << req.candidate.toString() << " because its lastIndex (" << req.lastIndex << ") is before my log start (" << journal.getLogStart() << ") - way too far behind me.");
+      return {snapshot.term, RaftVote::VETO};
+    }
+
+    RaftTerm myLastIndexTerm;
+    if(!journal.fetch(req.lastIndex, myLastIndexTerm).ok()) {
+      qdb_critical("Error when reading journal entry " << req.lastIndex << " when trying to determine if accepting a vote request could potentially overwrite my committed entries.");
+      // It could be that I just have a corrupted journal - don't prevent the
+      // node from ascending in this case... If I crash afterwards during
+      // replication, so be it.
+      return {snapshot.term, RaftVote::REFUSED};
+    }
+
+    // If the node were to ascend, it'll try and remove my req.lastIndex entry
+    // as inconsistent, which I consider committed already... Veto!
+    if(req.lastTerm != myLastIndexTerm) {
+      qdb_event("Vetoing vote request from " << req.candidate.toString() << " because its ascension would overwrite my committed entry with index " << req.lastIndex);
+      if(myLastIndexTerm < req.lastTerm) {
+        // May the Gods be kind on our souls, and we never see this message in production.
+        qdb_throw("Candidate " << req.candidate.toString() << " has a log entry at " << req.lastIndex << " with term " << req.lastTerm << " while I have a COMMITTED entry with a LOWER term: " << myLastIndexTerm << ". MAJOR CORRUPTION, DB IS ON FIRE");
+      }
+      return {snapshot.term, RaftVote::VETO};
+    }
+
+    if(req.lastIndex+1 <= journal.getCommitIndex()) {
+      // If the node were to ascend, it would add a leadership marker, and try
+      // to remove my committed req.lastIndex+1 entry as conflicting. Veto!
+      qdb_event("Vetoing vote request from " << req.candidate.toString() << " because its ascension would overwrite my committed entry with index " << req.lastIndex+1 << " through the addition of a leadership marker.");
+      return {snapshot.term, RaftVote::VETO};
+    }
+  }
+
   if(snapshot.term != req.term) {
     qdb_event("Rejecting vote request from " << req.candidate.toString() << " because of a term mismatch: " << snapshot.term << " vs " << req.term);
-    return {snapshot.term, false};
+    return {snapshot.term, RaftVote::REFUSED};
   }
 
   if(!snapshot.votedFor.empty() && snapshot.votedFor != req.candidate) {
     qdb_event("Rejecting vote request from " << req.candidate.toString() << " since I've voted already in this term (" << snapshot.term << ") for " << snapshot.votedFor.toString());
-    return {snapshot.term, false};
+    return {snapshot.term, RaftVote::REFUSED};
   }
 
   LogIndex myLastIndex = journal.getLogSize()-1;
   RaftTerm myLastTerm;
   if(!journal.fetch(myLastIndex, myLastTerm).ok()) {
     qdb_critical("Error when reading journal entry " << myLastIndex << " when processing request vote.");
-    return {snapshot.term, false};
+    return {snapshot.term, RaftVote::REFUSED};
   }
 
   if(req.lastTerm < myLastTerm) {
     qdb_event("Rejecting vote request from " << req.candidate.toString() << " since my log is more up-to-date, based on last term: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
-    return {snapshot.term, false};
+    return {snapshot.term, RaftVote::REFUSED};
   }
 
   if(req.lastIndex < myLastIndex) {
     qdb_event("Rejecting vote request from " << req.candidate.toString() << " since my log is more up-to-date, based on last index: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
-    return {snapshot.term, false};
+    return {snapshot.term, RaftVote::REFUSED};
   }
 
   // grant vote
   bool granted = state.grantVote(req.term, req.candidate);
   if(!granted) {
-    qdb_event("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term << " - probably benign race condition?");
-    return {snapshot.term, false};
-  }
-  else {
-    raftClock.heartbeat();
+    qdb_warn("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term << " - probably benign race condition?");
+    return {snapshot.term, RaftVote::REFUSED};
   }
 
-  return {snapshot.term, granted};
+  raftClock.heartbeat();
+  return {snapshot.term, RaftVote::GRANTED};
 }
 
 RaftInfo RaftDispatcher::info() {

@@ -178,6 +178,12 @@ void TestCluster::spinup(int id) {
   node(id)->group()->director();
 }
 
+void TestCluster::prepare(int id) {
+  qdb_info("Preparing node #" << id);
+  journal(id);
+  stateMachine(id);
+}
+
 int TestCluster::getServerID(const RaftServer &srv) {
   for(size_t i = 0; i < initialNodes.size(); i++) {
     if(myself(i) == srv) return i;

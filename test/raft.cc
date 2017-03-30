@@ -349,11 +349,11 @@ TEST_F(Raft_Voting, no_double_voting_on_same_term) {
   req.lastIndex = 2;
 
   RaftVoteResponse resp = dispatcher()->requestVote(req);
-  ASSERT_TRUE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   req.candidate = myself(2);
   resp = dispatcher()->requestVote(req);
-  ASSERT_FALSE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 }
 
 TEST_F(Raft_Voting, no_votes_for_previous_terms) {
@@ -364,11 +364,11 @@ TEST_F(Raft_Voting, no_votes_for_previous_terms) {
   req.lastIndex = 2;
 
   RaftVoteResponse resp = dispatcher()->requestVote(req);
-  ASSERT_TRUE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   req.term = 0;
   resp = dispatcher()->requestVote(req);
-  ASSERT_FALSE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 }
 
 TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
@@ -379,7 +379,7 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   req.lastIndex = 1;
 
   RaftVoteResponse resp = dispatcher()->requestVote(req);
-  ASSERT_TRUE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   // add a few requests to the log
   ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
@@ -392,17 +392,56 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   req.lastIndex = 30;
 
   resp = dispatcher()->requestVote(req);
-  ASSERT_FALSE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 
   req.lastTerm = 5;
   req.lastIndex = 2;
 
   resp = dispatcher()->requestVote(req);
-  ASSERT_FALSE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 
   req.lastIndex = 4;
   resp = dispatcher()->requestVote(req);
-  ASSERT_TRUE(resp.granted);
+  ASSERT_EQ(resp.vote, RaftVote::GRANTED);
+}
+
+TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
+  RaftVoteRequest req;
+  req.term = 5;
+  req.candidate =  myself(1);
+  req.lastTerm = 0;
+  req.lastIndex = 1;
+
+  RaftVoteResponse resp = dispatcher()->requestVote(req);
+  ASSERT_EQ(resp.vote, RaftVote::GRANTED);
+
+  // add a few requests to the log
+  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
+  ASSERT_TRUE(journal()->append(2, 4, testreqs[1]));
+  ASSERT_TRUE(journal()->append(3, 5, testreqs[2]));
+
+  // commit all of them
+  ASSERT_TRUE(journal()->setCommitIndex(3));
+
+  req.term = 6;
+  req.candidate = myself(2);
+  req.lastTerm = 2;
+  req.lastIndex = 1;
+
+  // would overwrite committed entry #1
+  resp = dispatcher()->requestVote(req);
+  ASSERT_EQ(resp.vote, RaftVote::VETO);
+
+  req.lastTerm = 3;
+  // contacting node is too far behind, and the addition of the leadership marker
+  // would overwrite entry #2
+  resp = dispatcher()->requestVote(req);
+  ASSERT_EQ(resp.vote, RaftVote::VETO);
+
+  // This case should never trigger under normal circumstances: contacting node's
+  // lastIndex has a higher term than local, committed lastIndex.
+  req.lastTerm = 4;
+  ASSERT_THROW(dispatcher()->requestVote(req), FatalException);
 }
 
 TEST(RaftTimeouts, basic_sanity) {
@@ -555,6 +594,32 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
   ASSERT_EQ(snapshot0.term, 2);
   ASSERT_TRUE(snapshot0.leader.empty());
   ASSERT_EQ(snapshot0.status, RaftStatus::CANDIDATE);
+}
+
+TEST_F(Raft_Director, node_has_committed_entries_no_one_else_has_ensure_it_vetoes) {
+  // node #0 has committed entries that no other node has. The node should
+  // veto any attempts of election, so that only itself can win this election.
+
+  ASSERT_TRUE(state(0)->observed(5, {}));
+  ASSERT_TRUE(state(1)->observed(5, {}));
+  ASSERT_TRUE(state(2)->observed(5, {}));
+
+  // add a few requests to the log
+  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
+  ASSERT_TRUE(journal()->append(2, 4, testreqs[1]));
+  ASSERT_TRUE(journal()->append(3, 5, testreqs[2]));
+
+  // commit all of them
+  ASSERT_TRUE(journal()->setCommitIndex(3));
+
+  // Here, timeouts are really important, as the veto message must go through
+  // in time. Prepare the DBs before spinning up.
+  prepare(0); prepare(1); prepare(2);
+
+  // node #0 must win
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  ASSERT_EQ(state(0)->getSnapshot().status, RaftStatus::LEADER);
 }
 
 TEST_F(Raft_Director, achieve_natural_election) {

@@ -102,7 +102,6 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
   if(ret != 1) qdb_throw("unexpected result from recv: " << ret);
 
   tlsconfig.active = (buffer[0] != '*');
-  qdb_info("poller, tls: " << tlsconfig.active);
   Link link(fd, tlsconfig);
   Connection conn(&link);
 
