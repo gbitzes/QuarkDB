@@ -365,7 +365,8 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   // grant vote
   bool granted = state.grantVote(req.term, req.candidate);
   if(!granted) {
-    qdb_event("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term);
+    qdb_event("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term << " - probably benign race condition?");
+    return {snapshot.term, false};
   }
   else {
     raftClock.heartbeat();
