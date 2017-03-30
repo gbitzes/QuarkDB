@@ -442,6 +442,14 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   // lastIndex has a higher term than local, committed lastIndex.
   req.lastTerm = 4;
   ASSERT_THROW(dispatcher()->requestVote(req), FatalException);
+
+  // Case where lastIndex has been trimmed already
+  journal()->trimUntil(2);
+  req.lastIndex = 1;
+  req.lastTerm = 3;
+
+  resp = dispatcher()->requestVote(req);
+  ASSERT_EQ(resp.vote, RaftVote::VETO);
 }
 
 TEST(RaftTimeouts, basic_sanity) {
