@@ -26,6 +26,12 @@ fedora24:
     paths:
     - "$CI_BUILD_NAME"
 
+ubuntu-asan:
+  stage: test
+  image: ubuntu:16.10
+  script:
+    - ./utils/ubuntu-asan.sh
+
 cc7-test:
   stage: test
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
