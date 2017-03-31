@@ -452,6 +452,24 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   ASSERT_EQ(resp.vote, RaftVote::VETO);
 }
 
+TEST_F(Raft_Voting, smaller_log_but_last_index_higher_term) {
+  ASSERT_TRUE(state()->observed(5, {}));
+
+  // add a few entries
+  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
+  ASSERT_TRUE(journal()->append(2, 3, testreqs[1]));
+  ASSERT_TRUE(journal()->append(3, 3, testreqs[2]));
+
+  RaftVoteRequest req;
+  req.term = 9;
+  req.candidate = myself(1);
+  req.lastTerm = 5;
+  req.lastIndex = 2;
+
+  RaftVoteResponse resp = dispatcher()->requestVote(req);
+  ASSERT_EQ(resp.vote, RaftVote::GRANTED);
+}
+
 TEST(RaftTimeouts, basic_sanity) {
   RaftTimeouts timeouts(std::chrono::milliseconds(100),
     std::chrono::milliseconds(200),

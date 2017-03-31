@@ -408,7 +408,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
     return {snapshot.term, RaftVote::REFUSED};
   }
 
-  if(req.lastIndex < myLastIndex) {
+  if(req.lastTerm == myLastTerm && req.lastIndex < myLastIndex) {
     qdb_event("Rejecting vote request from " << req.candidate.toString() << " since my log is more up-to-date, based on last index: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
     return {snapshot.term, RaftVote::REFUSED};
   }
