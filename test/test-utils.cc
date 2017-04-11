@@ -161,6 +161,10 @@ RaftClock* TestCluster::raftclock(int id) {
   return node(id)->group()->raftclock();
 }
 
+RaftLease* TestCluster::lease(int id) {
+  return node(id)->group()->lease();
+}
+
 TestNode* TestCluster::node(int id, const RaftServer &srv) {
   TestNode *ret = testnodes[id];
   if(ret == nullptr) {

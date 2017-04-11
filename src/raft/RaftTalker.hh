@@ -43,7 +43,10 @@ public:
 
   std::future<redisReplyPtr> requestVote(const RaftVoteRequest &req);
   std::future<redisReplyPtr> fetch(LogIndex index);
+
+  RaftServer getServer() { return server; }
 private:
+  RaftServer server;
   const RaftClusterID clusterID;
   TlsConfig tlsconfig;
   QClient tunnel;

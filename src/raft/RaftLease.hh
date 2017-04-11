@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftReplicator.hh
+// File: RaftLease.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,48 +21,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_REPLICATOR_H__
-#define __QUARKDB_RAFT_REPLICATOR_H__
+#ifndef __QUARKDB_RAFT_LEASE_H__
+#define __QUARKDB_RAFT_LEASE_H__
 
-#include "../StateMachine.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
+#include <chrono>
+#include <map>
+
+#include "RaftCommon.hh"
+#include "RaftMembers.hh"
 #include "RaftTimeouts.hh"
-#include "RaftCommitTracker.hh"
-#include "RaftLease.hh"
-#include <mutex>
 
 namespace quarkdb {
+using std::chrono::steady_clock;
 
-//------------------------------------------------------------------------------
-// A class that is given a number of target raft machine of the cluster, and
-// ensures that their journals match my own.
-//------------------------------------------------------------------------------
-class RaftReplicator {
+class RaftLastContact {
 public:
-  RaftReplicator(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, const RaftTimeouts t);
-  ~RaftReplicator();
-
-  bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  bool resilver(const RaftServer &target, const RaftStateSnapshot &snapshot);
+  RaftLastContact(const RaftServer &srv_) : srv(srv_) {}
+  void heartbeat(const steady_clock::time_point &timepoint);
+  steady_clock::time_point get();
 private:
-  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
-    std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
+  steady_clock::time_point lastCommunication;
+  std::mutex mtx;
+  RaftServer srv;
+};
 
-  RaftJournal &journal;
-  StateMachine &stateMachine;
-  RaftState &state;
-  RaftLease &lease;
+class RaftLease {
+public:
+  RaftLease(const std::vector<RaftServer> &targets, const steady_clock::duration &leaseDuration);
+  void updateTargets(const std::vector<RaftServer> &targets);
+  ~RaftLease();
+  RaftLastContact* getHandler(const RaftServer &srv);
+  steady_clock::time_point getDeadline();
+private:
+  RaftLastContact* getHandlerInternal(const RaftServer &srv);
 
-  RaftCommitTracker commitTracker;
-
-  std::atomic<int64_t> threadsAlive {0};
-  std::atomic<bool> shutdown {0};
-  std::vector<std::thread> threads;
-  std::mutex threadsMutex;
-
-  const RaftTimeouts timeouts;
+  std::mutex mtx;
+  std::map<RaftServer, RaftLastContact*> targets;
+  std::map<RaftServer, RaftLastContact*> registrations;
+  steady_clock::duration leaseDuration;
+  size_t quorumSize;
 };
 
 }

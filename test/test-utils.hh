@@ -129,6 +129,7 @@ public:
   RaftDirector *director(int id = 0);
   qclient::QClient *tunnel(int id = 0);
   RaftClock *raftclock(int id = 0);
+  RaftLease *lease(int id = 0);
 
   // spin up a node
   void spinup(int id);

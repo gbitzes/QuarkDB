@@ -25,13 +25,13 @@
 
 using namespace quarkdb;
 
-RaftTalker::RaftTalker(const RaftServer &server, const RaftClusterID &clusterID_)
-: clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", STRINGIFY(VERSION_FULL), clusterID}) {
+RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID_)
+: server(server_), clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", STRINGIFY(VERSION_FULL), clusterID}) {
 
 }
 
-RaftTalker::RaftTalker(const RaftServer &server)
-: tunnel(server.hostname, server.port) {
+RaftTalker::RaftTalker(const RaftServer &server_)
+: server(server_), tunnel(server.hostname, server.port) {
 }
 
 std::future<redisReplyPtr> RaftTalker::appendEntries(

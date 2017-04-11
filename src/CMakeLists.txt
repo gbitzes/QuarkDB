@@ -38,6 +38,7 @@ add_library(XrdRedis SHARED
   raft/RaftCommitTracker.cc  raft/RaftCommitTracker.hh
   raft/RaftGroup.cc          raft/RaftGroup.hh
                              raft/RaftMembers.hh
+  raft/RaftLease.cc          raft/RaftLease.hh
   ${BACKWARD_ENABLE}
 )
 

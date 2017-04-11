@@ -492,18 +492,18 @@ TEST_F(Raft_Election, basic_sanity) {
   // term mismatch, can't perform election
   RaftVoteRequest votereq;
   votereq.term = 1;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
 
   // we have a leader already, can't do election
   ASSERT_TRUE(state()->observed(2, myself(1)));
   votereq.term = 2;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
 
   // votereq.candidate must be empty
   votereq.candidate = myself(1);
   votereq.term = 3;
   ASSERT_TRUE(state()->observed(3, {}));
-  ASSERT_THROW(RaftElection::perform(votereq, *state()), FatalException);
+  ASSERT_THROW(RaftElection::perform(votereq, *state(), *lease()), FatalException);
 }
 
 TEST_F(Raft_Election, leader_cannot_call_election) {
@@ -513,7 +513,7 @@ TEST_F(Raft_Election, leader_cannot_call_election) {
 
   RaftVoteRequest votereq;
   votereq.term = 2;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
 }
 
 TEST_F(Raft_Election, observer_cannot_call_election) {
@@ -528,7 +528,7 @@ TEST_F(Raft_Election, observer_cannot_call_election) {
   RaftVoteRequest votereq;
   votereq.term = 1;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
 }
 
 TEST_F(Raft_Election, complete_simple_election) {
@@ -543,7 +543,7 @@ TEST_F(Raft_Election, complete_simple_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0)));
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0)));
 
   RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0.term, 2);
@@ -566,7 +566,7 @@ TEST_F(Raft_Election, unsuccessful_election_not_enough_votes) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0)));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0)));
 }
 
 TEST_F(Raft_Election, split_votes_successful_election) {
@@ -588,7 +588,7 @@ TEST_F(Raft_Election, split_votes_successful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0)));
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0)));
 
   RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0.term, 2);
@@ -614,7 +614,7 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0)));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0)));
 
   RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0.term, 2);

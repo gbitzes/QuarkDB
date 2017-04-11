@@ -29,8 +29,13 @@
 #include "../Common.hh"
 #include "RaftState.hh"
 #include "RaftTimeouts.hh"
+#include "RaftLease.hh"
 
 namespace quarkdb {
+
+inline size_t calculateQuorumSize(size_t members) {
+  return (members / 2) + 1;
+}
 
 class RaftParser {
 public:
@@ -43,7 +48,7 @@ public:
 
 class RaftElection {
 public:
-  static bool perform(RaftVoteRequest votereq, RaftState &state, const RaftTimeouts timeouts = defaultTimeouts);
+  static bool perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftTimeouts timeouts = defaultTimeouts);
 };
 
 }

@@ -26,7 +26,7 @@
 #include "../Utils.hh"
 using namespace quarkdb;
 
-bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const RaftTimeouts timeouts) {
+bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftTimeouts timeouts) {
   if(!votereq.candidate.empty()) {
     qdb_throw("candidate member of votereq must be empty, it is filled out by this function");
   }
@@ -51,6 +51,8 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
 
   qdb_info(state.getMyself().toString() << ": Starting election round for term " << votereq.term);
   std::vector<RaftTalker*> talkers;
+
+  std::chrono::steady_clock::time_point broadcastTimepoint = std::chrono::steady_clock::now();
 
   std::vector<std::future<redisReplyPtr>> futures;
   for(const RaftServer &node : state.getNodes()) {
@@ -87,6 +89,7 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, const Raft
     }
     else {
       if(resp.vote == RaftVote::GRANTED) {
+        lease.getHandler(talkers[i]->getServer())->heartbeat(broadcastTimepoint);
         granted++;
       }
       else if(resp.vote == RaftVote::REFUSED) {

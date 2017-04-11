@@ -14,15 +14,16 @@ add_executable(quarkdb-tests
   connection.cc
   dispatcher.cc
   e2e.cc
+  formatter.cc
   link.cc
   poller.cc
   raft-journal.cc
+  raft-lease.cc
   raft-parser.cc
   raft-state.cc
   raft-talker.cc
   raft.cc
   redis-parser.cc
-  formatter.cc
   state-machine.cc
   test-utils.cc                 test-utils.hh
   tunnel.cc

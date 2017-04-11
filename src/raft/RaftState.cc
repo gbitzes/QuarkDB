@@ -240,6 +240,15 @@ void RaftState::wait(const std::chrono::milliseconds &t) {
 }
 
 //------------------------------------------------------------------------------
+// Wait until the specified time_point, or we enter shutdown mode.
+//------------------------------------------------------------------------------
+void RaftState::wait_until(const std::chrono::steady_clock::time_point &t) {
+  std::unique_lock<std::mutex> lock(update);
+  if(status == RaftStatus::SHUTDOWN) return;
+  notifier.wait_until(lock, t);
+}
+
+//------------------------------------------------------------------------------
 // We must call updateJournal after having made changes to either term
 // or votedFor.
 //------------------------------------------------------------------------------

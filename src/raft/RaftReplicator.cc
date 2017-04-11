@@ -31,8 +31,8 @@
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, const RaftTimeouts t)
-: journal(journal_), stateMachine(sm), state(state_), commitTracker(journal, (journal.getNodes().size()/2)+1), timeouts(t) {
+RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, const RaftTimeouts t)
+: journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(journal, (journal.getNodes().size()/2)+1), timeouts(t) {
 
 }
 
@@ -198,6 +198,8 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
     matchIndex.reset(commitTracker, target);
   }
 
+  RaftLastContact &lastContact = *lease.getHandler(target);
+
   bool online = false;
   int64_t payloadLimit = 1;
 
@@ -222,6 +224,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
       continue;
     }
 
+    std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
     std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), reqs, terms);
     RaftAppendEntriesResponse resp;
 
@@ -244,6 +247,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
 
     state.observed(resp.term, {});
     if(snapshot.term < resp.term) continue;
+    lastContact.heartbeat(contact);
 
     // Check: Does the target need resilvering?
     if(resp.logSize <= journal.getLogStart()) {

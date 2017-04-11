@@ -24,11 +24,12 @@
 #include "RaftDirector.hh"
 #include "RaftUtils.hh"
 #include "RaftReplicator.hh"
+#include "RaftLease.hh"
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc)
-: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc) {
+RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftClock &rc)
+: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls) {
   mainThread = std::thread(&RaftDirector::main, this);
   commitApplier = std::thread(&RaftDirector::applyCommits, this);
   journalTrimmer = std::thread(&RaftDirector::trimJournal, this);
@@ -88,12 +89,31 @@ void RaftDirector::main() {
   }
 }
 
+static std::vector<RaftServer> all_servers_except_myself(const std::vector<RaftServer> &nodes, const RaftServer &myself) {
+  std::vector<RaftServer> remaining;
+  size_t skipped = 0;
+
+  for(size_t i = 0; i < nodes.size(); i++) {
+    if(myself == nodes[i]) {
+      if(skipped != 0) qdb_throw("found myself in the nodes list twice");
+      skipped++;
+      continue;
+    }
+    remaining.push_back(nodes[i]);
+  }
+
+  if(skipped != 1) qdb_throw("unexpected value for 'skipped', got " << skipped << " instead of 1");
+  if(remaining.size() != nodes.size()-1) qdb_throw("unexpected size for remaining: " << remaining.size() << " instead of " << nodes.size()-1);
+  return remaining;
+}
+
 void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   RaftMembership membership = journal.getMembership();
   qdb_info("Starting replicator for membership epoch " << membership.epoch);
   if(snapshot.leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
 
-  RaftReplicator replicator(journal, stateMachine, state, raftClock.getTimeouts());
+  lease.updateTargets(all_servers_except_myself(membership.nodes, state.getMyself()));
+  RaftReplicator replicator(journal, stateMachine, state, lease, raftClock.getTimeouts());
   for(const RaftServer& srv : membership.nodes) {
     if(srv != state.getMyself()) {
       replicator.launch(srv, snapshot);
@@ -108,7 +128,15 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   while(membership.epoch == journal.getEpoch() &&
         snapshot.term == state.getCurrentTerm() &&
         state.getSnapshot().status == RaftStatus::LEADER) {
-    state.wait(raftClock.getTimeouts().getHeartbeatInterval());
+
+    std::chrono::steady_clock::time_point deadline = lease.getDeadline();
+    if(deadline < std::chrono::steady_clock::now()) {
+      qdb_event("My leader lease has expired, I no longer control a quorum, stepping down.");
+      state.observed(snapshot.term+1, {});
+      return;
+    }
+
+    state.wait_until(deadline);
   }
 }
 
@@ -131,7 +159,7 @@ void RaftDirector::runForLeader() {
     return;
   }
 
-  if(!RaftElection::perform(votereq, state, raftClock.getTimeouts())) {
+  if(!RaftElection::perform(votereq, state, lease, raftClock.getTimeouts())) {
     state.dropOut(snapshot.term+1);
   }
 }

@@ -26,6 +26,7 @@
 #include "RaftTimeouts.hh"
 #include "RaftDirector.hh"
 #include "RaftReplicator.hh"
+#include "RaftLease.hh"
 #include "../StateMachine.hh"
 #include "RaftGroup.hh"
 using namespace quarkdb;
@@ -62,6 +63,7 @@ void RaftGroup::spindown() {
   if(replicatorptr) delete replicatorptr;
   if(stateptr) delete stateptr;
   if(clockptr) delete clockptr;
+  if(leaseptr) delete leaseptr;
 }
 
 RaftServer RaftGroup::myself() {
@@ -101,14 +103,21 @@ RaftState* RaftGroup::state() {
 
 RaftDirector* RaftGroup::director() {
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *raftclock());
+    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *raftclock());
   }
   return directorptr;
 }
 
 RaftReplicator* RaftGroup::replicator() {
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), raftclock()->getTimeouts());
+    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), *lease(), raftclock()->getTimeouts());
   }
   return replicatorptr;
+}
+
+RaftLease* RaftGroup::lease() {
+  if(leaseptr == nullptr) {
+    leaseptr = new RaftLease(journal()->getMembership().nodes, raftclock()->getTimeouts().getLow());
+  }
+  return leaseptr;
 }

@@ -63,6 +63,7 @@ public:
   bool inShutdown();
 
   void wait(const std::chrono::milliseconds &t);
+  void wait_until(const std::chrono::steady_clock::time_point &t);
 
   RaftTerm getCurrentTerm();
   RaftStateSnapshot getSnapshot();
