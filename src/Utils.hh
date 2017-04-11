@@ -32,6 +32,7 @@
 #include <chrono>
 #include <mutex>
 
+#include "Version.hh"
 #include "Common.hh"
 
 namespace quarkdb {
