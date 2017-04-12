@@ -178,8 +178,12 @@ TestNode* TestCluster::node(int id, const RaftServer &srv) {
 
 void TestCluster::spinup(int id) {
   qdb_info("Spinning up node #" << id)
-  poller(id);
-  node(id)->group()->director();
+  node(id)->spinup();
+}
+
+void TestCluster::spindown(int id) {
+  qdb_info("Spinning down node  #" << id)
+  node(id)->spindown();
 }
 
 void TestCluster::prepare(int id) {
@@ -247,6 +251,19 @@ qclient::QClient* TestNode::tunnel() {
     tunnelptr = new qclient::QClient(myself().hostname, myself().port);
   }
   return tunnelptr;
+}
+
+void TestNode::spinup() {
+  poller();
+  group()->spinup();
+}
+
+void TestNode::spindown() {
+  if(pollerptr) {
+    delete pollerptr;
+    pollerptr = nullptr;
+  }
+  group()->spindown();
 }
 
 }

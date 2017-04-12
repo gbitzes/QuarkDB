@@ -58,12 +58,30 @@ void RaftGroup::spinup() {
 
 void RaftGroup::spindown() {
   // Delete everything except the journal and store
-  if(directorptr) delete directorptr;
-  if(dispatcherptr) delete dispatcherptr;
-  if(replicatorptr) delete replicatorptr;
-  if(stateptr) delete stateptr;
-  if(clockptr) delete clockptr;
-  if(leaseptr) delete leaseptr;
+  if(directorptr) {
+    delete directorptr;
+    directorptr = nullptr;
+  }
+  if(dispatcherptr) {
+    delete dispatcherptr;
+    dispatcherptr = nullptr;
+  }
+  if(replicatorptr) {
+    delete replicatorptr;
+    replicatorptr = nullptr;
+  }
+  if(stateptr) {
+    delete stateptr;
+    stateptr = nullptr;
+  }
+  if(clockptr) {
+    delete clockptr;
+    clockptr = nullptr;
+  }
+  if(leaseptr) {
+    delete leaseptr;
+    leaseptr = nullptr;
+  }
 }
 
 RaftServer RaftGroup::myself() {

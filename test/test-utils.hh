@@ -102,6 +102,9 @@ public:
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
+
+  void spinup();
+  void spindown();
 private:
   RaftServer myselfSrv;
   RaftClusterID clusterID;
@@ -131,8 +134,9 @@ public:
   RaftClock *raftclock(int id = 0);
   RaftLease *lease(int id = 0);
 
-  // spin up a node
+  // manage node state
   void spinup(int id);
+  void spindown(int id);
 
   // In some tests, the latency of opening rocksdb can kill us, since by the
   // time the db is open raft starts timing out.

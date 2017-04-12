@@ -530,3 +530,21 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "123", "abc"), "OK");
   ASSERT_REPLY(tunnel(leaderID)->exec("get", "123"), "abc");
 }
+
+TEST_F(Raft_e2e, leader_steps_down_after_follower_failure) {
+  // cluster with 2 nodes
+  spinup(0); spinup(1);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+
+  int leaderID = getLeaderID();
+  ASSERT_GE(leaderID, 0);
+  ASSERT_LE(leaderID, 1);
+
+  RaftTerm term = state(leaderID)->getCurrentTerm();
+
+  int followerID = (leaderID + 1)%2;
+  spindown(followerID);
+
+  RETRY_ASSERT_TRUE(term < state(leaderID)->getCurrentTerm());
+  ASSERT_TRUE(state(leaderID)->getSnapshot().leader.empty());
+}
