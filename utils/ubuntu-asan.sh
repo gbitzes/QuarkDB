@@ -19,3 +19,4 @@ mkdir build && pushd build
 CXXFLAGS='-fsanitize=address' cmake -DXROOTD_ROOT_DIR=$XRD_INSTALL -DLIBRARY_PATH_PREFIX=lib ..
 make
 ./test/quarkdb-tests
+./test/quarkdb-stress-tests
