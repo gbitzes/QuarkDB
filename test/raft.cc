@@ -125,6 +125,7 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   ASSERT_EQ(snapshot.term, 2);
   ASSERT_EQ(snapshot.leader, myself(0));
 
+  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == 2);
   RaftEntry entry;
   journal(1)->fetch_or_die(1, entry);
   ASSERT_EQ(entry.request, make_req("JOURNAL_LEADERSHIP_MARKER", SSTR(2), myself(0).toString()));
