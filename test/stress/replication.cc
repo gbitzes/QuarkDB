@@ -57,16 +57,42 @@ TEST_F(Replication, entries_50k_with_follower_loss) {
   int activeFollower = (leaderID+2)%3;
 
   // verify the leader has started replicating some of the entries already
-  RETRY_ASSERT_TRUE_10sec(journal(victimFollower)->getCommitIndex() > 5000);
+  RETRY_ASSERT_TRUE(journal(victimFollower)->getCommitIndex() > 5000);
 
   // bring down one of the followers, ensure replication is not complete
   spindown(victimFollower);
   ASSERT_TRUE(journal(victimFollower)->getLogSize() < NENTRIES);
 
   // ensure that eventually, the other follower gets all entries
-  RETRY_ASSERT_TRUE_10sec(journal(activeFollower)->getLogSize() >= NENTRIES+2);
+  RETRY_ASSERT_TRUE(journal(activeFollower)->getLogSize() >= NENTRIES+2);
   ASSERT_TRUE(journal(leaderID)->getLogSize() >= NENTRIES+2);
 
-  RETRY_ASSERT_TRUE_10sec(stateMachine(activeFollower)->getLastApplied() >= NENTRIES+1);
-  RETRY_ASSERT_TRUE_10sec(stateMachine(leaderID)->getLastApplied() >= NENTRIES+1);
+  RETRY_ASSERT_TRUE(stateMachine(activeFollower)->getLastApplied() >= NENTRIES+1);
+  RETRY_ASSERT_TRUE(stateMachine(leaderID)->getLastApplied() >= NENTRIES+1);
+}
+
+TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes) {
+  // node #0 has committed entries that no other node has. The node should
+  // veto any attempts of election, so that only itself can win this election.
+
+  ASSERT_TRUE(state(0)->observed(5, {}));
+  ASSERT_TRUE(state(1)->observed(5, {}));
+  ASSERT_TRUE(state(2)->observed(5, {}));
+
+  // add a few requests to the log
+  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
+  ASSERT_TRUE(journal()->append(2, 4, testreqs[1]));
+  ASSERT_TRUE(journal()->append(3, 5, testreqs[2]));
+
+  // commit all of them
+  ASSERT_TRUE(journal()->setCommitIndex(3));
+
+  // Here, timeouts are really important, as the veto message must go through
+  // in time. Prepare the DBs before spinning up.
+  prepare(0); prepare(1); prepare(2);
+
+  // node #0 must win
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  ASSERT_EQ(state(0)->getSnapshot().status, RaftStatus::LEADER);
 }
