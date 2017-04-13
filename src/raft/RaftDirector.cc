@@ -38,7 +38,9 @@ RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine
 RaftDirector::~RaftDirector() {
   state.shutdown();
   journalTrimmer.join();
-  journal.notifyWaitingThreads();
+  while(commitApplierActive) {
+    journal.notifyWaitingThreads();
+  }
   commitApplier.join();
   mainThread.join();
 }
@@ -65,6 +67,7 @@ void RaftDirector::applyCommits() {
     commitIndex = journal.getCommitIndex();
     dispatcher.applyCommits(commitIndex);
   }
+  commitApplierActive = false;
 }
 
 void RaftDirector::main() {

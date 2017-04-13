@@ -57,6 +57,8 @@ private:
   std::thread mainThread;
   std::thread commitApplier;
   std::thread journalTrimmer;
+
+  std::atomic<bool> commitApplierActive {true};
 };
 
 }
