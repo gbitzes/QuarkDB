@@ -136,6 +136,7 @@ public:
   qclient::QClient *tunnel(int id = 0);
   RaftClock *raftclock(int id = 0);
   RaftLease *lease(int id = 0);
+  RaftCommitTracker *commitTracker(int id = 0);
 
   // manage node state
   void spinup(int id);

@@ -46,42 +46,41 @@ class RaftCommitTracker;
 class RaftMatchIndexTracker {
 public:
   RaftMatchIndexTracker(RaftCommitTracker &tr, const RaftServer &srv);
-  RaftMatchIndexTracker();
-  ~RaftMatchIndexTracker();
 
   DISALLOW_COPY_AND_ASSIGN(RaftMatchIndexTracker);
 
   void update(LogIndex newMatchIndex);
-  void reset(RaftCommitTracker &tr, const RaftServer &srv);
-  void reset();
+  LogIndex get() { return matchIndex; }
 private:
-  RaftCommitTracker *tracker = nullptr;
-  std::map<RaftServer, LogIndex>::iterator it;
-  friend class RaftCommitTracker;
+  RaftCommitTracker& tracker;
+  const RaftServer server;
+  std::atomic<LogIndex> matchIndex {0};
 };
 
 class RaftCommitTracker {
 public:
-  RaftCommitTracker(RaftJournal &journal, size_t quorum);
+  RaftCommitTracker(RaftJournal &journal);
   ~RaftCommitTracker();
-
   DISALLOW_COPY_AND_ASSIGN(RaftCommitTracker);
-  std::map<RaftServer, LogIndex>::iterator registration(const RaftServer &srv);
-  void updateQuorum(size_t newQuorum);
+
+  void updateTargets(const std::vector<RaftServer> &targets);
+  RaftMatchIndexTracker& getHandler(const RaftServer &srv);
 private:
   std::mutex mtx;
 
   RaftJournal &journal;
-  size_t quorum;
+  size_t quorumSize;
 
-  std::map<RaftServer, LogIndex> matchIndex;
+  std::map<RaftServer, RaftMatchIndexTracker*> registrations;
+  std::map<RaftServer, RaftMatchIndexTracker*> targets;
+
   LogIndex commitIndex = 0;
   bool commitIndexLagging = false;
 
-
-  void deregister(RaftMatchIndexTracker &tracker);
   void updated(LogIndex val);
   void recalculateCommitIndex();
+  RaftMatchIndexTracker& getHandlerInternal(const RaftServer &srv);
+  void updateCommitIndex(LogIndex newCommitIndex);
   friend class RaftMatchIndexTracker;
 };
 }

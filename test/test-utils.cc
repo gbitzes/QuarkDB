@@ -166,6 +166,10 @@ RaftLease* TestCluster::lease(int id) {
   return node(id)->group()->lease();
 }
 
+RaftCommitTracker* TestCluster::commitTracker(int id) {
+  return node(id)->group()->commitTracker();
+}
+
 TestNode* TestCluster::node(int id, const RaftServer &srv) {
   TestNode *ret = testnodes[id];
   if(ret == nullptr) {

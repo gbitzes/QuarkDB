@@ -40,13 +40,14 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 class RaftReplicator {
 public:
-  RaftReplicator(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, const RaftTimeouts t);
+  RaftReplicator(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, const RaftTimeouts t);
   ~RaftReplicator();
 
   bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
-  bool resilver(const RaftServer &target, const RaftStateSnapshot &snapshot);
 private:
+  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
+
+  bool resilver(const RaftServer &target, const RaftStateSnapshot &snapshot);
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
 
@@ -54,8 +55,7 @@ private:
   StateMachine &stateMachine;
   RaftState &state;
   RaftLease &lease;
-
-  RaftCommitTracker commitTracker;
+  RaftCommitTracker &commitTracker;
 
   std::atomic<int64_t> threadsAlive {0};
   std::atomic<bool> shutdown {0};

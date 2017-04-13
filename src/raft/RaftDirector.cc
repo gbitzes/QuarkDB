@@ -28,8 +28,8 @@
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftClock &rc)
-: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls) {
+RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc)
+: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct) {
   mainThread = std::thread(&RaftDirector::main, this);
   commitApplier = std::thread(&RaftDirector::applyCommits, this);
   journalTrimmer = std::thread(&RaftDirector::trimJournal, this);
@@ -115,8 +115,11 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   qdb_info("Starting replicator for membership epoch " << membership.epoch);
   if(snapshot.leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
 
-  lease.updateTargets(all_servers_except_myself(membership.nodes, state.getMyself()));
-  RaftReplicator replicator(journal, stateMachine, state, lease, raftClock.getTimeouts());
+  std::vector<RaftServer> targets = all_servers_except_myself(membership.nodes, state.getMyself());
+  commitTracker.updateTargets(targets);
+  lease.updateTargets(targets);
+
+  RaftReplicator replicator(journal, stateMachine, state, lease, commitTracker, raftClock.getTimeouts());
   for(const RaftServer& srv : membership.nodes) {
     if(srv != state.getMyself()) {
       replicator.launch(srv, snapshot);

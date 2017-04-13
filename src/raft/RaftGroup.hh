@@ -55,6 +55,7 @@ public:
   RaftClock *raftclock();
   RaftDirector *director();
   RaftLease *lease();
+  RaftCommitTracker *commitTracker();
 
   RaftServer myself();
 
@@ -73,6 +74,7 @@ private:
   RaftClock *clockptr = nullptr;
   RaftDirector *directorptr = nullptr;
   RaftLease *leaseptr = nullptr;
+  RaftCommitTracker *ctptr = nullptr;
 };
 
 }

@@ -36,6 +36,12 @@ struct RaftMembership {
   std::vector<RaftServer> observers;
   LogIndex epoch;
 
+  bool contains(const RaftServer &target) {
+    for(size_t i = 0; i < nodes.size(); i++) if(nodes[i] == target) return true;
+    for(size_t i = 0; i < observers.size(); i++) if(observers[i] == target) return true;
+    return false;
+  }
+
   bool operator==(const RaftMembership &rhs) const {
     return nodes == rhs.nodes && observers == rhs.observers && epoch == rhs.epoch;
   }

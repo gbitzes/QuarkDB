@@ -31,8 +31,8 @@
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, const RaftTimeouts t)
-: journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(journal, (journal.getNodes().size()/2)+1), timeouts(t) {
+RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, const RaftTimeouts t)
+: journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), timeouts(t) {
 
 }
 
@@ -191,13 +191,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
   RaftTalker talker(target, journal.getClusterID());
   LogIndex nextIndex = journal.getLogSize();
 
-  RaftMatchIndexTracker matchIndex;
-  std::vector<RaftServer> nodes = journal.getNodes();
-  if(contains(nodes, target)) {
-    // not an observer, must keep track of its matchIndex
-    matchIndex.reset(commitTracker, target);
-  }
-
+  RaftMatchIndexTracker &matchIndex = commitTracker.getHandler(target);
   RaftLastContact &lastContact = *lease.getHandler(target);
 
   bool online = false;

@@ -752,10 +752,13 @@ TEST_F(Raft_Director, election_with_different_journals) {
 }
 
 TEST_F(Raft_CommitTracker, basic_sanity) {
-  ASSERT_THROW(RaftCommitTracker(*journal(0), 1), FatalException);
-  ASSERT_THROW(RaftCommitTracker(*journal(0), 0), FatalException);
+  std::vector<RaftServer> members;
+  ASSERT_THROW(commitTracker()->updateTargets(members), FatalException);
 
-  RaftCommitTracker tracker(*journal(0), 2);
+  members.push_back(myself(1));
+  members.push_back(myself(2));
+
+  commitTracker()->updateTargets(members);
   ASSERT_EQ(journal(0)->getCommitIndex(), 0);
 
   // populate #0's journal
@@ -763,12 +766,8 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
     ASSERT_TRUE(journal(0)->append(i+1, 0, testreqs[i]));
   }
 
-  RaftMatchIndexTracker emptyTracker;
-  emptyTracker.update(300);
-  ASSERT_EQ(journal(0)->getCommitIndex(), 0);
-
-  RaftMatchIndexTracker matchIndex1(tracker, myself(1));
-  RaftMatchIndexTracker matchIndex2(tracker, myself(2));
+  RaftMatchIndexTracker &matchIndex1 = commitTracker()->getHandler(myself(1)); // (tracker, myself(1));
+  RaftMatchIndexTracker &matchIndex2 = commitTracker()->getHandler(myself(2)); // (tracker, myself(1));
 
   matchIndex1.update(1);
   ASSERT_EQ(journal(0)->getCommitIndex(), 1);
@@ -783,7 +782,10 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
   matchIndex1.update(3);
   ASSERT_EQ(journal(0)->getCommitIndex(), 3);
 
-  tracker.updateQuorum(3);
+  members.emplace_back("random", 123);
+  members.emplace_back("random", 234);
+  commitTracker()->updateTargets(members);
+
   matchIndex1.update(4);
   ASSERT_EQ(journal(0)->getCommitIndex(), 3);
 
@@ -793,7 +795,7 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
   matchIndex1.update(10);
   ASSERT_EQ(journal(0)->getCommitIndex(), 4);
 
-  RaftMatchIndexTracker matchIndex3(tracker, RaftServer("some_server", 1234));
+  RaftMatchIndexTracker &matchIndex3 = commitTracker()->getHandler({"random", 123}); //  myself(2)); // (tracker, myself(1));
   matchIndex3.update(15); // now we have 10, 4, 15
   ASSERT_EQ(journal(0)->getCommitIndex(), 10);
 

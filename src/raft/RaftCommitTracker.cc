@@ -21,68 +21,77 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "RaftUtils.hh"
 #include "RaftCommitTracker.hh"
 #include <random>
 #include <algorithm>
 using namespace quarkdb;
 
-RaftMatchIndexTracker::RaftMatchIndexTracker(RaftCommitTracker &tr, const RaftServer &srv) {
-  reset(tr, srv);
-}
-
-void RaftMatchIndexTracker::reset() {
-  if(tracker) {
-    tracker->deregister(*this);
-    tracker = nullptr;
-    it = std::map<RaftServer, LogIndex>::iterator();
-  }
-}
-
-void RaftMatchIndexTracker::reset(RaftCommitTracker &tr, const RaftServer &srv) {
-  reset();
-  tracker = &tr;
-  it = tracker->registration(srv);
-}
-
-RaftMatchIndexTracker::RaftMatchIndexTracker() { }
-
-RaftMatchIndexTracker::~RaftMatchIndexTracker() {
-  reset();
+RaftMatchIndexTracker::RaftMatchIndexTracker(RaftCommitTracker &tr, const RaftServer &srv)
+: tracker(tr), server(srv) {
 }
 
 void RaftMatchIndexTracker::update(LogIndex newMatchIndex) {
-  if(tracker) {
-    if(newMatchIndex < it->second) qdb_throw("attempted to reduce matchIndex: " << it->second << " ==> " << newMatchIndex);
-    it->second = newMatchIndex;
-    tracker->updated(newMatchIndex);
+  if(newMatchIndex < matchIndex) qdb_throw("attempted to reduce matchIndex: " << matchIndex << " ==> " << newMatchIndex);
+  matchIndex = newMatchIndex;
+  tracker.updated(matchIndex);
+}
+
+RaftCommitTracker::RaftCommitTracker(RaftJournal &jr)
+: journal(jr) {
+  updateTargets(journal.getMembership().nodes);
+}
+
+RaftCommitTracker::~RaftCommitTracker() {
+  for(auto it = registrations.begin(); it != registrations.end(); it++) {
+    delete it->second;
   }
 }
 
-RaftCommitTracker::RaftCommitTracker(RaftJournal &jr, size_t quorumSize)
-: journal(jr), quorum(0) {
-  updateQuorum(quorumSize);
+RaftMatchIndexTracker& RaftCommitTracker::getHandler(const RaftServer &srv) {
+  std::lock_guard<std::mutex> lock(mtx);
+  return this->getHandlerInternal(srv);
 }
 
-RaftCommitTracker::~RaftCommitTracker() { }
+RaftMatchIndexTracker& RaftCommitTracker::getHandlerInternal(const RaftServer &srv) {
+  auto it = registrations.find(srv);
 
-std::map<RaftServer, LogIndex>::iterator RaftCommitTracker::registration(const RaftServer &srv) {
-  std::lock_guard<std::mutex> lock(mtx);
+  if(it == registrations.end()) {
+    registrations[srv] = new RaftMatchIndexTracker(*this, srv);
+  }
 
-  if(matchIndex.count(srv) > 0) qdb_throw(srv.toString() << " is already being tracked");
-  matchIndex[srv] = 0;
-  return matchIndex.find(srv);
+  return *registrations[srv];
 }
 
-void RaftCommitTracker::deregister(RaftMatchIndexTracker &tracker) {
+void RaftCommitTracker::updateTargets(const std::vector<RaftServer> &trgt) {
   std::lock_guard<std::mutex> lock(mtx);
-  matchIndex.erase(tracker.it);
+
+  // clear the map of the old targets
+  targets.clear();
+
+  // update to new targets - the matchIndex is NOT lost
+  // for servers which exist in both sets!
+  quorumSize = calculateQuorumSize(trgt.size() + 1);
+  if(quorumSize < 2) qdb_throw("quorum size cannot be smaller than 2");
+  for(const RaftServer& target : trgt) {
+    targets[target] = &this->getHandlerInternal(target);
+  }
 }
 
-void RaftCommitTracker::updateQuorum(size_t newQuorum) {
-  std::lock_guard<std::mutex> lock(mtx);
-  if(newQuorum < 2) qdb_throw("quorum cannot be smaller than 2");
-  qdb_info("Updating commit tracker quorum size: " << quorum << " ==> " << newQuorum);
-  quorum = newQuorum;
+void RaftCommitTracker::updateCommitIndex(LogIndex newCommitIndex) {
+  LogIndex journalCommitIndex = journal.getCommitIndex();
+  if(newCommitIndex < journalCommitIndex) {
+    qdb_warn("calculated a commitIndex which is smaller than journal.commitIndex: " << newCommitIndex << ", " << journalCommitIndex << ". Will be unable to commit new entries until this is resolved.");
+    commitIndexLagging = true;
+  }
+  else {
+    if(commitIndexLagging) {
+      qdb_info("commitIndex no longer lagging behind journal.commitIndex, committing of new entries is now possible again.");
+      commitIndexLagging = false;
+    }
+    commitIndex = newCommitIndex;
+    journal.setCommitIndex(commitIndex);
+  }
 }
 
 void RaftCommitTracker::recalculateCommitIndex() {
@@ -92,30 +101,15 @@ void RaftCommitTracker::recalculateCommitIndex() {
   // a RaftMatchIndexTracker on it. But it has to be taken into account in the
   // commitIndex calculation.
 
-  if(matchIndex.size() < quorum-1) return;
+  std::vector<LogIndex> matchIndexes;
 
-  std::vector<LogIndex> sortedVector;
-  for(std::map<RaftServer, LogIndex>::iterator it = matchIndex.begin();
-      it != matchIndex.end(); it++) {
-    sortedVector.push_back(it->second);
+  for(auto it = targets.begin(); it != targets.end(); it++) {
+    matchIndexes.push_back(it->second->get());
   }
 
-  std::sort(sortedVector.begin(), sortedVector.end());
-  size_t threshold = sortedVector.size() - (quorum-1);
-
-  LogIndex journalCommitIndex = journal.getCommitIndex();
-  if(sortedVector[threshold] < journalCommitIndex) {
-    qdb_warn("calculated a commitIndex which is smaller than journal.commitIndex: " << sortedVector[threshold] << ", " << journalCommitIndex << ". Will be unable to commit new entries until this is resolved.");
-    commitIndexLagging = true;
-  }
-  else {
-    if(commitIndexLagging) {
-      qdb_info("commitIndex no longer lagging behind journal.commitIndex, committing of new entries is now possible again.");
-      commitIndexLagging = false;
-    }
-    commitIndex = sortedVector[threshold];
-    journal.setCommitIndex(commitIndex);
-  }
+  std::sort(matchIndexes.begin(), matchIndexes.end());
+  size_t threshold = (matchIndexes.size()+1) - quorumSize;
+  updateCommitIndex(matchIndexes[threshold]);
 }
 
 void RaftCommitTracker::updated(LogIndex val) {

@@ -82,6 +82,10 @@ void RaftGroup::spindown() {
     delete leaseptr;
     leaseptr = nullptr;
   }
+  if(ctptr) {
+    delete ctptr;
+    ctptr = nullptr;
+  }
 }
 
 RaftServer RaftGroup::myself() {
@@ -121,14 +125,14 @@ RaftState* RaftGroup::state() {
 
 RaftDirector* RaftGroup::director() {
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *raftclock());
+    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock());
   }
   return directorptr;
 }
 
 RaftReplicator* RaftGroup::replicator() {
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), *lease(), raftclock()->getTimeouts());
+    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts());
   }
   return replicatorptr;
 }
@@ -138,4 +142,11 @@ RaftLease* RaftGroup::lease() {
     leaseptr = new RaftLease(journal()->getMembership().nodes, raftclock()->getTimeouts().getLow());
   }
   return leaseptr;
+}
+
+RaftCommitTracker* RaftGroup::commitTracker() {
+  if(ctptr == nullptr) {
+    ctptr = new RaftCommitTracker(*journal());
+  }
+  return ctptr;
 }
