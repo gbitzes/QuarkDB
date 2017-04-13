@@ -51,7 +51,6 @@ public:
   RaftJournal *journal();
   RaftDispatcher *dispatcher();
   RaftState *state();
-  RaftReplicator *replicator();
   RaftClock *raftclock();
   RaftDirector *director();
   RaftLease *lease();
@@ -69,7 +68,6 @@ private:
   StateMachine *smptr = nullptr;
   RaftJournal *journalptr = nullptr;
   RaftDispatcher *dispatcherptr = nullptr;
-  RaftReplicator *replicatorptr = nullptr;
   RaftState *stateptr = nullptr;
   RaftClock *clockptr = nullptr;
   RaftDirector *directorptr = nullptr;

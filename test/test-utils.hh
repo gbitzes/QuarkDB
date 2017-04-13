@@ -129,7 +129,6 @@ public:
   RaftJournal* journal(int id = 0);
   RaftDispatcher *dispatcher(int id = 0);
   RaftState *state(int id = 0);
-  RaftReplicator *replicator(int id = 0);
   Poller *poller(int id = 0);
   RaftServer myself(int id = 0);
   RaftDirector *director(int id = 0);

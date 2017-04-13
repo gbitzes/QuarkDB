@@ -111,29 +111,34 @@ static std::vector<RaftServer> all_servers_except_myself(const std::vector<RaftS
 }
 
 void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
-  RaftMembership membership = journal.getMembership();
-  qdb_info("Starting replicator for membership epoch " << membership.epoch);
+  qdb_info("Starting replicator for term " << snapshot.term);
   if(snapshot.leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
 
-  std::vector<RaftServer> targets = all_servers_except_myself(membership.nodes, state.getMyself());
-  commitTracker.updateTargets(targets);
-  lease.updateTargets(targets);
+  RaftMembership membership = journal.getMembership();
+  membership.epoch = -1;
 
-  RaftReplicator replicator(journal, stateMachine, state, lease, commitTracker, raftClock.getTimeouts());
-  for(const RaftServer& srv : membership.nodes) {
-    if(srv != state.getMyself()) {
-      replicator.launch(srv, snapshot);
-    }
-  }
-
-  for(const RaftServer& srv : membership.observers) {
-    if(srv == state.getMyself()) qdb_throw("found myself in the list of observers, even though I'm leader: " << serializeNodes(membership.observers));
-    replicator.launch(srv, snapshot);
-  }
-
-  while(membership.epoch == journal.getEpoch() &&
-        snapshot.term == state.getCurrentTerm() &&
+  RaftReplicator replicator(snapshot, journal, stateMachine, state, lease, commitTracker, raftClock.getTimeouts());
+  while(snapshot.term == state.getCurrentTerm() &&
         state.getSnapshot().status == RaftStatus::LEADER) {
+
+    // new membership epoch?
+    if(membership.epoch != journal.getEpoch()) {
+      membership = journal.getMembership();
+      qdb_info("Reconfiguring replicator for membership epoch " << membership.epoch);
+
+      // Build list of targets
+      std::vector<RaftServer> targets = all_servers_except_myself(membership.nodes, state.getMyself());
+      // add observers
+      for(const RaftServer& srv : membership.observers) {
+        if(srv == state.getMyself()) qdb_throw("found myself in the list of observers, even though I'm leader: " << serializeNodes(membership.observers));
+        targets.push_back(srv);
+      }
+
+      // now set them
+      commitTracker.updateTargets(targets);
+      lease.updateTargets(targets);
+      replicator.setTargets(targets);
+    }
 
     std::chrono::steady_clock::time_point deadline = lease.getDeadline();
     if(deadline < std::chrono::steady_clock::now()) {

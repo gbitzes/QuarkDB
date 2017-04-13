@@ -66,10 +66,6 @@ void RaftGroup::spindown() {
     delete dispatcherptr;
     dispatcherptr = nullptr;
   }
-  if(replicatorptr) {
-    delete replicatorptr;
-    replicatorptr = nullptr;
-  }
   if(stateptr) {
     delete stateptr;
     stateptr = nullptr;
@@ -128,13 +124,6 @@ RaftDirector* RaftGroup::director() {
     directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock());
   }
   return directorptr;
-}
-
-RaftReplicator* RaftGroup::replicator() {
-  if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts());
-  }
-  return replicatorptr;
 }
 
 RaftLease* RaftGroup::lease() {

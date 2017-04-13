@@ -46,11 +46,11 @@ TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));
   ASSERT_TRUE(state()->becomeCandidate(2));
   ASSERT_TRUE(state()->ascend(2));
-  ASSERT_THROW(replicator()->launch(myself(), state()->getSnapshot()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(myself(), state()->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts()), FatalException);
 }
 
 TEST_F(Raft_Replicator, only_leader_can_launch_replicator) {
-  ASSERT_THROW(replicator()->launch(nodes()[1], state()->getSnapshot()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(nodes()[1], state()->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts()), FatalException);
 }
 
 TEST_F(Raft_Replicator, verify_sane_snapshot_term) {
@@ -61,11 +61,12 @@ TEST_F(Raft_Replicator, verify_sane_snapshot_term) {
   // trying to replicate for a term in the future
   RaftStateSnapshot snapshot = state()->getSnapshot();
   snapshot.term = 3;
-  ASSERT_THROW(replicator()->launch(nodes()[1], snapshot), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(nodes()[1], snapshot, *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts()), FatalException);
 
   // stale term - this can naturally happen, so it is not an exception
   ASSERT_TRUE(state()->observed(4, {}));
-  ASSERT_FALSE(replicator()->launch(nodes()[1], snapshot));
+  RaftReplicaTracker tracker(nodes()[1], snapshot, *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts());
+  ASSERT_FALSE(tracker.isRunning());
 }
 
 TEST_F(Raft_Replicator, do_simple_replication) {
@@ -83,7 +84,8 @@ TEST_F(Raft_Replicator, do_simple_replication) {
   poller(1);
 
   // launch!
-  ASSERT_TRUE(replicator(0)->launch(myself(1), state(0)->getSnapshot()));
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts());
+  ASSERT_TRUE(tracker.isRunning());
 
   // populate #0's journal
   for(size_t i = 0; i < testreqs.size(); i++) {
@@ -117,7 +119,8 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   poller(1);
 
   // launch
-  ASSERT_TRUE(replicator(0)->launch(myself(1), state(0)->getSnapshot()));
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts());
+  ASSERT_TRUE(tracker.isRunning());
 
   // verify everything's sane
   RETRY_ASSERT_TRUE(state(1)->getSnapshot().leader == myself(0));
@@ -150,7 +153,8 @@ TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
   poller(1);
 
   // launch!
-  ASSERT_TRUE(replicator(0)->launch(myself(1), state(0)->getSnapshot()));
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), raftclock()->getTimeouts());
+  ASSERT_TRUE(tracker.isRunning());
 
   // verify #1 recognized #0 as leader and that replication was successful
   RETRY_ASSERT_TRUE(journal(1)->getLogSize() == 2);
@@ -766,8 +770,8 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
     ASSERT_TRUE(journal(0)->append(i+1, 0, testreqs[i]));
   }
 
-  RaftMatchIndexTracker &matchIndex1 = commitTracker()->getHandler(myself(1)); // (tracker, myself(1));
-  RaftMatchIndexTracker &matchIndex2 = commitTracker()->getHandler(myself(2)); // (tracker, myself(1));
+  RaftMatchIndexTracker &matchIndex1 = commitTracker()->getHandler(myself(1));
+  RaftMatchIndexTracker &matchIndex2 = commitTracker()->getHandler(myself(2));
 
   matchIndex1.update(1);
   ASSERT_EQ(journal(0)->getCommitIndex(), 1);
@@ -795,7 +799,7 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
   matchIndex1.update(10);
   ASSERT_EQ(journal(0)->getCommitIndex(), 4);
 
-  RaftMatchIndexTracker &matchIndex3 = commitTracker()->getHandler({"random", 123}); //  myself(2)); // (tracker, myself(1));
+  RaftMatchIndexTracker &matchIndex3 = commitTracker()->getHandler({"random", 123});
   matchIndex3.update(15); // now we have 10, 4, 15
   ASSERT_EQ(journal(0)->getCommitIndex(), 10);
 

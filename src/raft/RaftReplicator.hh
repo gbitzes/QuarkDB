@@ -35,34 +35,56 @@
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
-// A class that is given a number of target raft machine of the cluster, and
-// ensures that their journals match my own.
+// Tracks a single raft replica
 //------------------------------------------------------------------------------
-class RaftReplicator {
+class RaftReplicaTracker {
 public:
-  RaftReplicator(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, const RaftTimeouts t);
-  ~RaftReplicator();
+  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, const RaftTimeouts t);
+  ~RaftReplicaTracker();
 
-  bool launch(const RaftServer &target, const RaftStateSnapshot &snapshot);
+  bool isRunning() { return running; }
 private:
-  void tracker(const RaftServer &target, const RaftStateSnapshot &snapshot);
-
-  bool resilver(const RaftServer &target, const RaftStateSnapshot &snapshot);
+  void main();
+  bool resilver();
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
+
+  RaftServer target;
+  RaftStateSnapshot snapshot;
 
   RaftJournal &journal;
   StateMachine &stateMachine;
   RaftState &state;
   RaftLease &lease;
   RaftCommitTracker &commitTracker;
-
-  std::atomic<int64_t> threadsAlive {0};
-  std::atomic<bool> shutdown {0};
-  std::vector<std::thread> threads;
-  std::mutex threadsMutex;
-
   const RaftTimeouts timeouts;
+
+  std::atomic<bool> running {false};
+  std::atomic<bool> shutdown {false};
+  std::thread thread;
+};
+
+//------------------------------------------------------------------------------
+// A class that tracks multiple raft replicas over the duration of a single
+// term
+//------------------------------------------------------------------------------
+class RaftReplicator {
+public:
+  RaftReplicator(RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, const RaftTimeouts t);
+  ~RaftReplicator();
+
+  void setTargets(const std::vector<RaftServer> &targets);
+private:
+  RaftStateSnapshot snapshot;
+  RaftJournal &journal;
+  StateMachine &stateMachine;
+  RaftState &state;
+  RaftLease &lease;
+  RaftCommitTracker &commitTracker;
+  const RaftTimeouts timeouts;
+
+  std::map<RaftServer, RaftReplicaTracker*> targets;
+  std::mutex mtx;
 };
 
 }

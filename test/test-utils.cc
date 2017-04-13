@@ -134,10 +134,6 @@ RaftState* TestCluster::state(int id) {
   return node(id)->group()->state();
 }
 
-RaftReplicator* TestCluster::replicator(int id) {
-  return node(id)->group()->replicator();
-}
-
 Poller* TestCluster::poller(int id) {
   return node(id)->poller();
 }

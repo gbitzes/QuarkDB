@@ -30,17 +30,6 @@
 
 namespace quarkdb {
 
-
-//------------------------------------------------------------------------------
-// The following mechanism might look more complicated than it needs to be, but
-// offers the following nice properties:
-//
-// RaftMatchIndexTracker can be used to track a single node, and de-registers
-// itself automatically when deleted, RAII-style.
-//
-// It's very cheap to update a match index: no map lookups.
-//------------------------------------------------------------------------------
-
 class RaftCommitTracker;
 
 class RaftMatchIndexTracker {

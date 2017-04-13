@@ -31,20 +31,51 @@
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, const RaftTimeouts t)
-: journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), timeouts(t) {
+RaftReplicator::RaftReplicator(RaftStateSnapshot &snapshot_, RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, const RaftTimeouts t)
+: snapshot(snapshot_), journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), timeouts(t) {
 
 }
 
 RaftReplicator::~RaftReplicator() {
-  shutdown = 1;
-  while(threadsAlive > 0) {
-    journal.notifyWaitingThreads();
+  for(auto it = targets.begin(); it != targets.end(); it++) {
+    delete it->second;
   }
-  for(std::thread &th : threads) th.join();
 }
 
-bool RaftReplicator::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
+RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshot &snapshot_, RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, const RaftTimeouts t)
+: target(target_), snapshot(snapshot_), journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), timeouts(t) {
+  if(target == state.getMyself()) {
+    qdb_throw("attempted to run replication on myself");
+  }
+
+  RaftStateSnapshot current = state.getSnapshot();
+  if(snapshot.term > current.term) {
+    qdb_throw("bug, a state snapshot has a larger term than the current state");
+  }
+
+  if(snapshot.term < current.term) {
+    return;
+  }
+
+  if(current.status != RaftStatus::LEADER && current.status != RaftStatus::SHUTDOWN) {
+    qdb_throw("bug, attempted to initiate replication for a term in which I'm not a leader");
+  }
+
+  running = true;
+  thread = std::thread(&RaftReplicaTracker::main, this);
+}
+
+RaftReplicaTracker::~RaftReplicaTracker() {
+  shutdown = 1;
+  while(running) {
+    journal.notifyWaitingThreads();
+  }
+  if(thread.joinable()) {
+    thread.join();
+  }
+}
+
+bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
   std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize) {
 
   payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
@@ -150,7 +181,7 @@ static bool cancelResilvering(QClient &tunnel) {
   return false;
 }
 
-bool RaftReplicator::resilver(const RaftServer &target, const RaftStateSnapshot &snapshot) {
+bool RaftReplicaTracker::resilver() {
   qdb_critical("Attempting to automatically resilver target " << target.toString());
 
   QClient tunnel(target.hostname, target.port);
@@ -186,8 +217,7 @@ bool RaftReplicator::resilver(const RaftServer &target, const RaftStateSnapshot 
   return is_ok_response(fut);
 }
 
-void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &snapshot) {
-  ScopedAdder<int64_t> adder(threadsAlive);
+void RaftReplicaTracker::main() {
   RaftTalker talker(target, journal.getClusterID());
   LogIndex nextIndex = journal.getLogSize();
 
@@ -251,7 +281,7 @@ void RaftReplicator::tracker(const RaftServer &target, const RaftStateSnapshot &
         qdb_critical("Unable to perform replication on " << target.toString() << ", it's too far behind (its logsize: " << resp.logSize << ") and my journal starts at " << journal.getLogStart() << ". The target node must be resilvered.");
         needResilvering = true;
         payloadLimit = 1;
-        resilver(target, snapshot);
+        resilver();
       }
 
       goto nextRound;
@@ -297,27 +327,30 @@ nextRound:
     }
   }
   qdb_event("Shutting down replicator tracker for " << target.toString());
+  running = false;
 }
 
-bool RaftReplicator::launch(const RaftServer &target, const RaftStateSnapshot &snapshot) {
-  if(target == state.getMyself()) {
-    qdb_throw("attempted to run RaftReplicator on myself");
+void RaftReplicator::setTargets(const std::vector<RaftServer> &newTargets) {
+  std::lock_guard<std::mutex> lock(mtx);
+
+  // add targets?
+  for(size_t i = 0; i < newTargets.size(); i++) {
+    if(targets.find(newTargets[i]) == targets.end()) {
+      targets[newTargets[i]] = new RaftReplicaTracker(newTargets[i], snapshot, journal, stateMachine, state, lease, commitTracker, timeouts);
+    }
   }
 
-  RaftStateSnapshot current = state.getSnapshot();
-  if(snapshot.term > current.term) {
-    qdb_throw("bug, a state snapshot has a larger term than the current state");
+  // remove targets?
+  std::vector<RaftServer> todel;
+
+  for(auto it = targets.begin(); it != targets.end(); it++) {
+    if(!contains(newTargets, it->first)) {
+      todel.push_back(it->first);
+    }
   }
 
-  if(snapshot.term < current.term) {
-    return false;
+  for(size_t i = 0; i < todel.size(); i++) {
+    delete targets[todel[i]];
+    targets.erase(todel[i]);
   }
-
-  if(current.status != RaftStatus::LEADER && current.status != RaftStatus::SHUTDOWN) {
-    qdb_throw("bug, attempted to initiate replication for a term in which I'm not a leader");
-  }
-
-  std::lock_guard<std::mutex> lock(threadsMutex);
-  threads.emplace_back(&RaftReplicator::tracker, this, target, snapshot);
-  return true;
 }
