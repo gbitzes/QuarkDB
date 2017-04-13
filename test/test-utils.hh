@@ -60,6 +60,9 @@ namespace quarkdb {
 // retry every 10ms for a total of 2 seconds
 #define RETRY_ASSERT_TRUE(cond) RETRY_ASSERT_TRUE_3(cond, 200, 10)
 
+// retry every 50ms for a total of 10 seconds
+#define RETRY_ASSERT_TRUE_10sec(cond) RETRY_ASSERT_TRUE_3(cond, 200, 50)
+
 extern std::vector<RedisRequest> testreqs;
 
 // necessary because C macros are dumb and don't undestand

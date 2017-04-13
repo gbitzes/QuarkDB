@@ -50,6 +50,7 @@ TestConfig::TestConfig() {
 
 void TestConfig::parseSingle(const std::string &key, const std::string &value) {
   if(key == "QDB_TESTS_TIMEOUTS") {
+    raftTimeoutsOverriden = true;
     if(value == "aggressive") {
       raftTimeouts = aggressiveTimeouts;
     }
@@ -58,6 +59,10 @@ void TestConfig::parseSingle(const std::string &key, const std::string &value) {
     }
     else if(value == "default") {
       raftTimeouts = defaultTimeouts;
+    }
+    else {
+      std::cerr << "Unknown value for " << key << ": '" << value << "'" << std::endl;
+      exit(EXIT_FAILURE);
     }
   }
   else {

@@ -1,7 +1,7 @@
-//------------------------------------------------------------------------------
-// File: test-config.hh
+// ----------------------------------------------------------------------
+// File: init.cc
 // Author: Georgios Bitzes - CERN
-//------------------------------------------------------------------------------
+// ----------------------------------------------------------------------
 
 /************************************************************************
  * quarkdb - a redis-like highly available key-value store              *
@@ -21,30 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_TEST_CONFIG_H__
-#define __QUARKDB_TEST_CONFIG_H__
+#include <gtest/gtest.h>
+#include "../config/test-config.hh"
+using namespace quarkdb;
 
-#include "raft/RaftTimeouts.hh"
-#include "Utils.hh"
-
-namespace quarkdb {
-
-struct TestConfig {
-  // parse environment variables to give the possibility to override defaults
-  TestConfig();
-  void parseSingle(const std::string &key, const std::string &value);
-
-  void setDefaultTimeout(const RaftTimeouts &t) {
-    if(!raftTimeoutsOverriden) {
-      raftTimeouts = t;
-    }
-  }
-
-  RaftTimeouts raftTimeouts {aggressiveTimeouts};
-  bool raftTimeoutsOverriden {false};
-};
-
-extern TestConfig testconfig;
+int main(int argc, char **argv) {
+  printf("Running main() from stress/main.cc\n");
+  testconfig.setDefaultTimeout(defaultTimeouts);
+  testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
 }
-
-#endif

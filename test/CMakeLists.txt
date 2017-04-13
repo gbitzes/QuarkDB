@@ -46,6 +46,15 @@ add_executable(quarkdb-bench
   ${COMMON_TEST_SOURCES}
 )
 
+#-------------------------------------------------------------------------------
+# Build stress tool
+#-------------------------------------------------------------------------------
+add_executable(quarkdb-stress-tests
+  stress/replication.cc
+  stress/main.cc
+  ${COMMON_TEST_SOURCES}
+)
+
 include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src  # need access to the private headers
@@ -70,10 +79,17 @@ target_link_libraries(quarkdb-bench
   ${XROOTD_UTILS_LIBRARY}
 )
 
+target_link_libraries(quarkdb-stress-tests
+  XrdRedis
+  gtest_main
+  ${XROOTD_CL_LIBRARY}
+  ${XROOTD_UTILS_LIBRARY}
+)
+
 #-------------------------------------------------------------------------------
 # Install
 #-------------------------------------------------------------------------------
 install(
-  TARGETS quarkdb-tests quarkdb-bench
+  TARGETS quarkdb-tests quarkdb-bench quarkdb-stress-tests
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )

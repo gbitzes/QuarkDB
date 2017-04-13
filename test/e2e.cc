@@ -531,7 +531,7 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   ASSERT_REPLY(tunnel(leaderID)->exec("get", "123"), "abc");
 }
 
-TEST_F(Raft_e2e, leader_steps_down_after_follower_failure) {
+TEST_F(Raft_e2e, leader_steps_down_after_follower_loss) {
   // cluster with 2 nodes
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
