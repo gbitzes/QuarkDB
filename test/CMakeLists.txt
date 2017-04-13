@@ -6,6 +6,14 @@ set(GTEST_BINARY_DIR "${CMAKE_BINARY_DIR}/deps/googletest/googletest")
 add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
 
 #-------------------------------------------------------------------------------
+# Source files shared across all test binaries
+#-------------------------------------------------------------------------------
+set(COMMON_TEST_SOURCES
+  test-utils.cc                 test-utils.hh
+  config/test-config.cc         config/test-config.hh
+)
+
+#-------------------------------------------------------------------------------
 # Build unit tests
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-tests
@@ -25,7 +33,7 @@ add_executable(quarkdb-tests
   raft.cc
   redis-parser.cc
   state-machine.cc
-  test-utils.cc                 test-utils.hh
+  ${COMMON_TEST_SOURCES}
   tunnel.cc
   utils.cc
 )
@@ -35,7 +43,7 @@ add_executable(quarkdb-tests
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-bench
   bench/hset.cc
-  test-utils.cc                 test-utils.hh
+  ${COMMON_TEST_SOURCES}
 )
 
 include_directories(

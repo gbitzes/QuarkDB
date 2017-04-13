@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "config/test-config.hh"
 #include "test-utils.hh"
 #include "Utils.hh"
 #include <vector>
@@ -218,7 +219,7 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
 
   StateMachine *smPtr = commonState.getStateMachine(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/state-machine"));
   RaftJournal *journalPtr = commonState.getJournal(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/raft-journal"), clusterID, initialNodes);
-  raftgroup = new RaftGroup(*journalPtr, *smPtr, myself(), aggressiveTimeouts);
+  raftgroup = new RaftGroup(*journalPtr, *smPtr, myself(), testconfig.raftTimeouts);
 }
 
 RaftGroup* TestNode::group() {
