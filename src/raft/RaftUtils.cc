@@ -89,7 +89,7 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
     }
     else {
       if(resp.vote == RaftVote::GRANTED) {
-        lease.getHandler(talkers[i]->getServer())->heartbeat(broadcastTimepoint);
+        lease.getHandler(talkers[i]->getServer()).heartbeat(broadcastTimepoint);
         granted++;
       }
       else if(resp.vote == RaftVote::REFUSED) {

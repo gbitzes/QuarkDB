@@ -34,18 +34,18 @@ TEST(Raft_Lease, basic_sanity_with_2_endpoints) {
   steady_clock::duration leaseDuration(seconds(1));
   RaftLease lease(targets, leaseDuration);
 
-  RaftLastContact *t1 = lease.getHandler(RaftServer("localhost", 1234));
+  RaftLastContact &t1 = lease.getHandler(RaftServer("localhost", 1234));
 
   steady_clock::time_point p0; // 0 ms
   steady_clock::time_point p1 = p0 + milliseconds(500);
 
-  t1->heartbeat(p1);
+  t1.heartbeat(p1);
 
   ASSERT_EQ(lease.getDeadline(), p1 + leaseDuration);
 
   steady_clock::time_point p2 = p0 + milliseconds(501);
 
-  t1->heartbeat(p2);
+  t1.heartbeat(p2);
   ASSERT_EQ(lease.getDeadline(), p2 + leaseDuration);
 }
 
@@ -58,27 +58,27 @@ TEST(Raft_Lease, basic_sanity_with_3_endpoints) {
   steady_clock::duration leaseDuration(seconds(1));
   RaftLease lease(targets, leaseDuration);
 
-  RaftLastContact *t1 = lease.getHandler(RaftServer("localhost", 1234));
-  RaftLastContact *t2 = lease.getHandler(RaftServer("example.com", 5678));
+  RaftLastContact &t1 = lease.getHandler(RaftServer("localhost", 1234));
+  RaftLastContact &t2 = lease.getHandler(RaftServer("example.com", 5678));
 
   steady_clock::time_point p0; // 0 ms
   steady_clock::time_point p1 = p0 + milliseconds(500);
   steady_clock::time_point p2 = p0 + milliseconds(1000);
 
-  t1->heartbeat(p1);
-  t2->heartbeat(p2);
+  t1.heartbeat(p1);
+  t2.heartbeat(p2);
 
   ASSERT_EQ(lease.getDeadline(), p2 + leaseDuration);
 
-  t1->heartbeat(p0 + milliseconds(750));
+  t1.heartbeat(p0 + milliseconds(750));
   ASSERT_EQ(lease.getDeadline(), p2 + leaseDuration);
 
   steady_clock::time_point p3 = p0 + milliseconds(1500);
-  t1->heartbeat(p3);
+  t1.heartbeat(p3);
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
 
   steady_clock::time_point p4 = p0 + milliseconds(2000);
-  t2->heartbeat(p4);
+  t2.heartbeat(p4);
   ASSERT_EQ(lease.getDeadline(), p4 + leaseDuration);
 }
 
@@ -93,10 +93,10 @@ TEST(Raft_Lease, basic_sanity_with_5_endpoints) {
   steady_clock::duration leaseDuration(seconds(1));
   RaftLease lease(targets, leaseDuration);
 
-  RaftLastContact *t1 = lease.getHandler(RaftServer("localhost", 1234));
-  RaftLastContact *t2 = lease.getHandler(RaftServer("example.com", 5678));
-  RaftLastContact *t3 = lease.getHandler(RaftServer("localhost", 9999));
-  RaftLastContact *t4 = lease.getHandler(RaftServer("example.com", 9999));
+  RaftLastContact &t1 = lease.getHandler(RaftServer("localhost", 1234));
+  RaftLastContact &t2 = lease.getHandler(RaftServer("example.com", 5678));
+  RaftLastContact &t3 = lease.getHandler(RaftServer("localhost", 9999));
+  RaftLastContact &t4 = lease.getHandler(RaftServer("example.com", 9999));
 
   steady_clock::time_point p0; // 0 ms
   steady_clock::time_point p1 = p0 + milliseconds(500);
@@ -104,25 +104,25 @@ TEST(Raft_Lease, basic_sanity_with_5_endpoints) {
   steady_clock::time_point p3 = p0 + milliseconds(800);
   steady_clock::time_point p4 = p0 + milliseconds(900);
 
-  t1->heartbeat(p1);
-  t2->heartbeat(p2);
-  t3->heartbeat(p3);
-  t4->heartbeat(p4);
+  t1.heartbeat(p1);
+  t2.heartbeat(p2);
+  t3.heartbeat(p3);
+  t4.heartbeat(p4);
 
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
 
 
-  t1->heartbeat(p0 + milliseconds(600));
+  t1.heartbeat(p0 + milliseconds(600));
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
 
-  t1->heartbeat(p0 + milliseconds(700));
+  t1.heartbeat(p0 + milliseconds(700));
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
 
   steady_clock::time_point p5 = p0 + milliseconds(801);
-  t1->heartbeat(p5);
+  t1.heartbeat(p5);
   ASSERT_EQ(lease.getDeadline(), p5 + leaseDuration);
 
   steady_clock::time_point p6 = p0 + milliseconds(10000);
-  t2->heartbeat(p6);
+  t2.heartbeat(p6);
   ASSERT_EQ(lease.getDeadline(), p4 + leaseDuration);
 }

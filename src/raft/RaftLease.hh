@@ -50,10 +50,10 @@ public:
   RaftLease(const std::vector<RaftServer> &targets, const steady_clock::duration &leaseDuration);
   void updateTargets(const std::vector<RaftServer> &targets);
   ~RaftLease();
-  RaftLastContact* getHandler(const RaftServer &srv);
+  RaftLastContact& getHandler(const RaftServer &srv);
   steady_clock::time_point getDeadline();
 private:
-  RaftLastContact* getHandlerInternal(const RaftServer &srv);
+  RaftLastContact& getHandlerInternal(const RaftServer &srv);
 
   std::mutex mtx;
   std::map<RaftServer, RaftLastContact*> targets;

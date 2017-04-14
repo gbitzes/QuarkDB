@@ -222,7 +222,7 @@ void RaftReplicaTracker::main() {
   LogIndex nextIndex = journal.getLogSize();
 
   RaftMatchIndexTracker &matchIndex = commitTracker.getHandler(target);
-  RaftLastContact &lastContact = *lease.getHandler(target);
+  RaftLastContact &lastContact = lease.getHandler(target);
 
   bool online = false;
   int64_t payloadLimit = 1;

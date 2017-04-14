@@ -48,7 +48,7 @@ void RaftLease::updateTargets(const std::vector<RaftServer> &trgt) {
   // for servers which exist in both sets!
   quorumSize = calculateQuorumSize(trgt.size() + 1);
   for(const RaftServer& target : trgt) {
-    targets[target] = this->getHandlerInternal(target);
+    targets[target] = &this->getHandlerInternal(target);
   }
 }
 
@@ -70,17 +70,17 @@ RaftLease::~RaftLease() {
 // Register the endpoint if it hasn't been yet. RaftLease maintains ownership
 // of the returned pointer.
 //------------------------------------------------------------------------------
-RaftLastContact* RaftLease::getHandlerInternal(const RaftServer &srv) {
+RaftLastContact& RaftLease::getHandlerInternal(const RaftServer &srv) {
   auto it = registrations.find(srv);
 
   if(it == registrations.end()) {
     registrations[srv] = new RaftLastContact(srv);
   }
 
-  return registrations[srv];
+  return *registrations[srv];
 }
 
-RaftLastContact* RaftLease::getHandler(const RaftServer &srv) {
+RaftLastContact& RaftLease::getHandler(const RaftServer &srv) {
   std::lock_guard<std::mutex> lock(mtx);
   return getHandlerInternal(srv);
 }
