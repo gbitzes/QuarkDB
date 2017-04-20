@@ -83,6 +83,23 @@ std::string intToBinaryString(int64_t num) {
   return std::string(buff, sizeof(num));
 }
 
+uint64_t binaryStringToUnsignedInt(const char* buff) {
+  uint64_t result;
+  memcpy(&result, buff, sizeof(result));
+  return be64toh(result);
+}
+
+void unsignedIntToBinaryString(uint64_t num, char* buff) {
+  uint64_t be = htobe64(num);
+  memcpy(buff, &be, sizeof(be));
+}
+
+std::string unsignedIntToBinaryString(uint64_t num) {
+  char buff[sizeof(num)];
+  unsignedIntToBinaryString(num, buff);
+  return std::string(buff, sizeof(num));
+}
+
 std::string chopPath(const std::string &path) {
   std::vector<std::string> parts = split(path, "/");
   std::stringstream ss;

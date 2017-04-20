@@ -66,11 +66,17 @@ extern std::mutex logMutex;
 
 // a serious error has occured signifying a bug in the program logic
 #define qdb_throw(message) throw FatalException(SSTR(message))
+#define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition))
 
-// store/retrieve int64 inside a *little endian* binary string
+// store/retrieve int64 inside a *big endian* binary string
 int64_t binaryStringToInt(const char* buff);
 void intToBinaryString(int64_t num, char* buff);
 std::string intToBinaryString(int64_t num);
+
+// store/retrieve uint64 inside a *big endian* binary string
+uint64_t binaryStringToUnsignedInt(const char* buff);
+void unsignedIntToBinaryString(uint64_t num, char* buff);
+std::string unsignedIntToBinaryString(uint64_t num);
 
 std::string chopPath(const std::string &path);
 bool mkpath(const std::string &path, mode_t mode, std::string &err);
