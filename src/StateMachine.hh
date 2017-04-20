@@ -72,6 +72,10 @@ public:
   rocksdb::Status exists(const std::string &key);
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status flushall(LogIndex index = 0);
+  rocksdb::Status lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
+  rocksdb::Status rpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
+  rocksdb::Status lpop(const std::string &key, std::string &item, LogIndex index = 0);
+  rocksdb::Status rpop(const std::string &key, std::string &item, LogIndex index = 0);
 
   rocksdb::Status noop(LogIndex index);
   LogIndex getLastApplied();
@@ -87,9 +91,11 @@ public:
   std::string statistics();
 
   enum class KeyType : char {
+    kNull = '\0',
     kString = 'a',
     kHash = 'b',
-    kSet = 'c'
+    kSet = 'c',
+    kList = 'e'
   };
 
   enum class InternalKeyType : char {
@@ -116,14 +122,65 @@ private:
   rocksdb::Status malformedRequest(TransactionPtr &tx, LogIndex index, std::string message);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
 
-  struct KeyDescriptor {
-    bool exists;
-    std::string dkey;
-    KeyType keytype;
-    int64_t size;
+  class KeyDescriptor {
+  public:
+    const std::string& getRawKey() {
+      return dkey;
+    }
+
+    bool exists() {
+      return existence;
+    }
+
+    void initializeType(KeyType type) {
+      if(existence || keytype != KeyType::kNull) qdb_throw("attempted to overwrite the type of a KeyDescriptor");
+      keytype = type;
+    }
+
+    KeyType type() {
+      return keytype;
+    }
+
+    int64_t size() {
+      return size_;
+    }
+
+    void setSize(int64_t size) {
+      size_ = size;
+    }
+
+    uint64_t getListStartIndex() {
+      qdb_assert(keytype == KeyType::kList);
+      return listStartIndex;
+    }
+
+    uint64_t getListEndIndex() {
+      qdb_assert(keytype == KeyType::kList);
+      return listEndIndex;
+    }
+
+    void setListStartIndex(uint64_t newindex) {
+      qdb_assert(keytype == KeyType::kList);
+      listStartIndex = newindex;
+    }
+
+    void setListEndIndex(uint64_t newindex) {
+      qdb_assert(keytype == KeyType::kList);
+      listEndIndex = newindex;
+    }
 
     std::string serialize() const;
     static KeyDescriptor construct(const rocksdb::Status &st, const std::string &str, std::string &&tkey);
+  private:
+    bool existence;
+    std::string dkey; // raw key descriptor, as stored on disk
+    KeyType keytype = KeyType::kNull;
+    int64_t size_ = 0;
+
+    // used only for lists
+    static constexpr uint64_t listIndexInitialize = std::numeric_limits<uint64_t>::max() / 2;
+    uint64_t listStartIndex = listIndexInitialize;
+    uint64_t listEndIndex = listIndexInitialize;
   };
 
   class WriteOperation {
@@ -144,6 +201,10 @@ private:
     bool deleteField(const std::string &field);
 
     void finalize(int64_t newsize);
+
+    KeyDescriptor& descriptor() {
+      return keyinfo;
+    }
   private:
     TransactionPtr &tx;
     const std::string &redisKey;

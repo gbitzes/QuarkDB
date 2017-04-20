@@ -262,6 +262,34 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::scan("0", members);
     }
+    case RedisCommand::LPUSH: {
+      if(request.size() < 3) return errArgs(request, commit);
+      int64_t length;
+      rocksdb::Status st = store.lpush(request[1], request.begin()+2, request.end(), length, commit);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(length);
+    }
+    case RedisCommand::RPUSH: {
+      if(request.size() < 3) return errArgs(request, commit);
+      int64_t length;
+      rocksdb::Status st = store.rpush(request[1], request.begin()+2, request.end(), length, commit);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(length);
+    }
+    case RedisCommand::LPOP: {
+      if(request.size() != 2) return errArgs(request, commit);
+      std::string item;
+      rocksdb::Status st = store.lpop(request[1], item, commit);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::string(item);
+    }
+    case RedisCommand::RPOP: {
+      if(request.size() != 2) return errArgs(request, commit);
+      std::string item;
+      rocksdb::Status st = store.rpop(request[1], item, commit);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::string(item);
+    }
     default: {
       std::string msg = SSTR("ERR internal dispatching error for " << quotes(request[0]) << " - raft not enabled?");
       qdb_critical(msg);

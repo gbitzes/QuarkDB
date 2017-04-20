@@ -48,6 +48,9 @@ TEST(Utils, binary_string_unsigned_int_conversion) {
   EXPECT_EQ(binaryStringToUnsignedInt(unsignedIntToBinaryString(17465798u).c_str()), 17465798u);
   EXPECT_EQ(binaryStringToUnsignedInt(unsignedIntToBinaryString(16583415634u).c_str()), 16583415634u);
   EXPECT_EQ(binaryStringToUnsignedInt(unsignedIntToBinaryString(18446744073709551613u).c_str()), 18446744073709551613u);
+
+  uint64_t big_number = std::numeric_limits<uint64_t>::max() / 2;
+  EXPECT_EQ(binaryStringToUnsignedInt(unsignedIntToBinaryString(big_number).c_str()), big_number);
 }
 
 TEST(Utils, pathJoin) {

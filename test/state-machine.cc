@@ -345,3 +345,65 @@ TEST_F(State_Machine, hmset) {
 
   ASSERT_THROW(stateMachine()->hmset("hash", vec.begin()+1, vec.end()), FatalException);
 }
+
+TEST_F(State_Machine, list_operations) {
+  std::vector<std::string> vec = {"item1", "item2", "item3"};
+  int64_t length;
+
+  ASSERT_OK(stateMachine()->lpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_EQ(length, 3);
+
+  std::string item;
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item3");
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item2");
+
+  vec = { "item4" };
+  ASSERT_OK(stateMachine()->lpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_EQ(length, 2);
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item4");
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item1");
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "");
+}
+
+TEST_F(State_Machine, list_operations2) {
+  std::vector<std::string> vec = {"item1", "item2", "item3", "item4"};
+  int64_t length;
+
+  ASSERT_OK(stateMachine()->rpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_EQ(length, 4);
+
+  std::string item;
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item1");
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item2");
+
+  vec = { "item5" };
+  ASSERT_OK(stateMachine()->lpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_EQ(length, 3);
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item5");
+
+  ASSERT_OK(stateMachine()->rpop("my_list", item));
+  ASSERT_EQ(item, "item4");
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "item3");
+
+  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_EQ(item, "");
+
+  ASSERT_OK(stateMachine()->rpop("my_list", item));
+  ASSERT_EQ(item, "");
+}

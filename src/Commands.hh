@@ -61,6 +61,11 @@ enum class RedisCommand {
   SCARD,
   SSCAN,
 
+  LPUSH,
+  LPOP,
+  RPUSH,
+  RPOP,
+
   RAFT_HANDSHAKE,
   RAFT_APPEND_ENTRIES,
   RAFT_INFO,

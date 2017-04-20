@@ -400,6 +400,37 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[9], "OK");
   ASSERT_REPLY(futures[10], "v3");
   ASSERT_REPLY(futures[11], 3);
+
+  futures.clear();
+  futures.emplace_back(tunnel(leaderID)->exec("lpush", "list_test", "i1", "i2", "i3", "i4"));
+  futures.emplace_back(tunnel(leaderID)->exec("exists", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("rpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("del", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("rpush", "list_test", "i5", "i6", "i7", "i8"));
+  futures.emplace_back(tunnel(leaderID)->exec("set", "list_test", "asdf"));
+  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("rpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("rpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("set", "list_test", "asdf"));
+  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
+
+  ASSERT_REPLY(futures[0], 4);
+  ASSERT_REPLY(futures[1], 1);
+  ASSERT_REPLY(futures[2], "i4");
+  ASSERT_REPLY(futures[3], "i1");
+  ASSERT_REPLY(futures[4], 1);
+  ASSERT_REPLY(futures[5], "");
+  ASSERT_REPLY(futures[6], 4);
+  ASSERT_REPLY(futures[7], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(futures[8], "i5");
+  ASSERT_REPLY(futures[9], "i8");
+  ASSERT_REPLY(futures[10], "i7");
+  ASSERT_REPLY(futures[11], "i6");
+  ASSERT_REPLY(futures[12], "OK");
+  ASSERT_REPLY(futures[13], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
