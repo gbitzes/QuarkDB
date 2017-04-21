@@ -280,6 +280,7 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
       if(request.size() != 2) return errArgs(request, commit);
       std::string item;
       rocksdb::Status st = store.lpop(request[1], item, commit);
+      if(st.IsNotFound()) return Formatter::null();
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(item);
     }
@@ -287,6 +288,7 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
       if(request.size() != 2) return errArgs(request, commit);
       std::string item;
       rocksdb::Status st = store.rpop(request[1], item, commit);
+      if(st.IsNotFound()) return Formatter::null();
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(item);
     }

@@ -370,8 +370,7 @@ TEST_F(State_Machine, list_operations) {
   ASSERT_OK(stateMachine()->lpop("my_list", item));
   ASSERT_EQ(item, "item1");
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
-  ASSERT_EQ(item, "");
+  ASSERT_NOTFOUND(stateMachine()->lpop("my_list", item));
 }
 
 TEST_F(State_Machine, list_operations2) {
@@ -401,9 +400,6 @@ TEST_F(State_Machine, list_operations2) {
   ASSERT_OK(stateMachine()->lpop("my_list", item));
   ASSERT_EQ(item, "item3");
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
-  ASSERT_EQ(item, "");
-
-  ASSERT_OK(stateMachine()->rpop("my_list", item));
-  ASSERT_EQ(item, "");
+  ASSERT_NOTFOUND(stateMachine()->lpop("my_list", item));
+  ASSERT_NOTFOUND(stateMachine()->rpop("my_list", item));
 }

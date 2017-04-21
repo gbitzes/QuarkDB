@@ -746,7 +746,8 @@ rocksdb::Status StateMachine::lpop(const std::string &key, std::string &item, Lo
   if(operation.keySize() == 0) {
     item = "";
     operation.finalize(0);
-    return finalize(tx, index);
+    finalize(tx, index);
+    return rocksdb::Status::NotFound();
   }
 
   KeyDescriptor &descriptor = operation.descriptor();
@@ -772,7 +773,8 @@ rocksdb::Status StateMachine::rpop(const std::string &key, std::string &item, Lo
   if(operation.keySize() == 0) {
     item = "";
     operation.finalize(0);
-    return finalize(tx, index);
+    finalize(tx, index);
+    return rocksdb::Status::NotFound();
   }
 
   KeyDescriptor &descriptor = operation.descriptor();

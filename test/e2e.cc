@@ -38,9 +38,19 @@ using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
 #define ASSERT_REPLY(reply, val) { assert_reply(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 #define ASSERT_ERR(reply, val) { assert_error(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
+#define ASSERT_NIL(reply) { assert_nil(reply); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 
 class Raft_e2e : public TestCluster3NodesFixture {};
 class Raft_e2e5 : public TestCluster5NodesFixture {};
+
+void assert_nil(const redisReplyPtr &reply) {
+  ASSERT_NE(reply, nullptr);
+  ASSERT_EQ(reply->type, REDIS_REPLY_NIL);
+}
+
+void assert_nil(std::future<redisReplyPtr> &fut) {
+  assert_nil(fut.get());
+}
 
 void assert_error(const redisReplyPtr &reply, const std::string &err) {
   ASSERT_NE(reply, nullptr);
@@ -263,6 +273,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("srem", "myset", "b"));
   futures.emplace_back(tunnel(leaderID)->exec("scard", "myset"));
   futures.emplace_back(tunnel(leaderID)->exec("smembers", "myset"));
+  futures.emplace_back(tunnel(leaderID)->exec("get", "empty_key"));
 
   ASSERT_REPLY(futures[0], 3);
   ASSERT_REPLY(futures[1], 3);
@@ -271,6 +282,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[4], 0);
   ASSERT_REPLY(futures[5], 1);
   ASSERT_REPLY(futures[6], make_req("c"));
+  ASSERT_NIL(futures[7]);
 
   futures.clear();
 
@@ -422,7 +434,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[2], "i4");
   ASSERT_REPLY(futures[3], "i1");
   ASSERT_REPLY(futures[4], 1);
-  ASSERT_REPLY(futures[5], "");
+  ASSERT_NIL(futures[5]);
   ASSERT_REPLY(futures[6], 4);
   ASSERT_REPLY(futures[7], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
   ASSERT_REPLY(futures[8], "i5");
