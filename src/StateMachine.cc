@@ -688,7 +688,7 @@ rocksdb::Status StateMachine::set(const std::string& key, const std::string& val
   return finalize(tx, index);
 }
 
-rocksdb::Status StateMachine::lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
+rocksdb::Status StateMachine::listPush(Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
   WriteOperation operation(tx, key, KeyType::kList);
@@ -696,100 +696,65 @@ rocksdb::Status StateMachine::lpush(const std::string &key, const VecIterator &s
 
   KeyDescriptor &descriptor = operation.descriptor();
 
-  uint64_t startIndex = descriptor.getListStartIndex();
+  uint64_t listIndex = descriptor.getListIndex(direction);
   uint64_t itemsAdded = 0;
   for(VecIterator it = start; it != end; it++) {
-    operation.writeField(unsignedIntToBinaryString(startIndex - itemsAdded), *it);
+    operation.writeField(unsignedIntToBinaryString(listIndex + (itemsAdded*(int)direction)), *it);
     itemsAdded++;
   }
 
-  descriptor.setListStartIndex(startIndex - itemsAdded);
+  descriptor.setListIndex(direction, listIndex + (itemsAdded*(int)direction));
   length = operation.keySize() + itemsAdded;
   if(operation.keySize() == 0) {
-    descriptor.setListEndIndex(startIndex+1);
+    descriptor.setListIndex(flipDirection(direction), listIndex + ((int)direction*-1));
   }
   operation.finalize(length);
   return finalize(tx, index);
 }
 
+
+rocksdb::Status StateMachine::lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
+  return listPush(Direction::kLeft, key, start, end, length, index);
+}
+
 rocksdb::Status StateMachine::rpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
+  return listPush(Direction::kRight, key, start, end, length, index);
+}
+
+rocksdb::Status StateMachine::listPop(Direction direction, const std::string &key, std::string &item, LogIndex index) {
   TransactionPtr tx = startTransaction();
 
   WriteOperation operation(tx, key, KeyType::kList);
   if(!operation.valid()) return wrongKeyType(tx, index);
 
-  KeyDescriptor &descriptor = operation.descriptor();
-
-  uint64_t endIndex = descriptor.getListEndIndex();
-  uint64_t itemsAdded = 0;
-  for(VecIterator it = start; it != end; it++) {
-    operation.writeField(unsignedIntToBinaryString(endIndex + itemsAdded), *it);
-    itemsAdded++;
-  }
-
-  descriptor.setListEndIndex(endIndex + itemsAdded);
-  length = operation.keySize() + itemsAdded;
+  // nothing to do, return empty string
   if(operation.keySize() == 0) {
-    descriptor.setListStartIndex(endIndex-1);
+    item = "";
+    operation.finalize(0);
+    finalize(tx, index);
+    return rocksdb::Status::NotFound();
   }
-  operation.finalize(length);
+
+  KeyDescriptor &descriptor = operation.descriptor();
+  uint64_t listIndex = descriptor.getListIndex(direction);
+  uint64_t victim = listIndex + (int)direction*(-1);
+
+  std::string field = unsignedIntToBinaryString(victim);
+  qdb_assert(operation.getField(field, item));
+  qdb_assert(operation.deleteField(field));
+  descriptor.setListIndex(direction, victim);
+
+  operation.finalize(operation.keySize() - 1);
   return finalize(tx, index);
 }
 
 rocksdb::Status StateMachine::lpop(const std::string &key, std::string &item, LogIndex index) {
-  TransactionPtr tx = startTransaction();
-
-  WriteOperation operation(tx, key, KeyType::kList);
-  if(!operation.valid()) return wrongKeyType(tx, index);
-
-  // nothing to do, return empty string
-  if(operation.keySize() == 0) {
-    item = "";
-    operation.finalize(0);
-    finalize(tx, index);
-    return rocksdb::Status::NotFound();
-  }
-
-  KeyDescriptor &descriptor = operation.descriptor();
-  uint64_t startIndex = descriptor.getListStartIndex();
-  uint64_t victim = startIndex+1;
-
-  std::string field = unsignedIntToBinaryString(victim);
-  qdb_assert(operation.getField(field, item));
-  qdb_assert(operation.deleteField(field));
-  descriptor.setListStartIndex(victim);
-
-  operation.finalize(operation.keySize() - 1);
-  return finalize(tx, index);
+  return listPop(Direction::kLeft, key, item, index);
 }
 
 rocksdb::Status StateMachine::rpop(const std::string &key, std::string &item, LogIndex index) {
-  TransactionPtr tx = startTransaction();
-
-  WriteOperation operation(tx, key, KeyType::kList);
-  if(!operation.valid()) return wrongKeyType(tx, index);
-
-  // nothing to do, return empty string
-  if(operation.keySize() == 0) {
-    item = "";
-    operation.finalize(0);
-    finalize(tx, index);
-    return rocksdb::Status::NotFound();
-  }
-
-  KeyDescriptor &descriptor = operation.descriptor();
-  uint64_t endIndex = descriptor.getListEndIndex();
-  uint64_t victim = endIndex - 1;
-
-  std::string field = unsignedIntToBinaryString(victim);
-  qdb_assert(operation.getField(field, item));
-  qdb_assert(operation.deleteField(field));
-  descriptor.setListEndIndex(victim);
-
-  operation.finalize(operation.keySize() - 1);
-  return finalize(tx, index);
+  return listPop(Direction::kRight, key, item, index);
 }
-
 
 StateMachine::Snapshot::Snapshot(rocksdb::DB *db_) {
   db = db_;

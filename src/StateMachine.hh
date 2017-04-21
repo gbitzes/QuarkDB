@@ -116,11 +116,28 @@ private:
     DISALLOW_COPY_AND_ASSIGN(Snapshot);
   };
 
+  enum class Direction : int {
+    kLeft = -1,
+    kRight = 1
+  };
+
+  static Direction flipDirection(Direction direction) {
+    if(direction == Direction::kLeft) {
+      return Direction::kRight;
+    }
+    else if(direction == Direction::kRight) {
+      return Direction::kLeft;
+    }
+    qdb_throw("should never happen");
+  }
+
   TransactionPtr startTransaction();
   void commitTransaction(TransactionPtr &tx, LogIndex index);
   rocksdb::Status finalize(TransactionPtr &tx, LogIndex index);
   rocksdb::Status malformedRequest(TransactionPtr &tx, LogIndex index, std::string message);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
+  rocksdb::Status listPop(Direction direction, const std::string &key, std::string &item, LogIndex index);
+  rocksdb::Status listPush(Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
 
   class KeyDescriptor {
   public:
@@ -149,24 +166,28 @@ private:
       size_ = size;
     }
 
-    uint64_t getListStartIndex() {
+    uint64_t getListIndex(Direction direction) {
       qdb_assert(keytype == KeyType::kList);
-      return listStartIndex;
+      if(direction == Direction::kLeft) {
+        return listStartIndex;
+      }
+      else if(direction == Direction::kRight) {
+        return listEndIndex;
+      }
+      qdb_throw("should never happen");
     }
 
-    uint64_t getListEndIndex() {
+    void setListIndex(Direction direction, uint64_t newindex) {
       qdb_assert(keytype == KeyType::kList);
-      return listEndIndex;
-    }
-
-    void setListStartIndex(uint64_t newindex) {
-      qdb_assert(keytype == KeyType::kList);
-      listStartIndex = newindex;
-    }
-
-    void setListEndIndex(uint64_t newindex) {
-      qdb_assert(keytype == KeyType::kList);
-      listEndIndex = newindex;
+      if(direction == Direction::kLeft) {
+        listStartIndex = newindex;
+        return;
+      }
+      else if(direction == Direction::kRight) {
+        listEndIndex = newindex;
+        return;
+      }
+      qdb_throw("should never happen");
     }
 
     std::string serialize() const;
