@@ -380,9 +380,16 @@ TEST_F(State_Machine, list_operations2) {
   ASSERT_OK(stateMachine()->rpush("my_list", vec.begin(), vec.end(), length));
   ASSERT_EQ(length, 4);
 
+  size_t len;
+  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_EQ(len, 4u);
+
   std::string item;
   ASSERT_OK(stateMachine()->lpop("my_list", item));
   ASSERT_EQ(item, "item1");
+
+  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_EQ(len, 3u);
 
   ASSERT_OK(stateMachine()->lpop("my_list", item));
   ASSERT_EQ(item, "item2");
@@ -394,6 +401,9 @@ TEST_F(State_Machine, list_operations2) {
   ASSERT_OK(stateMachine()->lpop("my_list", item));
   ASSERT_EQ(item, "item5");
 
+  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_EQ(len, 2u);
+
   ASSERT_OK(stateMachine()->rpop("my_list", item));
   ASSERT_EQ(item, "item4");
 
@@ -402,4 +412,7 @@ TEST_F(State_Machine, list_operations2) {
 
   ASSERT_NOTFOUND(stateMachine()->lpop("my_list", item));
   ASSERT_NOTFOUND(stateMachine()->rpop("my_list", item));
+
+  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_EQ(len, 0u);
 }

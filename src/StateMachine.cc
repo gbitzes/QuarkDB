@@ -712,6 +712,15 @@ rocksdb::Status StateMachine::listPush(Direction direction, const std::string &k
   return finalize(tx, index);
 }
 
+rocksdb::Status StateMachine::llen(const std::string &key, size_t &len) {
+  len = 0;
+
+  KeyDescriptor keyinfo = getKeyDescriptor(key);
+  if(keyinfo.exists() && keyinfo.type() != KeyType::kList) return wrong_type();
+
+  len = keyinfo.size();
+  return rocksdb::Status::OK();
+}
 
 rocksdb::Status StateMachine::lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
   return listPush(Direction::kLeft, key, start, end, length, index);

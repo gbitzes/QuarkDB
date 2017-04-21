@@ -65,6 +65,7 @@ enum class RedisCommand {
   LPOP,
   RPUSH,
   RPOP,
+  LLEN,
 
   RAFT_HANDSHAKE,
   RAFT_APPEND_ENTRIES,

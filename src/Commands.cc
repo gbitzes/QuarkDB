@@ -48,6 +48,7 @@ struct cmdMapInit {
     redis_cmd_map["smembers"] = {RedisCommand::SMEMBERS, CommandType::READ};
     redis_cmd_map["scard"] = {RedisCommand::SCARD, CommandType::READ};
     redis_cmd_map["sscan"] = {RedisCommand::SSCAN, CommandType::READ};
+    redis_cmd_map["llen"] = {RedisCommand::LLEN, CommandType::READ};
 
     redis_cmd_map["flushall"] = {RedisCommand::FLUSHALL, CommandType::WRITE};
     redis_cmd_map["set"] = {RedisCommand::SET, CommandType::WRITE};
@@ -60,7 +61,6 @@ struct cmdMapInit {
     redis_cmd_map["hdel"] = {RedisCommand::HDEL, CommandType::WRITE};
     redis_cmd_map["sadd"] = {RedisCommand::SADD, CommandType::WRITE};
     redis_cmd_map["srem"] = {RedisCommand::SREM, CommandType::WRITE};
-
     redis_cmd_map["lpush"] = {RedisCommand::LPUSH, CommandType::WRITE};
     redis_cmd_map["lpop"] = {RedisCommand::LPOP, CommandType::WRITE};
     redis_cmd_map["rpush"] = {RedisCommand::RPUSH, CommandType::WRITE};

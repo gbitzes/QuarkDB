@@ -76,6 +76,7 @@ public:
   rocksdb::Status rpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
   rocksdb::Status lpop(const std::string &key, std::string &item, LogIndex index = 0);
   rocksdb::Status rpop(const std::string &key, std::string &item, LogIndex index = 0);
+  rocksdb::Status llen(const std::string &key, size_t &len);
 
   rocksdb::Status noop(LogIndex index);
   LogIndex getLastApplied();
