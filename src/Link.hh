@@ -65,6 +65,7 @@ private:
 
   std::stringstream stream;
   XrdLink *link = nullptr;
+  bool dead = false;
   int fd = -1;
 
   LinkStatus streamRecv(char *buff, int blen, int timeout);

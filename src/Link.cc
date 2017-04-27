@@ -92,8 +92,20 @@ LinkStatus Link::rawSend(const char *buff, int blen) {
 }
 
 LinkStatus Link::Send(const char *buff, int blen) {
-  if(tlsconfig.active) return tlsfilter.send(buff, blen);
-  return rawSend(buff, blen);
+  if(dead) return -1;
+
+  LinkStatus ret;
+  if(tlsconfig.active) ret = tlsfilter.send(buff, blen);
+  ret = rawSend(buff, blen);
+
+  if(ret != blen) {
+    dead = true;
+    if(ret >= 0) {
+      qdb_critical("wrote " << ret << " bytes into Link, even though it should be " << blen);
+    }
+  }
+
+  return ret;
 }
 
 LinkStatus Link::Send(const std::string &str) {
