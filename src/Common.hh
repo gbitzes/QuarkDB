@@ -24,6 +24,7 @@
 #ifndef __QUARKDB_COMMON_H__
 #define __QUARKDB_COMMON_H__
 
+#include "RedisRequest.hh"
 #include <vector>
 #include <string>
 
@@ -135,7 +136,6 @@ private:
 };
 
 using RaftClusterID = std::string;
-using RedisRequest = std::vector<std::string>;
 using RaftTerm = int64_t;
 using LogIndex = int64_t;
 

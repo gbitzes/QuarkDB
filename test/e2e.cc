@@ -242,22 +242,22 @@ TEST_F(Raft_e2e, hscan) {
   }
 
   redisReplyPtr reply = tunnel(leaderID)->exec("hscan", "hash", "0", "cOUnT", "3").get();
-  ASSERT_REPLY(reply, std::make_pair("next:f4", make_req("f1", "v1", "f2", "v2", "f3", "v3")));
+  ASSERT_REPLY(reply, std::make_pair("next:f4", make_vec("f1", "v1", "f2", "v2", "f3", "v3")));
 
   reply = tunnel(leaderID)->exec("hscan", "hash", "0", "asdf", "123").get();
   ASSERT_ERR(reply, "ERR syntax error");
 
   reply = tunnel(leaderID)->exec("hscan", "hash", "next:f4", "COUNT", "3").get();
-  ASSERT_REPLY(reply, std::make_pair("next:f7", make_req("f4", "v4", "f5", "v5", "f6", "v6")));
+  ASSERT_REPLY(reply, std::make_pair("next:f7", make_vec("f4", "v4", "f5", "v5", "f6", "v6")));
 
   reply = tunnel(leaderID)->exec("hscan", "hash", "next:f7", "COUNT", "30").get();
-  ASSERT_REPLY(reply, std::make_pair("0", make_req("f7", "v7", "f8", "v8", "f9", "v9")));
+  ASSERT_REPLY(reply, std::make_pair("0", make_vec("f7", "v7", "f8", "v8", "f9", "v9")));
 
   reply = tunnel(leaderID)->exec("hscan", "hash", "adfaf").get();
   ASSERT_ERR(reply, "ERR invalid cursor");
 
   reply = tunnel(leaderID)->exec("hscan", "hash", "next:zz").get();
-  ASSERT_REPLY(reply, std::make_pair("0", make_req()));
+  ASSERT_REPLY(reply, std::make_pair("0", make_vec()));
 }
 
 TEST_F(Raft_e2e, test_many_redis_commands) {
@@ -277,11 +277,11 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   ASSERT_REPLY(futures[0], 3);
   ASSERT_REPLY(futures[1], 3);
-  ASSERT_REPLY(futures[2], make_req("a", "b", "c"));
+  ASSERT_REPLY(futures[2], make_vec("a", "b", "c"));
   ASSERT_REPLY(futures[3], 2);
   ASSERT_REPLY(futures[4], 0);
   ASSERT_REPLY(futures[5], 1);
-  ASSERT_REPLY(futures[6], make_req("c"));
+  ASSERT_REPLY(futures[6], make_vec("c"));
   ASSERT_NIL(futures[7]);
 
   futures.clear();
@@ -339,7 +339,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset"));
 
   ASSERT_REPLY(futures[0], "OK");
-  ASSERT_REPLY(futures[1], make_req("myhash", "myset", "mystring"));
+  ASSERT_REPLY(futures[1], make_vec("myhash", "myset", "mystring"));
   ASSERT_REPLY(futures[2], 4);
   ASSERT_REPLY(futures[3], 3);
   ASSERT_REPLY(futures[4], 0);
@@ -358,7 +358,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[2], "aa");
   ASSERT_REPLY(futures[3], 1);
   ASSERT_REPLY(futures[4], "a");
-  ASSERT_REPLY(futures[5], make_req("aa"));
+  ASSERT_REPLY(futures[5], make_vec("aa"));
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("flushall"));

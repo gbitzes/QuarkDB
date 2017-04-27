@@ -20,6 +20,7 @@ add_library(XrdRedis SHARED
   BufferedReader.cc          BufferedReader.hh
   BufferedWriter.cc          BufferedWriter.hh
   RedisParser.cc             RedisParser.hh
+                             RedisRequest.hh
   StateMachine.cc            StateMachine.hh
   Commands.cc                Commands.hh
   Formatter.cc               Formatter.hh
