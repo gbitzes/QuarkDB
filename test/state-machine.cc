@@ -308,15 +308,15 @@ TEST_F(State_Machine, hscan) {
 
   std::string newcursor;
   ASSERT_OK(stateMachine()->hscan("hash", "", 3, newcursor, vec));
-  ASSERT_EQ(vec, make_req("f1", "v1", "f2", "v2", "f3", "v3"));
+  ASSERT_EQ(vec, make_vec("f1", "v1", "f2", "v2", "f3", "v3"));
   ASSERT_EQ(newcursor, "f4");
 
   ASSERT_OK(stateMachine()->hscan("hash", "f4", 4, newcursor, vec));
-  ASSERT_EQ(vec, make_req("f4", "v4", "f5", "v5", "f6", "v6", "f7", "v7"));
+  ASSERT_EQ(vec, make_vec("f4", "v4", "f5", "v5", "f6", "v6", "f7", "v7"));
   ASSERT_EQ(newcursor, "f8");
 
   ASSERT_OK(stateMachine()->hscan("hash", "f8", 4, newcursor, vec));
-  ASSERT_EQ(vec, make_req("f8", "v8", "f9", "v9"));
+  ASSERT_EQ(vec, make_vec("f8", "v8", "f9", "v9"));
   ASSERT_EQ(newcursor, "");
 
   ASSERT_OK(stateMachine()->hscan("hash", "zz", 4, newcursor, vec));

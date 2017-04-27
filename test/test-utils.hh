@@ -72,6 +72,11 @@ RedisRequest make_req(Args... args) {
   return RedisRequest { args... };
 }
 
+template<typename... Args>
+std::vector<std::string> make_vec(Args... args) {
+  return std::vector<std::string> { args... };
+}
+
 class GlobalEnv : public testing::Environment {
 public:
   virtual void SetUp() override;

@@ -238,25 +238,25 @@ TEST_F(Raft_e2e, hscan) {
   int leaderID = getServerID(state(0)->getSnapshot().leader);
 
   for(size_t i = 1; i < 10; i++) {
-    ASSERT_REPLY(tunnel(leaderID)->execute(make_req("hset", "hash", SSTR("f" << i), SSTR("v" << i))), 1);
+    ASSERT_REPLY(tunnel(leaderID)->exec("hset", "hash", SSTR("f" << i), SSTR("v" << i)), 1);
   }
 
-  redisReplyPtr reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "0", "cOUnT", "3")).get();
+  redisReplyPtr reply = tunnel(leaderID)->exec("hscan", "hash", "0", "cOUnT", "3").get();
   ASSERT_REPLY(reply, std::make_pair("next:f4", make_req("f1", "v1", "f2", "v2", "f3", "v3")));
 
-  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "0", "asdf", "123")).get();
+  reply = tunnel(leaderID)->exec("hscan", "hash", "0", "asdf", "123").get();
   ASSERT_ERR(reply, "ERR syntax error");
 
-  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "next:f4", "COUNT", "3")).get();
+  reply = tunnel(leaderID)->exec("hscan", "hash", "next:f4", "COUNT", "3").get();
   ASSERT_REPLY(reply, std::make_pair("next:f7", make_req("f4", "v4", "f5", "v5", "f6", "v6")));
 
-  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "next:f7", "COUNT", "30")).get();
+  reply = tunnel(leaderID)->exec("hscan", "hash", "next:f7", "COUNT", "30").get();
   ASSERT_REPLY(reply, std::make_pair("0", make_req("f7", "v7", "f8", "v8", "f9", "v9")));
 
-  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "adfaf")).get();
+  reply = tunnel(leaderID)->exec("hscan", "hash", "adfaf").get();
   ASSERT_ERR(reply, "ERR invalid cursor");
 
-  reply = tunnel(leaderID)->execute(make_req("hscan", "hash", "next:zz")).get();
+  reply = tunnel(leaderID)->exec("hscan", "hash", "next:zz").get();
   ASSERT_REPLY(reply, std::make_pair("0", make_req()));
 }
 
