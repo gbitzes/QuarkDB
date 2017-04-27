@@ -71,6 +71,30 @@ TEST_F(Replication, entries_50k_with_follower_loss) {
   RETRY_ASSERT_TRUE(stateMachine(leaderID)->getLastApplied() >= NENTRIES+1);
 }
 
+TEST_F(Replication, lease_expires_under_load) {
+  // only nodes #0 and #1 are active
+  spinup(0); spinup(1);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  int leaderID = getLeaderID();
+  int followerID = (getLeaderID()+1) % 2;
+
+  // push lots of updates
+  const int64_t NENTRIES = 50000;
+  for(size_t i = 0; i < NENTRIES; i++) {
+    tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i));
+  }
+
+  // verify the leader has started replicating some of the entries already
+  RETRY_ASSERT_TRUE(journal(followerID)->getCommitIndex() > 5000);
+
+  // bring down one the follower, ensure replication is not complete
+  spindown(followerID);
+  ASSERT_TRUE(journal(followerID)->getLogSize() < NENTRIES);
+
+  // ensure the connection doesn't hang
+  tunnel(leaderID)->exec("ping").get();
+}
+
 TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes) {
   // node #0 has committed entries that no other node has. The node should
   // veto any attempts of election, so that only itself can win this election.

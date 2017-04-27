@@ -144,6 +144,7 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
     if(deadline < std::chrono::steady_clock::now()) {
       qdb_event("My leader lease has expired, I no longer control a quorum, stepping down.");
       state.observed(snapshot.term+1, {});
+      dispatcher.flushQueues("ERR unavailable");
       return;
     }
 

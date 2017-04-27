@@ -48,8 +48,8 @@ public:
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
   RaftVoteResponse requestVote(RaftVoteRequest &req);
   LinkStatus applyCommits(LogIndex index);
-private:
   void flushQueues(const std::string &msg);
+private:
   LinkStatus service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type);
   LinkStatus applyOneCommit(LogIndex index);
 
