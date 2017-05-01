@@ -70,6 +70,7 @@ target_link_libraries(quarkdb-tests
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
+  ${GCOV_LIBS}
 )
 
 target_link_libraries(quarkdb-bench
@@ -77,6 +78,7 @@ target_link_libraries(quarkdb-bench
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
+  ${GCOV_LIBS}
 )
 
 target_link_libraries(quarkdb-stress-tests
@@ -84,6 +86,7 @@ target_link_libraries(quarkdb-stress-tests
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
+  ${GCOV_LIBS}
 )
 
 #-------------------------------------------------------------------------------

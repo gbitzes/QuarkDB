@@ -54,6 +54,7 @@ target_link_libraries(
   ${XROOTD_UTILS_LIBRARY}
   ${BACKWARD_LIBRARIES}
   ${HIREDIS_LIBRARIES}
+  ${GCOV_LIBS}
 )
 
 install(

@@ -45,6 +45,33 @@ if(NOT PACKAGEONLY)
 endif()
 
 #-------------------------------------------------------------------------------
+# Check if we're generating a test coverage report
+#-------------------------------------------------------------------------------
+option(TESTCOVERAGE "Enable support for tracking test coverage" OFF)
+
+if(TESTCOVERAGE)
+  set(GCOV_CFLAGS "-fprofile-arcs -ftest-coverage --coverage")
+  set(GCOV_LIBS "gcov")
+
+  add_custom_target(
+    raw-test-trace
+    COMMAND lcov --capture --base-directory ${CMAKE_CURRENT_SOURCE_DIR} --directory ${CMAKE_BINARY_DIR} --output-file raw-trace.info
+  )
+
+  add_custom_target(
+    filtered-test-trace
+    COMMAND lcov --extract raw-trace.info "${CMAKE_CURRENT_SOURCE_DIR}/src/\\*" -o filtered-trace.info
+    DEPENDS raw-test-trace
+  )
+
+  add_custom_target(
+    coverage-report
+    COMMAND genhtml filtered-trace.info --output-directory coverage-report
+    DEPENDS filtered-test-trace
+  )
+endif()
+
+#-------------------------------------------------------------------------------
 # Use ccache, if available
 #-------------------------------------------------------------------------------
 
@@ -57,8 +84,7 @@ endif()
 #-------------------------------------------------------------------------------
 # Compiler options
 #-------------------------------------------------------------------------------
-
-add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++11 -g3 -fPIC)
+add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++11 -g3 -fPIC ${GCOV_CFLAGS})
 
 #-------------------------------------------------------------------------------
 # Build source and tests
