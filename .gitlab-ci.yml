@@ -27,7 +27,7 @@ fedora24:
     - "$CI_JOB_NAME"
 
 ubuntu-asan:
-  stage: test
+  stage: build
   image: ubuntu:16.10
   script:
     - ./utils/ubuntu-asan.sh
