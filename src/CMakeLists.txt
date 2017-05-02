@@ -9,7 +9,7 @@ include_directories(
 #-------------------------------------------------------------------------------
 # XrdRedis plugin
 #-------------------------------------------------------------------------------
-
+add_definitions(${GCOV_CFLAGS})
 add_library(XrdRedis SHARED
   XrdPlugin.cc
   XrdRedisProtocol.cc        XrdRedisProtocol.hh

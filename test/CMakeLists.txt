@@ -6,6 +6,11 @@ set(GTEST_BINARY_DIR "${CMAKE_BINARY_DIR}/deps/googletest/googletest")
 add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
 
 #-------------------------------------------------------------------------------
+# Activate test coverage for these source files / binaries
+#-------------------------------------------------------------------------------
+add_definitions(${GCOV_CFLAGS})
+
+#-------------------------------------------------------------------------------
 # Source files shared across all test binaries
 #-------------------------------------------------------------------------------
 set(COMMON_TEST_SOURCES

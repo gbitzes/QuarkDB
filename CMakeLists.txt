@@ -84,7 +84,7 @@ endif()
 #-------------------------------------------------------------------------------
 # Compiler options
 #-------------------------------------------------------------------------------
-add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++11 -g3 -fPIC ${GCOV_CFLAGS})
+add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++11 -g3 -fPIC)
 
 #-------------------------------------------------------------------------------
 # Build source and tests

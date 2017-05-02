@@ -5,6 +5,8 @@ apt update
 apt install -y git g++ cmake zlib1g-dev openssl libssl-dev libhiredis-dev python libbz2-dev lcov
 
 git submodule update --init --recursive
+
+rm -rf xrootd
 git clone https://github.com/xrootd/xrootd
 pushd xrootd
 git checkout v4.6.0
@@ -15,6 +17,7 @@ cmake .. -DCMAKE_INSTALL_PREFIX=$XRD_INSTALL && make
 make install
 popd; popd
 
+rm -rf build
 mkdir build && pushd build
 CXXFLAGS='-fsanitize=address' cmake -DTESTCOVERAGE=ON -DXROOTD_ROOT_DIR=$XRD_INSTALL -DLIBRARY_PATH_PREFIX=lib ..
 make
