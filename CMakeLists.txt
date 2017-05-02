@@ -55,18 +55,18 @@ if(TESTCOVERAGE)
 
   add_custom_target(
     raw-test-trace
-    COMMAND lcov --capture --base-directory ${CMAKE_CURRENT_SOURCE_DIR} --directory ${CMAKE_BINARY_DIR} --output-file raw-trace.info
+    COMMAND lcov --capture --base-directory ${CMAKE_CURRENT_SOURCE_DIR} --directory ${CMAKE_BINARY_DIR} --output-file ${CMAKE_BINARY_DIR}/raw-trace.info
   )
 
   add_custom_target(
     filtered-test-trace
-    COMMAND lcov --extract raw-trace.info "${CMAKE_CURRENT_SOURCE_DIR}/src/\\*" -o filtered-trace.info
+    COMMAND lcov --extract ${CMAKE_BINARY_DIR}/raw-trace.info "${CMAKE_CURRENT_SOURCE_DIR}/src/\\*" --output-file ${CMAKE_BINARY_DIR}/filtered-trace.info
     DEPENDS raw-test-trace
   )
 
   add_custom_target(
     coverage-report
-    COMMAND genhtml filtered-trace.info --output-directory coverage-report
+    COMMAND genhtml ${CMAKE_BINARY_DIR}/filtered-trace.info --output-directory ${CMAKE_BINARY_DIR}/coverage-report
     DEPENDS filtered-test-trace
   )
 endif()
