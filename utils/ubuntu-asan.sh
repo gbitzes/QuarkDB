@@ -2,7 +2,7 @@
 set -e
 
 apt update
-apt install -y git g++ cmake zlib1g-dev openssl libssl-dev libhiredis-dev python libbz2-dev
+apt install -y git g++ cmake zlib1g-dev openssl libssl-dev libhiredis-dev python libbz2-dev lcov
 
 git submodule update --init --recursive
 git clone https://github.com/xrootd/xrootd
