@@ -31,6 +31,9 @@ ubuntu-asan:
   image: ubuntu:16.10
   script:
     - ./utils/ubuntu-asan.sh
+  artifacts:
+    paths:
+    - build/coverage-report
 
 cc7-test:
   stage: test
