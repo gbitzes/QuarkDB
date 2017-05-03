@@ -1,5 +1,5 @@
-//----------------------------------------------------------------------
-// File: BufferedWriter.hh
+// ----------------------------------------------------------------------
+// File: RaftBlockedWrites.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,35 +21,36 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_BUFFERED_WRITER_H__
-#define __QUARKDB_BUFFERED_WRITER_H__
+#include "RaftBlockedWrites.hh"
+#include "../Connection.hh"
+using namespace quarkdb;
 
-#include <mutex>
+std::shared_ptr<PendingQueue> RaftBlockedWrites::popIndex(LogIndex index) {
+  std::lock_guard<std::mutex> lock(mtx);
+  auto it = tracker.find(index);
 
-namespace quarkdb {
-using LinkStatus = int;
-class Link;
+  if(it == tracker.end()) return {nullptr};
 
-#define OUTPUT_BUFFER_SIZE (16*1024)
+  std::shared_ptr<PendingQueue> ret = it->second;
+  tracker.erase(it);
 
-class BufferedWriter {
-public:
-  BufferedWriter(Link *link);
-  ~BufferedWriter();
-
-  void setActive(bool newval);
-  void flush();
-  LinkStatus send(std::string &&raw);
-private:
-  Link *link;
-
-  bool active = true;
-  char buffer[OUTPUT_BUFFER_SIZE];
-  int bufferedBytes = 0;
-
-  std::recursive_mutex mtx;
-};
-
+  return ret;
 }
 
-#endif
+void RaftBlockedWrites::insert(LogIndex index, const std::shared_ptr<PendingQueue> &item) {
+  std::lock_guard<std::mutex> lock(mtx);
+  tracker[index] = item;
+}
+
+void RaftBlockedWrites::flush(const std::string &msg) {
+  std::lock_guard<std::mutex> lock(mtx);
+  for(auto it = tracker.begin(); it != tracker.end(); it++) {
+    it->second->flushPending(msg);
+  }
+  tracker.clear();
+}
+
+size_t RaftBlockedWrites::size() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return tracker.size();
+}

@@ -144,3 +144,34 @@ TEST_F(Replication, connection_shuts_down_before_all_replies_arrive) {
   ASSERT_TRUE(journal()->getCommitIndex() > NENTRIES);
   // if we haven't crashed or gotten hung by now, we're grand
 }
+
+// blindly generate load, ignore any errors
+static void generateLoad(qclient::QClient *qcl, std::string prefix, std::atomic<bool> &stopFlag) {
+  int counter = 0;
+  while(!stopFlag) {
+    qcl->exec("set", SSTR(prefix <<  "-key-" << counter), SSTR(prefix << "value-" << counter));
+    counter++;
+  }
+  qcl->exec("ping").get();
+  qdb_info("Stopping load generation towards '" << prefix << "'");
+}
+
+TEST_F(Replication, load_during_election) {
+  // let's be extra evil and start generating load even before the nodes start up
+  std::atomic<bool> stopFlag {false};
+  std::thread t1(generateLoad, tunnel(0), "node0", std::ref(stopFlag));
+  std::thread t2(generateLoad, tunnel(1), "node1", std::ref(stopFlag));
+  std::thread t3(generateLoad, tunnel(2), "node2", std::ref(stopFlag));
+
+  // start the cluster
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  // terminate once we reach a decent number of writes
+  int leaderID = getLeaderID();
+  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() > 20000);
+  ASSERT_TRUE(leaderID == getLeaderID());
+
+  stopFlag = true;
+  t1.join(); t2.join(); t3.join();
+}

@@ -1,5 +1,5 @@
-//----------------------------------------------------------------------
-// File: BufferedWriter.hh
+// ----------------------------------------------------------------------
+// File: RaftBlockedWrites.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,33 +21,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_BUFFERED_WRITER_H__
-#define __QUARKDB_BUFFERED_WRITER_H__
+#ifndef __QUARKDB_RAFT_BLOCKED_WRITES_H__
+#define __QUARKDB_RAFT_BLOCKED_WRITES_H__
 
 #include <mutex>
+#include <memory>
+#include <map>
+#include "RaftCommon.hh"
 
 namespace quarkdb {
-using LinkStatus = int;
-class Link;
 
-#define OUTPUT_BUFFER_SIZE (16*1024)
-
-class BufferedWriter {
+class PendingQueue;
+class RaftBlockedWrites {
 public:
-  BufferedWriter(Link *link);
-  ~BufferedWriter();
+  RaftBlockedWrites() {}
+  ~RaftBlockedWrites() {}
 
-  void setActive(bool newval);
-  void flush();
-  LinkStatus send(std::string &&raw);
+  void flush(const std::string &msg);
+  void insert(LogIndex index, const std::shared_ptr<PendingQueue> &item);
+  std::shared_ptr<PendingQueue> popIndex(LogIndex index);
+  size_t size();
 private:
-  Link *link;
-
-  bool active = true;
-  char buffer[OUTPUT_BUFFER_SIZE];
-  int bufferedBytes = 0;
-
-  std::recursive_mutex mtx;
+  std::mutex mtx;
+  std::map<LogIndex, std::shared_ptr<PendingQueue>> tracker;
 };
 
 }

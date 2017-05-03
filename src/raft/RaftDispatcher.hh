@@ -29,6 +29,7 @@
 #include "RaftState.hh"
 #include "RaftUtils.hh"
 #include "RaftTimeouts.hh"
+#include "RaftBlockedWrites.hh"
 #include <thread>
 
 namespace quarkdb {
@@ -66,10 +67,10 @@ private:
   RaftState &state;
 
   //----------------------------------------------------------------------------
-  // The request queues live inside the connections, but we need to know *which*
-  // connection is being blocked by *which* journal entry.
+  // We need to keep track which request queue (might be attached to a
+  // Connection) is being blocked by which journal entry.
   //----------------------------------------------------------------------------
-  std::map<LogIndex, std::shared_ptr<PendingQueue>> blockedWrites;
+  RaftBlockedWrites blockedWrites;
 
   //----------------------------------------------------------------------------
   // Misc

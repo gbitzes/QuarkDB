@@ -188,15 +188,12 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   }
 
   conn->addPendingRequest(&redisDispatcher, std::move(req), index);
-  blockedWrites[index] = conn->getQueue();
+  blockedWrites.insert(index, conn->getQueue());
   return 1;
 }
 
 void RaftDispatcher::flushQueues(const std::string &msg) {
-  for(auto it = blockedWrites.begin(); it != blockedWrites.end(); it++) {
-    it->second->flushPending(msg);
-  }
-  blockedWrites.clear();
+  blockedWrites.flush(msg);
 }
 
 LinkStatus RaftDispatcher::applyCommits(LogIndex commitIndex) {
@@ -210,13 +207,12 @@ LinkStatus RaftDispatcher::applyCommits(LogIndex commitIndex) {
 }
 
 LinkStatus RaftDispatcher::applyOneCommit(LogIndex index) {
+  // Determine if this particular index entry is associated to a request queue.
+  std::shared_ptr<PendingQueue> blockedQueue = blockedWrites.popIndex(index);
 
-  auto it = blockedWrites.find(index);
-  if(it == blockedWrites.end()) {
+  if(blockedQueue.get() == nullptr) {
     // this journal entry is not related to any connection,
     // let's just apply it manually from the journal
-    // This happens in followers.
-
     RaftEntry entry;
 
     if(!journal.fetch(index, entry).ok()) {
@@ -228,12 +224,11 @@ LinkStatus RaftDispatcher::applyOneCommit(LogIndex index) {
     return 1;
   }
 
-  std::shared_ptr<PendingQueue> queue = it->second;
-  LogIndex newBlockingIndex = queue->dispatchPending(&redisDispatcher, index);
+  LogIndex newBlockingIndex = blockedQueue->dispatchPending(&redisDispatcher, index);
   if(newBlockingIndex > 0) {
-    blockedWrites[newBlockingIndex] = queue;
+    if(newBlockingIndex <= index) qdb_throw("blocking index of queue went backwards: " << index << " => " << newBlockingIndex);
+    blockedWrites.insert(newBlockingIndex, blockedQueue);
   }
-  blockedWrites.erase(it);
   return 1;
 }
 

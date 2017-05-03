@@ -28,6 +28,7 @@ add_library(XrdRedis SHARED
   Poller.cc                  Poller.hh
   Connection.cc              Connection.hh
   QuarkDBNode.cc             QuarkDBNode.hh
+  raft/RaftBlockedWrites.cc  raft/RaftBlockedWrites.hh
   raft/RaftJournal.cc        raft/RaftJournal.hh
   raft/RaftState.cc          raft/RaftState.hh
   raft/RaftTalker.cc         raft/RaftTalker.hh

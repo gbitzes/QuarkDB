@@ -26,6 +26,7 @@
 #include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
+#include "raft/RaftBlockedWrites.hh"
 #include "Poller.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
@@ -851,4 +852,35 @@ TEST(RaftMembers, no_observers) {
   ASSERT_EQ(members.nodes, members2.nodes);
   ASSERT_EQ(members.observers, members2.observers);
   ASSERT_EQ(members.toString(), members2.toString());
+}
+
+TEST(Raft_BlockedWrites, basic_sanity) {
+  RaftBlockedWrites blockedWrites;
+
+  std::shared_ptr<PendingQueue> q1 { new PendingQueue(nullptr) };
+  std::shared_ptr<PendingQueue> q2 { new PendingQueue(nullptr) };
+  std::shared_ptr<PendingQueue> q3 { new PendingQueue(nullptr) };
+  std::shared_ptr<PendingQueue> q4 { new PendingQueue(nullptr) };
+
+  blockedWrites.insert(1, q1);
+  blockedWrites.insert(2, q2);
+  blockedWrites.insert(3, q3);
+  blockedWrites.insert(4, q4);
+
+  ASSERT_EQ(blockedWrites.size(), 4u);
+  ASSERT_EQ(blockedWrites.popIndex(6), nullptr);
+  ASSERT_EQ(blockedWrites.popIndex(1), q1);
+  ASSERT_EQ(blockedWrites.popIndex(1), nullptr);
+  ASSERT_EQ(blockedWrites.size(), 3u);
+
+  blockedWrites.insert(5, q1);
+  ASSERT_EQ(blockedWrites.size(), 4u);
+
+  ASSERT_EQ(blockedWrites.popIndex(2), q2);
+  ASSERT_EQ(blockedWrites.popIndex(3), q3);
+  ASSERT_EQ(blockedWrites.size(), 2u);
+
+  ASSERT_EQ(blockedWrites.popIndex(5), q1);
+  ASSERT_EQ(blockedWrites.popIndex(4), q4);
+  ASSERT_EQ(blockedWrites.size(), 0u);
 }
