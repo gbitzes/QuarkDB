@@ -35,51 +35,34 @@
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
-// Keeps track of connection-specific state.
+// Keeps track of a list of pending requests, which can optionally be related
+// to a Connection.
 //
-// The proper OOP solution would be to separate the raft-specific parts into
-// their own class which inherits from this one, but since we only have two
-// specializations (raft, and non-raft) let's not make things more complicated
-// than they need to be. The raft parts are simply not used in the single-node
-// case.
+// Why "optionally"? There's no guarantee that by the time a pending request
+// is ready to be serviced, the connection will still be alive! The client
+// might have disconnected in the meantime, even after issuing writes that
+// have already been appended to the raft journal.
 //------------------------------------------------------------------------------
 
-class Dispatcher;
+class Connection;
 class RedisDispatcher;
-class Connection {
+class PendingQueue {
 public:
-  Connection(Link *link);
-  ~Connection();
+  PendingQueue(Connection *c) : conn(c) {}
+  ~PendingQueue() {}
 
-  LinkStatus raw(std::string &&raw);
-  LinkStatus err(const std::string &msg);
-  LinkStatus errArgs(const std::string &cmd);
-  LinkStatus pong();
-  LinkStatus string(const std::string &str);
-  LinkStatus fromStatus(const rocksdb::Status &status);
-  LinkStatus status(const std::string &msg);
-  LinkStatus ok();
-  LinkStatus null();
-  LinkStatus integer(int64_t number);
-  LinkStatus vector(const std::vector<std::string> &vec);
-  LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
+  void detachConnection() {
+    std::lock_guard<std::mutex> lock(mtx);
+    conn = nullptr;
+  }
 
   LinkStatus flushPending(const std::string &msg);
-  LinkStatus appendReq(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
+  LinkStatus appendResponse(std::string &&raw);
+  LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
-
-  bool raftAuthorization = false;
-  LinkStatus processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop);
-  void setResponseBuffering(bool value);
 private:
-  BufferedWriter writer;
-  LinkStatus append(std::string &&raw);
-
-  Link *link = nullptr;
+  Connection *conn;
   std::mutex mtx;
-
-  RedisRequest currentRequest;
-  RedisParser parser;
 
   //----------------------------------------------------------------------------
   // Information about a pending request, which can be either a read or a write.
@@ -102,12 +85,72 @@ private:
 
   struct PendingRequest {
     RedisRequest req;
-    std::string rawResp; // if not empty, we're just storing a raw, per-formatted response
+    std::string rawResp; // if not empty, we're just storing a raw, pre-formatted response
     LogIndex index = -1; // the corresponding entry in the raft journal - only relevant for write requests
   };
 
   LogIndex lastIndex = -1;
   std::queue<PendingRequest> pending;
+};
+
+//------------------------------------------------------------------------------
+// Keeps track of connection-specific state.
+//------------------------------------------------------------------------------
+class Dispatcher;
+class Connection {
+public:
+  Connection(Link *link);
+  ~Connection();
+
+  LinkStatus raw(std::string &&raw);
+  LinkStatus err(const std::string &msg);
+  LinkStatus errArgs(const std::string &cmd);
+  LinkStatus pong();
+  LinkStatus string(const std::string &str);
+  LinkStatus fromStatus(const rocksdb::Status &status);
+  LinkStatus status(const std::string &msg);
+  LinkStatus ok();
+  LinkStatus null();
+  LinkStatus integer(int64_t number);
+  LinkStatus vector(const std::vector<std::string> &vec);
+  LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
+
+  bool raftAuthorization = false;
+  LinkStatus processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop);
+  void setResponseBuffering(bool value);
+  void flush();
+
+  LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1) {
+    return pendingQueue->addPendingRequest(dispatcher, std::move(req), index);
+  }
+
+  LinkStatus flushPending(const std::string &msg) {
+    return pendingQueue->flushPending(msg);
+  }
+
+  LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
+    return pendingQueue->dispatchPending(dispatcher, commitIndex);
+  }
+
+  std::shared_ptr<PendingQueue> getQueue() {
+    return pendingQueue;
+  }
+
+  class FlushGuard {
+  public:
+    FlushGuard(Connection *c) : conn(c) { }
+    ~FlushGuard() { if(conn) { conn->flush(); } }
+  private:
+    Connection *conn;
+    BufferedWriter *writer;
+  };
+private:
+  BufferedWriter writer;
+
+  RedisRequest currentRequest;
+  RedisParser parser;
+  std::shared_ptr<PendingQueue> pendingQueue;
+  friend class PendingQueue;
 };
 
 

@@ -113,6 +113,7 @@ public:
 
   void spinup();
   void spindown();
+  void killTunnel();
 private:
   RaftServer myselfSrv;
   RaftClusterID clusterID;
@@ -141,6 +142,8 @@ public:
   RaftClock *raftclock(int id = 0);
   RaftLease *lease(int id = 0);
   RaftCommitTracker *commitTracker(int id = 0);
+
+  void killTunnel(int id = 0);
 
   // manage node state
   void spinup(int id);

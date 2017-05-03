@@ -120,3 +120,27 @@ TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes)
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   ASSERT_EQ(state(0)->getSnapshot().status, RaftStatus::LEADER);
 }
+
+TEST_F(Replication, connection_shuts_down_before_all_replies_arrive) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  const int64_t NENTRIES = 10000;
+  for(size_t repeat = 0; repeat < 3; repeat++) {
+    // push lots of updates
+    for(size_t i = 0; i < NENTRIES; i++) {
+      tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i));
+    }
+
+    killTunnel(leaderID);
+  }
+
+  for(size_t i = 0; i < NENTRIES; i++) {
+    tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i));
+  }
+  tunnel(leaderID)->exec("ping").get();
+  ASSERT_TRUE(leaderID == getLeaderID());
+  ASSERT_TRUE(journal()->getCommitIndex() > NENTRIES);
+  // if we haven't crashed or gotten hung by now, we're grand
+}

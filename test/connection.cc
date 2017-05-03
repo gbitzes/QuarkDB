@@ -39,7 +39,7 @@ TEST_F(tConnection, basic_sanity) {
   Connection conn(&link);
   conn.setResponseBuffering(false);
 
-  conn.appendReq(&dispatcher, {"get", "abc"});
+  conn.addPendingRequest(&dispatcher, {"get", "abc"});
   int len = link.Recv(buffer, BUFFER_SIZE, 0);
   ASSERT_EQ(std::string(buffer, len), "$-1\r\n");
 
@@ -47,24 +47,24 @@ TEST_F(tConnection, basic_sanity) {
   len = link.Recv(buffer, BUFFER_SIZE, 0);
   ASSERT_EQ(std::string(buffer, len), "-ERR fatality\r\n");
 
-  conn.appendReq(&dispatcher, {"set", "abc", "qwerty"}, 1);
-  ASSERT_THROW(conn.appendReq(&dispatcher, {"set", "abc", "qwerty"}, 1), FatalException);
+  conn.addPendingRequest(&dispatcher, {"set", "abc", "qwerty"}, 1);
+  ASSERT_THROW(conn.addPendingRequest(&dispatcher, {"set", "abc", "qwerty"}, 1), FatalException);
 
   // verify the request has NOT been dispatched yet
   std::string tmp;
   ASSERT_FALSE(stateMachine()->get("abc", tmp).ok());
 
-  conn.appendReq(&dispatcher, {"get", "abc"});
+  conn.addPendingRequest(&dispatcher, {"get", "abc"});
   ASSERT_EQ(link.Recv(buffer, BUFFER_SIZE, 0), 0); // "set" is blocking any replies
-  conn.appendReq(&dispatcher, {"ping"});
-  conn.appendReq(&dispatcher, {"set", "abc", "12345"}, 2);
+  conn.addPendingRequest(&dispatcher, {"ping"});
+  conn.addPendingRequest(&dispatcher, {"set", "abc", "12345"}, 2);
 
   ASSERT_EQ(conn.dispatchPending(&dispatcher, 1), 2);
   len = link.Recv(buffer, BUFFER_SIZE, 0);
   ASSERT_EQ(std::string(buffer, len), "+OK\r\n$6\r\nqwerty\r\n+PONG\r\n");
 
   conn.err("ERR fatality^2");
-  conn.appendReq(&dispatcher, {"get", "abc"});
+  conn.addPendingRequest(&dispatcher, {"get", "abc"});
   ASSERT_EQ(link.Recv(buffer, BUFFER_SIZE, 0), 0); // "set" is blocking any replies
 
   ASSERT_TRUE(stateMachine()->get("abc", tmp).ok());
@@ -78,5 +78,5 @@ TEST_F(tConnection, basic_sanity) {
   len = link.Recv(buffer, BUFFER_SIZE, 0);
   ASSERT_EQ(std::string(buffer, len), "+OK\r\n-ERR fatality^2\r\n$5\r\n12345\r\n");
 
-  ASSERT_THROW(conn.appendReq(&dispatcher, {"set", "asdf", "qwerty"}, 1), FatalException);
+  ASSERT_THROW(conn.addPendingRequest(&dispatcher, {"set", "asdf", "qwerty"}, 1), FatalException);
 }

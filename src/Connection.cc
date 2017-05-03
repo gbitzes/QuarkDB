@@ -26,75 +26,21 @@
 #include "Formatter.hh"
 using namespace quarkdb;
 
-Connection::Connection(Link *l)
-: writer(l), link(l), parser(l) {
-}
-
-Connection::~Connection() {
-  flushPending("ERR connection shutting down");
-}
-
-LinkStatus Connection::raw(std::string &&raw) {
-  return this->append(std::move(raw));
-}
-
-LinkStatus Connection::err(const std::string &msg) {
-  return this->append(Formatter::err(msg));
-}
-
-LinkStatus Connection::errArgs(const std::string &cmd) {
-  return this->append(Formatter::errArgs(cmd));
-}
-
-LinkStatus Connection::pong() {
-  return this->append(Formatter::pong());
-}
-
-LinkStatus Connection::string(const std::string &str) {
-  return this->append(Formatter::string(str));
-}
-
-LinkStatus Connection::fromStatus(const rocksdb::Status &status) {
-  return this->append(Formatter::fromStatus(status));
-}
-
-LinkStatus Connection::status(const std::string &msg) {
-  return this->append(Formatter::status(msg));
-}
-
-LinkStatus Connection::ok() {
-  return this->append(Formatter::ok());
-}
-
-LinkStatus Connection::null() {
-  return this->append(Formatter::null());
-}
-
-LinkStatus Connection::integer(int64_t number) {
-  return this->append(Formatter::integer(number));
-}
-
-LinkStatus Connection::vector(const std::vector<std::string> &vec) {
-  return this->append(Formatter::vector(vec));
-}
-
-LinkStatus Connection::scan(const std::string &marker, const std::vector<std::string> &vec) {
-  return this->append(Formatter::scan(marker, vec));
-}
-
-LinkStatus Connection::flushPending(const std::string &msg) {
+LinkStatus PendingQueue::flushPending(const std::string &msg) {
   std::lock_guard<std::mutex> lock(mtx);
   while(!pending.empty()) {
-    writer.send(Formatter::err(msg));
+    if(conn) conn->writer.send(Formatter::err(msg));
     pending.pop();
   }
-  writer.flush();
+  if(conn) conn->writer.flush();
   return 1;
 }
 
-LinkStatus Connection::append(std::string &&raw) {
+LinkStatus PendingQueue::appendResponse(std::string &&raw) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(pending.empty()) return writer.send(std::move(raw));
+  if(!conn) qdb_throw("attempted to append a raw response to a pendingQueue while being detached from a Connection. Contents: '" << raw << "'");
+
+  if(pending.empty()) return conn->writer.send(std::move(raw));
 
   // we're being blocked by a write, must queue
   PendingRequest req;
@@ -103,9 +49,11 @@ LinkStatus Connection::append(std::string &&raw) {
   return 1;
 }
 
-LinkStatus Connection::appendReq(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index) {
+LinkStatus PendingQueue::addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(pending.empty() && index < 0) return writer.send(dispatcher->dispatch(req, 0));
+  if(!conn) qdb_throw("attempted to append a pending request to a pendingQueue while being detached from a Connection, command " << req[0] << ", log index: " << index);
+
+  if(pending.empty() && index < 0) return conn->writer.send(dispatcher->dispatch(req, 0));
 
   if(index > 0) {
     if(index <= lastIndex) {
@@ -122,8 +70,92 @@ LinkStatus Connection::appendReq(RedisDispatcher *dispatcher, RedisRequest &&req
   return 1;
 }
 
+LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
+  std::lock_guard<std::mutex> lock(mtx);
+  Connection::FlushGuard guard(conn);
+
+  while(!pending.empty()) {
+    PendingRequest &req = pending.front();
+    if(commitIndex < req.index) {
+      // the rest of the items are blocked, return new blocking index
+      return req.index;
+    }
+
+    if(!req.rawResp.empty()) {
+      if(conn) conn->writer.send(std::move(req.rawResp));
+    }
+    else {
+      // we must dispatch the request even if the connection has died, since
+      // writes increase lastApplied of the state machine
+      std::string response = dispatcher->dispatch(req.req, commitIndex);
+      if(conn) conn->writer.send(std::move(response));
+    }
+
+    pending.pop();
+  }
+
+  // no more pending requests
+  return -1;
+}
+
+Connection::Connection(Link *l)
+: writer(l), parser(l), pendingQueue(new PendingQueue(this)) {
+}
+
+Connection::~Connection() {
+  pendingQueue->detachConnection();
+}
+
+LinkStatus Connection::raw(std::string &&raw) {
+  return pendingQueue->appendResponse(std::move(raw));
+}
+
+LinkStatus Connection::err(const std::string &msg) {
+  return pendingQueue->appendResponse(Formatter::err(msg));
+}
+
+LinkStatus Connection::errArgs(const std::string &cmd) {
+  return pendingQueue->appendResponse(Formatter::errArgs(cmd));
+}
+
+LinkStatus Connection::pong() {
+  return pendingQueue->appendResponse(Formatter::pong());
+}
+
+LinkStatus Connection::string(const std::string &str) {
+  return pendingQueue->appendResponse(Formatter::string(str));
+}
+
+LinkStatus Connection::fromStatus(const rocksdb::Status &status) {
+  return pendingQueue->appendResponse(Formatter::fromStatus(status));
+}
+
+LinkStatus Connection::status(const std::string &msg) {
+  return pendingQueue->appendResponse(Formatter::status(msg));
+}
+
+LinkStatus Connection::ok() {
+  return pendingQueue->appendResponse(Formatter::ok());
+}
+
+LinkStatus Connection::null() {
+  return pendingQueue->appendResponse(Formatter::null());
+}
+
+LinkStatus Connection::integer(int64_t number) {
+  return pendingQueue->appendResponse(Formatter::integer(number));
+}
+
+LinkStatus Connection::vector(const std::vector<std::string> &vec) {
+  return pendingQueue->appendResponse(Formatter::vector(vec));
+}
+
+LinkStatus Connection::scan(const std::string &marker, const std::vector<std::string> &vec) {
+  return pendingQueue->appendResponse(Formatter::scan(marker, vec));
+}
+
 LinkStatus Connection::processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop) {
-  BufferedWriter::FlushGuard guard(&writer);
+  FlushGuard guard(this);
   while(!stop) {
     LinkStatus status = parser.fetch(currentRequest);
     if(status == 0) return 1; // slow link
@@ -137,27 +169,6 @@ void Connection::setResponseBuffering(bool value) {
   writer.setActive(value);
 }
 
-LogIndex Connection::dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
-  std::lock_guard<std::mutex> lock(mtx);
-  BufferedWriter::FlushGuard guard(&writer);
-
-  while(!pending.empty()) {
-    PendingRequest &req = pending.front();
-    if(commitIndex < req.index) {
-      // the rest of the items are blocked, return new blocking index
-      return req.index;
-    }
-
-    if(!req.rawResp.empty()) {
-      writer.send(std::move(req.rawResp));
-    }
-    else {
-      writer.send(dispatcher->dispatch(req.req, commitIndex));
-    }
-
-    pending.pop();
-  }
-
-  // no more pending requests
-  return -1;
+void Connection::flush() {
+  writer.flush();
 }

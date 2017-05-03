@@ -166,6 +166,10 @@ RaftCommitTracker* TestCluster::commitTracker(int id) {
   return node(id)->group()->commitTracker();
 }
 
+void TestCluster::killTunnel(int id) {
+  return node(id)->killTunnel();
+}
+
 TestNode* TestCluster::node(int id, const RaftServer &srv) {
   TestNode *ret = testnodes[id];
   if(ret == nullptr) {
@@ -252,6 +256,13 @@ qclient::QClient* TestNode::tunnel() {
     tunnelptr = new qclient::QClient(myself().hostname, myself().port);
   }
   return tunnelptr;
+}
+
+void TestNode::killTunnel() {
+  if(tunnelptr != nullptr) {
+    delete tunnelptr;
+    tunnelptr = nullptr;
+  }
 }
 
 void TestNode::spinup() {

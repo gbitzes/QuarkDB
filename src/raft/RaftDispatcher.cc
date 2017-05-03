@@ -160,7 +160,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type) {
   // control command, service even if unavailable
   if(type == CommandType::CONTROL) {
-    return conn->appendReq(&redisDispatcher, std::move(req));
+    return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
 
   // if not leader, redirect
@@ -174,7 +174,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
 
   // read request, easy case
   if(type == CommandType::READ || type == CommandType::CONTROL) {
-    return conn->appendReq(&redisDispatcher, std::move(req));
+    return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
 
   // write request, must append to raft log
@@ -187,8 +187,8 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
     return conn->err("ERR unknown error");
   }
 
-  conn->appendReq(&redisDispatcher, std::move(req), index);
-  blockedWrites[index] = conn;
+  conn->addPendingRequest(&redisDispatcher, std::move(req), index);
+  blockedWrites[index] = conn->getQueue();
   return 1;
 }
 
@@ -228,11 +228,10 @@ LinkStatus RaftDispatcher::applyOneCommit(LogIndex index) {
     return 1;
   }
 
-  Connection *conn = it->second;
-
-  LogIndex newBlockingIndex = conn->dispatchPending(&redisDispatcher, index);
+  std::shared_ptr<PendingQueue> queue = it->second;
+  LogIndex newBlockingIndex = queue->dispatchPending(&redisDispatcher, index);
   if(newBlockingIndex > 0) {
-    blockedWrites[newBlockingIndex] = conn;
+    blockedWrites[newBlockingIndex] = queue;
   }
   blockedWrites.erase(it);
   return 1;

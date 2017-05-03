@@ -69,7 +69,7 @@ private:
   // The request queues live inside the connections, but we need to know *which*
   // connection is being blocked by *which* journal entry.
   //----------------------------------------------------------------------------
-  std::map<LogIndex, Connection*> blockedWrites;
+  std::map<LogIndex, std::shared_ptr<PendingQueue>> blockedWrites;
 
   //----------------------------------------------------------------------------
   // Misc
