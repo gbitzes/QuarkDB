@@ -1,6 +1,7 @@
 stages:
 - build
 - test
+- publish
 
 cc7:
   stage: build
@@ -54,3 +55,15 @@ fedora24-test:
     - dnf -y install fedora24/RPMS/*
     - quarkdb-tests
     - quarkdb-stress-tests
+
+publish:
+  stage: publish
+  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  dependencies:
+  - cc7
+  - fedora24
+  script:
+   - yum install --nogpg -y sssd-client sudo createrepo
+   - for platform in cc7 fedora24; do sudo -u stci -H packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
+  tags:
+    - docker-cc7
