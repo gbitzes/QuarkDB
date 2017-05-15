@@ -50,6 +50,7 @@ def main():
     branch = sh("git rev-parse --symbolic-full-name --abbrev-ref HEAD").strip()
     latest_tag = sh("git describe --abbrev=0 --tags").strip()
     versions = latest_tag.split(".")
+    if versions[0].startswith('v'): versions[0] = versions[0][1:]
 
     release = git_describe.split(".")[2]
     dash = release.find("-")
