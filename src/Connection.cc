@@ -73,6 +73,7 @@ LinkStatus PendingQueue::addPendingRequest(RedisDispatcher *dispatcher, RedisReq
 LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
   std::lock_guard<std::mutex> lock(mtx);
   Connection::FlushGuard guard(conn);
+  bool found = false;
 
   while(!pending.empty()) {
     PendingRequest &req = pending.front();
@@ -85,14 +86,22 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
       if(conn) conn->writer.send(std::move(req.rawResp));
     }
     else {
+      if(req.index > 0) {
+        if(found) qdb_throw("queue corruption: " << this << " found entry with positive index twice (" << req.index << ")");
+        found = true;
+        if(req.index != commitIndex) qdb_throw("queue corruption: " << this << " expected entry with index " << commitIndex << ", found " << req.index);
+      }
+
       // we must dispatch the request even if the connection has died, since
       // writes increase lastApplied of the state machine
-      std::string response = dispatcher->dispatch(req.req, commitIndex);
+      std::string response = dispatcher->dispatch(req.req, req.index);
       if(conn) conn->writer.send(std::move(response));
     }
 
     pending.pop();
   }
+
+  if(!found) qdb_throw("entry with index " << commitIndex << " not found");
 
   // no more pending requests
   return -1;

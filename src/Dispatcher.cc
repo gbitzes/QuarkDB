@@ -41,7 +41,13 @@ std::string RedisDispatcher::errArgs(RedisRequest &request, LogIndex commit) {
 
 std::string RedisDispatcher::dispatch(RedisRequest &req, LogIndex commit) {
   auto it = redis_cmd_map.find(req[0]);
-  if(it != redis_cmd_map.end()) return dispatch(req, it->second.first, commit);
+  if(it != redis_cmd_map.end()) {
+    if(commit > 0 && it->second.second != CommandType::WRITE) {
+      qdb_throw("attempted to dispatch non-write command '" << req[0] << "' with a positive commit index: " << commit);
+    }
+
+    return dispatch(req, it->second.first, commit);
+  }
 
   if(startswith(req[0], "JOURNAL_")) {
     store.noop(commit);
