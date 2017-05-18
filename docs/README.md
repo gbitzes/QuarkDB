@@ -12,7 +12,7 @@ High availability is achieved through multiple replicated nodes and the
 # Installation
 
 The easiest way is to install from an RPM - check out our
-[CI repo](https://dss-ci-repo.web.cern.ch/dss-ci-repo/quarkdb/).
+[CI repo](https://storage-ci.web.cern.ch/storage-ci/quarkdb/).
 
 Minimum supported platform is CentOS 7, since rocksdb requires C++11 and a recent
 compiler.
