@@ -140,7 +140,7 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const std::atomic<int64_t>
 
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
-  if(it == redis_cmd_map.end()) return conn->err(SSTR("ERR unknown command " << quotes(req[0])));
+  if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
 
   RedisCommand cmd = it->second.first;
   switch(cmd) {
@@ -169,7 +169,7 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
         return conn->ok();
       }
 
-      return conn->err(SSTR("ERR unknown argument '" << req[1] << "'"));
+      return conn->err(SSTR("unknown argument '" << req[1] << "'"));
     }
     case RedisCommand::QUARKDB_INFO: {
       return conn->vector(this->info().toVector());
@@ -185,12 +185,12 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::QUARKDB_ATTACH: {
       std::string err;
       if(attach(err)) return conn->ok();
-      return conn->err(SSTR("ERR " << err));
+      return conn->err(err);
     }
     case RedisCommand::QUARKDB_START_RESILVERING: {
       if(resilvering) {
         cancelResilvering();
-        return conn->err("ERR resilvering was already in progress. Calling it off");
+        return conn->err("resilvering was already in progress. Calling it off");
       }
 
       if(attached) {
@@ -198,7 +198,7 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
       }
 
       if(mkdir(SSTR(configuration.getDatabase() << "/resilvering-arena").c_str(), 0755) != 0) {
-        return conn->err("ERR could not create resilvering arena");
+        return conn->err("could not create resilvering arena");
       }
 
       qdb_event("Entering resilvering mode. Re-attaching during resilvering is forbidden.");

@@ -53,7 +53,7 @@ std::string RedisDispatcher::dispatch(RedisRequest &req, LogIndex commit) {
     store.noop(commit);
   }
 
-  return Formatter::err(SSTR("ERR unknown command " << quotes(req[0])));
+  return Formatter::err(SSTR("unknown command " << quotes(req[0])));
 }
 
 std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, LogIndex commit) {
@@ -207,13 +207,13 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
         cursor = std::string(request[2].begin() + 5, request[2].end());
       }
       else {
-        return Formatter::err("ERR invalid cursor");
+        return Formatter::err("invalid cursor");
       }
 
       if(request.size() == 5) {
-        if(!caseInsensitiveEquals(request[3], "count")) return Formatter::err("ERR syntax error");
-        if(startswith(request[4], "-") || request[4] == "0") return Formatter::err("ERR syntax error");
-        if(!my_strtoll(request[4], count)) return Formatter::err("ERR value is not an integer or out of range");
+        if(!caseInsensitiveEquals(request[3], "count")) return Formatter::err("syntax error");
+        if(startswith(request[4], "-") || request[4] == "0") return Formatter::err("syntax error");
+        if(!my_strtoll(request[4], count)) return Formatter::err("value is not an integer or out of range");
       }
 
       std::string newcursor;
@@ -262,7 +262,7 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
     }
     case RedisCommand::SSCAN: {
       if(request.size() != 3) return errArgs(request, commit);
-      if(request[2] != "0") return Formatter::err("ERR invalid cursor");
+      if(request[2] != "0") return Formatter::err("invalid cursor");
       std::vector<std::string> members;
       rocksdb::Status st = store.smembers(request[1], members);
       if(!st.ok()) return Formatter::fromStatus(st);
@@ -306,7 +306,7 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
       return Formatter::integer(len);
     }
     default: {
-      std::string msg = SSTR("ERR internal dispatching error for " << quotes(request[0]) << " - raft not enabled?");
+      std::string msg = SSTR("internal dispatching error for " << quotes(request[0]) << " - raft not enabled?");
       qdb_critical(msg);
       return Formatter::err(msg);
     }

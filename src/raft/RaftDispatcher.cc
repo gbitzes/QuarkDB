@@ -35,7 +35,7 @@ RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &s
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   auto it = redis_cmd_map.find(req[0]);
-  if(it == redis_cmd_map.end()) return conn->err(SSTR("ERR unknown command " << quotes(req[0])));
+  if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
 
   RedisCommand cmd = it->second.first;
   switch(cmd) {
@@ -48,7 +48,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       if(req.size() != 2) return conn->errArgs(req[0]);
 
       LogIndex index;
-      if(!my_strtoll(req[1], index)) return conn->err(SSTR("ERR could not parse " << req[1]));
+      if(!my_strtoll(req[1], index)) return conn->err(SSTR("could not parse " << req[1]));
 
       RaftEntry entry;
       std::vector<std::string> ret;
@@ -63,20 +63,20 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       return conn->vector(ret);
     }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
-      if(!conn->raftAuthorization) return conn->err("ERR not authorized to issue raft commands");
+      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftAppendEntriesRequest dest;
       if(!RaftParser::appendEntries(std::move(req), dest)) {
-        return conn->err("ERR malformed request");
+        return conn->err("malformed request");
       }
 
       RaftAppendEntriesResponse resp = appendEntries(std::move(dest));
       return conn->vector(resp.toVector());
     }
     case RedisCommand::RAFT_REQUEST_VOTE: {
-      if(!conn->raftAuthorization) return conn->err("ERR not authorized to issue raft commands");
+      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftVoteRequest votereq;
       if(!RaftParser::voteRequest(req, votereq)) {
-        return conn->err("ERR malformed request");
+        return conn->err("malformed request");
       }
 
       RaftVoteResponse resp = requestVote(votereq);
@@ -87,7 +87,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       if(req.size() != 3) return conn->errArgs(req[0]);
       if(req[2] != journal.getClusterID()) {
         qdb_critical("received handshake with wrong cluster id: " << req[2] << " (mine is " << journal.getClusterID() << ")");
-        return conn->err("ERR wrong cluster id");
+        return conn->err("wrong cluster id");
       }
 
       conn->raftAuthorization = true;
@@ -107,11 +107,11 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       RaftStateSnapshot snapshot = state.getSnapshot();
 
       if(snapshot.leader.empty()) {
-        return conn->err("ERR I have no leader, cannot start a coup");
+        return conn->err("I have no leader, cannot start a coup");
       }
 
       if(snapshot.leader == state.getMyself()) {
-        return conn->err("ERR I am the leader! I can't revolt against myself, you know.");
+        return conn->err("I am the leader! I can't revolt against myself, you know.");
       }
 
       qdb_event("Received request to attempt a coup d'etat against the current leader.");
@@ -125,12 +125,12 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
       RaftServer srv;
       if(!parseServer(req[1], srv)) {
-        return conn->err(SSTR("ERR cannot parse server: " << req[1]));
+        return conn->err(SSTR("cannot parse server: " << req[1]));
       }
 
       RaftStateSnapshot snapshot = state.getSnapshot();
-      if(snapshot.status != RaftStatus::LEADER) return conn->err("ERR not a leader");
-      if(srv == state.getMyself()) conn->err("ERR cannot perform membership changes on current leader");
+      if(snapshot.status != RaftStatus::LEADER) return conn->err("not a leader");
+      if(srv == state.getMyself()) conn->err("cannot perform membership changes on current leader");
 
       std::string err;
       bool rc;
@@ -167,9 +167,9 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   RaftStateSnapshot snapshot = state.getSnapshot();
   if(snapshot.status != RaftStatus::LEADER) {
     if(snapshot.leader.empty()) {
-      return conn->err("ERR unavailable");
+      return conn->err("unavailable");
     }
-    return conn->err(SSTR("MOVED 0 " << snapshot.leader.toString()));
+    return conn->moved(0, snapshot.leader);
   }
 
   // read request, easy case
@@ -184,7 +184,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   if(!journal.append(index, snapshot.term, req)) {
     qdb_critical("appending to journal failed for index = " << index <<
     " and term " << snapshot.term << " when servicing client request");
-    return conn->err("ERR unknown error");
+    return conn->err("unknown error");
   }
 
   conn->addPendingRequest(&redisDispatcher, std::move(req), index);

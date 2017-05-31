@@ -32,6 +32,7 @@ namespace quarkdb {
 
 class Formatter {
 public:
+  static std::string moved(int64_t shardId, const RaftServer &srv);
   static std::string err(const std::string &msg);
   static std::string errArgs(const std::string &cmd);
   static std::string pong();

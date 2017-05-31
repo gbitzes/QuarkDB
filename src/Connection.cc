@@ -119,6 +119,10 @@ LinkStatus Connection::raw(std::string &&raw) {
   return pendingQueue->appendResponse(std::move(raw));
 }
 
+LinkStatus Connection::moved(int64_t shardId, const RaftServer &location) {
+  return pendingQueue->appendResponse(Formatter::moved(shardId, location));
+}
+
 LinkStatus Connection::err(const std::string &msg) {
   return pendingQueue->appendResponse(Formatter::err(msg));
 }

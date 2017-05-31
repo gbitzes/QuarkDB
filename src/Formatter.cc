@@ -24,9 +24,12 @@
 #include "Formatter.hh"
 using namespace quarkdb;
 
+std::string Formatter::moved(int64_t shardId, const RaftServer &location) {
+  return SSTR("-MOVED " << shardId << " " << location.toString() << "\r\n");
+}
+
 std::string Formatter::err(const std::string &err) {
-  if(!startswith(err, "ERR ") && !startswith(err, "MOVED ")) qdb_throw("invalid error message: " << err);
-  return SSTR("-" << err << "\r\n");
+  return SSTR("-ERR " << err << "\r\n");
 }
 
 std::string Formatter::errArgs(const std::string &cmd) {
@@ -59,7 +62,7 @@ std::string Formatter::integer(int64_t number) {
 
 std::string Formatter::fromStatus(const rocksdb::Status &status) {
   if(status.ok()) return Formatter::ok();
-  return Formatter::err(SSTR("ERR " << status.ToString()));
+  return Formatter::err(status.ToString());
 }
 
 std::string Formatter::vector(const std::vector<std::string> &vec) {

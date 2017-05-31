@@ -252,7 +252,7 @@ bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers,
   std::lock_guard<std::mutex> lock(contentMutex);
 
   if(commitIndex < membershipEpoch) {
-    err = SSTR("ERR the current membership epoch has not been committed yet: " << membershipEpoch);
+    err = SSTR("the current membership epoch has not been committed yet: " << membershipEpoch);
     return false;
   }
 

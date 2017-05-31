@@ -43,7 +43,7 @@ TEST_F(tConnection, basic_sanity) {
   int len = link.Recv(buffer, BUFFER_SIZE, 0);
   ASSERT_EQ(std::string(buffer, len), "$-1\r\n");
 
-  conn.err("ERR fatality");
+  conn.err("fatality");
   len = link.Recv(buffer, BUFFER_SIZE, 0);
   ASSERT_EQ(std::string(buffer, len), "-ERR fatality\r\n");
 
@@ -63,7 +63,7 @@ TEST_F(tConnection, basic_sanity) {
   len = link.Recv(buffer, BUFFER_SIZE, 0);
   ASSERT_EQ(std::string(buffer, len), "+OK\r\n$6\r\nqwerty\r\n+PONG\r\n");
 
-  conn.err("ERR fatality^2");
+  conn.err("fatality^2");
   conn.addPendingRequest(&dispatcher, {"get", "abc"});
   ASSERT_EQ(link.Recv(buffer, BUFFER_SIZE, 0), 0); // "set" is blocking any replies
 

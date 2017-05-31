@@ -103,6 +103,7 @@ public:
   ~Connection();
 
   LinkStatus raw(std::string &&raw);
+  LinkStatus moved(int64_t shardId, const RaftServer &location);
   LinkStatus err(const std::string &msg);
   LinkStatus errArgs(const std::string &cmd);
   LinkStatus pong();

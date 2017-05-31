@@ -27,7 +27,7 @@
 using namespace quarkdb;
 
 TEST(Response, T1) {
-  ASSERT_EQ(Formatter::err("ERR test"), "-ERR test\r\n");
+  ASSERT_EQ(Formatter::err("test"), "-ERR test\r\n");
   ASSERT_EQ(Formatter::ok(), "+OK\r\n");
   ASSERT_EQ(Formatter::pong(), "+PONG\r\n");
   ASSERT_EQ(Formatter::null(), "$-1\r\n");
