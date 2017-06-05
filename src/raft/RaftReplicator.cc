@@ -43,7 +43,10 @@ RaftReplicator::~RaftReplicator() {
 }
 
 RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshot &snapshot_, RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, const RaftTimeouts t)
-: target(target_), snapshot(snapshot_), journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), timeouts(t) {
+: target(target_), snapshot(snapshot_), journal(journal_), stateMachine(sm),
+  state(state_), lease(lease_), commitTracker(ct), timeouts(t),
+  matchIndex(commitTracker.getHandler(target)),
+  lastContact(lease.getHandler(target))  {
   if(target == state.getMyself()) {
     qdb_throw("attempted to run replication on myself");
   }
@@ -91,6 +94,10 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     terms.push_back(entry.term);
   }
   return true;
+}
+
+static bool is_ready(std::future<redisReplyPtr> &fut) {
+  return fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
 }
 
 static bool retrieve_response(std::future<redisReplyPtr> &fut, RaftAppendEntriesResponse &resp) {
@@ -217,6 +224,100 @@ bool RaftReplicaTracker::resilver() {
   return is_ok_response(fut);
 }
 
+// Go through the pending queue, checking if any responses from the target have
+// arrived.
+//
+// If we're here, it means our target is very stable, so we should be able to
+// continuously stream updates without waiting for the replies.
+//
+// As soon as an error is discovered we return, and let the parent function
+// deal with it to stabilize the target once more.
+bool RaftReplicaTracker::checkPendingQueue(std::queue<PendingResponse> &inflight) {
+  while(true) {
+    if(inflight.size() == 0) return true;
+    if(!is_ready(inflight.front().fut)) return true;
+
+    PendingResponse item = std::move(inflight.front());
+    inflight.pop();
+
+    RaftAppendEntriesResponse resp;
+    if(!retrieve_response(item.fut, resp)) return false;
+    state.observed(resp.term, {});
+
+    if(!resp.outcome) return false;
+    if(resp.term != snapshot.term) return false;
+
+    lastContact.heartbeat(item.sent);
+    matchIndex.update(resp.logSize-1);
+
+    if(resp.logSize != item.pushedFrom + item.payloadSize) return false;
+  }
+  return true;
+}
+
+LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNextIndex) {
+
+  // If we're here, it means our target is very stable, so we should be able to
+  // continuously stream updates without waiting for the replies.
+  //
+  // As soon as an error is discovered we return, and let the parent function
+  // deal with it to stabilize the target once more.
+
+  const int64_t payloadLimit = 200;
+  LogIndex nextIndex = firstNextIndex;
+
+  std::queue<PendingResponse> inflight; // Queue<PendingResponse> inflight;
+  while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+    // Check for pending responses
+    if(!checkPendingQueue(inflight)) {
+      // Instruct the parent to continue from that point on. No guarantees that
+      // this is actually the current logsize of the target, but the parent will
+      // figure it out if not.
+      return nextIndex;
+      // return inflight.front().pushedFrom;
+    }
+
+    RaftTerm prevTerm;
+    if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
+      qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString() << ". My log start: " << journal.getLogStart());
+      state.wait(timeouts.getHeartbeatInterval());
+      continue;
+    }
+
+    std::vector<RedisRequest> reqs;
+    std::vector<RaftTerm> terms;
+
+    int64_t payloadSize = 0;
+    if(!buildPayload(nextIndex, payloadLimit, reqs, terms, payloadSize)) {
+      state.wait(timeouts.getHeartbeatInterval());
+      continue;
+    }
+
+    std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
+    inflight.emplace(
+      talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), reqs, terms),
+      contact,
+      nextIndex,
+      payloadSize
+    );
+
+    // Assume a positive response from the target, and keep pushing
+    // if there are more entries.
+    nextIndex += payloadSize;
+
+    if(nextIndex >= journal.getLogSize()) {
+      journal.waitForUpdates(nextIndex, timeouts.getHeartbeatInterval());
+    }
+    else {
+      // fire next round
+    }
+  }
+
+  // Again, no guarantees this is the actual, current logSize of the target,
+  // but the parent will figure it out.
+  return nextIndex;
+}
+
 void RaftReplicaTracker::main() {
   RaftTalker talker(target, journal.getClusterID());
   LogIndex nextIndex = journal.getLogSize();
@@ -229,6 +330,15 @@ void RaftReplicaTracker::main() {
 
   bool needResilvering = false;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+    // Target looks pretty stable, start continuous stream
+    if(online && payloadLimit >= 8) {
+      nextIndex = streamUpdates(talker, nextIndex);
+      // Something happened when streaming updates, switch back to conservative
+      // mode and wait for each response
+      payloadLimit = 1;
+      continue;
+    }
+
     if(nextIndex <= 0) qdb_throw("nextIndex has invalid value: " << nextIndex);
     if(nextIndex <= journal.getLogStart()) nextIndex = journal.getLogSize();
 

@@ -31,12 +31,15 @@
 #include "RaftCommitTracker.hh"
 #include "RaftLease.hh"
 #include <mutex>
+#include <queue>
+#include "RaftTalker.hh"
 
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
 // Tracks a single raft replica
 //------------------------------------------------------------------------------
+class RaftTalker;
 class RaftReplicaTracker {
 public:
   RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, const RaftTimeouts t);
@@ -44,7 +47,20 @@ public:
 
   bool isRunning() { return running; }
 private:
+  struct PendingResponse {
+    PendingResponse(std::future<redisReplyPtr> f, std::chrono::steady_clock::time_point s, LogIndex pushed, int64_t payload)
+    : fut(std::move(f)), sent(s), pushedFrom(pushed), payloadSize(payload) {}
+
+    std::future<redisReplyPtr> fut;
+    std::chrono::steady_clock::time_point sent;
+    LogIndex pushedFrom;
+    int64_t payloadSize;
+  };
+
   void main();
+  LogIndex streamUpdates(RaftTalker &talker, LogIndex nextIndex);
+  bool checkPendingQueue(std::queue<PendingResponse> &inflight);
+
   bool resilver();
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
@@ -58,6 +74,9 @@ private:
   RaftLease &lease;
   RaftCommitTracker &commitTracker;
   const RaftTimeouts timeouts;
+
+  RaftMatchIndexTracker &matchIndex;
+  RaftLastContact &lastContact;
 
   std::atomic<bool> running {false};
   std::atomic<bool> shutdown {false};
