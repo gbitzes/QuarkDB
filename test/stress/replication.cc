@@ -156,12 +156,27 @@ static void generateLoad(qclient::QClient *qcl, std::string prefix, std::atomic<
   qdb_info("Stopping load generation towards '" << prefix << "'");
 }
 
+class AssistedThread {
+public:
+  // universal references, perfect forwarding
+  template<typename... Args>
+  AssistedThread(Args&&... args) : stopFlag(false), th(std::forward<Args>(args)..., std::ref(stopFlag)) {
+  }
+
+  virtual ~AssistedThread() {
+    stopFlag = true;
+    th.join();
+  }
+private:
+  std::atomic<bool> stopFlag;
+  std::thread th;
+};
+
 TEST_F(Replication, load_during_election) {
   // let's be extra evil and start generating load even before the nodes start up
-  std::atomic<bool> stopFlag {false};
-  std::thread t1(generateLoad, tunnel(0), "node0", std::ref(stopFlag));
-  std::thread t2(generateLoad, tunnel(1), "node1", std::ref(stopFlag));
-  std::thread t3(generateLoad, tunnel(2), "node2", std::ref(stopFlag));
+  AssistedThread t1(generateLoad, tunnel(0), "node0");
+  AssistedThread t2(generateLoad, tunnel(1), "node1");
+  AssistedThread t3(generateLoad, tunnel(2), "node2");
 
   // start the cluster
   spinup(0); spinup(1); spinup(2);
@@ -171,7 +186,4 @@ TEST_F(Replication, load_during_election) {
   int leaderID = getLeaderID();
   RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() > 20000);
   ASSERT_TRUE(leaderID == getLeaderID());
-
-  stopFlag = true;
-  t1.join(); t2.join(); t3.join();
 }
