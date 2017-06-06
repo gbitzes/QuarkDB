@@ -28,20 +28,15 @@
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc)
-: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct) {
+RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt)
+: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt) {
   mainThread = std::thread(&RaftDirector::main, this);
-  commitApplier = std::thread(&RaftDirector::applyCommits, this);
   journalTrimmer = std::thread(&RaftDirector::trimJournal, this);
 }
 
 RaftDirector::~RaftDirector() {
   state.shutdown();
   journalTrimmer.join();
-  while(commitApplierActive) {
-    journal.notifyWaitingThreads();
-  }
-  commitApplier.join();
   mainThread.join();
 }
 
@@ -57,17 +52,6 @@ void RaftDirector::trimJournal() {
       state.wait(std::chrono::seconds(1));
     }
   }
-}
-
-void RaftDirector::applyCommits() {
-  LogIndex commitIndex = journal.getCommitIndex(); // local cached value
-  while(journal.waitForCommits(commitIndex)) {
-    if(state.inShutdown()) break;
-
-    commitIndex = journal.getCommitIndex();
-    dispatcher.applyCommits(commitIndex);
-  }
-  commitApplierActive = false;
 }
 
 void RaftDirector::main() {
@@ -144,7 +128,7 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
     if(deadline < std::chrono::steady_clock::now()) {
       qdb_event("My leader lease has expired, I no longer control a quorum, stepping down.");
       state.observed(snapshot.term+1, {});
-      dispatcher.flushQueues("unavailable");
+      writeTracker.flushQueues("unavailable");
       return;
     }
 

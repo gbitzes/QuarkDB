@@ -31,13 +31,14 @@
 #include "RaftDispatcher.hh"
 #include "RaftLease.hh"
 #include "RaftCommitTracker.hh"
+#include "RaftWriteTracker.hh"
 #include <thread>
 
 namespace quarkdb {
 
 class RaftDirector {
 public:
-  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc);
+  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc, RaftWriteTracker &wt);
   ~RaftDirector();
   DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
@@ -55,6 +56,7 @@ private:
   RaftClock &raftClock;
   RaftLease &lease;
   RaftCommitTracker &commitTracker;
+  RaftWriteTracker &writeTracker;
 
   std::thread mainThread;
   std::thread commitApplier;

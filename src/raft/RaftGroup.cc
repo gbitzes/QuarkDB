@@ -29,6 +29,8 @@
 #include "RaftLease.hh"
 #include "../StateMachine.hh"
 #include "RaftGroup.hh"
+#include "RaftWriteTracker.hh"
+
 using namespace quarkdb;
 
 RaftGroup::RaftGroup(const std::string &database, const RaftServer &myself, const RaftTimeouts &t)
@@ -66,6 +68,10 @@ void RaftGroup::spindown() {
     delete dispatcherptr;
     dispatcherptr = nullptr;
   }
+  if(wtptr) {
+    delete wtptr;
+    wtptr = nullptr;
+  }
   if(stateptr) {
     delete stateptr;
     stateptr = nullptr;
@@ -100,7 +106,7 @@ RaftJournal* RaftGroup::journal() {
 
 RaftDispatcher* RaftGroup::dispatcher() {
   if(dispatcherptr == nullptr) {
-    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock());
+    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock(), *writeTracker());
   }
   return dispatcherptr;
 }
@@ -121,7 +127,7 @@ RaftState* RaftGroup::state() {
 
 RaftDirector* RaftGroup::director() {
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock());
+    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker());
   }
   return directorptr;
 }
@@ -138,4 +144,11 @@ RaftCommitTracker* RaftGroup::commitTracker() {
     ctptr = new RaftCommitTracker(*journal());
   }
   return ctptr;
+}
+
+RaftWriteTracker* RaftGroup::writeTracker() {
+  if(wtptr == nullptr) {
+    wtptr = new RaftWriteTracker(*journal(), *state(), *stateMachine());
+  }
+  return wtptr;
 }

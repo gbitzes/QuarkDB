@@ -29,8 +29,8 @@
 
 using namespace quarkdb;
 
-RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm) {
+RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &wt)
+: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt) {
 }
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
@@ -177,58 +177,16 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
     return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
 
-  // write request, must append to raft log
+  // send request to the write tracker
   std::lock_guard<std::mutex> lock(raftCommand);
 
   LogIndex index = journal.getLogSize();
-  if(!journal.append(index, snapshot.term, req)) {
-    qdb_critical("appending to journal failed for index = " << index <<
-    " and term " << snapshot.term << " when servicing client request");
+  if(!writeTracker.append(index, snapshot.term, std::move(req), conn->getQueue(), redisDispatcher)) {
+    qdb_critical("appending write for index = " << index <<
+    " and term " << snapshot.term << " failed when servicing client request");
     return conn->err("unknown error");
   }
 
-  conn->addPendingRequest(&redisDispatcher, std::move(req), index);
-  blockedWrites.insert(index, conn->getQueue());
-  return 1;
-}
-
-void RaftDispatcher::flushQueues(const std::string &msg) {
-  blockedWrites.flush(msg);
-}
-
-LinkStatus RaftDispatcher::applyCommits(LogIndex commitIndex) {
-  std::lock_guard<std::mutex> lock(raftCommand);
-
-  for(LogIndex index = stateMachine.getLastApplied()+1; index <= commitIndex; index++) {
-    applyOneCommit(index);
-  }
-
-  return 1;
-}
-
-LinkStatus RaftDispatcher::applyOneCommit(LogIndex index) {
-  // Determine if this particular index entry is associated to a request queue.
-  std::shared_ptr<PendingQueue> blockedQueue = blockedWrites.popIndex(index);
-
-  if(blockedQueue.get() == nullptr) {
-    // this journal entry is not related to any connection,
-    // let's just apply it manually from the journal
-    RaftEntry entry;
-
-    if(!journal.fetch(index, entry).ok()) {
-      // serious error, threatens consistency. Bail out
-      qdb_throw("failed to fetch log entry " << index << " when applying commits");
-    }
-
-    redisDispatcher.dispatch(entry.request, index);
-    return 1;
-  }
-
-  LogIndex newBlockingIndex = blockedQueue->dispatchPending(&redisDispatcher, index);
-  if(newBlockingIndex > 0) {
-    if(newBlockingIndex <= index) qdb_throw("blocking index of queue went backwards: " << index << " => " << newBlockingIndex);
-    blockedWrites.insert(newBlockingIndex, blockedQueue);
-  }
   return 1;
 }
 
@@ -252,7 +210,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     return {snapshot.term, journal.getLogSize(), false, "You are not the current leader"};
   }
 
-  flushQueues(SSTR("MOVED 0 " << snapshot.leader.toString()));
+  writeTracker.flushQueues(SSTR("MOVED 0 " << snapshot.leader.toString()));
   raftClock.heartbeat();
 
   if(!journal.matchEntries(req.prevIndex, req.prevTerm)) {
@@ -423,7 +381,7 @@ RaftInfo RaftDispatcher::info() {
   RaftMembership membership = journal.getMembership();
 
   return {journal.getClusterID(), state.getMyself(), snapshot.leader, membership.epoch, membership.nodes, membership.observers, snapshot.term, journal.getLogStart(),
-          journal.getLogSize(), snapshot.status, journal.getCommitIndex(), stateMachine.getLastApplied(), blockedWrites.size()};
+          journal.getLogSize(), snapshot.status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size() };
 }
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {

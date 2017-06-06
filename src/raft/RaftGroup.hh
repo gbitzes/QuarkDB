@@ -38,7 +38,7 @@ namespace quarkdb {
 
 class StateMachine; class RaftJournal; class RaftDispatcher;
 class RaftState; class RaftReplicator; class RaftClock;
-class RaftDirector; class RaftLease;
+class RaftDirector; class RaftLease; class RaftWriteTracker;
 
 class RaftGroup {
 public:
@@ -55,6 +55,7 @@ public:
   RaftDirector *director();
   RaftLease *lease();
   RaftCommitTracker *commitTracker();
+  RaftWriteTracker *writeTracker();
 
   RaftServer myself();
 
@@ -73,6 +74,7 @@ private:
   RaftDirector *directorptr = nullptr;
   RaftLease *leaseptr = nullptr;
   RaftCommitTracker *ctptr = nullptr;
+  RaftWriteTracker *wtptr = nullptr;
 };
 
 }

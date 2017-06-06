@@ -38,6 +38,7 @@ add_library(XrdRedis SHARED
   raft/RaftTimeouts.cc       raft/RaftTimeouts.hh
   raft/RaftDirector.cc       raft/RaftDirector.hh
   raft/RaftCommitTracker.cc  raft/RaftCommitTracker.hh
+  raft/RaftWriteTracker.cc   raft/RaftWriteTracker.hh
   raft/RaftGroup.cc          raft/RaftGroup.hh
                              raft/RaftMembers.hh
   raft/RaftLease.cc          raft/RaftLease.hh

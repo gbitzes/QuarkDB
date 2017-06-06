@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftDispatcher.hh
+// File: RaftWriteTracker.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,55 +21,48 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_H__
-#define __QUARKDB_RAFT_H__
+#ifndef __QUARKDB_RAFT_WRITE_TRACKER_H__
+#define __QUARKDB_RAFT_WRITE_TRACKER_H__
 
-#include "../Dispatcher.hh"
+#include <qclient/QClient.hh>
+#include "RaftCommon.hh"
 #include "RaftJournal.hh"
 #include "RaftState.hh"
-#include "RaftUtils.hh"
-#include "RaftTimeouts.hh"
-#include "RaftBlockedWrites.hh"
-#include "RaftWriteTracker.hh"
-#include <thread>
+#include "../Connection.hh"
+#include "../StateMachine.hh"
+#include "../Dispatcher.hh"
 
 namespace quarkdb {
 
-
-class RaftDispatcher : public Dispatcher {
+//----------------------------------------------------------------------------
+// We track the state of pending writes, and apply them to the state machine
+// when necessary.
+//----------------------------------------------------------------------------
+class RaftWriteTracker {
 public:
-  RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &rt);
-  DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
+  RaftWriteTracker(RaftJournal &jr, RaftState &st, StateMachine &sm);
+  ~RaftWriteTracker();
 
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-
-  RaftInfo info();
-  bool fetch(LogIndex index, RaftEntry &entry);
-  bool checkpoint(const std::string &path, std::string &err);
-
-  RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
-  RaftVoteResponse requestVote(RaftVoteRequest &req);
+  bool append(LogIndex index, RaftTerm term, RedisRequest &&req, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher);
+  void flushQueues(const std::string &msg);
+  size_t size() { return blockedWrites.size(); }
 private:
-  LinkStatus service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type);
+  std::mutex mtx;
+  std::thread commitApplier;
 
-  //----------------------------------------------------------------------------
-  // Raft commands should not be run in parallel, but be serialized
-  //----------------------------------------------------------------------------
-  std::mutex raftCommand;
-
-  //----------------------------------------------------------------------------
-  // The all-important raft journal, state machine, and state tracker
-  //----------------------------------------------------------------------------
   RaftJournal &journal;
-  StateMachine &stateMachine;
   RaftState &state;
+  StateMachine &stateMachine;
 
-  //----------------------------------------------------------------------------
-  // Misc
-  //----------------------------------------------------------------------------
-  RaftClock &raftClock;
   RedisDispatcher redisDispatcher;
-  RaftWriteTracker& writeTracker;
+  RaftBlockedWrites blockedWrites;
+
+  std::atomic<bool> commitApplierActive {true};
+  std::atomic<bool> shutdown {false};
+
+  void applyCommits();
+  void updatedCommitIndex(LogIndex commitIndex);
+  void applySingleCommit(LogIndex index);
 };
 
 }
