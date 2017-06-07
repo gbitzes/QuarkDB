@@ -233,9 +233,10 @@ bool RaftReplicaTracker::resilver() {
 // As soon as an error is discovered we return, and let the parent function
 // deal with it to stabilize the target once more.
 bool RaftReplicaTracker::checkPendingQueue(std::queue<PendingResponse> &inflight) {
+  const int64_t pipelineLength = 10;
   while(true) {
     if(inflight.size() == 0) return true;
-    if(!is_ready(inflight.front().fut)) return true;
+    if(!is_ready(inflight.front().fut) && inflight.size() <= pipelineLength) return true;
 
     PendingResponse item = std::move(inflight.front());
     inflight.pop();
@@ -274,7 +275,6 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
       // this is actually the current logsize of the target, but the parent will
       // figure it out if not.
       return nextIndex;
-      // return inflight.front().pushedFrom;
     }
 
     RaftTerm prevTerm;
