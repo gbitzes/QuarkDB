@@ -331,13 +331,13 @@ void RaftReplicaTracker::main() {
   bool needResilvering = false;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
     // Target looks pretty stable, start continuous stream
-    if(online && payloadLimit >= 8) {
-      nextIndex = streamUpdates(talker, nextIndex);
-      // Something happened when streaming updates, switch back to conservative
-      // mode and wait for each response
-      payloadLimit = 1;
-      continue;
-    }
+    // if(online && payloadLimit >= 8) {
+    //   nextIndex = streamUpdates(talker, nextIndex);
+    //   // Something happened when streaming updates, switch back to conservative
+    //   // mode and wait for each response
+    //   payloadLimit = 1;
+    //   continue;
+    // }
 
     if(nextIndex <= 0) qdb_throw("nextIndex has invalid value: " << nextIndex);
     if(nextIndex <= journal.getLogStart()) nextIndex = journal.getLogSize();
