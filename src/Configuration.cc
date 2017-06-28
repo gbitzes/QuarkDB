@@ -26,7 +26,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "XrdRedisProtocol.hh"
+#include "XrdQuarkDB.hh"
 #include "XrdOuc/XrdOucEnv.hh"
 #include "Configuration.hh"
 #include "Utils.hh"
@@ -37,7 +37,7 @@ bool Configuration::fromFile(const std::string &filename, Configuration &out) {
   qdb_log("Reading configuration file from " << filename);
 
   XrdOucEnv myEnv;
-  XrdOucStream stream(&XrdRedisProtocol::eDest, getenv("XRDINSTANCE"), &myEnv, "=====> ");
+  XrdOucStream stream(&XrdQuarkDB::eDest, getenv("XRDINSTANCE"), &myEnv, "=====> ");
 
   int fd;
 

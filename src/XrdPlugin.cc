@@ -27,7 +27,7 @@
 #include "XrdSys/XrdSysError.hh"
 #include "XrdVersion.hh"
 
-#include "XrdRedisProtocol.hh"
+#include "XrdQuarkDB.hh"
 
 extern "C" {
 XrdProtocol *XrdgetProtocol(const char *pname, char *parms,
@@ -36,26 +36,26 @@ XrdProtocol *XrdgetProtocol(const char *pname, char *parms,
   pi->eDest->Say("++++++ quarkdb server initialization started");
 
   // check if the given configuration file is valid
-  if(!quarkdb::XrdRedisProtocol::Configure(parms, pi)) {
-    pi->eDest->Say("------ redis protocol initialization failed.");
+  if(!quarkdb::XrdQuarkDB::Configure(parms, pi)) {
+    pi->eDest->Say("------ quarkdb protocol plugin initialization failed.");
     return 0;
   }
 
-  XrdProtocol *protocol = (XrdProtocol*) new quarkdb::XrdRedisProtocol(false);
-  pi->eDest->Say("------ redis protocol initialization completed.");
+  XrdProtocol *protocol = (XrdProtocol*) new quarkdb::XrdQuarkDB(false);
+  pi->eDest->Say("------ quarkdb protocol plugin initialization completed.");
   return protocol;
 }
 }
 
 
-XrdVERSIONINFO(XrdgetProtocol, xrdredis);
+XrdVERSIONINFO(XrdgetProtocol, xrdquarkdb);
 
 //------------------------------------------------------------------------------
 // This function is called early on to determine the port we need to use. The
 // default is ostensibly 6379 but can be overriden; which we allow.
 //------------------------------------------------------------------------------
 
-XrdVERSIONINFO(GetProtocolPort, xrdredis);
+XrdVERSIONINFO(GetProtocolPort, xrdquarkdb);
 
 extern "C" {
 int GetProtocolPort(const char *pname, char *parms, XrdProtocol_Config *pi) {

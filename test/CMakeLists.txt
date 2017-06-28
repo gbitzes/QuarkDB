@@ -71,7 +71,7 @@ include_directories(
 # Link
 #-------------------------------------------------------------------------------
 target_link_libraries(quarkdb-tests
-  XrdRedis
+  XrdQuarkDB
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
@@ -79,7 +79,7 @@ target_link_libraries(quarkdb-tests
 )
 
 target_link_libraries(quarkdb-bench
-  XrdRedis
+  XrdQuarkDB
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
@@ -87,7 +87,7 @@ target_link_libraries(quarkdb-bench
 )
 
 target_link_libraries(quarkdb-stress-tests
-  XrdRedis
+  XrdQuarkDB
   gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}

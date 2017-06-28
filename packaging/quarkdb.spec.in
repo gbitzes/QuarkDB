@@ -55,7 +55,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-, root, root, -)
-%{_libdir}/libXrdRedis.so
+%{_libdir}/libXrdQuarkDB.so
 %{_bindir}/quarkdb-journal
 %{_bindir}/quarkdb-scrub
 %{_bindir}/quarkdb-chaos

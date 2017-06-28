@@ -7,12 +7,12 @@ include_directories(
 )
 
 #-------------------------------------------------------------------------------
-# XrdRedis plugin
+# xrootd plugin for QuarkDB plugin
 #-------------------------------------------------------------------------------
 add_definitions(${GCOV_CFLAGS})
-add_library(XrdRedis SHARED
+add_library(XrdQuarkDB SHARED
   XrdPlugin.cc
-  XrdRedisProtocol.cc        XrdRedisProtocol.hh
+  XrdQuarkDB.cc              XrdQuarkDB.hh
   Configuration.cc           Configuration.hh
   Utils.cc                   Utils.hh
                              Common.hh
@@ -46,7 +46,7 @@ add_library(XrdRedis SHARED
 )
 
 target_link_libraries(
-  XrdRedis PUBLIC
+  XrdQuarkDB PUBLIC
   qclient
   bz2
   z
@@ -60,6 +60,6 @@ target_link_libraries(
 )
 
 install(
-  TARGETS XrdRedis
+  TARGETS XrdQuarkDB
   LIBRARY DESTINATION ${CMAKE_INSTALL_FULL_LIBDIR}
 )

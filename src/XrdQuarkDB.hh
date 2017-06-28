@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: XrdRedisProtocol.hh
+// File: XrdQuarkDB.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_XRDREDIS_PROTOCOL_H__
-#define __QUARKDB_XRDREDIS_PROTOCOL_H__
+#ifndef __QUARKDB_XRDQUARKDB_PROTOCOL_H__
+#define __QUARKDB_XRDQUARKDB_PROTOCOL_H__
 
 #include "Xrd/XrdProtocol.hh"
 #include "XrdSys/XrdSysError.hh"
@@ -46,9 +46,9 @@
 namespace quarkdb {
 
 
-class XrdRedisProtocol : public XrdProtocol {
+class XrdQuarkDB : public XrdProtocol {
 public:
-  XrdRedisProtocol(bool tls);
+  XrdQuarkDB(bool tls);
 
   /// Read and apply the configuration
   static int Configure(char *parms, XrdProtocol_Config *pi);
@@ -63,8 +63,8 @@ public:
   void DoIt();
 
   /// Construction / destruction
-  XrdRedisProtocol();
-  virtual ~XrdRedisProtocol();
+  XrdQuarkDB();
+  virtual ~XrdQuarkDB();
 
   /// globally accessible error handler
   static XrdSysError eDest;

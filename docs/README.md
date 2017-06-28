@@ -77,7 +77,7 @@ different clusterIDs will refuse to talk with one another.
   ```
   if exec xrootd
     xrd.port 7777
-    xrd.protocol redis:7777 /path/to/quarkdb/build/src/libXrdRedis.so
+    xrd.protocol redis:7777 /path/to/quarkdb/build/src/libXrdQuarkDB.so
     redis.mode raft
     redis.database /path/to/node-database
     redis.myself localhost:7777

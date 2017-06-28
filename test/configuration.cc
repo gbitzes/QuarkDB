@@ -41,7 +41,7 @@ TEST(Configuration, T2) {
   std::string c;
 
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode raft\n"
       "redis.database /home/user/mydb\n"
       "redis.myself server1:7776\n"
@@ -61,7 +61,7 @@ TEST(Configuration, T3) {
 
   // specifying a raft-only directive when standalone
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.myself server1:7776\n"
@@ -75,7 +75,7 @@ TEST(Configuration, T4) {
   std::string c;
 
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.trace info\n"
@@ -93,7 +93,7 @@ TEST(Configuration, T5) {
 
   // missing database
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode standalone\n"
       "fi\n";
 
@@ -106,7 +106,7 @@ TEST(Configuration, T6) {
 
   // unknown mode
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode something_something\n"
       "redis.database /home/user/mydb\n"
       "fi\n";
@@ -120,7 +120,7 @@ TEST(Configuration, T7) {
 
   // unknown directive
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.blublu something\n"
@@ -135,7 +135,7 @@ TEST(Configuration, T8) {
 
   // unknown trace level
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.trace wrong\n"
@@ -149,7 +149,7 @@ TEST(Configuration, T9) {
   std::string c;
 
   c = "if exec xrootd\n"
-      "xrd.protocol redis:7776 libXrdRedis.so\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode standalone\n"
       "redis.database /home/user/mydb/\n"
       "redis.trace info\n"

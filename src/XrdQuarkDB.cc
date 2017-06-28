@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: XrdRedisProtocol.cc
+// File: XrdQuarkDB.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -22,7 +22,7 @@
  ************************************************************************/
 
 #include "XrdVersion.hh"
-#include "XrdRedisProtocol.hh"
+#include "XrdQuarkDB.hh"
 #include "XrdOuc/XrdOucEnv.hh"
 #include "raft/RaftDispatcher.hh"
 
@@ -36,14 +36,14 @@ using namespace quarkdb;
 // Globals
 //------------------------------------------------------------------------------
 
-XrdSysError XrdRedisProtocol::eDest(0, "redis");
+XrdSysError XrdQuarkDB::eDest(0, "quarkdb");
 
-const char *XrdRedisTraceID = "XrdRedis";
-XrdOucTrace *XrdRedisTrace = 0;
-QuarkDBNode *XrdRedisProtocol::quarkdbNode = 0;
-std::atomic<bool> XrdRedisProtocol::inShutdown {false};
-std::atomic<int64_t> XrdRedisProtocol::inFlight {0};
-EventFD XrdRedisProtocol::shutdownFD;
+const char *XrdQuarkDBID = "XrdQuarkDB";
+XrdOucTrace *XrdQuarkDBTrace = 0;
+QuarkDBNode *XrdQuarkDB::quarkdbNode = 0;
+std::atomic<bool> XrdQuarkDB::inShutdown {false};
+std::atomic<int64_t> XrdQuarkDB::inFlight {0};
+EventFD XrdQuarkDB::shutdownFD;
 
 //------------------------------------------------------------------------------
 // Shutdown mechanism. Here's how it works.
@@ -55,7 +55,7 @@ EventFD XrdRedisProtocol::shutdownFD;
 // all requests currently in flight are completed before deleting the main node.
 //------------------------------------------------------------------------------
 
-void XrdRedisProtocol::shutdownMonitor() {
+void XrdQuarkDB::shutdownMonitor() {
   while(!inShutdown) {
     shutdownFD.wait();
   }
@@ -72,10 +72,10 @@ void XrdRedisProtocol::shutdownMonitor() {
 }
 
 //------------------------------------------------------------------------------
-// XrdRedisProtocol class
+// XrdQuarkDB class
 //------------------------------------------------------------------------------
 
-XrdRedisProtocol::XrdRedisProtocol(bool tls)
+XrdQuarkDB::XrdQuarkDB(bool tls)
 : XrdProtocol("Redis protocol handler") {
   Reset();
 
@@ -86,7 +86,7 @@ XrdRedisProtocol::XrdRedisProtocol(bool tls)
   }
 }
 
-int XrdRedisProtocol::Process(XrdLink *lp) {
+int XrdQuarkDB::Process(XrdLink *lp) {
   if(inShutdown) { return -1; }
   ScopedAdder<int64_t> adder(inFlight);
 
@@ -100,7 +100,7 @@ int XrdRedisProtocol::Process(XrdLink *lp) {
   return status;
 }
 
-XrdProtocol* XrdRedisProtocol::Match(XrdLink *lp) {
+XrdProtocol* XrdQuarkDB::Match(XrdLink *lp) {
   char buffer[2];
 
   // Peek at the first bytes of data
@@ -114,13 +114,13 @@ XrdProtocol* XrdRedisProtocol::Match(XrdLink *lp) {
       return nullptr;
     }
 
-    return new XrdRedisProtocol(true);
+    return new XrdQuarkDB(true);
   }
 
-  return new XrdRedisProtocol(false); // TLS not enabled
+  return new XrdQuarkDB(false); // TLS not enabled
 }
 
-void XrdRedisProtocol::Reset() {
+void XrdQuarkDB::Reset() {
   if(conn) {
     delete conn;
     conn = nullptr;
@@ -131,24 +131,24 @@ void XrdRedisProtocol::Reset() {
   }
 }
 
-void XrdRedisProtocol::Recycle(XrdLink *lp,int consec,const char *reason) {
+void XrdQuarkDB::Recycle(XrdLink *lp,int consec,const char *reason) {
 
 }
 
-int XrdRedisProtocol::Stats(char *buff, int blen, int do_sync) {
+int XrdQuarkDB::Stats(char *buff, int blen, int do_sync) {
   return 0;
 }
 
-void XrdRedisProtocol::DoIt() {
+void XrdQuarkDB::DoIt() {
 
 }
 
 static void handle_sigint(int sig) {
-  XrdRedisProtocol::inShutdown = true;
-  XrdRedisProtocol::shutdownFD.notify();
+  XrdQuarkDB::inShutdown = true;
+  XrdQuarkDB::shutdownFD.notify();
 }
 
-int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
+int XrdQuarkDB::Configure(char *parms, XrdProtocol_Config * pi) {
   eDest.logger(pi->eDest->logger());
 
   char* rdf = (parms && *parms ? parms : pi->ConfigFN);
@@ -163,12 +163,12 @@ int XrdRedisProtocol::Configure(char *parms, XrdProtocol_Config * pi) {
   }
 
   quarkdbNode = new QuarkDBNode(configuration, inFlight);
-  std::thread(&XrdRedisProtocol::shutdownMonitor).detach();
+  std::thread(&XrdQuarkDB::shutdownMonitor).detach();
   signal(SIGINT, handle_sigint);
   signal(SIGTERM, handle_sigint);
   return 1;
 }
 
-XrdRedisProtocol::~XrdRedisProtocol() {
+XrdQuarkDB::~XrdQuarkDB() {
   Reset();
 }
