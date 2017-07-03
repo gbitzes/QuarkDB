@@ -98,7 +98,10 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
   // peek first byte to determine if TLS is active
   char buffer[2];
 
-  int ret = recv(fd, buffer, 1, MSG_PEEK);
+  int ret = 0;
+  while(ret == 0) {
+    ret = recv(fd, buffer, 1, MSG_PEEK);
+  }
   if(ret != 1) qdb_throw("unexpected result from recv: " << ret);
 
   tlsconfig.active = (buffer[0] != '*');

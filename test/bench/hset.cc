@@ -23,85 +23,203 @@
 
 #include "StateMachine.hh"
 #include "../test-utils.hh"
+#include "bench-utils.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
 
-class hset : public TestCluster3Nodes, public ::testing::TestWithParam<int> {
-public:
-  void processRangeRedis(size_t start, size_t end, int port) {
-    qclient::QClient tunn("localhost", port);
-    for(size_t i = start; i < end; i++) {
-      tunn.exec("hset", SSTR("key-" << i), "field", "some_contents");
-    }
-    tunn.exec("ping").get(); // receive all responses
-  }
+enum class Mode {
+  kDirect = 1,
+  kRedisStandalone = 2,
+  kConsensus = 3
+};
 
-  void processRange(size_t start, size_t end) {
-    for(size_t i = start; i < end; i++) {
-      bool created;
-      stateMachine()->hset(SSTR("key-" << i), "field", "some_contents", created, 0);
-    }
+std::string modeToStr(Mode mode) {
+  if(mode == Mode::kDirect) return "direct";
+  if(mode == Mode::kRedisStandalone) return "standalone";
+  if(mode == Mode::kConsensus) return "consensus";
+  qdb_throw("should never happen");
+}
+
+struct BenchmarkParams {
+  int nthreads;
+  int events;
+  Mode mode;
+
+  BenchmarkParams(int threads, int ev, Mode m) : nthreads(threads), events(ev), mode(m) {}
+  operator std::string() const {
+    return SSTR("threads" << nthreads << "_events" << events << "_" << modeToStr(mode));
   }
 };
 
-INSTANTIATE_TEST_CASE_P(TestWithMultipleThreads,
-                        hset,
-                        ::testing::Values(1, 2, 4, 8),
-                        ::testing::PrintToStringParamName());
+class Executor {
+public:
+  Executor(size_t ev) : events(ev) {}
+  virtual ~Executor() {}
 
-TEST_P(hset, directly_without_redis_protocol) {
-  size_t number_of_inserts = 1000000;
-  stateMachine(); // initialize
+  virtual void main(int threadId) = 0;
+  virtual std::string describe() = 0;
 
-  auto startTime = std::chrono::high_resolution_clock::now();
-
-  qdb_info("Starting benchmark: issue HSET " << number_of_inserts << " times directly to the state machine, no redis, " << GetParam() << " threads");
-
-  std::vector<std::thread> threads;
-  for(size_t i = 0; i < (size_t) GetParam(); i++) {
-    size_t start = (number_of_inserts / GetParam()) * i;
-    size_t end = (number_of_inserts / GetParam()) * (i+1);
-
-    threads.emplace_back(&hset::processRange, this, start, end);
-    qdb_info("Thread #" << i << " was assigned to range [" << start << "-" << end << ")");
+  size_t getEvents() {
+    return events;
   }
 
-  for(size_t i = 0; i < threads.size(); i++) {
-    threads[i].join();
-  }
-  qdb_info("Benchmark has ended");
+protected:
+  size_t events;
+};
 
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count();
-  qdb_info("Rate: " << (float) number_of_inserts / ((float) duration / (float) 1000) << " Hz");
+// We provide this class to avoid the overhead of dynamic dispatch with
+// virtual functions.
+class HsetProvider {
+public:
+  static inline void handleEventDirect(StateMachine *sm, size_t threadId, size_t eventId) {
+    bool created;
+    ASSERT_TRUE(sm->hset(SSTR("key-" << eventId), "field", "some_contents", created, 0).ok());
+  }
+
+  static inline std::future<qclient::redisReplyPtr> handleEventRedis(qclient::QClient &tunnel, size_t threadId, size_t eventId) {
+    return tunnel.exec("hset", SSTR("key-" << eventId), "field", "some_contents");
+  }
+
+  static std::string describe() {
+    return "HSET";
+  }
+};
+
+template<typename TestcaseProvider>
+class ExecutorHelper : public Executor {
+public:
+  ExecutorHelper(size_t ev, StateMachine *sm) : Executor(ev), stateMachine(sm) {}
+  ExecutorHelper(size_t ev, const RaftServer &srv) : Executor(ev), server(srv) {}
+
+  void main(int threadId) override {
+    if(stateMachine) {
+      return mainDirect(threadId);
+    }
+    return mainRedis(threadId);
+  }
+
+  void mainDirect(int threadId) {
+    while(true) {
+      size_t next = nextEvent++;
+      if(next > events) break;
+
+      TestcaseProvider::handleEventDirect(stateMachine, threadId, next);
+    }
+  }
+
+  void mainRedis(int threadId) {
+    qclient::QClient tunnel(server.hostname, server.port);
+    while(true) {
+      size_t next = nextEvent++;
+      if(next > events) break;
+      TestcaseProvider::handleEventRedis(tunnel, threadId, next);
+    }
+    tunnel.exec("ping").get(); // receive all responses
+  }
+
+  std::string describe() override {
+    return TestcaseProvider::describe();
+  }
+
+private:
+  RaftServer server;
+  StateMachine *stateMachine = nullptr;
+  std::atomic<size_t> nextEvent {0};
+};
+
+class Benchmarker {
+public:
+  static float measureRate(Executor &executor, size_t nthreads) {
+    Stopwatch stopwatch(executor.getEvents());
+
+    std::atomic<int64_t> nextEvent {0};
+    std::vector<std::thread> threads;
+    for(size_t i = 0; i < nthreads; i++) {
+      threads.emplace_back(&Executor::main, &executor, i);
+    }
+
+    for(size_t i = 0; i < threads.size(); i++) {
+      threads[i].join();
+    }
+
+    stopwatch.stop();
+    return stopwatch.rate();
+  }
+
+  void run(Executor &executor, size_t nthreads) {
+    qdb_info("Starting benchmark: " << executor.describe());
+    float rate = measureRate(executor, nthreads);
+    qdb_info("Benchmark has ended. Rate: " << rate << " Hz");
+  }
+};
+
+template<typename TestcaseProvider>
+class BenchmarkHelper : public TestCluster3Nodes {
+public:
+  ~BenchmarkHelper() {
+    if(customPoller) delete customPoller;
+    if(customDispatcher) delete customDispatcher;
+    if(executor) delete executor;
+  }
+
+  void createExecutor(const BenchmarkParams &params) {
+    if(params.mode == Mode::kDirect) {
+      executor = new ExecutorHelper<TestcaseProvider>(params.events, stateMachine());
+    }
+    else if(params.mode == Mode::kRedisStandalone) {
+      customDispatcher = new RedisDispatcher(*stateMachine());
+      customPoller = new Poller(34567, customDispatcher);
+      executor = new ExecutorHelper<TestcaseProvider>(params.events, {"localhost", 34567});
+    }
+    else if(params.mode == Mode::kConsensus) {
+      spinup(0); spinup(1); spinup(2);
+      RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+      executor = new ExecutorHelper<TestcaseProvider>(params.events, myself(getLeaderID()));
+    }
+  }
+protected:
+  RedisDispatcher *customDispatcher {nullptr};
+  Poller *customPoller {nullptr};
+  Executor *executor {nullptr};
+};
+
+class hset : public BenchmarkHelper<HsetProvider>, public ::testing::TestWithParam<BenchmarkParams> {
+public:
+  void run() {
+    createExecutor(GetParam());
+
+    Benchmarker benchmarker;
+    benchmarker.run(*executor, GetParam().nthreads);
+  }
+};
+
+static std::vector<BenchmarkParams> generateParams() {
+  std::vector<BenchmarkParams> ret;
+
+  for(size_t threads : {1, 2, 4, 8}) {
+    for(size_t events : {1000000}) {
+      for(Mode mode : {Mode::kDirect, Mode::kRedisStandalone}) {
+      // for(Mode mode : {Mode::kDirect, Mode::kRedisStandalone, Mode::kConsensus}) {
+        ret.emplace_back(threads, events, mode);
+      }
+    }
+  }
+  return ret;
 }
 
-TEST_P(hset, through_redis_protocol) {
-  size_t number_of_inserts = 1000000;
-  stateMachine(); // initialize
-
-  auto startTime = std::chrono::high_resolution_clock::now();
-
-  RedisDispatcher disp(*stateMachine());
-  int port = 34567;
-  Poller poll(port, &disp);
-  qclient::QClient tunn("localhost", port);
-
-  qdb_info("Starting benchmark: issue HSET " << number_of_inserts << " times through the redis protocol, " << GetParam() << " threads");
-  std::vector<std::thread> threads;
-  for(size_t i = 0; i < (size_t) GetParam(); i++) {
-    size_t start = (number_of_inserts / GetParam()) * i;
-    size_t end = (number_of_inserts / GetParam()) * (i+1);
-
-    threads.emplace_back(&hset::processRangeRedis, this, start, end, port);
-    qdb_info("Thread #" << i << " was assigned to range [" << start << "-" << end << ")");
+struct BenchmarkParamsPrinter {
+  template <class T>
+  std::string operator()(const T& info) const {
+    return info.param;
   }
+};
 
-  for(size_t i = 0; i < threads.size(); i++) {
-    threads[i].join();
-  }
-  qdb_info("Benchmark has ended");
+INSTANTIATE_TEST_CASE_P(Benchmark,
+                        hset,
+                        ::testing::ValuesIn(generateParams()),
+                        BenchmarkParamsPrinter());
 
-  auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - startTime).count();
-  qdb_info("Rate: " << (float) number_of_inserts / ((float) duration / (float) 1000) << " Hz");
+TEST_P(hset, hset) {
+  run();
 }
