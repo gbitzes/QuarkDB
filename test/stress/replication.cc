@@ -33,6 +33,7 @@
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
 #include <qclient/QClient.hh>
+#include "utils/AssistedThread.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -152,25 +153,10 @@ static void generateLoad(qclient::QClient *qcl, std::string prefix, std::atomic<
     qcl->exec("set", SSTR(prefix <<  "-key-" << counter), SSTR(prefix << "value-" << counter));
     counter++;
   }
+  qdb_info("Stopping load generation towards '" << prefix << "', waiting on pending replies");
   qcl->exec("ping").get();
-  qdb_info("Stopping load generation towards '" << prefix << "'");
+  qdb_info("Shutting down load generator towards '" << prefix << "'");
 }
-
-class AssistedThread {
-public:
-  // universal references, perfect forwarding
-  template<typename... Args>
-  AssistedThread(Args&&... args) : stopFlag(false), th(std::forward<Args>(args)..., std::ref(stopFlag)) {
-  }
-
-  virtual ~AssistedThread() {
-    stopFlag = true;
-    th.join();
-  }
-private:
-  std::atomic<bool> stopFlag;
-  std::thread th;
-};
 
 TEST_F(Replication, load_during_election) {
   // let's be extra evil and start generating load even before the nodes start up
@@ -186,4 +172,8 @@ TEST_F(Replication, load_during_election) {
   int leaderID = getLeaderID();
   RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() > 20000);
   ASSERT_TRUE(leaderID == getLeaderID());
+
+  t1.stop();
+  t2.stop();
+  t3.stop();
 }
