@@ -83,16 +83,15 @@ public:
   virtual void SetUp() override;
   virtual void TearDown() override;
 
-  // initialize a clean state machine or journal. The connection is cached,
+  // Initialize a *clean* Shard Directory. The connection to the dbs is cached,
   // because even if rocksdb is local, it takes a long time to open.
   // (often 50+ ms)
-  StateMachine *getStateMachine(const std::string &path);
-  RaftJournal *getJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+
+  ShardDirectory* getShardDirectory(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   const std::string testdir = "/tmp/quarkdb-tests";
   static RaftServer server(int id);
 private:
-  std::map<std::string, StateMachine*> smCache;
-  std::map<std::string, RaftJournal*> journalCache;
+  std::map<std::string, ShardDirectory*> shardDirCache;
 };
 extern GlobalEnv &commonState;
 

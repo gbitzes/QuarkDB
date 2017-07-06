@@ -29,6 +29,7 @@
 #include "RedisParser.hh"
 #include "StateMachine.hh"
 #include "Dispatcher.hh"
+#include "ShardDirectory.hh"
 #include "raft/RaftJournal.hh"
 #include "raft/RaftState.hh"
 #include "raft/RaftTimeouts.hh"
@@ -71,7 +72,7 @@ struct QuarkDBInfo {
 
 class QuarkDBNode : public Dispatcher {
 public:
-  QuarkDBNode(const Configuration &config, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t = defaultTimeouts);
+  QuarkDBNode(const Configuration &config, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t);
   ~QuarkDBNode();
 
   void detach();
@@ -83,6 +84,8 @@ public:
   }
 private:
   Configuration configuration;
+  ShardDirectory *shardDirectory;
+
   RaftGroup* raftgroup = nullptr;
   StateMachine *stateMachine = nullptr;
   Dispatcher* dispatcher = nullptr;

@@ -63,23 +63,8 @@ void QuarkDBNode::detach() {
     dispatcher = nullptr;
   }
 
+  delete shardDirectory;
   qdb_info("Backend has been detached from this quarkdb node.")
-}
-
-static bool directoryExists(const std::string &path, std::string &err) {
-  struct stat sb;
-
-  if(stat(path.c_str(), &sb) != 0) {
-    err = SSTR("Cannot stat " << path);
-    return false;
-  }
-
-  if(!S_ISDIR(sb.st_mode)) {
-    err = SSTR(path << " is not a directory");
-    return false;
-  }
-
-  return true;
 }
 
 bool QuarkDBNode::attach(std::string &err) {
@@ -93,23 +78,14 @@ bool QuarkDBNode::attach(std::string &err) {
     return false;
   }
 
-  std::string suberr;
-  if(!directoryExists(configuration.getDatabase(), suberr)) {
-    err = SSTR("Unable to attach to backend, cannot access base directory: " << suberr);
-    return false;
-  }
-
-  if(configuration.getMode() == Mode::raft && !directoryExists(configuration.getRaftJournal(), suberr)) {
-    err = SSTR("Unable to attach to backend (raft mode), cannot access raft journal: " << suberr);
-    return false;
-  }
+  shardDirectory = new ShardDirectory(configuration.getDatabase());
 
   if(configuration.getMode() == Mode::standalone) {
-    stateMachine = new StateMachine(configuration.getStateMachine());
+    stateMachine = shardDirectory->getStateMachine();
     dispatcher = new RedisDispatcher(*stateMachine);
   }
   else if(configuration.getMode() == Mode::raft) {
-    raftgroup = new RaftGroup(configuration.getDatabase(), configuration.getMyself(), timeouts);
+    raftgroup = new RaftGroup(*shardDirectory, configuration.getMyself(), timeouts);
     dispatcher = raftgroup->dispatcher();
     raftgroup->spinup();
   }

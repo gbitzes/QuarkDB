@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "ShardDirectory.hh"
 #include "config/test-config.hh"
 #include "test-utils.hh"
 #include "Utils.hh"
@@ -50,35 +51,18 @@ std::vector<RedisRequest> testreqs = {
 };
 
 void GlobalEnv::TearDown() {
-  for(auto& kv : smCache) {
+  for(auto& kv : shardDirCache) {
     delete kv.second;
   }
-  smCache.clear();
-
-  for(auto& kv : journalCache) {
-    delete kv.second;
-  }
-  journalCache.clear();
+  shardDirCache.clear();
 }
 
-StateMachine* GlobalEnv::getStateMachine(const std::string &path) {
-  StateMachine *ret = smCache[path];
+ShardDirectory* GlobalEnv::getShardDirectory(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
+  ShardDirectory *ret = shardDirCache[path];
   if(ret == nullptr) {
     mkpath_or_die(path, 0755);
-    ret = new StateMachine(path);
-    smCache[path] = ret;
-  }
-
-  ret->reset();
-  return ret;
-}
-
-RaftJournal* GlobalEnv::getJournal(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
-  RaftJournal *ret = journalCache[path];
-  if(ret == nullptr) {
-    mkpath_or_die(path, 0755);
-    ret = new RaftJournal(path, clusterID, nodes);
-    journalCache[path] = ret;
+    ret = new ShardDirectory(path);
+    shardDirCache[path] = ret;
   }
 
   ret->obliterate(clusterID, nodes);
@@ -221,9 +205,9 @@ int TestCluster::getLeaderID() {
 TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)
 : myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
-  StateMachine *smPtr = commonState.getStateMachine(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/state-machine"));
-  RaftJournal *journalPtr = commonState.getJournal(SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/raft-journal"), clusterID, initialNodes);
-  raftgroup = new RaftGroup(*journalPtr, *smPtr, myself(), testconfig.raftTimeouts);
+  std::string shardPath = SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/");
+  ShardDirectory *shardDirectory = commonState.getShardDirectory(shardPath, clusterID, initialNodes);
+  raftgroup = new RaftGroup(*shardDirectory, myself(), testconfig.raftTimeouts);
 }
 
 RaftGroup* TestNode::group() {

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Configuration.hh
+// File: ShardDirectory.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,48 +21,41 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_CONFIGURATION_H__
-#define __QUARKDB_CONFIGURATION_H__
-
-#include <string>
-#include <vector>
-
-#include <XrdOuc/XrdOucStream.hh>
+#ifndef __QUARKDB_SHARD_DIRECTORY_H__
+#define __QUARKDB_SHARD_DIRECTORY_H__
 
 #include "Common.hh"
-#include "Utils.hh"
 
 namespace quarkdb {
 
-enum class Mode {
-  standalone = 0,
-  raft = 1
-};
+class StateMachine; class RaftJournal;
 
-class Configuration {
+// Manages a shard directory on the physical file system.
+// Keeps ownership of StateMachine and RaftJournal - initialized lazily.
+class ShardDirectory {
 public:
-  static bool fromFile(const std::string &filename, Configuration &out);
-  static bool fromStream(XrdOucStream &stream, Configuration &out);
-  static bool fromString(const std::string &str, Configuration &out);
-  bool isValid();
+  ShardDirectory(const std::string &path);
+  ~ShardDirectory();
 
-  Mode getMode() const { return mode; }
-  std::string getDatabase() const { return database; }
-  TraceLevel getTraceLevel() const { return trace; }
-  std::string getCertificatePath() const { return certificatePath; }
-  std::string getKeyPath() const { return keyPath; }
+  StateMachine *getStateMachine();
+  RaftJournal *getRaftJournal();
 
-  RaftServer getMyself() const { return myself; }
+  // Reset the contents of both the state machine and the raft journal.
+  // Physical paths remain the same.
+  void obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
 private:
-  Mode mode;
-  std::string database;
-  TraceLevel trace = TraceLevel::info;
-  std::string certificatePath;
-  std::string keyPath;
+  std::string path;
 
-  // raft options
-  RaftServer myself;
+  StateMachine *smptr = nullptr;
+  RaftJournal *journalptr = nullptr;
+
+  std::string stateMachinePath();
+  std::string raftJournalPath();
 };
+
+
+
 }
+
 
 #endif

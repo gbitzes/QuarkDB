@@ -41,10 +41,11 @@ class RaftState; class RaftReplicator; class RaftClock;
 class RaftDirector; class RaftLease; class RaftWriteTracker;
 class RaftTrimmer;
 
+class ShardDirectory;
+
 class RaftGroup {
 public:
-  RaftGroup(const std::string &path, const RaftServer &myself, const RaftTimeouts &t);
-  RaftGroup(RaftJournal &journal, StateMachine &stateMachine, const RaftServer &myself, const RaftTimeouts &t);
+  RaftGroup(ShardDirectory &shardDirectory, const RaftServer &myself, const RaftTimeouts &t);
   DISALLOW_COPY_AND_ASSIGN(RaftGroup);
   ~RaftGroup();
 
@@ -64,12 +65,16 @@ public:
   void spinup();
   void spindown();
 private:
-  bool injectedDatabases = false;
+
+  // Ownership managed external to this class.
+  ShardDirectory &shardDirectory;
+  StateMachine &stateMachineRef;
+  RaftJournal &raftJournalRef;
+
   const RaftServer me;
   const RaftTimeouts timeouts;
 
-  StateMachine *smptr = nullptr;
-  RaftJournal *journalptr = nullptr;
+  // All components needed for the raft party - owned by this class.
   RaftDispatcher *dispatcherptr = nullptr;
   RaftState *stateptr = nullptr;
   RaftClock *clockptr = nullptr;

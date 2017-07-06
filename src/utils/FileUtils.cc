@@ -71,4 +71,20 @@ void mkpath_or_die(const std::string &path, mode_t mode) {
   if(!quarkdb::mkpath(path, mode, err)) qdb_throw(err);
 }
 
+bool directoryExists(const std::string &path, std::string &err) {
+  struct stat sb;
+
+  if(stat(path.c_str(), &sb) != 0) {
+    err = SSTR("Cannot stat " << path);
+    return false;
+  }
+
+  if(!S_ISDIR(sb.st_mode)) {
+    err = SSTR(path << " is not a directory");
+    return false;
+  }
+
+  return true;
+}
+
 }

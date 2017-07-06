@@ -32,28 +32,18 @@
 #include "RaftWriteTracker.hh"
 #include "RaftTrimmer.hh"
 #include "../utils/FileUtils.hh"
+#include "../ShardDirectory.hh"
 
 using namespace quarkdb;
 
-RaftGroup::RaftGroup(const std::string &database, const RaftServer &myself, const RaftTimeouts &t)
-: me(myself), timeouts(t) {
-  journalptr = new RaftJournal(pathJoin(database, "raft-journal"));
-  smptr = new StateMachine(pathJoin(database, "state-machine"));
-}
+RaftGroup::RaftGroup(ShardDirectory &shardDir, const RaftServer &myself, const RaftTimeouts &t)
+: shardDirectory(shardDir), stateMachineRef(*shardDirectory.getStateMachine()),
+raftJournalRef(*shardDirectory.getRaftJournal()), me(myself), timeouts(t) {
 
-RaftGroup::RaftGroup(RaftJournal &journal, StateMachine &stateMachine, const RaftServer &myself, const RaftTimeouts &t)
-: me(myself), timeouts(t) {
-  injectedDatabases = true;
-  journalptr = &journal;
-  smptr = &stateMachine;
 }
 
 RaftGroup::~RaftGroup() {
   spindown();
-  if(!injectedDatabases) {
-    delete journalptr;
-    delete smptr;
-  }
 }
 
 void RaftGroup::spinup() {
@@ -103,12 +93,12 @@ RaftServer RaftGroup::myself() {
 
 StateMachine* RaftGroup::stateMachine() {
   // always available
-  return smptr;
+  return &stateMachineRef;
 }
 
 RaftJournal* RaftGroup::journal() {
   // always available
-  return journalptr;
+  return &raftJournalRef;
 }
 
 RaftDispatcher* RaftGroup::dispatcher() {

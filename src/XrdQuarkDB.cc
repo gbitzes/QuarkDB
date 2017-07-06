@@ -163,7 +163,7 @@ int XrdQuarkDB::Configure(char *parms, XrdProtocol_Config * pi) {
     return 0;
   }
 
-  quarkdbNode = new QuarkDBNode(configuration, inFlight);
+  quarkdbNode = new QuarkDBNode(configuration, inFlight, defaultTimeouts);
   std::thread(&XrdQuarkDB::shutdownMonitor).detach();
   signal(SIGINT, handle_sigint);
   signal(SIGTERM, handle_sigint);

@@ -28,6 +28,7 @@ add_library(XrdQuarkDB SHARED
   Poller.cc                  Poller.hh
   Connection.cc              Connection.hh
   QuarkDBNode.cc             QuarkDBNode.hh
+  ShardDirectory.cc          ShardDirectory.hh
 
   raft/RaftBlockedWrites.cc  raft/RaftBlockedWrites.hh
   raft/RaftJournal.cc        raft/RaftJournal.hh
