@@ -24,6 +24,9 @@
 #include "StateMachine.hh"
 #include "QuarkDBNode.hh"
 #include "Version.hh"
+#include "utils/FileUtils.hh"
+#include "utils/ScopedAdder.hh"
+
 #include <sys/stat.h>
 
 using namespace quarkdb;

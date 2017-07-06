@@ -78,9 +78,6 @@ uint64_t binaryStringToUnsignedInt(const char* buff);
 void unsignedIntToBinaryString(uint64_t num, char* buff);
 std::string unsignedIntToBinaryString(uint64_t num);
 
-std::string chopPath(const std::string &path);
-bool mkpath(const std::string &path, mode_t mode, std::string &err);
-void mkpath_or_die(const std::string &path, mode_t mode);
 bool my_strtoll(const std::string &str, int64_t &ret);
 bool my_strtod(const std::string &str, double &ret);
 std::vector<std::string> split(std::string data, std::string token);
@@ -88,7 +85,6 @@ bool startswith(const std::string &str, const std::string &prefix);
 bool parseServer(const std::string &str, RaftServer &srv);
 bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
 std::string serializeNodes(const std::vector<RaftServer> &nodes);
-std::string pathJoin(const std::string &part1, const std::string &part2);
 bool caseInsensitiveEquals(const std::string &str1, const std::string &str2);
 
 inline std::string boolToString(bool b) {
@@ -148,22 +144,6 @@ bool all_identical(const std::vector<T> &v) {
   }
   return true;
 }
-
-template<class T>
-class ScopedAdder {
-public:
-  ScopedAdder(std::atomic<T> &target_, T value_ = 1) : target(target_), value(value_) {
-    target += value;
-  }
-
-  ~ScopedAdder() {
-    target -= value;
-  }
-
-private:
-  std::atomic<T> &target;
-  T value;
-};
 
 int stringmatchlen(const char *pattern, int patternLen,
   const char *string, int stringLen, int nocase);

@@ -28,6 +28,7 @@ add_library(XrdQuarkDB SHARED
   Poller.cc                  Poller.hh
   Connection.cc              Connection.hh
   QuarkDBNode.cc             QuarkDBNode.hh
+
   raft/RaftBlockedWrites.cc  raft/RaftBlockedWrites.hh
   raft/RaftJournal.cc        raft/RaftJournal.hh
   raft/RaftState.cc          raft/RaftState.hh
@@ -43,6 +44,11 @@ add_library(XrdQuarkDB SHARED
                              raft/RaftMembers.hh
   raft/RaftTrimmer.cc        raft/RaftTrimmer.hh
   raft/RaftLease.cc          raft/RaftLease.hh
+
+                             utils/AssistedThread.hh
+  utils/FileUtils.cc         utils/FileUtils.hh
+                             utils/ScopedAdder.hh
+
   ${BACKWARD_ENABLE}
 )
 

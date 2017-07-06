@@ -31,6 +31,7 @@
 #include "RaftGroup.hh"
 #include "RaftWriteTracker.hh"
 #include "RaftTrimmer.hh"
+#include "../utils/FileUtils.hh"
 
 using namespace quarkdb;
 

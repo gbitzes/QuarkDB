@@ -26,6 +26,7 @@
 #include "RaftReplicator.hh"
 #include "RaftTalker.hh"
 #include "RaftUtils.hh"
+#include "../utils/FileUtils.hh"
 #include <dirent.h>
 #include <fstream>
 

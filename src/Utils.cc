@@ -32,13 +32,6 @@ namespace quarkdb {
 
 std::mutex logMutex;
 
-std::string pathJoin(const std::string &part1, const std::string &part2) {
-  if(part1.empty()) return "/" + part2;
-  if(part2.empty()) return part1;
-  if(part1[part1.size()-1] == '/') return part1 + part2;
-  return part1 + "/" + part2;
-}
-
 bool caseInsensitiveEquals(const std::string &str1, const std::string &str2) {
   if(str1.size() != str2.size()) return false;
   for(size_t i = 0; i < str1.size(); i++) {
@@ -98,42 +91,6 @@ std::string unsignedIntToBinaryString(uint64_t num) {
   char buff[sizeof(num)];
   unsignedIntToBinaryString(num, buff);
   return std::string(buff, sizeof(num));
-}
-
-std::string chopPath(const std::string &path) {
-  std::vector<std::string> parts = split(path, "/");
-  std::stringstream ss;
-
-  for(size_t i = 1; i < parts.size()-1; i++) {
-    ss << "/" << parts[i];
-  }
-
-  return ss.str();
-}
-
-bool mkpath(const std::string &path, mode_t mode, std::string &err) {
-  size_t pos = path.find("/");
-
-  while( (pos = path.find("/", pos+1)) != std::string::npos) {
-    std::string chunk = path.substr(0, pos);
-
-    struct stat sb;
-    if(stat(chunk.c_str(), &sb) != 0) {
-      qdb_info("Creating directory: " << chunk);
-      if(mkdir(chunk.c_str(), mode) < 0) {
-        int localerrno = errno;
-        err = SSTR("cannot create directory " << chunk << ": " << strerror(localerrno));
-        return false;
-      }
-    }
-  }
-
-  return true;
-}
-
-void mkpath_or_die(const std::string &path, mode_t mode) {
-  std::string err;
-  if(!mkpath(path, mode, err)) qdb_throw(err);
 }
 
 std::vector<std::string> split(std::string data, std::string token) {

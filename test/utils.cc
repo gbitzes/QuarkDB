@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include <gtest/gtest.h>
+#include "utils/FileUtils.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;

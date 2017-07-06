@@ -36,6 +36,7 @@
 #include <qclient/QClient.hh>
 #include <gtest/gtest.h>
 #include "config/test-config.hh"
+#include "utils/FileUtils.hh"
 
 #include <sys/types.h>
 #include <sys/socket.h>
