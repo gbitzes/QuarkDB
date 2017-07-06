@@ -25,18 +25,52 @@
 
 #include <atomic>
 #include <thread>
+#include <mutex>
+#include <condition_variable>
 
 namespace quarkdb {
+
+
+class AssistedThread;
+class ThreadAssistant {
+public:
+  ThreadAssistant(bool flag) : stopFlag(flag) {}
+
+  void requestTermination() {
+    std::lock_guard<std::mutex> lock(mtx);
+    stopFlag = true;
+    notifier.notify_all();
+  }
+
+  bool terminationRequested() {
+    return stopFlag;
+  }
+
+  template<typename T>
+  void wait_for(T duration) {
+    std::unique_lock<std::mutex> lock(mtx);
+
+    if(stopFlag) return;
+    notifier.wait_for(lock, duration);
+  }
+
+private:
+  friend class AssistedThread;
+
+  std::atomic<bool> stopFlag;
+  std::mutex mtx;
+  std::condition_variable notifier;
+};
 
 class AssistedThread {
 public:
   // null constructor, no underlying thread
-  AssistedThread() : stopFlag(true), joined(true) { }
+  AssistedThread() : assistant(true), joined(true) { }
 
   // universal references, perfect forwarding, variadic template
   // (C++ is intensifying)
   template<typename... Args>
-  AssistedThread(Args&&... args) : stopFlag(false), joined(false), th(std::forward<Args>(args)..., std::ref(stopFlag)) {
+  AssistedThread(Args&&... args) : assistant(false), joined(false), th(std::forward<Args>(args)..., std::ref(assistant)) {
   }
 
   // Only allow assignment to rvalues
@@ -45,7 +79,7 @@ public:
   AssistedThread& operator=(AssistedThread&& src) noexcept {
     join();
 
-    stopFlag = src.stopFlag.load();
+    assistant.stopFlag = src.assistant.stopFlag.load();
     joined = src.joined.load();
     th = std::move(src.th);
     return *this;
@@ -57,7 +91,7 @@ public:
 
   void stop() {
     if(joined) return;
-    stopFlag = true;
+    assistant.requestTermination();
   }
 
   void join() {
@@ -69,7 +103,9 @@ public:
   }
 
 private:
-  std::atomic<bool> stopFlag, joined;
+  ThreadAssistant assistant;
+
+  std::atomic<bool> joined;
   std::thread th;
 };
 

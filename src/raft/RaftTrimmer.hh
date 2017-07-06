@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftDirector.hh
+// File: RaftTrimmer.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,43 +21,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_DIRECTOR_H__
-#define __QUARKDB_RAFT_DIRECTOR_H__
+#ifndef __QUARKDB_RAFT_TRIMMER_H__
+#define __QUARKDB_RAFT_TRIMMER_H__
 
-#include "../StateMachine.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
-#include "RaftTimeouts.hh"
-#include "RaftDispatcher.hh"
-#include "RaftLease.hh"
-#include "RaftCommitTracker.hh"
-#include "RaftWriteTracker.hh"
-#include <thread>
+#include "../utils/AssistedThread.hh"
+#include <atomic>
 
 namespace quarkdb {
 
-class RaftDirector {
+class RaftJournal;
+class RaftTrimmer {
 public:
-  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc, RaftWriteTracker &wt);
-  ~RaftDirector();
-  DISALLOW_COPY_AND_ASSIGN(RaftDirector);
+  RaftTrimmer(RaftJournal &journal);
 private:
-  void main();
-  void actAsFollower(RaftStateSnapshot &snapshot);
-  void actAsLeader(RaftStateSnapshot &snapshot);
-  void runForLeader();
-  void applyCommits();
-
-  RaftDispatcher &dispatcher;
   RaftJournal &journal;
-  StateMachine &stateMachine;
-  RaftState &state;
-  RaftClock &raftClock;
-  RaftLease &lease;
-  RaftCommitTracker &commitTracker;
-  RaftWriteTracker &writeTracker;
+  AssistedThread mainThread;
 
-  std::thread mainThread;
+  void main(ThreadAssistant &assistant);
 };
 
 }

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftDirector.hh
+// File: RaftTrimmer.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,45 +21,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_DIRECTOR_H__
-#define __QUARKDB_RAFT_DIRECTOR_H__
-
-#include "../StateMachine.hh"
+#include "RaftTrimmer.hh"
 #include "RaftJournal.hh"
-#include "RaftState.hh"
-#include "RaftTimeouts.hh"
-#include "RaftDispatcher.hh"
-#include "RaftLease.hh"
-#include "RaftCommitTracker.hh"
-#include "RaftWriteTracker.hh"
-#include <thread>
 
-namespace quarkdb {
+using namespace quarkdb;
 
-class RaftDirector {
-public:
-  RaftDirector(RaftDispatcher &disp, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc, RaftWriteTracker &wt);
-  ~RaftDirector();
-  DISALLOW_COPY_AND_ASSIGN(RaftDirector);
-private:
-  void main();
-  void actAsFollower(RaftStateSnapshot &snapshot);
-  void actAsLeader(RaftStateSnapshot &snapshot);
-  void runForLeader();
-  void applyCommits();
 
-  RaftDispatcher &dispatcher;
-  RaftJournal &journal;
-  StateMachine &stateMachine;
-  RaftState &state;
-  RaftClock &raftClock;
-  RaftLease &lease;
-  RaftCommitTracker &commitTracker;
-  RaftWriteTracker &writeTracker;
-
-  std::thread mainThread;
-};
+RaftTrimmer::RaftTrimmer(RaftJournal &jr)
+: journal(jr), mainThread(&RaftTrimmer::main, this) {
 
 }
 
-#endif
+void RaftTrimmer::main(ThreadAssistant &assistant) {
+  while(!assistant.terminationRequested()) {
+    LogIndex logSpan = journal.getLogSize() - journal.getLogStart();
+
+    // TODO: make these configurable?
+    if(logSpan >= 1000000) {
+      journal.trimUntil(journal.getLogStart() + 100000);
+    }
+    else {
+      assistant.wait_for(std::chrono::seconds(1));
+    }
+  }
+}

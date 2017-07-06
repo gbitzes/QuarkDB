@@ -31,27 +31,11 @@ using namespace quarkdb;
 RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt)
 : dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt) {
   mainThread = std::thread(&RaftDirector::main, this);
-  journalTrimmer = std::thread(&RaftDirector::trimJournal, this);
 }
 
 RaftDirector::~RaftDirector() {
   state.shutdown();
-  journalTrimmer.join();
   mainThread.join();
-}
-
-void RaftDirector::trimJournal() {
-  while(!state.inShutdown()) {
-    LogIndex logSpan = journal.getLogSize() - journal.getLogStart();
-
-    // TODO: make these configurable?
-    if(logSpan >= 1000000) {
-      journal.trimUntil(journal.getLogStart() + 100000);
-    }
-    else {
-      state.wait(std::chrono::seconds(1));
-    }
-  }
 }
 
 void RaftDirector::main() {

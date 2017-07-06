@@ -41,6 +41,7 @@ add_library(XrdQuarkDB SHARED
   raft/RaftWriteTracker.cc   raft/RaftWriteTracker.hh
   raft/RaftGroup.cc          raft/RaftGroup.hh
                              raft/RaftMembers.hh
+  raft/RaftTrimmer.cc        raft/RaftTrimmer.hh
   raft/RaftLease.cc          raft/RaftLease.hh
   ${BACKWARD_ENABLE}
 )

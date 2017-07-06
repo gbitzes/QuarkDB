@@ -30,6 +30,7 @@
 #include "../StateMachine.hh"
 #include "RaftGroup.hh"
 #include "RaftWriteTracker.hh"
+#include "RaftTrimmer.hh"
 
 using namespace quarkdb;
 
@@ -55,7 +56,8 @@ RaftGroup::~RaftGroup() {
 }
 
 void RaftGroup::spinup() {
-  director(); // transitively initializes everything
+  trimmer();
+  director(); // transitively initializes everything else
 }
 
 void RaftGroup::spindown() {
@@ -87,6 +89,10 @@ void RaftGroup::spindown() {
   if(ctptr) {
     delete ctptr;
     ctptr = nullptr;
+  }
+  if(trimmerptr) {
+    delete trimmerptr;
+    trimmerptr = nullptr;
   }
 }
 
@@ -151,4 +157,11 @@ RaftWriteTracker* RaftGroup::writeTracker() {
     wtptr = new RaftWriteTracker(*journal(), *state(), *stateMachine());
   }
   return wtptr;
+}
+
+RaftTrimmer* RaftGroup::trimmer() {
+  if(trimmerptr == nullptr) {
+    trimmerptr = new RaftTrimmer(*journal());
+  }
+  return trimmerptr;
 }

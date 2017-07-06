@@ -147,9 +147,9 @@ TEST_F(Replication, connection_shuts_down_before_all_replies_arrive) {
 }
 
 // blindly generate load, ignore any errors
-static void generateLoad(qclient::QClient *qcl, std::string prefix, std::atomic<bool> &stopFlag) {
+static void generateLoad(qclient::QClient *qcl, std::string prefix, ThreadAssistant &assistant) {
   int counter = 0;
-  while(!stopFlag) {
+  while(!assistant.terminationRequested()) {
     qcl->exec("set", SSTR(prefix <<  "-key-" << counter), SSTR(prefix << "value-" << counter));
     counter++;
   }
