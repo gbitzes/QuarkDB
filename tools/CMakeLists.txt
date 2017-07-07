@@ -21,6 +21,6 @@ include_directories(
 )
 
 install(
-  TARGETS quarkdb-journal quarkdb-scrub quarkdb-chaos
+  TARGETS quarkdb-journal quarkdb-scrub quarkdb-chaos quarkdb-create
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )
