@@ -79,7 +79,7 @@ private:
   std::condition_variable notifier;
 
   std::atomic<RaftTerm> term;
-  RaftStatus status;
+  std::atomic<RaftStatus> status;
   RaftServer leader;
   RaftServer votedFor;
   const RaftServer myself;
