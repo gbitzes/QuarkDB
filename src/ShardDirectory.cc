@@ -98,7 +98,7 @@ void ShardDirectory::initializeDirectory(const std::string &path, RaftClusterID 
     qdb_throw("Cannot initialize shard directory for '" << shardID << "', path already exists: " << path);
   }
 
-  mkpath_or_die(path, 0755);
+  mkpath_or_die(path + "/", 0755);
   write_file_or_die(pathJoin(path, "SHARD-ID"), shardID);
 }
 

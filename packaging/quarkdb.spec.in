@@ -62,3 +62,4 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/quarkdb-tests
 %{_bindir}/quarkdb-stress-tests
 %{_bindir}/quarkdb-bench
+%{_bindir}/quarkdb-create

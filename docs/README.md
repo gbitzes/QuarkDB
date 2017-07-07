@@ -36,6 +36,25 @@ RocksDB is embedded as a submodule, but you can also compile it yourself
 and specify `-DROCKSDB_ROOT_DIR` to the cmake invocation, in order to speed
 things up if you do a full recompilation of quarkdb often.
 
+# Setting up a local node
+
+1. Create the database directory by running the following command:
+
+  ```
+  quarkdb-create --path /path/to/database-dir
+  ```
+
+2. Create an xrootd configuration file - here's an example.
+
+  ```
+  if exec xrootd
+    xrd.port 7777
+    xrd.protocol redis:7777 /path/to/quarkdb/build/src/libXrdQuarkDB.so
+    redis.mode standalone
+    redis.database /path/to/database-dir
+  fi
+  ```
+
 # Setting up a cluster
 
 Let's set up a 3-node test cluster on localhost, with each node listening on a
@@ -49,30 +68,15 @@ A [UUID](https://www.uuidgenerator.net) will do nicely.
 It's a string that uniquely identifies a cluster - nodes with
 different clusterIDs will refuse to talk with one another.
 
-3. For each node in the cluster, run the following commands:
+3. For each node in the cluster, run the following command:
 
   ```
-  mkdir /path/to/node-database
-  quarkbd-journal --create --path /path/to/node-database/raft-journal --clusterID your-cluster-id --nodes localhost:7777,localhost:7778,localhost:7779
+  quarkbd-create --path /path/to/node-database --clusterID your-cluster-id --nodes localhost:7777,localhost:7778,localhost:7779
   ```
 
-  Both clusterID and nodes *must* be identical in each invocation. At the end, you
-  should have a directory structure similar to the following:
+  Both clusterID and nodes *must* be identical across every invocation.
 
-  ```
-  .
-  ├── node-0
-  │   └── raft-journal
-  │       └──  ...
-  ├── node-1
-  │   └── raft-journal
-  │       └──  ...
-  └── node-2
-      └── raft-journal
-          └──  ...
-  ```
-
-4. Create an xrootd configuration file for each node - here's an example.
+4. For each node in the cluster, create an xrootd configuration file - here's an example.
 
   ```
   if exec xrootd

@@ -7,6 +7,9 @@ target_link_libraries(quarkdb-journal XrdQuarkDB)
 add_executable(quarkdb-scrub quarkdb-scrub.cc)
 target_link_libraries(quarkdb-scrub XrdQuarkDB)
 
+add_executable(quarkdb-create quarkdb-create.cc)
+target_link_libraries(quarkdb-create XrdQuarkDB)
+
 add_executable(quarkdb-chaos quarkdb-chaos.cc)
 target_link_libraries(quarkdb-chaos XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT})
 
