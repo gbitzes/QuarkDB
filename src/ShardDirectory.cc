@@ -35,6 +35,11 @@ ShardDirectory::ShardDirectory(const std::string &initpath)
   if(!directoryExists(path, err)) {
     qdb_throw("Cannot initialize shard directory at '" << path << "': " << err);
   }
+
+  std::string idPath(pathJoin(path, "SHARD-ID"));
+  if(!readFile(idPath, shardID)) {
+    qdb_throw("Unable to read shard id from '" << idPath << "'");
+  }
 }
 
 ShardDirectory::~ShardDirectory() {
@@ -85,4 +90,27 @@ void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftS
   else {
     getRaftJournal()->obliterate(clusterID, nodes);
   }
+}
+
+void ShardDirectory::initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID) {
+  std::string err;
+  if(directoryExists(path, err)) {
+    qdb_throw("Cannot initialize shard directory for '" << shardID << "', path already exists: " << path);
+  }
+
+  mkpath_or_die(path, 0755);
+  write_file_or_die(pathJoin(path, "SHARD-ID"), shardID);
+}
+
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID) {
+  initializeDirectory(path, clusterID, shardID);
+  return new ShardDirectory(path);
+}
+
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes) {
+  initializeDirectory(path, clusterID, shardID);
+
+  ShardDirectory *shardDirectory = new ShardDirectory(path);
+  shardDirectory->obliterate(clusterID, nodes);
+  return shardDirectory;
 }

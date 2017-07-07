@@ -87,4 +87,63 @@ bool directoryExists(const std::string &path, std::string &err) {
   return true;
 }
 
+bool readFile(FILE *f, std::string &contents) {
+  bool retvalue = true;
+  std::ostringstream ss;
+
+  const int BUFFER_SIZE = 1024;
+  char buffer[BUFFER_SIZE];
+
+  while(true) {
+    size_t bytesRead = fread(buffer, 1, BUFFER_SIZE, f);
+
+    if(bytesRead > 0) {
+      ss.write(buffer, bytesRead);
+    }
+
+    // end of file
+    if(bytesRead != BUFFER_SIZE) {
+      retvalue = feof(f);
+      break;
+    }
+  }
+
+  contents = ss.str();
+  return retvalue;
+}
+
+bool readFile(const std::string &path, std::string &contents) {
+  bool retvalue = true;
+
+  FILE *in = fopen(path.c_str(), "rb");
+  if(!in) {
+    return false;
+  }
+
+  retvalue = readFile(in, contents);
+  fclose(in);
+  return retvalue;
+}
+
+bool write_file(const std::string &path, const std::string &contents) {
+  bool retvalue;
+
+  FILE *out = fopen(path.c_str(), "wb");
+
+  if(!out) {
+    return false;
+  }
+
+  retvalue = fwrite(contents.c_str(), sizeof(char), contents.size(), out);
+  fclose(out);
+  return retvalue;
+}
+
+void write_file_or_die(const std::string &path, const std::string &contents) {
+  if(!write_file(path, contents)) {
+    qdb_throw("Could not write to file: " << path);
+  }
+}
+
+
 }

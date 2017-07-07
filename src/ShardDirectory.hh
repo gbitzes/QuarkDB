@@ -30,6 +30,8 @@ namespace quarkdb {
 
 class StateMachine; class RaftJournal;
 
+using ShardID = std::string;
+
 // Manages a shard directory on the physical file system.
 // Keeps ownership of StateMachine and RaftJournal - initialized lazily.
 class ShardDirectory {
@@ -43,14 +45,24 @@ public:
   // Reset the contents of both the state machine and the raft journal.
   // Physical paths remain the same.
   void obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+
+  // Create a standalone shard.
+  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID);
+
+  // Create a consensus shard.
+  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes);
+
 private:
   std::string path;
+  ShardID shardID;
 
   StateMachine *smptr = nullptr;
   RaftJournal *journalptr = nullptr;
 
   std::string stateMachinePath();
   std::string raftJournalPath();
+
+  static void initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID);
 };
 
 

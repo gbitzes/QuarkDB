@@ -60,8 +60,7 @@ void GlobalEnv::TearDown() {
 ShardDirectory* GlobalEnv::getShardDirectory(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
   ShardDirectory *ret = shardDirCache[path];
   if(ret == nullptr) {
-    mkpath_or_die(path, 0755);
-    ret = new ShardDirectory(path);
+    ret = ShardDirectory::create(path, clusterID, "default", nodes);
     shardDirCache[path] = ret;
   }
 
