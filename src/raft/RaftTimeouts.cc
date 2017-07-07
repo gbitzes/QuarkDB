@@ -28,6 +28,7 @@ using namespace quarkdb;
 
 std::random_device RaftTimeouts::rd;
 std::mt19937 RaftTimeouts::gen(rd());
+std::mutex RaftTimeouts::genMutex;
 
 
 RaftTimeouts quarkdb::defaultTimeouts {milliseconds(1000), milliseconds(1500),
@@ -54,6 +55,7 @@ milliseconds RaftTimeouts::getHigh() const {
 }
 
 milliseconds RaftTimeouts::getRandom() const {
+  std::lock_guard<std::mutex> lock(genMutex);
   return std::chrono::milliseconds(dist(gen));
 }
 

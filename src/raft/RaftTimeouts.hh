@@ -49,6 +49,7 @@ private:
 
   static std::random_device rd;
   static std::mt19937 gen;
+  static std::mutex genMutex;
   mutable std::uniform_int_distribution<> dist;
 };
 

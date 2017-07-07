@@ -250,7 +250,7 @@ private:
   void ensureCompatibleFormat(bool justCreated);
   void remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx);
 
-  LogIndex lastApplied;
+  std::atomic<LogIndex> lastApplied;
   rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;
   const std::string filename;
