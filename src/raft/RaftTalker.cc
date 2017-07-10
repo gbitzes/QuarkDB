@@ -22,11 +22,12 @@
  ************************************************************************/
 
 #include "RaftTalker.hh"
+#include "../Version.hh"
 
 using namespace quarkdb;
 
 RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID_)
-: server(server_), clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", STRINGIFY(VERSION_FULL), clusterID}) {
+: server(server_), clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID}) {
 
 }
 

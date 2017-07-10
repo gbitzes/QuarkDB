@@ -23,6 +23,7 @@
 
 #include "raft/RaftTalker.hh"
 #include "Common.hh"
+#include "Version.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
@@ -48,7 +49,7 @@ TEST(RaftTalker, T1) {
   while( (rc = parser.fetch(req)) == 0) ;
   ASSERT_EQ(rc, 1);
 
-  RedisRequest tmp = {"RAFT_HANDSHAKE", STRINGIFY(VERSION_FULL), clusterID};
+  RedisRequest tmp = {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID};
   ASSERT_EQ(req, tmp);
 
   // send an append entries message over the talker

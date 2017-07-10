@@ -269,6 +269,6 @@ error:
 
 QuarkDBInfo QuarkDBNode::info() {
   return {attached, resilvering, configuration.getMode(), configuration.getDatabase(),
-          STRINGIFY(VERSION_FULL), SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH),
+          VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH),
           inFlight};
 }

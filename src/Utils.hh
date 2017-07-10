@@ -32,13 +32,9 @@
 #include <chrono>
 #include <mutex>
 
-#include "Version.hh"
 #include "Common.hh"
 
 namespace quarkdb {
-
-#define STR_VALUE(arg) #arg
-#define STRINGIFY(arg) STR_VALUE(arg)
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;   \
