@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftTrimmer.cc
+// File: RaftConfig.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,31 +21,50 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftTrimmer.hh"
-#include "RaftJournal.hh"
 #include "RaftConfig.hh"
+#include "RaftDispatcher.hh"
+#include "../Connection.hh"
 #include "../StateMachine.hh"
 
 using namespace quarkdb;
 
+// TODO: implement internal commands in stateMachine, so such keys are hidden from
+// users
+const std::string trimLimitConfigKey("__internal_raft_config_trim_limit");
 
-RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
-: journal(jr), raftConfig(conf), stateMachine(sm), mainThread(&RaftTrimmer::main, this) {
+RaftConfig::RaftConfig(RaftDispatcher &disp, StateMachine &sm)
+: dispatcher(disp), stateMachine(sm) {
 
 }
 
-void RaftTrimmer::main(ThreadAssistant &assistant) {
-  while(!assistant.terminationRequested()) {
-    LogIndex logSpan = journal.getLogSize() - journal.getLogStart();
+int64_t RaftConfig::getJournalTrimLimit() {
+  std::string trimLimit;
+  rocksdb::Status st = stateMachine.get(trimLimitConfigKey, trimLimit);
 
-    int64_t journalTrimLimit = raftConfig.getJournalTrimLimit();
-    int64_t threshold = journal.getLogStart() + journalTrimLimit;
-
-    if(logSpan >= journalTrimLimit && journal.getCommitIndex() > threshold && stateMachine.getLastApplied() > threshold) {
-      journal.trimUntil(threshold);
-    }
-    else {
-      assistant.wait_for(std::chrono::seconds(1));
-    }
+  if(st.IsNotFound()) {
+    // Return default value
+    return 1000000;
   }
+  else if(!st.ok()) {
+    qdb_throw("Error when retrieving journal trim limit: " << st.ToString());
+  }
+
+  return binaryStringToInt(trimLimit.c_str());
+}
+
+// A value lower than 100k probably means an operator error.
+// By default, prevent such low values unless overrideSafety is set.
+LinkStatus RaftConfig::setJournalTrimLimit(Connection *conn, int64_t newLimit, bool overrideSafety) {
+  if(!overrideSafety && newLimit <= 100000) {
+    qdb_critical("attempted to set journal trimming limit to very low value: " << newLimit);
+    return conn->err(SSTR("new limit too small: " << newLimit));
+  }
+
+  if(newLimit < 3) {
+    qdb_critical("attempted to set journal trimming limit to very low value: " << newLimit);
+    return conn->err(SSTR("new limit too small, even with overrideSafety: " << newLimit));
+  }
+
+  RedisRequest req { "SET", trimLimitConfigKey, intToBinaryString(newLimit) };
+  return dispatcher.dispatch(conn, req);
 }

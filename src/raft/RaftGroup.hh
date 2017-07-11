@@ -31,15 +31,12 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 // This class keeps track of and owns all objects needed for the raft party.
 // Everything is initialized lazily.
-//
-// The journal and rocksdb objects can be injected, and in that case are not
-// owned by us.
 //------------------------------------------------------------------------------
 
 class StateMachine; class RaftJournal; class RaftDispatcher;
 class RaftState; class RaftReplicator; class RaftClock;
 class RaftDirector; class RaftLease; class RaftWriteTracker;
-class RaftTrimmer;
+class RaftTrimmer; class RaftCommitTracker; class RaftConfig;
 
 class ShardDirectory;
 
@@ -59,6 +56,7 @@ public:
   RaftCommitTracker *commitTracker();
   RaftWriteTracker *writeTracker();
   RaftTrimmer *trimmer();
+  RaftConfig *config();
 
   RaftServer myself();
 
@@ -83,6 +81,7 @@ private:
   RaftCommitTracker *ctptr = nullptr;
   RaftWriteTracker *wtptr = nullptr;
   RaftTrimmer *trimmerptr = nullptr;
+  RaftConfig *configptr = nullptr;
 };
 
 }

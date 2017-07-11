@@ -149,6 +149,10 @@ RaftCommitTracker* TestCluster::commitTracker(int id) {
   return node(id)->group()->commitTracker();
 }
 
+RaftConfig* TestCluster::raftconfig(int id) {
+  return node(id)->group()->config();
+}
+
 void TestCluster::killTunnel(int id) {
   return node(id)->killTunnel();
 }

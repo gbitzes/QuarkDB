@@ -31,6 +31,7 @@ add_library(XrdQuarkDB SHARED
   ShardDirectory.cc          ShardDirectory.hh
 
   raft/RaftBlockedWrites.cc  raft/RaftBlockedWrites.hh
+  raft/RaftConfig.cc         raft/RaftConfig.hh
   raft/RaftJournal.cc        raft/RaftJournal.hh
   raft/RaftState.cc          raft/RaftState.hh
   raft/RaftTalker.cc         raft/RaftTalker.hh

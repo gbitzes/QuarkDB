@@ -29,12 +29,14 @@
 
 namespace quarkdb {
 
-class RaftJournal;
+class RaftJournal; class RaftConfig; class StateMachine;
 class RaftTrimmer {
 public:
-  RaftTrimmer(RaftJournal &journal);
+  RaftTrimmer(RaftJournal &journal, RaftConfig &raftConfig, StateMachine &sm);
 private:
   RaftJournal &journal;
+  RaftConfig &raftConfig;
+  StateMachine &stateMachine;
   AssistedThread mainThread;
 
   void main(ThreadAssistant &assistant);

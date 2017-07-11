@@ -55,8 +55,9 @@ add_executable(quarkdb-bench
 # Build stress tool
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-stress-tests
-  stress/replication.cc
   stress/main.cc
+  stress/replication.cc
+  stress/resilvering.cc
   ${COMMON_TEST_SOURCES}
 )
 

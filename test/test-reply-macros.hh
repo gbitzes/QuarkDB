@@ -24,11 +24,16 @@
 #ifndef __QUARKDB_TEST_REPLY_MACROS_H__
 #define __QUARKDB_TEST_REPLY_MACROS_H__
 
+#include <gtest/gtest.h>
+#include <qclient/QClient.hh>
+
 #define ASSERT_REPLY(reply, val) { assert_reply(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 #define ASSERT_ERR(reply, val) { assert_error(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 #define ASSERT_NIL(reply) { assert_nil(reply); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
 
 namespace quarkdb {
+
+using redisReplyPtr = qclient::redisReplyPtr;
 
 void assert_nil(const redisReplyPtr &reply) {
   ASSERT_NE(reply, nullptr);

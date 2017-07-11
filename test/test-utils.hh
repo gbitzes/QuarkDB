@@ -142,6 +142,7 @@ public:
   RaftClock *raftclock(int id = 0);
   RaftLease *lease(int id = 0);
   RaftCommitTracker *commitTracker(int id = 0);
+  RaftConfig *raftconfig(int id = 0);
 
   void killTunnel(int id = 0);
 

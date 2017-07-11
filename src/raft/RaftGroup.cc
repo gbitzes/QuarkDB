@@ -31,6 +31,7 @@
 #include "RaftGroup.hh"
 #include "RaftWriteTracker.hh"
 #include "RaftTrimmer.hh"
+#include "RaftConfig.hh"
 #include "../utils/FileUtils.hh"
 #include "../ShardDirectory.hh"
 
@@ -56,6 +57,10 @@ void RaftGroup::spindown() {
   if(directorptr) {
     delete directorptr;
     directorptr = nullptr;
+  }
+  if(configptr) {
+    delete configptr;
+    configptr = nullptr;
   }
   if(dispatcherptr) {
     delete dispatcherptr;
@@ -152,7 +157,14 @@ RaftWriteTracker* RaftGroup::writeTracker() {
 
 RaftTrimmer* RaftGroup::trimmer() {
   if(trimmerptr == nullptr) {
-    trimmerptr = new RaftTrimmer(*journal());
+    trimmerptr = new RaftTrimmer(*journal(), *config(), *stateMachine());
   }
   return trimmerptr;
+}
+
+RaftConfig* RaftGroup::config() {
+  if(configptr == nullptr) {
+    configptr = new RaftConfig(*dispatcher(), *stateMachine());
+  }
+  return configptr;
 }

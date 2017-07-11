@@ -32,7 +32,6 @@
 #include "test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
-#include <qclient/QClient.hh>
 #include "test-reply-macros.hh"
 
 using namespace quarkdb;

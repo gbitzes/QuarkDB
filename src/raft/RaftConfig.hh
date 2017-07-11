@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftTrimmer.cc
+// File: RaftConfig.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,31 +21,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftTrimmer.hh"
-#include "RaftJournal.hh"
-#include "RaftConfig.hh"
-#include "../StateMachine.hh"
+#ifndef __QUARKDB_RAFT_CONFIG_H__
+#define __QUARKDB_RAFT_CONFIG_H__
 
-using namespace quarkdb;
+#include <stdint.h>
+#include "../Link.hh"
 
+namespace quarkdb {
 
-RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
-: journal(jr), raftConfig(conf), stateMachine(sm), mainThread(&RaftTrimmer::main, this) {
+class StateMachine; class RaftDispatcher; class Connection;
+
+class RaftConfig {
+public:
+  RaftConfig(RaftDispatcher &dispatcher, StateMachine &sm);
+
+  int64_t getJournalTrimLimit();
+  LinkStatus setJournalTrimLimit(Connection *conn, int64_t newLimit, bool overrideSafety = false);
+
+private:
+  RaftDispatcher &dispatcher;
+  StateMachine &stateMachine;
+};
 
 }
 
-void RaftTrimmer::main(ThreadAssistant &assistant) {
-  while(!assistant.terminationRequested()) {
-    LogIndex logSpan = journal.getLogSize() - journal.getLogStart();
 
-    int64_t journalTrimLimit = raftConfig.getJournalTrimLimit();
-    int64_t threshold = journal.getLogStart() + journalTrimLimit;
-
-    if(logSpan >= journalTrimLimit && journal.getCommitIndex() > threshold && stateMachine.getLastApplied() > threshold) {
-      journal.trimUntil(threshold);
-    }
-    else {
-      assistant.wait_for(std::chrono::seconds(1));
-    }
-  }
-}
+#endif
