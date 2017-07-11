@@ -33,73 +33,12 @@
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
 #include <qclient/QClient.hh>
+#include "test-reply-macros.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
-#define ASSERT_REPLY(reply, val) { assert_reply(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
-#define ASSERT_ERR(reply, val) { assert_error(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
-#define ASSERT_NIL(reply) { assert_nil(reply); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
-
 class Raft_e2e : public TestCluster3NodesFixture {};
 class Raft_e2e5 : public TestCluster5NodesFixture {};
-
-void assert_nil(const redisReplyPtr &reply) {
-  ASSERT_NE(reply, nullptr);
-  ASSERT_EQ(reply->type, REDIS_REPLY_NIL);
-}
-
-void assert_nil(std::future<redisReplyPtr> &fut) {
-  assert_nil(fut.get());
-}
-
-void assert_error(const redisReplyPtr &reply, const std::string &err) {
-  ASSERT_NE(reply, nullptr);
-  ASSERT_EQ(reply->type, REDIS_REPLY_ERROR);
-  ASSERT_EQ(std::string(reply->str, reply->len), err);
-}
-
-void assert_reply(const redisReplyPtr &reply, int integer) {
-  ASSERT_NE(reply, nullptr);
-  ASSERT_EQ(reply->type, REDIS_REPLY_INTEGER);
-  ASSERT_EQ(reply->integer, integer);
-}
-
-void assert_reply(const redisReplyPtr &reply, const std::string &str) {
-  ASSERT_NE(reply, nullptr);
-  // ASSERT_TRUE(reply->type == REDIS_REPLY_STRING || reply->type == REDIS_REPLY_STATUS);
-  EXPECT_EQ(std::string(reply->str, reply->len), str);
-}
-
-void assert_reply(const redisReplyPtr &reply, const std::vector<std::string> &vec) {
-  ASSERT_NE(reply, nullptr);
-  ASSERT_EQ(reply->type, REDIS_REPLY_ARRAY);
-  ASSERT_EQ(reply->elements, vec.size());
-
-  for(size_t i = 0; i < vec.size(); i++) {
-    ASSERT_REPLY(redisReplyPtr(reply->element[i], [](redisReply*){}), vec[i]);
-  }
-}
-
-void assert_reply(const redisReplyPtr &reply, const std::pair<std::string, std::vector<std::string>> &scan) {
-  ASSERT_NE(reply, nullptr);
-  ASSERT_EQ(reply->type, REDIS_REPLY_ARRAY);
-  ASSERT_EQ(reply->elements, 2u);
-  ASSERT_REPLY(redisReplyPtr(reply->element[0], [](redisReply*){}), scan.first);
-  ASSERT_REPLY(redisReplyPtr(reply->element[1], [](redisReply*){}), scan.second);
-}
-
-
-// crazy C++ templating to allow ASSERT_REPLY() to work as one liner in all cases
-// T&& here is a universal reference
-template<typename T>
-void assert_reply(std::future<redisReplyPtr> &fut, T&& check) {
-  assert_reply(fut.get(), check);
-}
-
-template<typename T>
-void assert_reply(std::future<redisReplyPtr> &&fut, T&& check) {
-  assert_reply(fut.get(), check);
-}
 
 TEST_F(Raft_e2e, coup) {
   spinup(0); spinup(1); spinup(2);
