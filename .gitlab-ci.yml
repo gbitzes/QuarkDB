@@ -68,20 +68,18 @@ rpms:
   tags:
     - docker-cc7
 
-docs:
-  stage: publish
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
-  script:
-   - yum install --nogpg -y sssd-client sudo http-parser http-parser-devel npm
-   - npm install gitbook-cli -g
-   - gitbook build
-   - chown -R stci _book
-   - SNAPSHOT=$(date +%s)
-   - TARGET="/eos/project/q/quarkdb/www/docs/${CI_COMMIT_REF_NAME}"
-   - STAGING_AREA="$TARGET-${SNAPSHOT}"
-   - sudo -u stci -H cp -r _book "$STAGING_AREA"
-   - sudo -u stci -H packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
-  tags:
-    - docker-cc7
-
-
+# docs:
+#   stage: publish
+#   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+#   script:
+#    - yum install --nogpg -y sssd-client sudo http-parser http-parser-devel npm
+#    - npm install gitbook-cli -g
+#    - gitbook build
+#    - chown -R stci _book
+#    - SNAPSHOT=$(date +%s)
+#    - TARGET="/eos/project/q/quarkdb/www/docs/${CI_COMMIT_REF_NAME}"
+#    - STAGING_AREA="$TARGET-${SNAPSHOT}"
+#    - sudo -u stci -H cp -r _book "$STAGING_AREA"
+#    - sudo -u stci -H packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
+#   tags:
+#     - docker-cc7
