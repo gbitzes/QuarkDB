@@ -58,6 +58,10 @@ void RaftGroup::spindown() {
     delete directorptr;
     directorptr = nullptr;
   }
+  if(trimmerptr) {
+    delete trimmerptr;
+    trimmerptr = nullptr;
+  }
   if(configptr) {
     delete configptr;
     configptr = nullptr;
@@ -85,10 +89,6 @@ void RaftGroup::spindown() {
   if(ctptr) {
     delete ctptr;
     ctptr = nullptr;
-  }
-  if(trimmerptr) {
-    delete trimmerptr;
-    trimmerptr = nullptr;
   }
 }
 
