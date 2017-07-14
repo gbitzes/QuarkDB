@@ -13,6 +13,7 @@ Group: Applications/File
 
 Source: %{name}-%{version}-@VERSION_RELEASE@.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
+BuildRequires: libuuid-devel
 BuildRequires: xrootd
 BuildRequires: xrootd-server-devel
 BuildRequires: xrootd-devel
