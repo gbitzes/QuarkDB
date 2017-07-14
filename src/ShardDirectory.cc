@@ -73,12 +73,16 @@ RaftJournal* ShardDirectory::getRaftJournal() {
   return journalptr;
 }
 
+std::string ShardDirectory::currentPath() {
+  return pathJoin(path, "current");
+}
+
 std::string ShardDirectory::stateMachinePath() {
-  return pathJoin(path, "state-machine");
+  return pathJoin(currentPath(), "state-machine");
 }
 
 std::string ShardDirectory::raftJournalPath() {
-  return pathJoin(path, "raft-journal");
+  return pathJoin(currentPath(), "raft-journal");
 }
 
 void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
@@ -100,6 +104,7 @@ void ShardDirectory::initializeDirectory(const std::string &path, RaftClusterID 
 
   mkpath_or_die(path + "/", 0755);
   write_file_or_die(pathJoin(path, "SHARD-ID"), shardID);
+  mkpath_or_die(pathJoin(path, "current") + "/", 0755);
 }
 
 ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID) {

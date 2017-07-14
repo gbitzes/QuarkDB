@@ -61,6 +61,7 @@ private:
 
   std::string stateMachinePath();
   std::string raftJournalPath();
+  std::string currentPath();
 
   static void initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID);
 };
