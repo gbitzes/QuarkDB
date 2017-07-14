@@ -36,6 +36,7 @@ option(PACKAGEONLY "Build without dependencies" OFF)
 if(NOT PACKAGEONLY)
   find_package(hiredis REQUIRED)
   find_package(XRootD REQUIRED)
+  find_package(uuid REQUIRED)
 
   find_package(RocksDB)
   if(NOT ROCKSDB_FOUND)
