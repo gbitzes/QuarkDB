@@ -36,16 +36,56 @@ RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
 
 void RaftTrimmer::main(ThreadAssistant &assistant) {
   while(!assistant.terminationRequested()) {
-    LogIndex logSpan = journal.getLogSize() - journal.getLogStart();
+    LogIndex start, size, threshold;
+    TrimmingConfig trimConfig;
 
-    int64_t journalTrimLimit = raftConfig.getJournalTrimLimit();
-    int64_t threshold = journal.getLogStart() + journalTrimLimit;
+    // Don't trim at all if resilvering is going on.
+    if(resilveringsInProgress != 0) goto wait;
 
-    if(logSpan >= journalTrimLimit && journal.getCommitIndex() > threshold && stateMachine.getLastApplied() > threshold) {
-      journal.trimUntil(threshold);
+    start = journal.getLogStart();
+    size = journal.getLogSize();
+
+    trimConfig = raftConfig.getTrimmingConfig();
+
+    // If we removed 'step' entries, would we still have at least 'keepAtLeast'
+    // entries in the journal?
+    if(size - start <= trimConfig.keepAtLeast + trimConfig.step) {
+      goto wait;
     }
-    else {
+
+    threshold = start + trimConfig.step;
+
+    // A last, paranoid check: Have the entries we're about to remove been
+    // both committed and applied?
+    if(journal.getCommitIndex() <= threshold || stateMachine.getLastApplied() <= threshold) {
+      goto wait;
+    }
+
+    // All clear, go.
+    journal.trimUntil(threshold);
+    continue; // no wait
+
+wait:
       assistant.wait_for(std::chrono::seconds(1));
-    }
+  }
+}
+
+void RaftTrimmer::resilveringInitiated() {
+  std::lock_guard<std::mutex> lock(mtx);
+  resilveringsInProgress++;
+
+  if(resilveringsInProgress == 1) {
+    qdb_info("Pausing journal trimming, as this node is about to start resilvering another.");
+  }
+}
+
+void RaftTrimmer::resilveringOver() {
+  std::lock_guard<std::mutex> lock(mtx);
+  resilveringsInProgress--;
+
+  qdb_assert(resilveringsInProgress >= 0);
+
+  if(resilveringsInProgress == 0) {
+    qdb_info("No resilvering is in progress, resuming journal trimmer.");
   }
 }

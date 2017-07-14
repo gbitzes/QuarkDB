@@ -42,12 +42,13 @@ TEST_F(Trimming, configurable_trimming_limit) {
     futures.emplace_back(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)));
   }
 
-  // Set journal trim limit to a ridiculously low value.
-  // This is to ensure it never tries to trim non-committed or non-applied entries.
+  // Set journal trim config to ridiculously low values.
+  // This is to ensure the trimmer never tries to remove non-committed or non-applied entries.
   // With a sane trim limit in the millions, this would never happen anyway, but let's be paranoid.
   Link link;
   Connection dummy(&link);
-  raftconfig(leaderID)->setJournalTrimLimit(&dummy, 5, true);
+  TrimmingConfig trimConfig { 2, 1 };
+  raftconfig(leaderID)->setTrimmingConfig(&dummy, trimConfig, true);
 
   // some more updates...
   for(size_t i = NENTRIES; i < NENTRIES*2; i++) {

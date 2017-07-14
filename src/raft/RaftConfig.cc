@@ -30,41 +30,49 @@ using namespace quarkdb;
 
 // TODO: implement internal commands in stateMachine, so such keys are hidden from
 // users
-const std::string trimLimitConfigKey("__internal_raft_config_trim_limit");
+const std::string trimConfigKey("__internal_raft_config_trim_config");
 
 RaftConfig::RaftConfig(RaftDispatcher &disp, StateMachine &sm)
 : dispatcher(disp), stateMachine(sm) {
 
 }
 
-int64_t RaftConfig::getJournalTrimLimit() {
-  std::string trimLimit;
-  rocksdb::Status st = stateMachine.get(trimLimitConfigKey, trimLimit);
+TrimmingConfig RaftConfig::getTrimmingConfig() {
+  std::string trimConfig;
+  rocksdb::Status st = stateMachine.get(trimConfigKey, trimConfig);
 
   if(st.IsNotFound()) {
-    // Return default value
-    return 1000000;
+    // Return default values
+    return { 1000000, 100000 };
   }
   else if(!st.ok()) {
     qdb_throw("Error when retrieving journal trim limit: " << st.ToString());
   }
 
-  return binaryStringToInt(trimLimit.c_str());
+  qdb_assert(trimConfig.size() == 16);
+
+  TrimmingConfig ret;
+  ret.keepAtLeast = binaryStringToInt(trimConfig.c_str());
+  ret.step = binaryStringToInt(trimConfig.c_str() + 8);
+
+  return ret;
 }
 
-// A value lower than 100k probably means an operator error.
-// By default, prevent such low values unless overrideSafety is set.
-LinkStatus RaftConfig::setJournalTrimLimit(Connection *conn, int64_t newLimit, bool overrideSafety) {
-  if(!overrideSafety && newLimit <= 100000) {
-    qdb_critical("attempted to set journal trimming limit to very low value: " << newLimit);
-    return conn->err(SSTR("new limit too small: " << newLimit));
+LinkStatus RaftConfig::setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety) {
+  // A 'keepAtLeast' value lower than 100k probably means an operator error.
+  // By default, prevent such low values unless overrideSafety is set.
+  if(!overrideSafety && trimConfig.keepAtLeast <= 100000) {
+    qdb_critical("attempted to set journal 'keepAtLeast' configuration to very low value: " << trimConfig.keepAtLeast);
+    return conn->err(SSTR("new 'keepAtLeast' too small: " << trimConfig.keepAtLeast));
   }
 
-  if(newLimit < 3) {
-    qdb_critical("attempted to set journal trimming limit to very low value: " << newLimit);
-    return conn->err(SSTR("new limit too small, even with overrideSafety: " << newLimit));
+  // A step value lower than 10k probably means an operator error.
+  if(!overrideSafety && trimConfig.step <= 10000) {
+    qdb_critical("attempted to set journal 'step' configuration to very low value: " << trimConfig.step);
+    return conn->err(SSTR("new 'step' too small: " << trimConfig.step));
   }
 
-  RedisRequest req { "SET", trimLimitConfigKey, intToBinaryString(newLimit) };
+
+  RedisRequest req { "SET", trimConfigKey, intToBinaryString(trimConfig.keepAtLeast) + intToBinaryString(trimConfig.step)};
   return dispatcher.dispatch(conn, req);
 }

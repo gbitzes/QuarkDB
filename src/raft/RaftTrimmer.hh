@@ -33,7 +33,14 @@ class RaftJournal; class RaftConfig; class StateMachine;
 class RaftTrimmer {
 public:
   RaftTrimmer(RaftJournal &journal, RaftConfig &raftConfig, StateMachine &sm);
+
+  void resilveringInitiated();
+  void resilveringOver();
+
 private:
+  std::mutex mtx;
+  std::atomic<int64_t> resilveringsInProgress = {0};
+
   RaftJournal &journal;
   RaftConfig &raftConfig;
   StateMachine &stateMachine;

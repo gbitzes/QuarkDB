@@ -31,12 +31,20 @@ namespace quarkdb {
 
 class StateMachine; class RaftDispatcher; class Connection;
 
+struct TrimmingConfig {
+  // Minimum number of journal entries to keep at all times.
+  int64_t keepAtLeast;
+  // Trimming step - don't bother to trim if we'd be getting rid of fewer than
+  // step entries.
+  int64_t step;
+};
+
 class RaftConfig {
 public:
   RaftConfig(RaftDispatcher &dispatcher, StateMachine &sm);
 
-  int64_t getJournalTrimLimit();
-  LinkStatus setJournalTrimLimit(Connection *conn, int64_t newLimit, bool overrideSafety = false);
+  TrimmingConfig getTrimmingConfig();
+  LinkStatus setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety = false);
 
 private:
   RaftDispatcher &dispatcher;
