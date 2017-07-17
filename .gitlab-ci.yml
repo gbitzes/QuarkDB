@@ -86,3 +86,19 @@ docs:
    - sudo -u stci -H packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
   tags:
    - docker-cc7
+
+coverage:
+  stage: publish
+  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  dependencies:
+  - ubuntu-asan
+  script:
+   - yum install --nogpg -y sssd-client sudo
+   - chown -R stci build/coverage-report
+   - SNAPSHOT=$(date +%s)
+   - TARGET="/eos/project/q/quarkdb/www/coverage/${CI_COMMIT_REF_NAME}"
+   - STAGING_AREA="$TARGET-${SNAPSHOT}"
+   - sudo -u stci -H cp -r build/coverage-report "$STAGING_AREA"
+   - sudo -u stci -H packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
+  tags:
+   - docker-cc7
