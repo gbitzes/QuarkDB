@@ -80,9 +80,15 @@ public:
   AssistedThread& operator=(AssistedThread&& src) noexcept {
     join();
 
+    // Move source thread to this one
     assistant.stopFlag = src.assistant.stopFlag.load();
     joined = src.joined.load();
     th = std::move(src.th);
+
+    // Make sure source thread remains in a valid state
+    src.joined = true;
+    src.assistant.stopFlag = true;
+
     return *this;
   }
 

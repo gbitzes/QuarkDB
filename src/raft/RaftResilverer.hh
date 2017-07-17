@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftConfig.hh
+// File: RaftResilverer.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,40 +21,59 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_CONFIG_H__
-#define __QUARKDB_RAFT_CONFIG_H__
+#ifndef __QUARKDB_RAFT_RESILVERER_H__
+#define __QUARKDB_RAFT_RESILVERER_H__
 
-#include <stdint.h>
-#include "../Link.hh"
+#include <qclient/QClient.hh>
+#include "../utils/AssistedThread.hh"
+#include "../Common.hh"
+#include "RaftTalker.hh"
 
 namespace quarkdb {
 
-class StateMachine; class RaftDispatcher; class Connection;
+using ResilveringEventID = std::string;
+using redisReplyPtr = qclient::redisReplyPtr;
 
-struct TrimmingConfig {
-  // Minimum number of journal entries to keep at all times.
-  int64_t keepAtLeast;
-  // Trimming step - don't bother to trim if we'd be getting rid of fewer than
-  // step entries.
-  int64_t step;
+enum class ResilveringState {
+  INPROGRESS = 0,
+  SUCCEEDED = 1,
+  FAILED = 2
 };
 
-class RaftConfig {
+struct ResilveringStatus {
+  ResilveringState state;
+  std::string err;
+};
+
+class ShardDirectory; class RaftTrimmer;
+
+class RaftResilverer {
 public:
-  RaftConfig(RaftDispatcher &dispatcher, StateMachine &sm);
+  RaftResilverer(ShardDirectory &directory, const RaftServer &target, const RaftClusterID &clusterID, RaftTrimmer *trimmer = nullptr);
+  ~RaftResilverer();
 
-  TrimmingConfig getTrimmingConfig();
-  LinkStatus setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety = false);
-
-  bool getResilveringEnabled();
-  LinkStatus setResilveringEnabled(Connection *conn, bool value);
-
+  ResilveringStatus getStatus();
 private:
-  RaftDispatcher &dispatcher;
-  StateMachine &stateMachine;
+  ShardDirectory &shardDirectory;
+  RaftServer target;
+  RaftClusterID clusterID;
+  RaftTrimmer* trimmer;
+
+  RaftTalker talker;
+
+  void setStatus(const ResilveringState &state, const std::string &err);
+  ResilveringStatus status;
+  std::mutex statusMtx;
+
+  ResilveringEventID resilveringID = "super-random-string";
+
+  AssistedThread mainThread;
+  void main(ThreadAssistant &assistant);
+  bool copyDirectory(const std::string &path, const std::string &prefix, std::string &err);
+
+  void cancel(const std::string &reason);
 };
 
 }
-
 
 #endif

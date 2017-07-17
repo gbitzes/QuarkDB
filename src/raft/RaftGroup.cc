@@ -129,7 +129,7 @@ RaftState* RaftGroup::state() {
 
 RaftDirector* RaftGroup::director() {
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker());
+    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), *trimmer(), shardDirectory, *config());
   }
   return directorptr;
 }

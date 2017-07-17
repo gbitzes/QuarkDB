@@ -24,13 +24,30 @@
 #ifndef __QUARKDB_SHARD_DIRECTORY_H__
 #define __QUARKDB_SHARD_DIRECTORY_H__
 
+#include <memory>
 #include "Common.hh"
+#include "utils/Resilvering.hh"
 
 namespace quarkdb {
 
 class StateMachine; class RaftJournal;
 
+// Snapshot of a shard. The underlying snapshot directory is deleted upon object's
+// deletion, it is thus not suitable for long-lived backups.
+
+class ShardSnapshot {
+public:
+  ShardSnapshot(const std::string &path);
+  ~ShardSnapshot();
+
+  std::string getPath();
+private:
+  const std::string path;
+};
+
 using ShardID = std::string;
+using ResilveringEventID = std::string;
+using SnapshotID = std::string;
 
 // Manages a shard directory on the physical file system.
 // Keeps ownership of StateMachine and RaftJournal - initialized lazily.
@@ -52,16 +69,35 @@ public:
   // Create a consensus shard.
   static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes);
 
+  std::unique_ptr<ShardSnapshot> takeSnapshot(const SnapshotID &id, std::string &err);
+
+  bool resilveringStart(const ResilveringEventID &id, std::string &err);
+  bool resilveringCopy(const ResilveringEventID &id, const std::string &filename, const std::string &contents, std::string &err);
+  bool resilveringFinish(const ResilveringEventID &id, std::string &err);
+
+  const ResilveringHistory& getResilveringHistory() const;
+
 private:
+  void parseResilveringHistory();
+  void storeResilveringHistory();
+
+  void detach();
   std::string path;
   ShardID shardID;
 
   StateMachine *smptr = nullptr;
   RaftJournal *journalptr = nullptr;
 
+  ResilveringHistory resilveringHistory;
+
   std::string stateMachinePath();
   std::string raftJournalPath();
   std::string currentPath();
+  std::string resilveringHistoryPath();
+
+  std::string getSupplanted(const ResilveringEventID &id);
+  std::string getResilveringArena(const ResilveringEventID &id);
+  std::string getTempSnapshot(const SnapshotID &id);
 
   static void initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID);
 };

@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "raft/RaftState.hh"
+#include "raft/RaftJournal.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;

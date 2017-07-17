@@ -47,6 +47,8 @@
 
 namespace quarkdb {
 
+class Shard;
+
 #define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
   size_t nretries = 0; \
   while(nretries++ < retry) { \
@@ -104,6 +106,8 @@ public:
   TestNode(RaftServer myself, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   ~TestNode();
 
+  ShardDirectory* shardDirectory();
+  Shard* shard();
   RaftGroup* group();
   Poller *poller();
   qclient::QClient *tunnel();
@@ -119,7 +123,8 @@ private:
   RaftClusterID clusterID;
   std::vector<RaftServer> initialNodes;
 
-  RaftGroup *raftgroup = nullptr;
+  ShardDirectory *sharddirptr = nullptr;
+  Shard *shardptr = nullptr;
   Poller *pollerptr = nullptr;
   qclient::QClient *tunnelptr = nullptr;
 };
@@ -131,6 +136,7 @@ public:
   TestCluster(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   ~TestCluster();
 
+  ShardDirectory* shardDirectory(int id = 0);
   StateMachine* stateMachine(int id = 0);
   RaftJournal* journal(int id = 0);
   RaftDispatcher *dispatcher(int id = 0);
@@ -143,6 +149,7 @@ public:
   RaftLease *lease(int id = 0);
   RaftCommitTracker *commitTracker(int id = 0);
   RaftConfig *raftconfig(int id = 0);
+  RaftTrimmer* trimmer(int id = 0);
 
   void killTunnel(int id = 0);
 

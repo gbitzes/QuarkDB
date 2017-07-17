@@ -28,8 +28,8 @@
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt)
-: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt) {
+RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf)
+: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), trimmer(trim), shardDirectory(sharddir), config(conf) {
   mainThread = std::thread(&RaftDirector::main, this);
 }
 
@@ -85,7 +85,7 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   RaftMembership membership = journal.getMembership();
   membership.epoch = -1;
 
-  RaftReplicator replicator(snapshot, journal, stateMachine, state, lease, commitTracker, raftClock.getTimeouts());
+  RaftReplicator replicator(snapshot, journal, stateMachine, state, lease, commitTracker, trimmer, shardDirectory, config, raftClock.getTimeouts());
   while(snapshot.term == state.getCurrentTerm() &&
         state.getSnapshot().status == RaftStatus::LEADER) {
 

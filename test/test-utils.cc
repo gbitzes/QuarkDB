@@ -27,6 +27,7 @@
 #include "Utils.hh"
 #include <vector>
 #include <string>
+#include "Shard.hh"
 #include <gtest/gtest.h>
 
 namespace quarkdb {
@@ -101,6 +102,10 @@ RaftClusterID TestCluster::clusterID() {
   return clusterid;
 }
 
+ShardDirectory* TestCluster::shardDirectory(int id) {
+  return node(id)->shardDirectory();
+}
+
 StateMachine* TestCluster::stateMachine(int id) {
   return node(id)->group()->stateMachine();
 }
@@ -151,6 +156,10 @@ RaftCommitTracker* TestCluster::commitTracker(int id) {
 
 RaftConfig* TestCluster::raftconfig(int id) {
   return node(id)->group()->config();
+}
+
+RaftTrimmer* TestCluster::trimmer(int id) {
+  return node(id)->group()->trimmer();
 }
 
 void TestCluster::killTunnel(int id) {
@@ -209,18 +218,26 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
 : myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
   std::string shardPath = SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/");
-  ShardDirectory *shardDirectory = commonState.getShardDirectory(shardPath, clusterID, initialNodes);
-  raftgroup = new RaftGroup(*shardDirectory, myself(), testconfig.raftTimeouts);
+  sharddirptr = commonState.getShardDirectory(shardPath, clusterID, initialNodes);
+  shardptr = new Shard(shardDirectory(), myself(), Mode::raft, testconfig.raftTimeouts);
+}
+
+ShardDirectory* TestNode::shardDirectory() {
+  return sharddirptr;
+}
+
+Shard* TestNode::shard() {
+  return shardptr;
 }
 
 RaftGroup* TestNode::group() {
-  return raftgroup;
+  return shard()->getRaftGroup();
 }
 
 TestNode::~TestNode() {
   if(pollerptr) delete pollerptr;
   if(tunnelptr) delete tunnelptr;
-  if(raftgroup) delete raftgroup;
+  if(shardptr) delete shardptr;
 }
 
 RaftServer TestNode::myself() {
@@ -233,7 +250,7 @@ std::vector<RaftServer> TestNode::nodes() {
 
 Poller* TestNode::poller() {
   if(pollerptr == nullptr) {
-    pollerptr = new Poller(myself().port, group()->dispatcher());
+    pollerptr = new Poller(myself().port, shard());
   }
   return pollerptr;
 }

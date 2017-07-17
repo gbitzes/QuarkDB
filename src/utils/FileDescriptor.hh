@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftConfig.hh
+// File: FileDescriptor.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,40 +21,55 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_CONFIG_H__
-#define __QUARKDB_RAFT_CONFIG_H__
+#ifndef __QUARKDB_FILE_DESCRIPTOR_H__
+#define __QUARKDB_FILE_DESCRIPTOR_H__
 
-#include <stdint.h>
-#include "../Link.hh"
+#include <unistd.h>
 
 namespace quarkdb {
 
-class StateMachine; class RaftDispatcher; class Connection;
-
-struct TrimmingConfig {
-  // Minimum number of journal entries to keep at all times.
-  int64_t keepAtLeast;
-  // Trimming step - don't bother to trim if we'd be getting rid of fewer than
-  // step entries.
-  int64_t step;
-};
-
-class RaftConfig {
+class FileDescriptor {
 public:
-  RaftConfig(RaftDispatcher &dispatcher, StateMachine &sm);
+  FileDescriptor(int fd_) : fd(fd_) {
+    if(fd < 0) {
+      // We assume that EventDescriptor immediatelly wraps a call which
+      // returns a file descriptor, so errno still contains the error we're
+      // interested in.
+      localerrno = errno;
+    }
+  }
 
-  TrimmingConfig getTrimmingConfig();
-  LinkStatus setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety = false);
+  FileDescriptor() {}
 
-  bool getResilveringEnabled();
-  LinkStatus setResilveringEnabled(Connection *conn, bool value);
+  ~FileDescriptor() {
+    close();
+  }
+
+  void close() {
+    if(fd >= 0) {
+      ::close(fd);
+      fd = -1;
+    }
+  }
+
+  bool ok() {
+    return fd >= 0 && localerrno == 0;
+  }
+
+  std::string err() {
+    return strerror(localerrno);
+  }
+
+  int getFD() {
+    return fd;
+  }
 
 private:
-  RaftDispatcher &dispatcher;
-  StateMachine &stateMachine;
+  int localerrno = 0;
+  int fd = -1;
+
 };
 
 }
-
 
 #endif

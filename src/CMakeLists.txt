@@ -28,6 +28,7 @@ add_library(XrdQuarkDB SHARED
   Poller.cc                  Poller.hh
   Connection.cc              Connection.hh
   QuarkDBNode.cc             QuarkDBNode.hh
+  Shard.cc                   Shard.hh
   ShardDirectory.cc          ShardDirectory.hh
 
   raft/RaftBlockedWrites.cc  raft/RaftBlockedWrites.hh
@@ -38,6 +39,7 @@ add_library(XrdQuarkDB SHARED
   raft/RaftUtils.cc          raft/RaftUtils.hh
   raft/RaftDispatcher.cc     raft/RaftDispatcher.hh
   raft/RaftReplicator.cc     raft/RaftReplicator.hh
+  raft/RaftResilverer.cc     raft/RaftResilverer.hh
   raft/RaftTimeouts.cc       raft/RaftTimeouts.hh
   raft/RaftDirector.cc       raft/RaftDirector.hh
   raft/RaftCommitTracker.cc  raft/RaftCommitTracker.hh

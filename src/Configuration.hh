@@ -39,6 +39,16 @@ enum class Mode {
   raft = 1
 };
 
+inline std::string modeToString(const Mode &mode) {
+  if(mode == Mode::standalone) {
+    return "STANDALONE";
+  }
+  if(mode == Mode::raft) {
+    return "RAFT";
+  }
+  qdb_throw("unknown mode"); // should never happen
+}
+
 class Configuration {
 public:
   static bool fromFile(const std::string &filename, Configuration &out);

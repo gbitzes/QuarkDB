@@ -26,6 +26,7 @@
 #include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
+#include "raft/RaftConfig.hh"
 #include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
@@ -401,9 +402,13 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   ASSERT_GE(leaderID, 0);
   ASSERT_LE(leaderID, 1);
 
-  std::vector<std::future<redisReplyPtr>> futures;
+  // First, disable automatic resilvering
+  Link link;
+  Connection dummy(&link);
+  raftconfig(leaderID)->setResilveringEnabled(&dummy, false);
 
   // send off many requests, pipeline them
+  std::vector<std::future<redisReplyPtr>> futures;
   for(size_t i = 0; i < testreqs.size(); i++) {
     futures.emplace_back(tunnel(leaderID)->execute(testreqs[i]));
   }
@@ -442,6 +447,9 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
 
   ASSERT_EQ(journal(2)->getLogSize(), journal(leaderID)->getLogSize());
   ASSERT_EQ(journal(2)->getLogSize(), journal(firstSlaveID)->getLogSize());
+
+  // Verify resilvering didn't happen.
+  ASSERT_EQ(journal(2)->getLogStart(), 0);
 }
 
 TEST_F(Raft_e2e, membership_updates) {

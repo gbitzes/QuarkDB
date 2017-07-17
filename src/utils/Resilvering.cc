@@ -34,7 +34,7 @@ ResilveringEvent::ResilveringEvent(const ResilveringEventID &eventID, time_t sta
 
 }
 
-std::string ResilveringEvent::serialize() {
+std::string ResilveringEvent::serialize() const {
   return SSTR(id << " - " << startTime);
 }
 
@@ -53,11 +53,11 @@ bool ResilveringEvent::deserialize(const std::string &str, ResilveringEvent &ret
   return true;
 }
 
-ResilveringEventID ResilveringEvent::getID() {
+ResilveringEventID ResilveringEvent::getID() const {
   return id;
 }
 
-time_t ResilveringEvent::getStartTime() {
+time_t ResilveringEvent::getStartTime() const {
   return startTime;
 }
 
@@ -68,11 +68,13 @@ bool ResilveringEvent::operator==(const ResilveringEvent& rhs) const {
 
 ResilveringHistory::ResilveringHistory() {}
 
-size_t ResilveringHistory::size() {
+size_t ResilveringHistory::size() const {
+  std::lock_guard<std::mutex> lock(mtx);
   return events.size();
 }
 
-std::string ResilveringHistory::serialize() {
+std::string ResilveringHistory::serialize() const {
+  std::lock_guard<std::mutex> lock(mtx);
   std::ostringstream ss;
 
   for(size_t i = 0; i < events.size(); i++) {
@@ -83,6 +85,7 @@ std::string ResilveringHistory::serialize() {
 }
 
 void ResilveringHistory::append(const ResilveringEvent &event) {
+  std::lock_guard<std::mutex> lock(mtx);
   events.push_back(event);
 }
 
@@ -101,9 +104,18 @@ bool ResilveringHistory::deserialize(const std::string &str, ResilveringHistory 
 }
 
 bool ResilveringHistory::operator==(const ResilveringHistory& rhs) const {
+  std::lock_guard<std::mutex> lock(mtx);
+  std::lock_guard<std::mutex> lock2(rhs.mtx);
+
   return VectorUtils::checkEquality(events, rhs.events);
 }
 
 const ResilveringEvent& ResilveringHistory::at(size_t i) const {
+  std::lock_guard<std::mutex> lock(mtx);
   return events.at(i);
+}
+
+void ResilveringHistory::clear() {
+  std::lock_guard<std::mutex> lock(mtx);
+  events.clear();
 }

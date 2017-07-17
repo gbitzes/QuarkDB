@@ -35,6 +35,10 @@ std::string pathJoin(const std::string &part1, const std::string &part2) {
   return part1 + "/" + part2;
 }
 
+std::string pathJoin(const std::string &part1, const std::string &part2, const std::string &part3) {
+  return pathJoin(part1, pathJoin(part2, part3));
+}
+
 std::string chopPath(const std::string &path) {
   std::vector<std::string> parts = split(path, "/");
   std::stringstream ss;
@@ -125,12 +129,13 @@ bool readFile(const std::string &path, std::string &contents) {
   return retvalue;
 }
 
-bool write_file(const std::string &path, const std::string &contents) {
+bool write_file(const std::string &path, const std::string &contents, std::string &err) {
   bool retvalue;
 
   FILE *out = fopen(path.c_str(), "wb");
 
   if(!out) {
+    err = SSTR("Unable to open path for writing: " << path << ", errno: " << errno);
     return false;
   }
 
@@ -140,8 +145,23 @@ bool write_file(const std::string &path, const std::string &contents) {
 }
 
 void write_file_or_die(const std::string &path, const std::string &contents) {
-  if(!write_file(path, contents)) {
-    qdb_throw("Could not write to file: " << path);
+  std::string err;
+  if(!write_file(path, contents, err)) {
+    qdb_throw(err);
+  }
+}
+
+void rename_directory_or_die(const std::string &source, const std::string &destination) {
+  qdb_info("Renaming directory: '" << source << "' to '" << destination << "'");
+
+  std::string tmp;
+  if(!directoryExists(source, tmp)) {
+    qdb_throw("Tried to rename " << q(source) << " to " << q(destination) << ", but " << q(source) << " did not exist.");
+  }
+
+  int ret = rename(source.c_str(), destination.c_str());
+  if(ret != 0) {
+    qdb_throw("Tried to rename " << q(source) << " to " << q(destination) << ", but ::rename failed: " << strerror(errno));
   }
 }
 

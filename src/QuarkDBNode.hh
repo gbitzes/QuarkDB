@@ -38,19 +38,7 @@
 
 namespace quarkdb {
 
-inline std::string modeToString(const Mode &mode) {
-  if(mode == Mode::standalone) {
-    return "STANDALONE";
-  }
-  if(mode == Mode::raft) {
-    return "RAFT";
-  }
-  qdb_throw("unknown mode"); // should never happen
-}
-
 struct QuarkDBInfo {
-  bool attached;
-  bool resilvering;
   Mode mode;
   std::string baseDir;
   std::string version;
@@ -59,8 +47,6 @@ struct QuarkDBInfo {
 
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
-    ret.emplace_back(SSTR("ATTACHED " << boolToString(attached)));
-    ret.emplace_back(SSTR("BEING-RESILVERED " << boolToString(resilvering)));
     ret.emplace_back(SSTR("MODE " << modeToString(mode)));
     ret.emplace_back(SSTR("BASE-DIRECTORY " << baseDir));
     ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
@@ -70,13 +56,13 @@ struct QuarkDBInfo {
   }
 };
 
+class Shard;
+
 class QuarkDBNode : public Dispatcher {
 public:
   QuarkDBNode(const Configuration &config, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t);
   ~QuarkDBNode();
 
-  void detach();
-  bool attach(std::string &err);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
 
   const Configuration& getConfiguration() {
@@ -85,20 +71,14 @@ public:
 private:
   Configuration configuration;
   ShardDirectory *shardDirectory;
-
-  RaftGroup* raftgroup = nullptr;
-  StateMachine *stateMachine = nullptr;
-  Dispatcher* dispatcher = nullptr;
+  Shard *shard;
 
   QuarkDBInfo info();
 
-  std::atomic<bool> attached {false};
+  std::atomic<bool> shutdown {false};
   const std::atomic<int64_t> &inFlight;
   const RaftTimeouts timeouts;
   std::atomic<int64_t> beingDispatched {0};
-
-  void cancelResilvering();
-  std::atomic<bool> resilvering {false};
 };
 
 }

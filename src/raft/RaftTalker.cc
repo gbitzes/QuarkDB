@@ -124,3 +124,19 @@ std::future<redisReplyPtr> RaftTalker::fetch(LogIndex index) {
 
   return tunnel.execute(payload);
 }
+
+std::future<redisReplyPtr> RaftTalker::resilveringStart(const ResilveringEventID &id) {
+  return tunnel.exec("quarkdb_start_resilvering", id);
+}
+
+std::future<redisReplyPtr> RaftTalker::resilveringCopy(const ResilveringEventID &id, const std::string &filename, const std::string &contents) {
+  return tunnel.exec("quarkdb_resilvering_copy_file", id, filename, contents);
+}
+
+std::future<redisReplyPtr> RaftTalker::resilveringFinish(const ResilveringEventID &id) {
+  return tunnel.exec("quarkdb_finish_resilvering", id);
+}
+
+std::future<redisReplyPtr> RaftTalker::resilveringCancel(const ResilveringEventID &id, const std::string &reason) {
+  return tunnel.exec("quarkdb_cancel_resilvering");
+}

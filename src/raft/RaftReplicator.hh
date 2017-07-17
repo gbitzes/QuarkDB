@@ -39,10 +39,11 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 // Tracks a single raft replica
 //------------------------------------------------------------------------------
-class RaftTalker;
+class RaftTalker; class RaftResilverer; class RaftTrimmer;
+class ShardDirectory; class RaftConfig;
 class RaftReplicaTracker {
 public:
-  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, const RaftTimeouts t);
+  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicaTracker();
 
   bool isRunning() { return running; }
@@ -61,7 +62,7 @@ private:
   LogIndex streamUpdates(RaftTalker &talker, LogIndex nextIndex);
   bool checkPendingQueue(std::queue<PendingResponse> &inflight);
 
-  bool resilver();
+  void triggerResilvering();
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
 
@@ -73,6 +74,9 @@ private:
   RaftState &state;
   RaftLease &lease;
   RaftCommitTracker &commitTracker;
+  RaftTrimmer &trimmer;
+  ShardDirectory &shardDirectory;
+  RaftConfig &config;
   const RaftTimeouts timeouts;
 
   RaftMatchIndexTracker &matchIndex;
@@ -81,7 +85,10 @@ private:
   std::atomic<bool> running {false};
   std::atomic<bool> shutdown {false};
   std::thread thread;
+
+  RaftResilverer *resilverer = nullptr;
 };
+
 
 //------------------------------------------------------------------------------
 // A class that tracks multiple raft replicas over the duration of a single
@@ -89,7 +96,7 @@ private:
 //------------------------------------------------------------------------------
 class RaftReplicator {
 public:
-  RaftReplicator(RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, const RaftTimeouts t);
+  RaftReplicator(RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicator();
 
   void setTargets(const std::vector<RaftServer> &targets);
@@ -100,10 +107,14 @@ private:
   RaftState &state;
   RaftLease &lease;
   RaftCommitTracker &commitTracker;
+  RaftTrimmer &trimmer;
+  ShardDirectory &shardDirectory;
+  RaftConfig &config;
   const RaftTimeouts timeouts;
 
   std::map<RaftServer, RaftReplicaTracker*> targets;
   std::mutex mtx;
+
 };
 
 }

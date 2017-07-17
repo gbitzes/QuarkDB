@@ -24,6 +24,7 @@
 #ifndef __QUARKDB_RESILVERING_H__
 #define __QUARKDB_RESILVERING_H__
 
+#include <mutex>
 #include <string>
 
 using ResilveringEventID = std::string;
@@ -33,10 +34,10 @@ public:
   ResilveringEvent();
   ResilveringEvent(const ResilveringEventID &id, time_t finalized);
 
-  ResilveringEventID getID();
-  time_t getStartTime();
+  ResilveringEventID getID() const;
+  time_t getStartTime() const;
 
-  std::string serialize();
+  std::string serialize() const;
   static bool deserialize(const std::string &str, ResilveringEvent &);
 
   bool operator==(const ResilveringEvent& rhs) const;
@@ -50,14 +51,16 @@ public:
   ResilveringHistory();
 
   void append(const ResilveringEvent &event);
-  size_t size();
+  size_t size() const;
   const ResilveringEvent& at(size_t i) const;
 
-  std::string serialize();
+  std::string serialize() const;
   static bool deserialize(const std::string &str, ResilveringHistory &hist);
+  void clear();
 
   bool operator==(const ResilveringHistory& rhs) const;
 private:
+  mutable std::mutex mtx;
   std::vector<ResilveringEvent> events;
 };
 

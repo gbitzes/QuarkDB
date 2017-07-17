@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftConfig.hh
+// File: Shard.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,40 +21,59 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_CONFIG_H__
-#define __QUARKDB_RAFT_CONFIG_H__
+#ifndef __QUARKDB_SHARD_H__
+#define __QUARKDB_SHARD_H__
 
-#include <stdint.h>
-#include "../Link.hh"
+#include "raft/RaftTimeouts.hh"
+#include "Dispatcher.hh"
+#include "Configuration.hh"
 
 namespace quarkdb {
 
-class StateMachine; class RaftDispatcher; class Connection;
+struct ShardInfo {
+  bool resilvering;
+  Mode mode;
+  std::string shardDirectory;
+  int64_t inFlight;
 
-struct TrimmingConfig {
-  // Minimum number of journal entries to keep at all times.
-  int64_t keepAtLeast;
-  // Trimming step - don't bother to trim if we'd be getting rid of fewer than
-  // step entries.
-  int64_t step;
+  std::vector<std::string> toVector() {
+    std::vector<std::string> ret;
+    ret.emplace_back(SSTR("BEING-RESILVERED " << boolToString(resilvering)));
+    ret.emplace_back(SSTR("MODE " << modeToString(mode)));
+    ret.emplace_back(SSTR("SHARD-DIRECTORY" << shardDirectory));
+    ret.emplace_back(SSTR("IN-FLIGHT " << inFlight));
+    return ret;
+  }
 };
 
-class RaftConfig {
+class RaftGroup; class ShardDirectory;
+class Shard : public Dispatcher {
 public:
-  RaftConfig(RaftDispatcher &dispatcher, StateMachine &sm);
+  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
+  ~Shard();
 
-  TrimmingConfig getTrimmingConfig();
-  LinkStatus setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety = false);
-
-  bool getResilveringEnabled();
-  LinkStatus setResilveringEnabled(Connection *conn, bool value);
-
+  RaftGroup* getRaftGroup();
+  void spinup();
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
 private:
-  RaftDispatcher &dispatcher;
-  StateMachine &stateMachine;
+  void detach();
+  void attach();
+
+  std::atomic<bool> attached {false};
+  std::atomic<bool> shutdown;
+  std::atomic<int64_t> beingDispatched {0};
+
+  ShardDirectory *shardDirectory;
+
+  RaftGroup *raftGroup = nullptr;
+  StateMachine *stateMachine = nullptr;
+  Dispatcher *dispatcher = nullptr;
+
+  RaftServer myself;
+  Mode mode;
+  RaftTimeouts timeouts;
 };
 
 }
-
 
 #endif

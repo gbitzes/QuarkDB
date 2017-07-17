@@ -24,9 +24,14 @@
 #include "../test-reply-macros.hh"
 #include "../test-utils.hh"
 #include "raft/RaftConfig.hh"
+#include "ShardDirectory.hh"
+#include "raft/RaftResilverer.hh"
 
 using namespace quarkdb;
 class Trimming : public TestCluster3NodesFixture {};
+class Resilvering : public TestCluster3NodesFixture {};
+
+#define ASSERT_NOTFOUND(msg) ASSERT_TRUE(msg.IsNotFound())
 
 TEST_F(Trimming, configurable_trimming_limit) {
   spinup(0); spinup(1); spinup(2);
@@ -67,4 +72,96 @@ TEST_F(Trimming, configurable_trimming_limit) {
   RETRY_ASSERT_TRUE(stateMachine(0)->getLastApplied() == 1002);
   RETRY_ASSERT_TRUE(stateMachine(1)->getLastApplied() == 1002);
   RETRY_ASSERT_TRUE(stateMachine(2)->getLastApplied() == 1002);
+}
+
+TEST_F(Resilvering, manual) {
+  // Don't spin up #2 yet.. We'll try to resilver that node manually later.
+  spinup(0); spinup(1);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+
+  int leaderID = getLeaderID();
+
+  // push lots of updates
+  const int64_t NENTRIES = 5000;
+  for(size_t i = 0; i < NENTRIES; i++) {
+    ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)), "OK");
+  }
+
+  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == NENTRIES+1);
+  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == NENTRIES+1);
+  ASSERT_EQ(journal(2)->getCommitIndex(), 0);
+
+  // Stop the stable cluster and start node #2
+  spindown(0);
+  spindown(1);
+  spinup(2);
+
+  // Ensure node #2 is empty.
+  std::string tmp;
+  for(size_t i = 0; i < NENTRIES; i++) {
+    ASSERT_NOTFOUND(stateMachine(2)->get(SSTR("key-" << i), tmp));
+  }
+
+  // Let's drive the resilvering logic of #2 manually.
+  RaftResilverer resilverer(*shardDirectory(0), myself(2), clusterID());
+  RETRY_ASSERT_TRUE(resilverer.getStatus().state == ResilveringState::SUCCEEDED);
+
+  // Ensure the data is there after resilvering.
+  for(size_t i = 0; i < NENTRIES; i++) {
+    std::string value;
+    ASSERT_TRUE(stateMachine(2)->get(SSTR("key-" << i), value).ok());
+    ASSERT_EQ(value, SSTR("value-" << i));
+  }
+
+  ASSERT_TRUE(journal(2)->getCommitIndex() == NENTRIES+1);
+}
+
+TEST_F(Resilvering, automatic) {
+  // Don't spin up #2 yet.. Will be resilvered later on.
+  spinup(0); spinup(1); prepare(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+
+  int leaderID = getLeaderID();
+
+  // Lower the journal trim limit, so as to trigger a resilvering.
+  Link link;
+  Connection dummy(&link);
+  TrimmingConfig trimConfig { 1000, 1000 };
+  raftconfig(leaderID)->setTrimmingConfig(&dummy, trimConfig, true);
+
+  // push lots of updates
+  const int64_t NENTRIES = 5000;
+  for(size_t i = 0; i < NENTRIES; i++) {
+    ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)), "OK");
+  }
+
+  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == NENTRIES+2);
+  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == NENTRIES+2);
+  ASSERT_EQ(journal(2)->getCommitIndex(), 0);
+
+  RETRY_ASSERT_TRUE(journal(0)->getLogStart() == NENTRIES - 1000);
+  RETRY_ASSERT_TRUE(journal(1)->getLogStart() == NENTRIES - 1000);
+  ASSERT_EQ(journal(2)->getLogStart(), 0);
+
+  const ResilveringHistory &resilveringHistory = shardDirectory(2)->getResilveringHistory();
+  ASSERT_EQ(resilveringHistory.size(), 1u);
+  ASSERT_EQ(resilveringHistory.at(0).getID(), "GENESIS");
+
+  // Start up node #2, verify it gets resilvered
+  spinup(2);
+
+  // Attention here.. when resilvering is in progress, we can't access the journal
+  // or state machine. Wait until resilvering is done.
+
+  RETRY_ASSERT_TRUE(resilveringHistory.size() == 2u);
+
+  RETRY_ASSERT_TRUE(journal(2)->getCommitIndex() == NENTRIES+2);
+  RETRY_ASSERT_TRUE(journal(2)->getLogStart() == NENTRIES - 1000);
+
+  // Ensure the data is there after resilvering.
+  for(size_t i = 0; i < NENTRIES; i++) {
+    std::string value;
+    ASSERT_TRUE(stateMachine(2)->get(SSTR("key-" << i), value).ok());
+    ASSERT_EQ(value, SSTR("value-" << i));
+  }
 }

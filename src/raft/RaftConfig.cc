@@ -31,10 +31,39 @@ using namespace quarkdb;
 // TODO: implement internal commands in stateMachine, so such keys are hidden from
 // users
 const std::string trimConfigKey("__internal_raft_config_trim_config");
+const std::string resilveringSupportKey("__internal_raft_resilvering_enabled");
 
 RaftConfig::RaftConfig(RaftDispatcher &disp, StateMachine &sm)
 : dispatcher(disp), stateMachine(sm) {
 
+}
+
+bool RaftConfig::getResilveringEnabled() {
+  std::string value;
+  rocksdb::Status st = stateMachine.get(resilveringSupportKey, value);
+
+  if(st.IsNotFound()) {
+    return true;
+  }
+
+  if(!st.ok()) {
+    qdb_throw("Error when retrieving whether resilvering is enabled: " << st.ToString());
+  }
+
+  if(value == "TRUE") {
+    return true;
+  }
+
+  if(value == "FALSE") {
+    return false;
+  }
+
+  qdb_throw("Invalid value for raft resilvering flag: " << value);
+}
+
+LinkStatus RaftConfig::setResilveringEnabled(Connection *conn, bool value) {
+  RedisRequest req { "SET", resilveringSupportKey, boolToString(value) };
+  return dispatcher.dispatch(conn, req);
 }
 
 TrimmingConfig RaftConfig::getTrimmingConfig() {

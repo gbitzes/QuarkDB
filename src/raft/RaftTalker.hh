@@ -32,6 +32,8 @@
 namespace quarkdb {
 using namespace qclient;
 
+using ResilveringEventID = std::string;
+
 class RaftTalker {
 public:
   RaftTalker(const RaftServer &server, const RaftClusterID &clusterID);
@@ -43,6 +45,11 @@ public:
 
   std::future<redisReplyPtr> requestVote(const RaftVoteRequest &req);
   std::future<redisReplyPtr> fetch(LogIndex index);
+
+  std::future<redisReplyPtr> resilveringStart(const ResilveringEventID &id);
+  std::future<redisReplyPtr> resilveringCopy(const ResilveringEventID &id, const std::string &filename, const std::string &contents);
+  std::future<redisReplyPtr> resilveringFinish(const ResilveringEventID &id);
+  std::future<redisReplyPtr> resilveringCancel(const ResilveringEventID &id, const std::string &reason);
 
   RaftServer getServer() { return server; }
 private:

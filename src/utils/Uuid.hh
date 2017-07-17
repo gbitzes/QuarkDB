@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftConfig.hh
+// File: Uuid.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,40 +21,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_CONFIG_H__
-#define __QUARKDB_RAFT_CONFIG_H__
+#ifndef __QUARKDB_UUID_H__
+#define __QUARKDB_UUID_H__
 
-#include <stdint.h>
-#include "../Link.hh"
+#include <uuid/uuid.h>
 
 namespace quarkdb {
 
-class StateMachine; class RaftDispatcher; class Connection;
+inline std::string generateUuid() {
+  char buffer[64];
 
-struct TrimmingConfig {
-  // Minimum number of journal entries to keep at all times.
-  int64_t keepAtLeast;
-  // Trimming step - don't bother to trim if we'd be getting rid of fewer than
-  // step entries.
-  int64_t step;
-};
+  uuid_t uuid;
+  uuid_generate_time(uuid);
+  uuid_unparse(uuid, buffer);
 
-class RaftConfig {
-public:
-  RaftConfig(RaftDispatcher &dispatcher, StateMachine &sm);
-
-  TrimmingConfig getTrimmingConfig();
-  LinkStatus setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety = false);
-
-  bool getResilveringEnabled();
-  LinkStatus setResilveringEnabled(Connection *conn, bool value);
-
-private:
-  RaftDispatcher &dispatcher;
-  StateMachine &stateMachine;
-};
-
+  return std::string(buffer);
 }
 
+}
 
 #endif
