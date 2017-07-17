@@ -23,6 +23,7 @@
 
 #include <gtest/gtest.h>
 #include "utils/FileUtils.hh"
+#include "utils/Resilvering.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -59,4 +60,41 @@ TEST(Utils, pathJoin) {
   ASSERT_EQ(pathJoin("/home", "test"), "/home/test");
   ASSERT_EQ(pathJoin("", "home"), "/home");
   ASSERT_EQ(pathJoin("/home", ""), "/home");
+}
+
+TEST(Utils, resilvering_event_parsing) {
+  ResilveringEvent event1("f493280d-009e-4388-a7ec-77ce66b77ce9", 123), event2;
+
+  ASSERT_TRUE(ResilveringEvent::deserialize(event1.serialize(), event2));
+  ASSERT_EQ(event1, event2);
+
+  ASSERT_EQ(event1.getID(), event2.getID());
+  ASSERT_EQ(event1.getStartTime(), event2.getStartTime());
+
+  ResilveringEvent event3("a94a3955-be85-4e70-9fea-0f68eb01de89", 456);
+  ASSERT_FALSE(event1 == event3);
+}
+
+TEST(Utils, resilvering_history_parsing) {
+  ResilveringHistory history;
+
+  history.append(ResilveringEvent("f493280d-009e-4388-a7ec-77ce66b77ce9", 123));
+  history.append(ResilveringEvent("a94a3955-be85-4e70-9fea-0f68eb01de89", 456));
+  history.append(ResilveringEvent("56f3dcec-2aa6-4487-b708-e867225d849c", 789));
+
+  ResilveringHistory history2;
+  ASSERT_TRUE(ResilveringHistory::deserialize(history.serialize(), history2));
+  ASSERT_EQ(history, history2);
+
+  for(size_t i = 0; i < history.size(); i++) {
+    ASSERT_EQ(history.at(i), history2.at(i));
+  }
+
+  history2.append(ResilveringEvent("711e8894-ec4e-4f57-9c2c-eb9e260401ff", 890));
+  ASSERT_FALSE(history == history2);
+
+  ResilveringHistory history3, history4;
+  ASSERT_TRUE(history3 == history4);
+  ASSERT_FALSE(history == history3);
+  ASSERT_FALSE(history3 == history);
 }

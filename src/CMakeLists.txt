@@ -49,6 +49,7 @@ add_library(XrdQuarkDB SHARED
 
                              utils/AssistedThread.hh
   utils/FileUtils.cc         utils/FileUtils.hh
+  utils/Resilvering.cc       utils/Resilvering.hh
                              utils/ScopedAdder.hh
 
   ${BACKWARD_ENABLE}
