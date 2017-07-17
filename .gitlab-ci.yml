@@ -31,10 +31,15 @@ ubuntu-asan:
   stage: build
   image: ubuntu:16.10
   script:
+    - export XRD_BUILD=/cache/xrootd
     - ./utils/ubuntu-asan.sh
   artifacts:
     paths:
     - build/coverage-report
+  cache:
+    key: ubuntu
+    paths:
+    - /cache/
 
 cc7-test:
   stage: test

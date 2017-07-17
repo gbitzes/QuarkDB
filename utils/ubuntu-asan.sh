@@ -1,22 +1,33 @@
 #!/usr/bin/env bash
-set -e
+set -ex
 
 apt update
 apt install -y git g++ cmake zlib1g-dev openssl libssl-dev libhiredis-dev python libbz2-dev lcov uuid-dev
 
 git submodule update --init --recursive
 
-rm -rf xrootd
-git clone https://github.com/xrootd/xrootd
-pushd xrootd
-git checkout v4.6.0
-mkdir build && pushd build
+# Build xrootd, use cache if available
+if [[ "$XRD_BUILD" == "" ]]; then
+  XRD_BUILD=$PWD/xrootd
+fi
 
-XRD_INSTALL=$PWD/install
-cmake .. -DCMAKE_INSTALL_PREFIX=$XRD_INSTALL && make
-make install
-popd; popd
+if [ ! "$(ls -A $XRD_BUILD)" ]; then
+  mkdir -p $XRD_BUILD
+  pushd $XRD_BUILD
+  rm -rf xrootd
+  git clone https://github.com/xrootd/xrootd
+  pushd xrootd
+  git checkout v4.6.0
+  mkdir build && pushd build
 
+  XRD_INSTALL=$PWD/install
+  cmake .. -DCMAKE_INSTALL_PREFIX=$XRD_INSTALL && make
+  make install
+  popd; popd; popd
+fi
+XRD_INSTALL="$XRD_BUILD/xrootd/build/install"
+
+# Build QuarkDB
 rm -rf build
 mkdir build && pushd build
 CXXFLAGS='-fsanitize=address' cmake -DTESTCOVERAGE=ON -DXROOTD_ROOT_DIR=$XRD_INSTALL -DLIBRARY_PATH_PREFIX=lib ..

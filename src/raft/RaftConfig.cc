@@ -28,8 +28,6 @@
 
 using namespace quarkdb;
 
-// TODO: implement internal commands in stateMachine, so such keys are hidden from
-// users
 const std::string trimConfigKey("raft.trimming");
 const std::string resilveringEnabledKey("raft.resilvering.enabled");
 
