@@ -23,6 +23,7 @@
 
 #include "RaftUtils.hh"
 #include "RaftCommitTracker.hh"
+#include "RaftJournal.hh"
 #include <random>
 #include <algorithm>
 using namespace quarkdb;

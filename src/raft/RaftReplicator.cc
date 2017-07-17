@@ -28,6 +28,11 @@
 #include "RaftUtils.hh"
 #include "RaftResilverer.hh"
 #include "RaftConfig.hh"
+#include "RaftState.hh"
+#include "RaftJournal.hh"
+#include "RaftCommitTracker.hh"
+#include "RaftTimeouts.hh"
+#include "RaftLease.hh"
 #include "../utils/FileUtils.hh"
 #include <dirent.h>
 #include <fstream>

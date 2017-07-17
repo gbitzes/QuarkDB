@@ -25,15 +25,18 @@
 #define __QUARKDB_RAFT_H__
 
 #include "../Dispatcher.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
 #include "RaftUtils.hh"
 #include "RaftTimeouts.hh"
 #include "RaftBlockedWrites.hh"
-#include "RaftWriteTracker.hh"
 #include <thread>
 
 namespace quarkdb {
+
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+class RaftJournal; class RaftState; class RaftClock; class RaftWriteTracker;
+
 
 
 class RaftDispatcher : public Dispatcher {

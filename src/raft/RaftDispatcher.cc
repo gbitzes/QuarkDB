@@ -23,6 +23,9 @@
 
 #include "RaftDispatcher.hh"
 #include "RaftUtils.hh"
+#include "RaftJournal.hh"
+#include "RaftWriteTracker.hh"
+#include "RaftState.hh"
 
 #include <random>
 #include <sys/stat.h>

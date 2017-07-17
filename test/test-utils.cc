@@ -28,6 +28,8 @@
 #include <vector>
 #include <string>
 #include "Shard.hh"
+#include "raft/RaftGroup.hh"
+#include "raft/RaftJournal.hh"
 #include <gtest/gtest.h>
 
 namespace quarkdb {

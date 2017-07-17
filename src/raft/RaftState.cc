@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "RaftState.hh"
+#include "RaftJournal.hh"
 
 using namespace quarkdb;
 

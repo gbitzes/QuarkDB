@@ -24,23 +24,25 @@
 #ifndef __QUARKDB_RAFT_REPLICATOR_H__
 #define __QUARKDB_RAFT_REPLICATOR_H__
 
-#include "../StateMachine.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
 #include "RaftTimeouts.hh"
-#include "RaftCommitTracker.hh"
-#include "RaftLease.hh"
 #include <mutex>
 #include <queue>
 #include "RaftTalker.hh"
+#include "RaftState.hh"
 
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
-// Tracks a single raft replica
+// Forward declarations
 //------------------------------------------------------------------------------
 class RaftTalker; class RaftResilverer; class RaftTrimmer;
-class ShardDirectory; class RaftConfig;
+class ShardDirectory; class RaftConfig; class RaftState;
+class StateMachine; class RaftJournal; class RaftLease;
+class RaftCommitTracker; class RaftMatchIndexTracker; class RaftLastContact;
+
+//------------------------------------------------------------------------------
+// Tracks a single raft replica
+//------------------------------------------------------------------------------
 class RaftReplicaTracker {
 public:
   RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);

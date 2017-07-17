@@ -27,11 +27,15 @@
 #include <qclient/QClient.hh>
 #include "RaftCommon.hh"
 #include "../Common.hh"
-#include "RaftState.hh"
 #include "RaftTimeouts.hh"
-#include "RaftLease.hh"
 
 namespace quarkdb {
+
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+class RaftState; class RaftLease;
+
 
 inline size_t calculateQuorumSize(size_t members) {
   return (members / 2) + 1;

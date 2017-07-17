@@ -23,6 +23,9 @@
 
 #include "RaftBlockedWrites.hh"
 #include "RaftWriteTracker.hh"
+#include "RaftJournal.hh"
+#include "RaftState.hh"
+#include "../StateMachine.hh"
 #include "../Utils.hh"
 using namespace quarkdb;
 

@@ -28,11 +28,8 @@
 #include <sys/un.h>
 #include <vector>
 #include "Common.hh"
-#include "raft/RaftDispatcher.hh"
-#include "raft/RaftReplicator.hh"
-#include "raft/RaftDirector.hh"
-#include "raft/RaftGroup.hh"
 #include "Poller.hh"
+#include "raft/RaftState.hh"
 #include <qclient/QClient.hh>
 #include <gtest/gtest.h>
 #include "config/test-config.hh"
@@ -47,7 +44,12 @@
 
 namespace quarkdb {
 
-class Shard;
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+class Shard; class RaftGroup; class ShardDirectory; class RaftJournal;
+class RaftDispatcher; class RaftLease; class RaftDirector;
+class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
 
 #define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
   size_t nretries = 0; \

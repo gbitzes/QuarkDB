@@ -26,12 +26,15 @@
 
 #include "../Common.hh"
 #include "RaftCommon.hh"
-#include "RaftJournal.hh"
 #include <mutex>
+#include <condition_variable>
 
 namespace quarkdb {
 
-
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+class RaftJournal;
 
 struct RaftStateSnapshot {
   RaftTerm term;

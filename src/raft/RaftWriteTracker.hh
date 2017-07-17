@@ -26,13 +26,14 @@
 
 #include <qclient/QClient.hh>
 #include "RaftCommon.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
-#include "../Connection.hh"
-#include "../StateMachine.hh"
 #include "../Dispatcher.hh"
 
 namespace quarkdb {
+
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+class RaftJournal; class RaftState; class StateMachine;
 
 //----------------------------------------------------------------------------
 // We track the state of pending writes, and apply them to the state machine

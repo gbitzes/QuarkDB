@@ -29,16 +29,18 @@
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
-// This class keeps track of and owns all objects needed for the raft party.
-// Everything is initialized lazily.
+// Forward declarations
 //------------------------------------------------------------------------------
-
 class StateMachine; class RaftJournal; class RaftDispatcher;
 class RaftState; class RaftReplicator; class RaftClock;
 class RaftDirector; class RaftLease; class RaftWriteTracker;
 class RaftTrimmer; class RaftCommitTracker; class RaftConfig;
-
 class ShardDirectory;
+
+//------------------------------------------------------------------------------
+// This class keeps track of and owns all objects needed for the raft party.
+// Everything is initialized lazily.
+//------------------------------------------------------------------------------
 
 class RaftGroup {
 public:

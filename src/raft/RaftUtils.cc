@@ -23,6 +23,8 @@
 
 #include "RaftUtils.hh"
 #include "RaftTalker.hh"
+#include "RaftState.hh"
+#include "RaftLease.hh"
 #include "../Utils.hh"
 using namespace quarkdb;
 

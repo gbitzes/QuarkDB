@@ -26,6 +26,7 @@
 #include "raft/RaftConfig.hh"
 #include "ShardDirectory.hh"
 #include "raft/RaftResilverer.hh"
+#include "raft/RaftJournal.hh"
 
 using namespace quarkdb;
 class Trimming : public TestCluster3NodesFixture {};

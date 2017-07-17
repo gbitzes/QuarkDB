@@ -26,11 +26,13 @@
 
 #include <mutex>
 #include "../Common.hh"
-#include "RaftState.hh"
 
 namespace quarkdb {
 
-class RaftCommitTracker;
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+class RaftState; class RaftCommitTracker; class RaftJournal;
 
 class RaftMatchIndexTracker {
 public:
