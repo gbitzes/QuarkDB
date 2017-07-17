@@ -50,6 +50,7 @@ add_library(XrdQuarkDB SHARED
   raft/RaftLease.cc          raft/RaftLease.hh
 
                              utils/AssistedThread.hh
+  utils/DirectoryIterator.cc utils/DirectoryIterator.hh
   utils/FileUtils.cc         utils/FileUtils.hh
   utils/Resilvering.cc       utils/Resilvering.hh
                              utils/ScopedAdder.hh

@@ -28,6 +28,7 @@
 #include <dirent.h>
 #include <fstream>
 #include "../utils/Uuid.hh"
+#include "../utils/DirectoryIterator.hh"
 
 using namespace quarkdb;
 
@@ -87,22 +88,10 @@ void RaftResilverer::cancel(const std::string &reason) {
 bool RaftResilverer::copyDirectory(const std::string &target, const std::string &prefix, std::string &err) {
   qdb_info("Resilvering: Copying directory " << target << " under prefix '" << prefix << "' of remote target");
 
-  DIR *dir;
+  DirectoryIterator dirIterator(target);
+
   struct dirent *entry;
-
-  dir = opendir(target.c_str());
-  if(!dir) {
-    err = SSTR("Unable to open directory " << target << " when resilvering");
-    return false;
-  }
-
-  entry = readdir(dir);
-  if(!entry) {
-    err = SSTR("Unable to readdir " << target << " when resilvering");
-    return false;
-  }
-
-  do {
+  while( (entry = dirIterator.next()) ) {
     if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
     std::string currentPath = SSTR(target << "/" << entry->d_name);
@@ -117,7 +106,6 @@ bool RaftResilverer::copyDirectory(const std::string &target, const std::string 
 
     if(entry->d_type == DT_DIR) {
       if(!copyDirectory(currentPath, currentPrefix, err)) {
-        closedir(dir);
         return false;
       }
     }
@@ -129,7 +117,12 @@ bool RaftResilverer::copyDirectory(const std::string &target, const std::string 
       std::future<redisReplyPtr> fut = talker.resilveringCopy(resilveringID, currentPrefix, buffer.str());
       if(!is_ok_response(fut)) return false;
     }
-  } while( (entry = readdir(dir)));
+  }
+
+  if(!dirIterator.ok()) {
+    err = SSTR("copyDirectory failed, unable to iterate directory: " << dirIterator.err());
+    return false;
+  }
 
   return true;
 }
