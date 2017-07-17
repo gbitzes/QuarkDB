@@ -416,3 +416,59 @@ TEST_F(State_Machine, list_operations2) {
   ASSERT_OK(stateMachine()->llen("my_list", len));
   ASSERT_EQ(len, 0u);
 }
+
+TEST_F(State_Machine, config) {
+  LogIndex commitIndex = 0;
+  std::string item;
+
+  ASSERT_NOTFOUND(stateMachine()->configGet("raft.resilvering", item));
+  ASSERT_OK(stateMachine()->configSet("raft.resilvering", "TRUE", ++commitIndex));
+  ASSERT_OK(stateMachine()->configGet("raft.resilvering", item));
+  ASSERT_EQ(item, "TRUE");
+
+  ASSERT_OK(stateMachine()->configSet("raft.trimming.step", "123", ++commitIndex));
+  ASSERT_OK(stateMachine()->configSet("raft.trimming.limit", "1000", ++commitIndex));
+
+  ASSERT_OK(stateMachine()->configGet("raft.trimming.step", item));
+  ASSERT_EQ(item, "123");
+
+  ASSERT_OK(stateMachine()->configGet("raft.trimming.limit", item));
+  ASSERT_EQ(item, "1000");
+
+  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.limit"));
+  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.step"));
+
+  ASSERT_OK(stateMachine()->set("raft.trimming.step", "evil", ++commitIndex));
+  ASSERT_OK(stateMachine()->configGet("raft.trimming.step", item));
+  ASSERT_EQ(item, "123");
+
+  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.limit"));
+  ASSERT_OK(stateMachine()->exists("raft.trimming.step"));
+
+  std::vector<std::string> keysToDelete = {"raft.trimming.step"};
+  int64_t num = 0;
+  ASSERT_OK(stateMachine()->del(keysToDelete.begin(), keysToDelete.end(), num, ++commitIndex));
+  ASSERT_EQ(num, 1);
+  ASSERT_OK(stateMachine()->configGet("raft.trimming.step", item));
+  ASSERT_EQ(item, "123");
+
+  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.limit"));
+
+  ASSERT_OK(stateMachine()->set("random key", "random value", ++commitIndex));
+  ASSERT_OK(stateMachine()->set("random key 2", "random value 2", ++commitIndex));
+
+  std::vector<std::string> allkeys;
+  ASSERT_OK(stateMachine()->keys("*", allkeys));
+  ASSERT_EQ(allkeys, make_vec("random key", "random key 2"));
+
+  ASSERT_OK(stateMachine()->flushall(++commitIndex));
+  ASSERT_OK(stateMachine()->keys("*", allkeys));
+  ASSERT_EQ(allkeys, make_vec());
+
+  ASSERT_OK(stateMachine()->configGet("raft.trimming.step", item));
+  ASSERT_EQ(item, "123");
+
+  std::vector<std::string> contents;
+  ASSERT_OK(stateMachine()->configGetall(contents));
+  ASSERT_EQ(contents, make_vec("raft.resilvering", "TRUE", "raft.trimming.limit", "1000", "raft.trimming.step", "123"));
+}

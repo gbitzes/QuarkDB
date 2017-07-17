@@ -568,6 +568,41 @@ rocksdb::Status StateMachine::scard(const std::string &key, size_t &count) {
   return rocksdb::Status::OK();
 }
 
+rocksdb::Status StateMachine::configGet(const std::string &key, std::string &value) {
+  Snapshot snapshot(db);
+  std::string tkey = translate_key(KeyType::kConfiguration, key);
+  return db->Get(snapshot.opts(), tkey, &value);
+}
+
+rocksdb::Status StateMachine::configSet(const std::string &key, const std::string &value, LogIndex index) {
+  // We don't use WriteOperation or key descriptors here,
+  // since kConfiguration is special.
+
+  std::string tkey = translate_key(KeyType::kConfiguration, key);
+
+  TransactionPtr tx = startTransaction();
+  THROW_ON_ERROR(tx->Put(tkey, value));
+  commitTransaction(tx, index);
+
+  return rocksdb::Status::OK();
+}
+
+rocksdb::Status StateMachine::configGetall(std::vector<std::string> &res) {
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  res.clear();
+
+  std::string searchPrefix(1, char(KeyType::kConfiguration));
+  for(iter->Seek(searchPrefix); iter->Valid(); iter->Next()) {
+    std::string rkey = iter->key().ToString();
+    if(rkey.size() == 0 || rkey[0] != char(KeyType::kConfiguration)) break;
+
+    res.push_back(rkey.substr(1));
+    res.push_back(iter->value().ToString());
+  }
+
+  return rocksdb::Status::OK();
+}
+
 StateMachine::WriteOperation::~WriteOperation() {
   if(!finalized) {
     std::cerr << "WriteOperation being destroyed without having been finalized" << std::endl;
@@ -797,7 +832,7 @@ void StateMachine::remove_all_with_prefix(const std::string &prefix, int64_t &re
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
     if(!startswith(key, prefix)) break;
-    if(key.size() > 0 && key[0] == char(InternalKeyType::kInternal)) continue;
+    if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(KeyType::kConfiguration))) continue;
 
     THROW_ON_ERROR(tx->Delete(key));
     removed++;

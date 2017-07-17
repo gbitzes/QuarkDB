@@ -300,11 +300,21 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[5], make_vec("aa"));
 
   futures.clear();
+  futures.emplace_back(tunnel(leaderID)->exec("config_getall"));
+  futures.emplace_back(tunnel(leaderID)->exec("config_set", "some.config.value", "1234"));
   futures.emplace_back(tunnel(leaderID)->exec("flushall"));
   futures.emplace_back(tunnel(leaderID)->exec("del", "aa"));
+  futures.emplace_back(tunnel(leaderID)->exec("config_get", "some.config.value", "1234"));
+  futures.emplace_back(tunnel(leaderID)->exec("config_get", "some.config.value"));
+  futures.emplace_back(tunnel(leaderID)->exec("config_getall"));
 
-  ASSERT_REPLY(futures[0], "OK");
-  ASSERT_REPLY(futures[1], 0);
+  ASSERT_REPLY(futures[0], "");
+  ASSERT_REPLY(futures[1], "OK");
+  ASSERT_REPLY(futures[2], "OK");
+  ASSERT_REPLY(futures[3], 0);
+  ASSERT_REPLY(futures[4], "ERR wrong number of arguments for 'config_get' command");
+  ASSERT_REPLY(futures[5], "1234");
+  ASSERT_REPLY(futures[6], make_vec("some.config.value", "1234"));
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("hset", "hash", "key1", "v1"));

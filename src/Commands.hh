@@ -67,6 +67,10 @@ enum class RedisCommand {
   RPOP,
   LLEN,
 
+  CONFIG_GET,
+  CONFIG_SET,
+  CONFIG_GETALL,
+
   RAFT_HANDSHAKE,
   RAFT_APPEND_ENTRIES,
   RAFT_INFO,

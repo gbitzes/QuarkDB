@@ -305,6 +305,27 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(len);
     }
+    case RedisCommand::CONFIG_GET: {
+      if(request.size() != 2) return errArgs(request, commit);
+
+      std::string value;
+      rocksdb::Status st = store.configGet(request[1], value);
+      if(st.IsNotFound()) return Formatter::null();
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::string(value);
+    }
+    case RedisCommand::CONFIG_SET: {
+      if(request.size() != 3) return errArgs(request, commit);
+      rocksdb::Status st = store.configSet(request[1], request[2], commit);
+      return Formatter::fromStatus(st);
+    }
+    case RedisCommand::CONFIG_GETALL: {
+      if(request.size() != 1) return errArgs(request, commit);
+      std::vector<std::string> ret;
+      rocksdb::Status st = store.configGetall(ret);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::vector(ret);
+    }
     default: {
       std::string msg = SSTR("internal dispatching error for " << quotes(request[0]) << " - raft not enabled?");
       qdb_critical(msg);

@@ -78,6 +78,15 @@ public:
   rocksdb::Status rpop(const std::string &key, std::string &item, LogIndex index = 0);
   rocksdb::Status llen(const std::string &key, size_t &len);
 
+  //----------------------------------------------------------------------------
+  // Internal configuration, not exposed to users through 'KEYS' and friends.
+  // Has completely its own key namespace and does not interact in any way
+  // with the other redis commands.
+  //----------------------------------------------------------------------------
+  rocksdb::Status configGet(const std::string &key, std::string &value);
+  rocksdb::Status configSet(const std::string &key, const std::string &value, LogIndex index = 0);
+  rocksdb::Status configGetall(std::vector<std::string> &res);
+
   rocksdb::Status noop(LogIndex index);
   LogIndex getLastApplied();
 
@@ -93,6 +102,7 @@ public:
 
   enum class KeyType : char {
     kNull = '\0',
+    kConfiguration = '~',
     kString = 'a',
     kHash = 'b',
     kSet = 'c',
