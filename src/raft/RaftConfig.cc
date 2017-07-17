@@ -30,8 +30,8 @@ using namespace quarkdb;
 
 // TODO: implement internal commands in stateMachine, so such keys are hidden from
 // users
-const std::string trimConfigKey("__internal_raft_config_trim_config");
-const std::string resilveringSupportKey("__internal_raft_resilvering_enabled");
+const std::string trimConfigKey("raft.trimming");
+const std::string resilveringEnabledKey("raft.resilvering.enabled");
 
 RaftConfig::RaftConfig(RaftDispatcher &disp, StateMachine &sm)
 : dispatcher(disp), stateMachine(sm) {
@@ -40,7 +40,7 @@ RaftConfig::RaftConfig(RaftDispatcher &disp, StateMachine &sm)
 
 bool RaftConfig::getResilveringEnabled() {
   std::string value;
-  rocksdb::Status st = stateMachine.get(resilveringSupportKey, value);
+  rocksdb::Status st = stateMachine.configGet(resilveringEnabledKey, value);
 
   if(st.IsNotFound()) {
     return true;
@@ -62,13 +62,13 @@ bool RaftConfig::getResilveringEnabled() {
 }
 
 LinkStatus RaftConfig::setResilveringEnabled(Connection *conn, bool value) {
-  RedisRequest req { "SET", resilveringSupportKey, boolToString(value) };
+  RedisRequest req { "CONFIG_SET", resilveringEnabledKey, boolToString(value) };
   return dispatcher.dispatch(conn, req);
 }
 
 TrimmingConfig RaftConfig::getTrimmingConfig() {
   std::string trimConfig;
-  rocksdb::Status st = stateMachine.get(trimConfigKey, trimConfig);
+  rocksdb::Status st = stateMachine.configGet(trimConfigKey, trimConfig);
 
   if(st.IsNotFound()) {
     // Return default values
@@ -101,7 +101,6 @@ LinkStatus RaftConfig::setTrimmingConfig(Connection *conn, const TrimmingConfig 
     return conn->err(SSTR("new 'step' too small: " << trimConfig.step));
   }
 
-
-  RedisRequest req { "SET", trimConfigKey, intToBinaryString(trimConfig.keepAtLeast) + intToBinaryString(trimConfig.step)};
+  RedisRequest req { "CONFIG_SET", trimConfigKey, intToBinaryString(trimConfig.keepAtLeast) + intToBinaryString(trimConfig.step)};
   return dispatcher.dispatch(conn, req);
 }
