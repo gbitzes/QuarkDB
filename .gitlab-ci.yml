@@ -5,7 +5,7 @@ stages:
 
 cc7:
   stage: build
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
   script:
     - yum install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils
     - packaging/gitlab-build.sh
@@ -43,7 +43,7 @@ ubuntu-asan:
 
 cc7-test:
   stage: test
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
   dependencies:
   - cc7
   script:
@@ -63,7 +63,7 @@ fedora24-test:
 
 rpms:
   stage: publish
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
   dependencies:
   - cc7
   - fedora24
@@ -75,7 +75,7 @@ rpms:
 
 docs:
   stage: publish
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
   script:
    - yum install --nogpg -y sssd-client sudo http-parser http-parser-devel npm
    - pushd ~/
@@ -94,7 +94,7 @@ docs:
 
 coverage:
   stage: publish
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
   dependencies:
   - ubuntu-asan
   script:
