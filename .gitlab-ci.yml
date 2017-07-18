@@ -9,4 +9,6 @@ cc7-enhanced:
     DOCKER_FILE: cc7-enhanced/Dockerfile
   script:
   - ""
+  tags:
+  - docker-image-build
 
