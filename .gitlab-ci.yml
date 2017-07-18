@@ -1,5 +1,5 @@
 stages:
-  build
+- build
 
 cc7-enhanced:
   stage: build
