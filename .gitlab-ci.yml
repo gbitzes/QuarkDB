@@ -12,3 +12,15 @@ cc7-enhanced:
   tags:
   - docker-image-build
 
+ubuntu-enhanced:
+  stage: build
+  variables:
+    TO: gitlab-registry.cern.ch/eos/quarkdb/ubuntu-enhanced
+    DOCKER_FILE: ubuntu-enhanced/Dockerfile
+    NO_CACHE: "1"
+  script:
+  - ""
+  tags:
+  - docker-image-build
+
+
