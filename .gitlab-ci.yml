@@ -3,9 +3,10 @@ stages:
 
 cc7-enhanced:
   stage: build
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  image: gitlab-registry.cern.ch/vcs/gitlabci-docker-builder
+  variables:
+    TO: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
+    DOCKER_FILE: cc7-enhanced/Dockerfile
   script:
-  - yum install -y docker
-  - service docker start
-  - cc7-enhanced/build-and-upload.sh
+  - ""
 
