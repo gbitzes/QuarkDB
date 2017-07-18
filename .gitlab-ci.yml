@@ -1,0 +1,7 @@
+stages:
+  build
+
+cc7-enhanced:
+  script:
+  - cc7-enhanced/build-and-upload.sh
+
