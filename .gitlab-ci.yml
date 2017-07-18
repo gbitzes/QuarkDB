@@ -29,7 +29,7 @@ fedora24:
 
 ubuntu-asan:
   stage: build
-  image: ubuntu:16.10
+  image: gitlab-registry.cern.ch/eos/quarkdb/ubuntu-enhanced
   script:
     - ci/ubuntu/asan.sh
   artifacts:
