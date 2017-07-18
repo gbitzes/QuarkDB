@@ -5,5 +5,7 @@ cc7-enhanced:
   stage: build
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
+  - yum install -y docker
+  - service docker start
   - cc7-enhanced/build-and-upload.sh
 
