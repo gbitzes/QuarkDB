@@ -27,6 +27,6 @@ git checkout v4.6.0
 mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX="$BASE_PATH/install"
-make -j
-make -j install
+make
+make install
 
