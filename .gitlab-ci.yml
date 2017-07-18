@@ -2,6 +2,8 @@ stages:
   build
 
 cc7-enhanced:
+  stage: build
+  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
   - cc7-enhanced/build-and-upload.sh
 
