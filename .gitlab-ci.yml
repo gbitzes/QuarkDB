@@ -3,7 +3,6 @@ stages:
 
 cc7-enhanced:
   stage: build
-  image: gitlab-registry.cern.ch/vcs/gitlabci-docker-builder
   variables:
     TO: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
     DOCKER_FILE: cc7-enhanced/Dockerfile
