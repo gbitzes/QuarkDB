@@ -5,6 +5,7 @@ set -e
 # re-compile it again and again for each commit.
 
 # Make the directory as the first thing, so as to fail fast
+git submodule update --init --recursive
 ROCKSDB_PATH=$(ci/canonical-rocksdb-path.sh)
 mkdir -p $ROCKSDB_PATH
 
@@ -16,7 +17,6 @@ fi
 
 # Build RocksDB using the same command that would be used if
 # there was no caching.
-git submodule update --init --recursive
 rm -rf build
 mkdir build && cd build
 $CMAKE .. -DPACKAGEONLY=1 -DBUILD_ROCKSDB=1
