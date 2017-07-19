@@ -24,3 +24,13 @@ popd
 ##------------------------------------------------------------------------------
 
 yum install -y sssd-client sudo http-parser http-parser-devel npm createrepo
+
+##------------------------------------------------------------------------------
+## Install gitbook, needed for publishing docs.
+##------------------------------------------------------------------------------
+
+pushd ~/
+npm install -g gitbook-cli
+npm install gitbook
+popd
+gitbook build # Gitbook will install more stuff during its first execution
