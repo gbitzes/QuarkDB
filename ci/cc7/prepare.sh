@@ -34,3 +34,9 @@ npm install -g gitbook-cli
 npm install gitbook
 popd
 gitbook build # Gitbook will install more stuff during its first execution
+
+##------------------------------------------------------------------------------
+## Install rocksdb
+##------------------------------------------------------------------------------
+
+ci/install-rocksdb.sh

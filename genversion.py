@@ -61,8 +61,11 @@ def main():
 
     version_full = versions[0] + "." + versions[1] + "." + versions[2] + "-" + release
 
-    old = getFile("src/Version.hh")
-    template = getFile("src/Version.hh.in")
+    rocksdb_cache = ""
+    try:
+        rocksdb_cache = sh("ci/rocksdb-cmake.sh")
+    except:
+        pass
 
     replacements = [
       ["@GIT_SHA1@", commit_hash],
@@ -73,7 +76,8 @@ def main():
       ["@VERSION_MINOR@", versions[1]],
       ["@VERSION_PATCH@", versions[2]],
       ["@VERSION_RELEASE@", release],
-      ["@VERSION_FULL@", version_full]
+      ["@VERSION_FULL@", version_full],
+      ["@ROCKSDB_CACHED_BUILD@", rocksdb_cache]
     ]
 
     if applyTemplate(args.template, args.out, replacements):

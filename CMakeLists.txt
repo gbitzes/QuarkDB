@@ -32,12 +32,15 @@ ExtractVersionInfo()
 #-------------------------------------------------------------------------------
 
 option(PACKAGEONLY "Build without dependencies" OFF)
+option(BUILD_ROCKSDB "Build rocksdb, even if PACKAGEONLY was specified" OFF)
 
 if(NOT PACKAGEONLY)
   find_package(hiredis REQUIRED)
   find_package(XRootD REQUIRED)
   find_package(uuid REQUIRED)
+endif()
 
+if( (NOT PACKAGEONLY) OR (BUILD_ROCKSDB))
   find_package(RocksDB)
   if(NOT ROCKSDB_FOUND)
     include(buildRocksDB)
