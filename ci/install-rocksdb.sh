@@ -8,13 +8,18 @@ set -e
 ROCKSDB_PATH=$(ci/canonical-rocksdb-path.sh)
 mkdir -p $ROCKSDB_PATH
 
+# Find available cmake command
+CMAKE="cmake3"
+if ! which $CMAKE; then
+  CMAKE="cmake"
+fi
 
 # Build RocksDB using the same command that would be used if
 # there was no caching.
 git submodule update --init --recursive
 rm -rf build
 mkdir build && cd build
-cmake .. -DPACKAGEONLY=1 -DBUILD_ROCKSDB=1
+$CMAKE .. -DPACKAGEONLY=1 -DBUILD_ROCKSDB=1
 make BuildRocksDB
 
 # Copy necessary files.
