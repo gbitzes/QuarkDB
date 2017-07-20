@@ -7,6 +7,6 @@ MAINTAINER Georgios Bitzes, georgios.bitzes@cern.ch, CERN 2017
 
 RUN yum clean all
 RUN yum install -y git
-RUN git clone https://gitlab.cern.ch/eos/quarkdb.git; pushd quarkdb; ci/cc7/prepare.sh; popd
-RUN rm -rf quarkdb
+RUN git clone https://gitlab.cern.ch/eos/quarkdb.git; cd quarkdb; ci/cc7/prepare.sh
+RUN rm -rf /quarkdb
 
