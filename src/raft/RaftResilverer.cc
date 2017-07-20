@@ -32,20 +32,46 @@
 
 using namespace quarkdb;
 
-static bool is_ok_response(std::future<redisReplyPtr> &fut) {
-  std::future_status status = fut.wait_for(std::chrono::seconds(3));
-  if(status != std::future_status::ready) {
-    return false;
+class OkResponseVerifier {
+public:
+  OkResponseVerifier(std::future<redisReplyPtr> &&fut) {
+    const int timeout = 3;
+
+    std::future_status status = fut.wait_for(std::chrono::seconds(timeout));
+    if(status != std::future_status::ready) {
+      error = SSTR("Timeout after " << timeout << " seconds");
+      return;
+    }
+
+    redisReplyPtr rep = fut.get();
+    if(rep == nullptr) {
+      error = SSTR("Received nullptr response (should never happen)");
+      return;
+    }
+
+    if(rep->type != REDIS_REPLY_STATUS) {
+      error = SSTR("Unexpected response type: " << rep->type);
+      return;
+    }
+
+    std::string response = std::string(rep->str, rep->len);
+    if(response != "OK") {
+      error = SSTR("Unexpected response: " << response);
+      return;
+    }
   }
 
-  redisReplyPtr rep = fut.get();
-  if(rep == nullptr) return false;
+  bool ok() {
+    return error.empty();
+  }
 
-  if(rep->type != REDIS_REPLY_STATUS) return false;
-  if(std::string(rep->str, rep->len) != "OK") return false;
+  std::string err() {
+    return error;
+  }
 
-  return true;
-}
+private:
+  std::string error;
+};
 
 RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftClusterID &cid, RaftTrimmer *trim)
 : shardDirectory(dir), target(trg), clusterID(cid), trimmer(trim), talker(target, clusterID) {
@@ -73,7 +99,7 @@ void RaftResilverer::setStatus(const ResilveringState &state, const std::string 
   status.err = err;
 
   if(status.state == ResilveringState::FAILED) {
-    qdb_warn("Attempt to resilver a node has failed: " << status.err);
+    qdb_critical("Attempt to resilver " << target.toString() << " has failed: " << status.err);
     cancel(status.err);
   }
 }
@@ -83,6 +109,19 @@ void RaftResilverer::cancel(const std::string &reason) {
   // resilverings after some timeout, anyway.
 
   talker.resilveringCancel(resilveringID, reason);
+}
+
+bool RaftResilverer::copyFile(const std::string &path, const std::string &prefix, std::string &err) {
+  std::ifstream t(path);
+  std::stringstream buffer;
+  buffer << t.rdbuf();
+
+  OkResponseVerifier verifier(talker.resilveringCopy(resilveringID, prefix, buffer.str()));
+  if(!verifier.ok()) {
+    err = SSTR("Error when coping " << path << ": " << verifier.err());
+  }
+
+  return verifier.ok();
 }
 
 bool RaftResilverer::copyDirectory(const std::string &target, const std::string &prefix, std::string &err) {
@@ -114,8 +153,11 @@ bool RaftResilverer::copyDirectory(const std::string &target, const std::string 
       std::stringstream buffer;
       buffer << t.rdbuf();
 
-      std::future<redisReplyPtr> fut = talker.resilveringCopy(resilveringID, currentPrefix, buffer.str());
-      if(!is_ok_response(fut)) return false;
+      OkResponseVerifier verifier(talker.resilveringCopy(resilveringID, currentPrefix, buffer.str()));
+      if(!verifier.ok()) {
+        err = SSTR("Error when copying directory " << target << ": ");
+        return false;
+      }
     }
   }
 
@@ -128,10 +170,9 @@ bool RaftResilverer::copyDirectory(const std::string &target, const std::string 
 }
 
 void RaftResilverer::main(ThreadAssistant &assistant) {
-  std::future<redisReplyPtr> fut = talker.resilveringStart(resilveringID);
-
-  if(!is_ok_response(fut)) {
-    setStatus(ResilveringState::FAILED, "Could not initiate resilvering");
+  OkResponseVerifier verifier(talker.resilveringStart(resilveringID));
+  if(!verifier.ok()) {
+    setStatus(ResilveringState::FAILED, SSTR("Could not initiate resilvering: " << verifier.err()));
     return;
   }
 
@@ -139,7 +180,7 @@ void RaftResilverer::main(ThreadAssistant &assistant) {
   std::unique_ptr<ShardSnapshot> shardSnapshot = shardDirectory.takeSnapshot(resilveringID, err);
 
   if(shardSnapshot == nullptr || !err.empty()) {
-    setStatus(ResilveringState::FAILED, "Could not create snapshot");
+    setStatus(ResilveringState::FAILED, SSTR("Could not create snapshot: " << err));
     return;
   }
 
@@ -148,9 +189,9 @@ void RaftResilverer::main(ThreadAssistant &assistant) {
     return;
   }
 
-  fut = talker.resilveringFinish(resilveringID);
-  if(!is_ok_response(fut)) {
-    setStatus(ResilveringState::FAILED, err);
+  verifier = OkResponseVerifier(talker.resilveringFinish(resilveringID));
+  if(!verifier.ok()) {
+    setStatus(ResilveringState::FAILED, SSTR("Error when finishing resilvering: " << verifier.err()));
     return;
   }
 

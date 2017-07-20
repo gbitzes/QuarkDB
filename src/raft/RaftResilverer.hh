@@ -72,6 +72,7 @@ private:
   bool copyDirectory(const std::string &path, const std::string &prefix, std::string &err);
 
   void cancel(const std::string &reason);
+  bool copyFile(const std::string &path, const std::string &prefix, std::string &err);
 };
 
 }
