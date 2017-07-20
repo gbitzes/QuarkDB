@@ -34,9 +34,7 @@ using namespace quarkdb;
 
 class OkResponseVerifier {
 public:
-  OkResponseVerifier(std::future<redisReplyPtr> &&fut) {
-    const int timeout = 3;
-
+  OkResponseVerifier(std::future<redisReplyPtr> &&fut, size_t timeout = 3) {
     std::future_status status = fut.wait_for(std::chrono::seconds(timeout));
     if(status != std::future_status::ready) {
       error = SSTR("Timeout after " << timeout << " seconds");
@@ -153,7 +151,7 @@ bool RaftResilverer::copyDirectory(const std::string &target, const std::string 
       std::stringstream buffer;
       buffer << t.rdbuf();
 
-      OkResponseVerifier verifier(talker.resilveringCopy(resilveringID, currentPrefix, buffer.str()));
+      OkResponseVerifier verifier(talker.resilveringCopy(resilveringID, currentPrefix, buffer.str()), 60);
       if(!verifier.ok()) {
         err = SSTR("Error when copying directory " << target << ": ");
         return false;
