@@ -187,7 +187,7 @@ void RaftResilverer::main(ThreadAssistant &assistant) {
     return;
   }
 
-  verifier = OkResponseVerifier(talker.resilveringFinish(resilveringID));
+  verifier = OkResponseVerifier(talker.resilveringFinish(resilveringID), 60);
   if(!verifier.ok()) {
     setStatus(ResilveringState::FAILED, SSTR("Error when finishing resilvering: " << verifier.err()));
     return;
