@@ -100,6 +100,9 @@ void RaftResilverer::setStatus(const ResilveringState &state, const std::string 
     qdb_critical("Attempt to resilver " << target.toString() << " has failed: " << status.err);
     cancel(status.err);
   }
+  else if(status.state == ResilveringState::SUCCEEDED) {
+    qdb_event("Target " << target.toString() << " has been successfully resilvered.");
+  }
 }
 
 void RaftResilverer::cancel(const std::string &reason) {
