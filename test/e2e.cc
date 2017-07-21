@@ -506,15 +506,15 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   spinup(0); spinup(1); spinup(2); spinup(3);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2, 3));
 
-  // verify consensus
-  for(size_t i = 1; i < 3; i++) {
-    ASSERT_EQ(state(i)->getSnapshot().leader, state(i-1)->getSnapshot().leader);
-  }
-
   // throw node #4 out of the cluster
   int leaderID = getServerID(state(0)->getSnapshot().leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(4).toString()), "OK");
-  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == 2);
+
+  // wait until membership update has been committed
+  RaftMembership membership = journal(leaderID)->getMembership();
+  ASSERT_GT(membership.epoch, 0u);
+  ASSERT_EQ(membership.nodes.size(), 4u);
+  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
 
   // .. and now spinup node #4 :> Ensure it doesn't disrupt the current leader
   spinup(4);
