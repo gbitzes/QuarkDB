@@ -81,9 +81,6 @@ class Package(object):
 
         self.packagename = tmp
 
-    # def assert_version(version):
-    #     pass
-
 def construct_location(platform, arch, filename):
     return "{0}/{1}/{2}".format(platform, arch, filename)
 
@@ -131,7 +128,7 @@ class Repository(object):
         tag = is_tag(ref)
 
         base = "{0}/{1}".format(self.base, ref)
-        if tag: base = "{0}/tags/{1}".format(self.base, ref)
+        if tag: base = "{0}/tag".format(self.base)
         base += "/" + list(platforms)[0]
 
         for package in packages:
@@ -179,8 +176,8 @@ def parseargs():
         declare_required(parser, args, "keep-last-days")
         bailout("NYI")
 
-    if args.ref == "tags":
-        bailout("A branch named 'tags'? Really?")
+    if args.ref == "tags" or args.ref == "tag":
+        bailout("A branch named '{0}'? Really?".format(args.ref))
 
     global DRY_RUN
     global NO_CREATE_REPO
