@@ -52,6 +52,11 @@ void Shard::attach() {
   attached = true;
 }
 
+void Shard::start() {
+  attach();
+  spinup();
+}
+
 void Shard::detach() {
   if(!attached) return;
   attached = false;
@@ -132,12 +137,11 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
 
       std::string err;
       if(!shardDirectory->resilveringFinish(eventID, err)) {
-        attach();
-        spinup();
+        start();
         return conn->err(err);
       }
 
-      attach();
+      start();
       return conn->ok();
     }
     default: {

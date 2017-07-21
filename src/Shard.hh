@@ -58,6 +58,7 @@ public:
 private:
   void detach();
   void attach();
+  void start();
 
   std::atomic<bool> attached {false};
   std::atomic<bool> shutdown;
