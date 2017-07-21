@@ -7,6 +7,5 @@ MAINTAINER Georgios Bitzes, georgios.bitzes@cern.ch, CERN 2017
 
 RUN dnf clean all
 RUN dnf install -y git
-RUN git clone https://gitlab.cern.ch/eos/quarkdb.git; cd quarkdb; ci/fedora/prepare.sh
-RUN rm -rf /quarkdb
+RUN git clone https://gitlab.cern.ch/eos/quarkdb.git; cd quarkdb; ci/fedora/prepare.sh; cd ..; rm -rf quarkdb
 
