@@ -209,8 +209,6 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
 
   if(req.term == snapshot.term && req.leader != snapshot.leader) {
     qdb_throw("Received append entries from " << req.leader.toString() << ", while I believe leader for term " << snapshot.term << " is " << snapshot.leader.toString());
-    // TODO trigger panic?
-    return {snapshot.term, journal.getLogSize(), false, "You are not the current leader"};
   }
 
   writeTracker.flushQueues(SSTR("MOVED 0 " << snapshot.leader.toString()));
@@ -253,8 +251,24 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     }
   }
 
+  warnIfLagging(req.commitIndex);
   journal.setCommitIndex(std::min(journal.getLogSize()-1, req.commitIndex));
   return {snapshot.term, journal.getLogSize(), true, ""};
+}
+
+void RaftDispatcher::warnIfLagging(LogIndex leaderCommitIndex) {
+  const LogIndex threshold = 10000;
+  LogIndex entriesBehind = leaderCommitIndex - journal.getCommitIndex();
+  if(entriesBehind > threshold &&
+     std::chrono::steady_clock::now() - lastLaggingWarning > std::chrono::seconds(10)) {
+
+    qdb_warn("My commit index is " << entriesBehind << " entries behind that of the leader.");
+    lastLaggingWarning = std::chrono::steady_clock::now();
+  }
+  else if(entriesBehind <= threshold && lastLaggingWarning != std::chrono::steady_clock::time_point()) {
+    qdb_info("No longer lagging significantly behind the leader. (" << entriesBehind << " entries)");
+    lastLaggingWarning = {};
+  }
 }
 
 RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {

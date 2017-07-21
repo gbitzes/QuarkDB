@@ -29,6 +29,7 @@
 #include "RaftTimeouts.hh"
 #include "RaftBlockedWrites.hh"
 #include <thread>
+#include <chrono>
 
 namespace quarkdb {
 
@@ -73,6 +74,13 @@ private:
   RaftClock &raftClock;
   RedisDispatcher redisDispatcher;
   RaftWriteTracker& writeTracker;
+
+  //----------------------------------------------------------------------------
+  // Print a message when a follower is too far behind in regular intervals
+  //----------------------------------------------------------------------------
+  std::chrono::steady_clock::time_point lastLaggingWarning;
+  void warnIfLagging(LogIndex leaderLogIndex);
+
 };
 
 }
