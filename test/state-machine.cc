@@ -472,3 +472,39 @@ TEST_F(State_Machine, config) {
   ASSERT_OK(stateMachine()->configGetall(contents));
   ASSERT_EQ(contents, make_vec("raft.resilvering", "TRUE", "raft.trimming.limit", "1000", "raft.trimming.step", "123"));
 }
+
+TEST_F(State_Machine, keys) {
+  ASSERT_OK(stateMachine()->set("one", "1"));
+  ASSERT_OK(stateMachine()->set("two", "2"));
+  ASSERT_OK(stateMachine()->set("three", "3"));
+  ASSERT_OK(stateMachine()->set("four", "4"));
+
+  std::vector<std::string> keys;
+  ASSERT_OK(stateMachine()->keys("*o*", keys));
+  ASSERT_EQ(keys, make_vec("four", "one", "two"));
+
+  ASSERT_OK(stateMachine()->keys("t??", keys));
+  ASSERT_EQ(keys, make_vec("two"));
+
+  ASSERT_OK(stateMachine()->keys("*", keys));
+  ASSERT_EQ(keys, make_vec("four", "one", "three", "two"));
+
+  ASSERT_OK(stateMachine()->set("hello", "1"));
+  ASSERT_OK(stateMachine()->set("hallo", "2"));
+  ASSERT_OK(stateMachine()->set("hillo", "3"));
+  ASSERT_OK(stateMachine()->set("hllo", "4"));
+  ASSERT_OK(stateMachine()->set("heeeello", "5"));
+
+  ASSERT_OK(stateMachine()->keys("h[ae]llo", keys));
+  ASSERT_EQ(keys, make_vec("hallo", "hello"));
+
+  ASSERT_OK(stateMachine()->keys("h*llo", keys));
+  ASSERT_EQ(keys, make_vec("hallo", "heeeello", "hello", "hillo", "hllo"));
+
+  ASSERT_OK(stateMachine()->keys("h[^e]llo", keys));
+  ASSERT_EQ(keys, make_vec("hallo", "hillo"));
+
+  ASSERT_OK(stateMachine()->set("*", "1"));
+  ASSERT_OK(stateMachine()->keys("\\*", keys));
+  ASSERT_EQ(keys, make_vec("*"));
+}
