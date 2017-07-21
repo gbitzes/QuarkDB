@@ -30,20 +30,17 @@
 #include "Xrd/XrdLink.hh"
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdOuc/XrdOucStream.hh"
-
-#include "QuarkDBNode.hh"
+#include "Utils.hh"
 #include "EventFD.hh"
-
-#include "Configuration.hh"
-#include "RedisParser.hh"
-#include "StateMachine.hh"
-#include "Dispatcher.hh"
-#include "raft/RaftJournal.hh"
-#include "raft/RaftState.hh"
-#include "raft/RaftTimeouts.hh"
-#include "raft/RaftDirector.hh"
+#include <atomic>
+#include <qclient/QClient.hh>
 
 namespace quarkdb {
+
+//------------------------------------------------------------------------------
+// Forward declarations
+//------------------------------------------------------------------------------
+class Link; class Connection; class QuarkDBNode;
 
 
 class XrdQuarkDB : public XrdProtocol {

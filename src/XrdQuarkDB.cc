@@ -26,6 +26,7 @@
 #include "XrdOuc/XrdOucEnv.hh"
 #include "raft/RaftDispatcher.hh"
 #include "utils/ScopedAdder.hh"
+#include "QuarkDBNode.hh"
 
 #include <stdlib.h>
 #include <algorithm>
