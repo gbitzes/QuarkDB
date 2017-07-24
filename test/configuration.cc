@@ -46,6 +46,7 @@ TEST(Configuration, T2) {
       "redis.database /home/user/mydb\n"
       "redis.myself server1:7776\n"
       "redis.trace debug\n"
+      "redis.write_ahead_log true\n"
       "fi\n";
 
   ASSERT_TRUE(Configuration::fromString(c, config));
@@ -53,6 +54,7 @@ TEST(Configuration, T2) {
   ASSERT_EQ(config.getDatabase(), "/home/user/mydb");
   ASSERT_EQ(config.getMyself(), RaftServer("server1", 7776) );
   ASSERT_EQ(config.getTraceLevel(), TraceLevel::debug);
+  ASSERT_EQ(config.getWriteAheadLog(), true);
 }
 
 TEST(Configuration, T3) {
@@ -79,12 +81,14 @@ TEST(Configuration, T4) {
       "redis.mode standalone\n"
       "redis.database /home/user/mydb\n"
       "redis.trace info\n"
+      "redis.write_ahead_log false\n"
       "fi\n";
 
   ASSERT_TRUE(Configuration::fromString(c, config));
   ASSERT_EQ(config.getMode(), Mode::standalone);
   ASSERT_EQ(config.getDatabase(), "/home/user/mydb");
   ASSERT_EQ(config.getTraceLevel(), TraceLevel::info);
+  ASSERT_EQ(config.getWriteAheadLog(), false);
 }
 
 TEST(Configuration, T5) {
@@ -156,5 +160,19 @@ TEST(Configuration, T9) {
       "fi\n";
 
   // no trailing slashes in redis.database
+  ASSERT_FALSE(Configuration::fromString(c, config));
+}
+
+TEST(Configuration, T10) {
+  Configuration config;
+  std::string c;
+
+  c = "if exec xrootd\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
+      "redis.mode standalone\n"
+      "redis.database /home/user/mydb\n"
+      "redis.write_ahead_log qadsfadf\n"
+      "fi\n";
+
   ASSERT_FALSE(Configuration::fromString(c, config));
 }

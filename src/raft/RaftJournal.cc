@@ -129,7 +129,7 @@ void RaftJournal::initialize() {
 }
 
 void RaftJournal::openDB(const std::string &path) {
-  qdb_info("Opening journal database " << quotes(path));
+  qdb_info("Opening raft journal " << quotes(path));
   dbPath = path;
 
   rocksdb::Options options;
@@ -146,7 +146,7 @@ RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, c
 }
 
 RaftJournal::~RaftJournal() {
-  qdb_info("Closing journal database " << quotes(dbPath));
+  qdb_info("Closing raft journal " << quotes(dbPath));
 
   if(transactionDB) {
     delete transactionDB;

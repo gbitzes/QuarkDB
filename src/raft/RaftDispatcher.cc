@@ -251,8 +251,8 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     }
   }
 
-  warnIfLagging(req.commitIndex);
   journal.setCommitIndex(std::min(journal.getLogSize()-1, req.commitIndex));
+  warnIfLagging(req.commitIndex);
   return {snapshot.term, journal.getLogSize(), true, ""};
 }
 

@@ -45,8 +45,16 @@ static bool directoryExists(const std::string &path) {
   return false;
 }
 
-StateMachine::StateMachine(const std::string &f) : filename(f) {
-  qdb_info("Openning state machine database " << quotes(filename));
+StateMachine::StateMachine(const std::string &f, bool write_ahead_log)
+: filename(f), writeAheadLog(write_ahead_log) {
+
+  if(writeAheadLog) {
+    qdb_info("Openning state machine " << quotes(filename) << ".");
+  }
+  else {
+    qdb_warn("Opening state machine " << quotes(filename) << " *without* write ahead log - an unclean shutdown WILL CAUSE DATA LOSS");
+  }
+
   bool dirExists = directoryExists(filename);
 
   rocksdb::Options options;
@@ -67,7 +75,7 @@ StateMachine::StateMachine(const std::string &f) : filename(f) {
 
 StateMachine::~StateMachine() {
   if(transactionDB) {
-    qdb_info("Closing rocksdb database " << quotes(filename));
+    qdb_info("Closing state machine " << quotes(filename));
     delete transactionDB;
     transactionDB = nullptr;
     db = nullptr;
@@ -920,7 +928,9 @@ std::string StateMachine::statistics() {
 }
 
 StateMachine::TransactionPtr StateMachine::startTransaction() {
-  return TransactionPtr(transactionDB->BeginTransaction(rocksdb::WriteOptions()));
+  rocksdb::WriteOptions opts;
+  opts.disableWAL = !writeAheadLog;
+  return TransactionPtr(transactionDB->BeginTransaction(opts));
 }
 
 rocksdb::Status StateMachine::noop(LogIndex index) {

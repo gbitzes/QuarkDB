@@ -35,7 +35,7 @@ namespace quarkdb {
 
 class StateMachine {
 public:
-  StateMachine(const std::string &filename);
+  StateMachine(const std::string &filename, bool write_ahead_log = true);
   virtual ~StateMachine();
   DISALLOW_COPY_AND_ASSIGN(StateMachine);
   void reset();
@@ -263,7 +263,9 @@ private:
   std::atomic<LogIndex> lastApplied;
   rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;
+
   const std::string filename;
+  bool writeAheadLog;
 };
 
 

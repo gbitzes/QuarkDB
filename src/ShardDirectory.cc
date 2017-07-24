@@ -59,8 +59,8 @@ void ShardDirectory::storeResilveringHistory() {
   write_file_or_die(resilveringHistoryPath(), resilveringHistory.serialize());
 }
 
-ShardDirectory::ShardDirectory(const std::string &initpath)
-: path(initpath) {
+ShardDirectory::ShardDirectory(const std::string &initpath, Configuration config)
+: path(initpath), configuration(config) {
 
   std::string err;
   if(!directoryExists(path, err)) {
@@ -94,7 +94,7 @@ void ShardDirectory::detach() {
 StateMachine* ShardDirectory::getStateMachine() {
   if(smptr) return smptr;
 
-  smptr = new StateMachine(stateMachinePath());
+  smptr = new StateMachine(stateMachinePath(), configuration.getWriteAheadLog());
   return smptr;
 }
 
@@ -188,7 +188,7 @@ std::unique_ptr<ShardSnapshot> ShardDirectory::takeSnapshot(const SnapshotID &id
     return nullptr;
   }
 
-  return  std::unique_ptr<ShardSnapshot>(new ShardSnapshot(snapshotDirectory));
+  return std::unique_ptr<ShardSnapshot>(new ShardSnapshot(snapshotDirectory));
 }
 
 bool ShardDirectory::resilveringStart(const ResilveringEventID &id, std::string &err) {

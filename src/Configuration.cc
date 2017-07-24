@@ -75,6 +75,20 @@ static bool parseMode(const std::string &buffer, Mode &mode) {
   return true;
 }
 
+static bool parseBool(const std::string &buffer, bool &enableWriteAheadLog) {
+  if(buffer == "true") {
+    enableWriteAheadLog = true;
+    return true;
+  }
+  else if(buffer == "false") {
+    enableWriteAheadLog = false;
+    return true;
+  }
+
+  qdb_log("Cannot convert to boolean: " << quotes(buffer));
+  return false;
+}
+
 static bool parseTraceLevel(const std::string &buffer, TraceLevel &trace) {
   if(buffer == "off") {
     trace = TraceLevel::off;
@@ -127,6 +141,9 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       }
       else if(!strcmp("key", option)) {
         success = fetchSingle(stream, out.keyPath);
+      }
+      else if(!strcmp("write_ahead_log", option)) {
+        success = fetchSingle(stream, buffer) && parseBool(buffer, out.writeAheadLog);
       }
       else {
         qdb_log("Error when parsing configuration - unknown option " << quotes(option));

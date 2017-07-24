@@ -14,6 +14,7 @@ add_executable(quarkdb-chaos quarkdb-chaos.cc)
 target_link_libraries(quarkdb-chaos XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT})
 
 include_directories(
+  ${XROOTD_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src   # need access to the private headers
   ${CMAKE_SOURCE_DIR}/deps  # for optionparser.h
   ${ROCKSDB_INCLUDE_DIRS}

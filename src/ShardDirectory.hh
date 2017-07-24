@@ -26,11 +26,12 @@
 
 #include <memory>
 #include "Common.hh"
+#include "Configuration.hh"
 #include "utils/Resilvering.hh"
 
 namespace quarkdb {
 
-class StateMachine; class RaftJournal;
+class StateMachine; class RaftJournal; class Configuration;
 
 // Snapshot of a shard. The underlying snapshot directory is deleted upon object's
 // deletion, it is thus not suitable for long-lived backups.
@@ -53,7 +54,7 @@ using SnapshotID = std::string;
 // Keeps ownership of StateMachine and RaftJournal - initialized lazily.
 class ShardDirectory {
 public:
-  ShardDirectory(const std::string &path);
+  ShardDirectory(const std::string &path, Configuration config = {});
   ~ShardDirectory();
 
   StateMachine *getStateMachine();
@@ -83,6 +84,7 @@ private:
 
   void detach();
   std::string path;
+  Configuration configuration;
   ShardID shardID;
 
   StateMachine *smptr = nullptr;

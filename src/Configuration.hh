@@ -63,12 +63,14 @@ public:
   std::string getKeyPath() const { return keyPath; }
 
   RaftServer getMyself() const { return myself; }
+  bool getWriteAheadLog() const { return writeAheadLog; }
 private:
   Mode mode;
   std::string database;
   TraceLevel trace = TraceLevel::info;
   std::string certificatePath;
   std::string keyPath;
+  bool writeAheadLog = true;
 
   // raft options
   RaftServer myself;

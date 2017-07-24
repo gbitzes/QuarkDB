@@ -46,7 +46,7 @@ QuarkDBNode::~QuarkDBNode() {
 QuarkDBNode::QuarkDBNode(const Configuration &config, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t)
 : configuration(config), inFlight(inFlight_), timeouts(t) {
 
-  shardDirectory = new ShardDirectory(configuration.getDatabase());
+  shardDirectory = new ShardDirectory(configuration.getDatabase(), configuration);
 
   if(configuration.getMode() == Mode::raft) {
     shard = new Shard(shardDirectory, configuration.getMyself(), configuration.getMode(), timeouts);
