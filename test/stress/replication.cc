@@ -34,12 +34,9 @@
 #include <gtest/gtest.h>
 #include <qclient/QClient.hh>
 #include "utils/AssistedThread.hh"
+#include "../test-reply-macros.hh"
 
 using namespace quarkdb;
-#define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
-#define ASSERT_REPLY(reply, val) { assert_reply(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
-#define ASSERT_ERR(reply, val) { assert_error(reply, val); if(::testing::Test::HasFatalFailure()) { FAIL(); return; } }
-
 class Replication : public TestCluster3NodesFixture {};
 
 TEST_F(Replication, entries_50k_with_follower_loss) {
@@ -176,4 +173,89 @@ TEST_F(Replication, load_during_election) {
   t1.stop();
   t2.stop();
   t3.stop();
+}
+
+static void assert_linearizability(std::future<redisReplyPtr> &future, std::string expectedValue, std::atomic<int64_t> &responses, std::atomic<int64_t> &violations) {
+  redisReplyPtr reply = future.get();
+  if(reply->type != REDIS_REPLY_STRING) return;
+
+  responses++;
+  std::string receivedValue = std::string(reply->str, reply->len);
+  if(expectedValue != receivedValue) {
+    violations++;
+    qdb_critical("Linearizability violation. Received " << quotes(receivedValue) << ", expected: " << quotes(expectedValue));
+  }
+}
+
+// Given an endpoint, try to read a key again and again and again.
+// If we get ERR or MOVED, no problem.
+// If we get a response other than expectedValue, linearizability has been violated.
+static void obsessiveReader(qclient::QClient *qcl, std::string key, std::string expectedValue, std::atomic<int64_t> &responses, std::atomic<int64_t> &violations, ThreadAssistant &assistant) {
+  std::list<std::future<redisReplyPtr>> futures;
+
+  qdb_info("Issuing a flood of reads for key " << quotes(key));
+
+  while(!assistant.terminationRequested()) {
+    futures.emplace_back(qcl->exec("get", key));
+
+    while(futures.size() >= 1000) {
+      assert_linearizability(futures.front(), expectedValue, responses, violations);
+      futures.pop_front();
+    }
+  }
+
+  while(futures.size() != 0) {
+    assert_linearizability(futures.front(), expectedValue, responses, violations);
+    futures.pop_front();
+  }
+}
+
+TEST_F(Replication, linearizability_during_failover) {
+  // start the cluster
+  spinup(0); spinup(1), spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> futures;
+
+  // Issue a bunch of writes, all towards the same key
+  const int nWrites = 10000;
+  for(size_t i = 0; i <= nWrites; i++) {
+    futures.push_back(tunnel(leaderID)->exec("set", "key", SSTR("value-" << i)));
+  }
+
+  // Receive responses
+  for(size_t i = 0; i < futures.size(); i++) {
+    ASSERT_REPLY(futures[i], "OK");
+  }
+
+  // our followers..
+  int node1 = (leaderID + 1) % 3;
+  int node2 = (leaderID + 2) % 3;
+
+  // start reading "key"
+  std::atomic<int64_t> responses(0), violations(0);
+
+  AssistedThread reader1(obsessiveReader, tunnel(node1), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
+  AssistedThread reader2(obsessiveReader, tunnel(node2), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
+
+  RaftTerm firstTerm = state(leaderID)->getCurrentTerm();
+
+  // stop the leader
+  spindown(leaderID);
+
+  // Ensure failover happens..
+  RETRY_ASSERT_TRUE(state(node1)->getCurrentTerm() != firstTerm);
+  RETRY_ASSERT_TRUE(checkStateConsensus(node1, node2));
+  int newLeaderID = getLeaderID();
+  ASSERT_NE(leaderID, newLeaderID);
+
+  // Wait until we have 1k real responses (not errors or "moved")
+  RETRY_ASSERT_TRUE(responses >= 1000);
+
+  reader1.stop(); reader2.stop();
+  reader1.join(); reader2.join();
+
+  qdb_info("After " << responses << " reads, linearizability was violated " << violations << " times.");
+  ASSERT_EQ(violations, 0);
 }

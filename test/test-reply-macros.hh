@@ -35,34 +35,34 @@ namespace quarkdb {
 
 using redisReplyPtr = qclient::redisReplyPtr;
 
-void assert_nil(const redisReplyPtr &reply) {
+inline void assert_nil(const redisReplyPtr &reply) {
   ASSERT_NE(reply, nullptr);
   ASSERT_EQ(reply->type, REDIS_REPLY_NIL);
 }
 
-void assert_nil(std::future<redisReplyPtr> &fut) {
+inline void assert_nil(std::future<redisReplyPtr> &fut) {
   assert_nil(fut.get());
 }
 
-void assert_error(const redisReplyPtr &reply, const std::string &err) {
+inline void assert_error(const redisReplyPtr &reply, const std::string &err) {
   ASSERT_NE(reply, nullptr);
   ASSERT_EQ(reply->type, REDIS_REPLY_ERROR);
   ASSERT_EQ(std::string(reply->str, reply->len), err);
 }
 
-void assert_reply(const redisReplyPtr &reply, int integer) {
+inline void assert_reply(const redisReplyPtr &reply, int integer) {
   ASSERT_NE(reply, nullptr);
   ASSERT_EQ(reply->type, REDIS_REPLY_INTEGER);
   ASSERT_EQ(reply->integer, integer);
 }
 
-void assert_reply(const redisReplyPtr &reply, const std::string &str) {
+inline void assert_reply(const redisReplyPtr &reply, const std::string &str) {
   ASSERT_NE(reply, nullptr);
   // ASSERT_TRUE(reply->type == REDIS_REPLY_STRING || reply->type == REDIS_REPLY_STATUS);
   EXPECT_EQ(std::string(reply->str, reply->len), str);
 }
 
-void assert_reply(const redisReplyPtr &reply, const std::vector<std::string> &vec) {
+inline void assert_reply(const redisReplyPtr &reply, const std::vector<std::string> &vec) {
   ASSERT_NE(reply, nullptr);
   ASSERT_EQ(reply->type, REDIS_REPLY_ARRAY);
   ASSERT_EQ(reply->elements, vec.size());
@@ -72,7 +72,7 @@ void assert_reply(const redisReplyPtr &reply, const std::vector<std::string> &ve
   }
 }
 
-void assert_reply(const redisReplyPtr &reply, const std::pair<std::string, std::vector<std::string>> &scan) {
+inline void assert_reply(const redisReplyPtr &reply, const std::pair<std::string, std::vector<std::string>> &scan) {
   ASSERT_NE(reply, nullptr);
   ASSERT_EQ(reply->type, REDIS_REPLY_ARRAY);
   ASSERT_EQ(reply->elements, 2u);
@@ -84,12 +84,12 @@ void assert_reply(const redisReplyPtr &reply, const std::pair<std::string, std::
 // crazy C++ templating to allow ASSERT_REPLY() to work as one liner in all cases
 // T&& here is a universal reference
 template<typename T>
-void assert_reply(std::future<redisReplyPtr> &fut, T&& check) {
+inline void assert_reply(std::future<redisReplyPtr> &fut, T&& check) {
   assert_reply(fut.get(), check);
 }
 
 template<typename T>
-void assert_reply(std::future<redisReplyPtr> &&fut, T&& check) {
+inline void assert_reply(std::future<redisReplyPtr> &&fut, T&& check) {
   assert_reply(fut.get(), check);
 }
 

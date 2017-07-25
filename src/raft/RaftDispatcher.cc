@@ -175,8 +175,15 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
     return conn->moved(0, snapshot.leader);
   }
 
-  // read request, easy case
-  if(type == CommandType::READ || type == CommandType::CONTROL) {
+  // read request: Only reply if lastApplied of the state machine has reached
+  // at least the leadership marker log index.
+  // This ensures linearizability is respected immediatelly after a failover.
+  if(type == CommandType::READ) {
+    if(stateMachine.getLastApplied() < snapshot.leadershipMarker) {
+      // TODO: block until the state machine catches up?
+      return conn->err("unavailable");
+    }
+
     return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
 

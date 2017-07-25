@@ -34,6 +34,7 @@ RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
   status = RaftStatus::FOLLOWER;
   term = journal.getCurrentTerm();
   votedFor = journal.getVotedFor();
+  leadershipMarker = -1;
 }
 
 //------------------------------------------------------------------------------
@@ -57,7 +58,7 @@ RaftTerm RaftState::getCurrentTerm() {
 
 RaftStateSnapshot RaftState::getSnapshot() {
   std::lock_guard<std::mutex> lock(update);
-  return {term, status, leader, votedFor};
+  return {term, status, leader, votedFor, leadershipMarker};
 }
 
 RaftServer RaftState::getMyself() {
@@ -86,6 +87,10 @@ void RaftState::updateStatus(RaftStatus newstatus) {
   if(status != newstatus) {
     qdb_event("Status transition: " << statusToString(status) << " ==> " << statusToString(newstatus));
     status = newstatus;
+
+    if(status != RaftStatus::LEADER) {
+      leadershipMarker = -1;
+    }
   }
 }
 
@@ -170,12 +175,14 @@ bool RaftState::ascend(RaftTerm forTerm) {
     return false;
   }
 
-  if(!journal.appendLeadershipMarker(journal.getLogSize(), forTerm, myself)) {
+  LogIndex localIndex = journal.getLogSize();
+  if(!journal.appendLeadershipMarker(localIndex, forTerm, myself)) {
     qdb_warn("could not append leadership marker to journal for term " << forTerm << ", unable to ascend");
     return false;
   }
 
   leader = myself;
+  leadershipMarker = localIndex;
   updateStatus(RaftStatus::LEADER);
   qdb_event("Ascending as leader for term " << forTerm << ". Long may I reign.");
   return true;

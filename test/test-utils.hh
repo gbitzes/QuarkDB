@@ -175,7 +175,7 @@ public:
     std::vector<RaftStateSnapshot> snapshots;
 
     for(size_t i = 0; i < arguments.size(); i++) {
-      snapshots.emplace_back(state(i)->getSnapshot());
+      snapshots.emplace_back(state(arguments[i])->getSnapshot());
     }
 
     for(size_t i = 1; i < snapshots.size(); i++) {

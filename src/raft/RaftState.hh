@@ -41,9 +41,11 @@ struct RaftStateSnapshot {
   RaftStatus status;
   RaftServer leader;
   RaftServer votedFor;
+  LogIndex leadershipMarker;
 
   bool operator==(const RaftStateSnapshot& rhs) const {
-    return term == rhs.term && status == rhs.status && leader == rhs.leader && votedFor == rhs.votedFor;
+    return term == rhs.term && status == rhs.status && leader == rhs.leader &&
+           votedFor == rhs.votedFor && leadershipMarker == rhs.leadershipMarker;
   }
 };
 
@@ -85,6 +87,7 @@ private:
   std::atomic<RaftStatus> status;
   RaftServer leader;
   RaftServer votedFor;
+  LogIndex leadershipMarker;
   const RaftServer myself;
 
   void updateJournal();
