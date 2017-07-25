@@ -72,6 +72,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   ASSERT_GE(leaderID, 0);
   ASSERT_LE(leaderID, 2);
 
+  LogIndex commitIndex = journal(leaderID)->getCommitIndex();
   std::vector<std::future<redisReplyPtr>> futures;
 
   // send off many requests, pipeline them
@@ -79,11 +80,17 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   futures.emplace_back(tunnel(leaderID)->execute({"ping"}));
   futures.emplace_back(tunnel(leaderID)->execute({"set", "asdf", "1234"}));
   futures.emplace_back(tunnel(leaderID)->execute({"get", "asdf"}));
+  futures.emplace_back(tunnel(leaderID)->exec("raft_fetch", SSTR(commitIndex+1) ));
 
   ASSERT_REPLY(futures[0], "");
   ASSERT_REPLY(futures[1], "PONG");
   ASSERT_REPLY(futures[2], "OK");
   ASSERT_REPLY(futures[3], "1234");
+
+  RaftEntry entry;
+  ASSERT_TRUE(RaftParser::fetchResponse(futures[4].get(), entry));
+  ASSERT_EQ(entry.term, state(0)->getCurrentTerm());
+  ASSERT_EQ(entry.request, make_req("set", "asdf", "1234"));
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->execute({"set", "asdf", "3456"}));
