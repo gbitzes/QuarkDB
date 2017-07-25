@@ -78,7 +78,6 @@ private:
   std::atomic<bool> shutdown {false};
   const std::atomic<int64_t> &inFlight;
   const RaftTimeouts timeouts;
-  std::atomic<int64_t> beingDispatched {0};
 };
 
 }

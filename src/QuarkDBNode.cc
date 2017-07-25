@@ -33,10 +33,6 @@
 using namespace quarkdb;
 
 QuarkDBNode::~QuarkDBNode() {
-  qdb_event("Received request to detach this node. Spinning until all requests being dispatched (" << beingDispatched << ") have been processed..");
-  while(beingDispatched != 0) ;
-  qdb_info("Requests being dispatched: " << beingDispatched << ", it is now safe to detach.");
-
   delete shard;
   delete shardDirectory;
 
@@ -51,7 +47,6 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const std::atomic<int64_t>
   if(configuration.getMode() == Mode::raft) {
     shard = new Shard(shardDirectory, configuration.getMyself(), configuration.getMode(), timeouts);
     // spin up the raft machinery
-    shard->getRaftGroup();
     shard->spinup();
   }
   else {
@@ -96,10 +91,6 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
       return conn->vector(this->info().toVector());
     }
     default: {
-      if(shutdown) return conn->err("node is detached from any backends");
-      ScopedAdder<int64_t> adder(beingDispatched);
-      if(shutdown) return conn->err("node is detached from any backends");
-
       return shard->dispatch(conn, req);
     }
   }
