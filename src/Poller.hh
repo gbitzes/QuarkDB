@@ -31,6 +31,7 @@
 #include "Dispatcher.hh"
 #include "EventFD.hh"
 #include <netinet/in.h>
+#include "utils/InFlightTracker.hh"
 
 namespace quarkdb {
 
@@ -41,8 +42,7 @@ public:
   DISALLOW_COPY_AND_ASSIGN(Poller);
 
 private:
-  std::atomic<bool> shutdown;
-
+  InFlightTracker inFlightTracker;
   EventFD shutdownFD;
 
   void main(Dispatcher *dispatcher);

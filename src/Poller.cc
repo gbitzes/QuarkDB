@@ -80,12 +80,11 @@ Poller::Poller(int port, Dispatcher *dispatcher) {
     exit(1);
   }
 
-  shutdown = false;
   mainThread = std::thread(&Poller::main, this, dispatcher);
 }
 
 Poller::~Poller() {
-  shutdown = true;
+  inFlightTracker.setAcceptingRequests(false);
   shutdownFD.notify();
   ::shutdown(s, SHUT_RDWR); // kill the socket
   mainThread.join();
@@ -117,11 +116,11 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
   polls[1].events = POLLIN;
   polls[1].revents = 0;
 
-  while(!shutdown) {
+  while(inFlightTracker.isAcceptingRequests()) {
     poll(polls, 2, -1);
 
     // time to quit?
-    if(shutdown) break;
+    if(!inFlightTracker.isAcceptingRequests()) break;
 
     // EOF?
     if(polls[0].revents & POLLIN) {
@@ -132,7 +131,7 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
       }
     }
 
-    LinkStatus status = conn.processRequests(dispatcher, shutdown);
+    LinkStatus status = conn.processRequests(dispatcher, inFlightTracker);
     if(status <= 0) break;
 
     if( (polls[0].revents & POLLERR) || (polls[0].revents & POLLHUP) ) {

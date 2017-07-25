@@ -39,8 +39,8 @@ QuarkDBNode::~QuarkDBNode() {
   qdb_info("Shutting down QuarkDB node.")
 }
 
-QuarkDBNode::QuarkDBNode(const Configuration &config, const std::atomic<int64_t> &inFlight_, const RaftTimeouts &t)
-: configuration(config), inFlight(inFlight_), timeouts(t) {
+QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t)
+: configuration(config), timeouts(t) {
 
   shardDirectory = new ShardDirectory(configuration.getDatabase(), configuration);
 
@@ -97,6 +97,5 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 QuarkDBInfo QuarkDBNode::info() {
-  return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH),
-          inFlight};
+  return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH) };
 }

@@ -26,7 +26,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "XrdQuarkDB.hh"
 #include "XrdOuc/XrdOucEnv.hh"
 #include "Configuration.hh"
 #include "Utils.hh"

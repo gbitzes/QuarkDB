@@ -24,6 +24,7 @@
 #include "Connection.hh"
 #include "Dispatcher.hh"
 #include "Formatter.hh"
+#include "utils/InFlightTracker.hh"
 using namespace quarkdb;
 
 LinkStatus PendingQueue::flushPending(const std::string &msg) {
@@ -167,9 +168,9 @@ LinkStatus Connection::scan(const std::string &marker, const std::vector<std::st
   return pendingQueue->appendResponse(Formatter::scan(marker, vec));
 }
 
-LinkStatus Connection::processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop) {
+LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTracker &inFlightTracker) {
   FlushGuard guard(this);
-  while(!stop) {
+  while(inFlightTracker.isAcceptingRequests()) {
     LinkStatus status = parser.fetch(currentRequest);
     if(status == 0) return 1; // slow link
     if(status < 0) return status; // error

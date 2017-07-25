@@ -96,7 +96,8 @@ private:
 //------------------------------------------------------------------------------
 // Keeps track of connection-specific state.
 //------------------------------------------------------------------------------
-class Dispatcher;
+class Dispatcher; class InFlightTracker;
+
 class Connection {
 public:
   Connection(Link *link);
@@ -117,7 +118,7 @@ public:
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
 
   bool raftAuthorization = false;
-  LinkStatus processRequests(Dispatcher *dispatcher, const std::atomic<bool> &stop);
+  LinkStatus processRequests(Dispatcher *dispatcher, const InFlightTracker &tracker);
   void setResponseBuffering(bool value);
   void flush();
 

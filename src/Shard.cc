@@ -30,12 +30,12 @@
 using namespace quarkdb;
 
 Shard::Shard(ShardDirectory *shardDir, const RaftServer &me, Mode m, const RaftTimeouts &t)
-: shardDirectory(shardDir), myself(me), mode(m), timeouts(t) {
+: shardDirectory(shardDir), myself(me), mode(m), timeouts(t), inFlightTracker(false) {
   attach();
 }
 
 void Shard::attach() {
-  qdb_assert(!attached);
+  qdb_assert(!inFlightTracker.isAcceptingRequests());
 
   if(mode == Mode::standalone) {
     stateMachine = shardDirectory->getStateMachine();
@@ -49,7 +49,7 @@ void Shard::attach() {
     qdb_throw("cannot determine configuration mode"); // should never happen
   }
 
-  attached = true;
+  inFlightTracker.setAcceptingRequests(true);
 }
 
 void Shard::start() {
@@ -58,12 +58,12 @@ void Shard::start() {
 }
 
 void Shard::detach() {
-  if(!attached) return;
-  attached = false;
+  if(!inFlightTracker.isAcceptingRequests()) return;
+  inFlightTracker.setAcceptingRequests(false);
 
-  qdb_event("Received request to detach this shard. Spinning until all requests being dispatched (" << beingDispatched << ") have been processed..");
-  while(beingDispatched != 0) ;
-  qdb_info("Requests being dispatched: " << beingDispatched << ", it is now safe to detach.");
+  qdb_event("Detaching this shard - spinning until all requests being dispatched (" << inFlightTracker.getInFlight() << ") have been processed.");
+  inFlightTracker.spinUntilNoRequestsInFlight();
+  qdb_info("All requests processed, detaching.");
 
   if(raftGroup) {
     qdb_info("Shutting down the raft machinery.");
@@ -145,8 +145,10 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       return conn->ok();
     }
     default: {
-      ScopedAdder<int64_t> adder(beingDispatched);
-      if(!attached) return conn->err("unavailable");
+      InFlightRegistration registration(inFlightTracker);
+      if(!registration.ok()) {
+        return conn->err("unavailable");
+      }
 
       return dispatcher->dispatch(conn, req);
     }

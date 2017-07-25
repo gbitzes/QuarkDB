@@ -31,6 +31,7 @@
 #include "XrdOuc/XrdOucString.hh"
 #include "XrdOuc/XrdOucStream.hh"
 #include "Utils.hh"
+#include "utils/InFlightTracker.hh"
 #include "EventFD.hh"
 #include <atomic>
 #include <qclient/QClient.hh>
@@ -63,7 +64,7 @@ public:
   XrdQuarkDB();
   virtual ~XrdQuarkDB();
 
-  static std::atomic<bool> inShutdown;
+  static InFlightTracker inFlightTracker;
   static EventFD shutdownFD;
 private:
   /// The link we are bound to
@@ -74,9 +75,7 @@ private:
   void Reset();
 protected:
   static QuarkDBNode *quarkdbNode;
-
   static void shutdownMonitor();
-  static std::atomic<int64_t> inFlight;
 };
 
 }

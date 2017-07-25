@@ -27,24 +27,9 @@
 #include "raft/RaftTimeouts.hh"
 #include "Dispatcher.hh"
 #include "Configuration.hh"
+#include "utils/InFlightTracker.hh"
 
 namespace quarkdb {
-
-struct ShardInfo {
-  bool resilvering;
-  Mode mode;
-  std::string shardDirectory;
-  int64_t inFlight;
-
-  std::vector<std::string> toVector() {
-    std::vector<std::string> ret;
-    ret.emplace_back(SSTR("BEING-RESILVERED " << boolToString(resilvering)));
-    ret.emplace_back(SSTR("MODE " << modeToString(mode)));
-    ret.emplace_back(SSTR("SHARD-DIRECTORY" << shardDirectory));
-    ret.emplace_back(SSTR("IN-FLIGHT " << inFlight));
-    return ret;
-  }
-};
 
 class RaftGroup; class ShardDirectory;
 class Shard : public Dispatcher {
@@ -60,10 +45,6 @@ private:
   void attach();
   void start();
 
-  std::atomic<bool> attached {false};
-  std::atomic<bool> shutdown;
-  std::atomic<int64_t> beingDispatched {0};
-
   ShardDirectory *shardDirectory;
 
   RaftGroup *raftGroup = nullptr;
@@ -73,6 +54,8 @@ private:
   RaftServer myself;
   Mode mode;
   RaftTimeouts timeouts;
+
+  InFlightTracker inFlightTracker;
 };
 
 }

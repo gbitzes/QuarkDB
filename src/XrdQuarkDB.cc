@@ -39,8 +39,7 @@ using namespace quarkdb;
 //------------------------------------------------------------------------------
 
 QuarkDBNode *XrdQuarkDB::quarkdbNode = 0;
-std::atomic<bool> XrdQuarkDB::inShutdown {false};
-std::atomic<int64_t> XrdQuarkDB::inFlight {0};
+InFlightTracker XrdQuarkDB::inFlightTracker;
 EventFD XrdQuarkDB::shutdownFD;
 
 //------------------------------------------------------------------------------
@@ -54,15 +53,12 @@ EventFD XrdQuarkDB::shutdownFD;
 //------------------------------------------------------------------------------
 
 void XrdQuarkDB::shutdownMonitor() {
-  while(!inShutdown) {
+  while(inFlightTracker.isAcceptingRequests()) {
     shutdownFD.wait();
   }
 
-  qdb_event("Received request to shut down. Spinning until all requests in flight (" << inFlight << ") have been processed..");
-
-  while(inFlight != 0) ;
-  qdb_info("Requests in flight: " << inFlight << ", it is now safe to shut down.");
-
+  qdb_event("Received request to shut down. Spinning until all requests in flight (" << inFlightTracker.getInFlight() << ") have been processed..");
+  inFlightTracker.spinUntilNoRequestsInFlight();
   delete quarkdbNode;
 
   qdb_event("SHUTTING DOWN");
@@ -85,17 +81,15 @@ XrdQuarkDB::XrdQuarkDB(bool tls)
 }
 
 int XrdQuarkDB::Process(XrdLink *lp) {
-  if(inShutdown) { return -1; }
-  ScopedAdder<int64_t> adder(inFlight);
+  InFlightRegistration registration(inFlightTracker);
+  if(!registration.ok()) { return -1; }
 
   // TODO log client DN
   if(!link && tlsconfig.active) qdb_info("handling TLS connection. Security is intensifying");
   if(!link) link = new Link(lp, tlsconfig);
   if(!conn) conn = new Connection(link);
 
-  LinkStatus status = conn->processRequests(quarkdbNode, inShutdown);
-  if(inShutdown) return -1;
-  return status;
+  return conn->processRequests(quarkdbNode, inFlightTracker);
 }
 
 XrdProtocol* XrdQuarkDB::Match(XrdLink *lp) {
@@ -142,7 +136,7 @@ void XrdQuarkDB::DoIt() {
 }
 
 static void handle_sigint(int sig) {
-  XrdQuarkDB::inShutdown = true;
+  XrdQuarkDB::inFlightTracker.setAcceptingRequests(false);
   XrdQuarkDB::shutdownFD.notify();
 }
 
@@ -158,7 +152,7 @@ int XrdQuarkDB::Configure(char *parms, XrdProtocol_Config * pi) {
     return 0;
   }
 
-  quarkdbNode = new QuarkDBNode(configuration, inFlight, defaultTimeouts);
+  quarkdbNode = new QuarkDBNode(configuration, defaultTimeouts);
   std::thread(&XrdQuarkDB::shutdownMonitor).detach();
   signal(SIGINT, handle_sigint);
   signal(SIGTERM, handle_sigint);
