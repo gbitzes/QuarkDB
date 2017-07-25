@@ -37,7 +37,7 @@ bool Configuration::fromFile(const std::string &filename, Configuration &out) {
   qdb_log("Reading configuration file from " << filename);
 
   XrdOucEnv myEnv;
-  XrdOucStream stream(&XrdQuarkDB::eDest, getenv("XRDINSTANCE"), &myEnv, "=====> ");
+  XrdOucStream stream(NULL, getenv("XRDINSTANCE"), NULL, "=====> ");
 
   int fd;
 

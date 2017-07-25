@@ -38,10 +38,6 @@ using namespace quarkdb;
 // Globals
 //------------------------------------------------------------------------------
 
-XrdSysError XrdQuarkDB::eDest(0, "quarkdb");
-
-const char *XrdQuarkDBID = "XrdQuarkDB";
-XrdOucTrace *XrdQuarkDBTrace = 0;
 QuarkDBNode *XrdQuarkDB::quarkdbNode = 0;
 std::atomic<bool> XrdQuarkDB::inShutdown {false};
 std::atomic<int64_t> XrdQuarkDB::inFlight {0};
@@ -151,8 +147,6 @@ static void handle_sigint(int sig) {
 }
 
 int XrdQuarkDB::Configure(char *parms, XrdProtocol_Config * pi) {
-  eDest.logger(pi->eDest->logger());
-
   char* rdf = (parms && *parms ? parms : pi->ConfigFN);
 
   Configuration configuration;

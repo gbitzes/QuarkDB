@@ -63,9 +63,6 @@ public:
   XrdQuarkDB();
   virtual ~XrdQuarkDB();
 
-  /// globally accessible error handler
-  static XrdSysError eDest;
-
   static std::atomic<bool> inShutdown;
   static EventFD shutdownFD;
 private:
