@@ -150,13 +150,7 @@ bool RaftResilverer::copyDirectory(const std::string &target, const std::string 
       }
     }
     else {
-      std::ifstream t(currentPath);
-      std::stringstream buffer;
-      buffer << t.rdbuf();
-
-      OkResponseVerifier verifier(talker.resilveringCopy(resilveringID, currentPrefix, buffer.str()), 60);
-      if(!verifier.ok()) {
-        err = SSTR("Error when copying directory " << target << ": ");
+      if(!copyFile(currentPath, currentPrefix, err)) {
         return false;
       }
     }
