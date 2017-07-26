@@ -212,7 +212,7 @@ static void obsessiveReader(qclient::QClient *qcl, std::string key, std::string 
 
 TEST_F(Replication, linearizability_during_failover) {
   // start the cluster
-  spinup(0); spinup(1), spinup(2);
+  spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
 

@@ -26,6 +26,7 @@
 #include "RaftJournal.hh"
 #include "RaftWriteTracker.hh"
 #include "RaftState.hh"
+#include "../StateMachine.hh"
 
 #include <random>
 #include <sys/stat.h>
@@ -175,9 +176,14 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
     return conn->moved(0, snapshot.leader);
   }
 
-  // read request: Only reply if lastApplied of the state machine has reached
-  // at least the leadership marker log index.
-  // This ensures linearizability is respected immediatelly after a failover.
+  // read request: What happens if I was just elected as leader, but my state
+  // machine is behind leadershipMarker?
+  // It means I have committed entries on the journal, which haven't been applied
+  // to the state machine. If I were to service a read, I'd be giving out potentially
+  // stale values!
+  //
+  // Ensure the state machine is all caught-up before servicing reads, in order
+  // to prevent a linearizability violation.
   if(type == CommandType::READ) {
     if(stateMachine.getLastApplied() < snapshot.leadershipMarker) {
       // TODO: block until the state machine catches up?

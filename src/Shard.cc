@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "StateMachine.hh"
 #include "Shard.hh"
 #include "ShardDirectory.hh"
 #include "raft/RaftGroup.hh"

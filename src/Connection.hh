@@ -25,12 +25,15 @@
 #define __QUARKDB_CONNECTION_H__
 
 #include "Link.hh"
-#include "StateMachine.hh"
 #include "RedisParser.hh"
 #include "BufferedWriter.hh"
 #include <queue>
 
 #define OUTPUT_BUFFER_SIZE (16*1024)
+
+namespace rocksdb {
+  class Status;
+}
 
 namespace quarkdb {
 

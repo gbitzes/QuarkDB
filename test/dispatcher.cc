@@ -23,6 +23,7 @@
 
 #include "Dispatcher.hh"
 #include "BufferedReader.hh"
+#include "StateMachine.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;

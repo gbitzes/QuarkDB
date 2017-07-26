@@ -151,12 +151,6 @@ void RaftReplicaTracker::triggerResilvering() {
 
 // Go through the pending queue, checking if any responses from the target have
 // arrived.
-//
-// If we're here, it means our target is very stable, so we should be able to
-// continuously stream updates without waiting for the replies.
-//
-// As soon as an error is discovered we return, and let the parent function
-// deal with it to stabilize the target once more.
 bool RaftReplicaTracker::checkPendingQueue(std::queue<PendingResponse> &inflight) {
   const int64_t pipelineLength = 10;
   while(true) {
@@ -192,7 +186,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
   const int64_t payloadLimit = 200;
   LogIndex nextIndex = firstNextIndex;
 
-  std::queue<PendingResponse> inflight; // Queue<PendingResponse> inflight;
+  std::queue<PendingResponse> inflight;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
     // Check for pending responses
     if(!checkPendingQueue(inflight)) {
