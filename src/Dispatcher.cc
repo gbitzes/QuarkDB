@@ -40,25 +40,21 @@ std::string RedisDispatcher::errArgs(RedisRequest &request, LogIndex commit) {
   return Formatter::errArgs(request[0]);
 }
 
-std::string RedisDispatcher::dispatch(RedisRequest &req, LogIndex commit) {
-  auto it = redis_cmd_map.find(req[0]);
-  if(it != redis_cmd_map.end()) {
-    if(commit > 0 && it->second.second != CommandType::WRITE) {
-      qdb_throw("attempted to dispatch non-write command '" << req[0] << "' with a positive commit index: " << commit);
+std::string RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
+  if(request.getCommand() == RedisCommand::INVALID) {
+    if(startswith(request[0], "JOURNAL_")) {
+      store.noop(commit);
+      return Formatter::ok();
     }
 
-    return dispatch(req, it->second.first, commit);
+    return Formatter::err(SSTR("unknown command " << quotes(request[0])));
   }
 
-  if(startswith(req[0], "JOURNAL_")) {
-    store.noop(commit);
+  if(commit > 0 && request.getCommandType() != CommandType::WRITE) {
+    qdb_throw("attempted to dispatch non-write command '" << request[0] << "' with a positive commit index: " << commit);
   }
 
-  return Formatter::err(SSTR("unknown command " << quotes(req[0])));
-}
-
-std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, LogIndex commit) {
-  switch(cmd) {
+  switch(request.getCommand()) {
     case RedisCommand::PING: {
       if(request.size() > 2) return errArgs(request, commit);
       if(request.size() == 1) return Formatter::pong();
@@ -328,7 +324,7 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, RedisCommand cmd, L
       return Formatter::vector(ret);
     }
     default: {
-      std::string msg = SSTR("internal dispatching error for " << quotes(request[0]) << " - raft not enabled?");
+      std::string msg = SSTR("internal dispatching error for " << quotes(request[0]));
       qdb_critical(msg);
       return Formatter::err(msg);
     }

@@ -54,7 +54,7 @@ public:
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
   RaftVoteResponse requestVote(RaftVoteRequest &req);
 private:
-  LinkStatus service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type);
+  LinkStatus service(Connection *conn, RedisRequest &req);
 
   //----------------------------------------------------------------------------
   // Raft commands should not be run in parallel, but be serialized

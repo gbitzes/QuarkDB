@@ -29,6 +29,8 @@
 namespace quarkdb {
 
 enum class RedisCommand {
+  INVALID,
+
   PING,
   DEBUG,
 
@@ -93,6 +95,8 @@ enum class RedisCommand {
 };
 
 enum class CommandType {
+  INVALID,
+
   READ,
   WRITE,
   CONTROL,

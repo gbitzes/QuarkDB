@@ -55,11 +55,7 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t)
 }
 
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
-  auto it = redis_cmd_map.find(req[0]);
-  if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
-
-  RedisCommand cmd = it->second.first;
-  switch(cmd) {
+  switch(req.getCommand()) {
     case RedisCommand::PING: {
       if(req.size() > 2) return conn->errArgs(req[0]);
       if(req.size() == 1) return conn->pong();

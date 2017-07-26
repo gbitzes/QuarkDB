@@ -1,5 +1,5 @@
-//-----------------------------------------------------------------------
-// File: Dispatcher.hh
+// ----------------------------------------------------------------------
+// File: RedisRequest.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,35 +21,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_DISPATCHER_H__
-#define __QUARKDB_DISPATCHER_H__
+#include "RedisRequest.hh"
+using namespace quarkdb;
 
-#include "Common.hh"
-#include "Link.hh"
-#include "Commands.hh"
-#include "Connection.hh"
+void RedisRequest::parseCommand() {
+  command = RedisCommand::INVALID;
+  commandType = CommandType::INVALID;
 
-namespace quarkdb {
+  if(contents.size() == 0) {
+    return;
+  }
 
-class Dispatcher {
-public:
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
-  virtual ~Dispatcher() {}
-};
+  auto it = redis_cmd_map.find(contents[0]);
+  if(it == redis_cmd_map.end()) {
+    return;
+  }
 
-class StateMachine;
-
-class RedisDispatcher : public Dispatcher {
-public:
-  RedisDispatcher(StateMachine &rocksdb);
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  std::string dispatch(RedisRequest &req, LogIndex commit);
-private:
-  std::string errArgs(RedisRequest &request, LogIndex commit);
-
-  StateMachine &store;
-};
-
+  command = it->second.first;
+  commandType = it->second.second;
 }
-
-#endif

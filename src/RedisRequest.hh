@@ -24,6 +24,7 @@
 #ifndef __QUARKDB_REDIS_REQUEST_H__
 #define __QUARKDB_REDIS_REQUEST_H__
 
+#include "Commands.hh"
 #include <string>
 #include <vector>
 
@@ -39,21 +40,18 @@ public:
     for(auto it = list.begin(); it != list.end(); it++) {
       contents.push_back(*it);
     }
+    parseCommand();
   }
 
   RedisRequest() {}
-  RedisRequest(const std::vector<std::string> &init) {
-    for(size_t i = 0; i < init.size(); i++) {
-      contents.emplace_back(init[i]);
-    }
-  }
 
   size_t size() const {
     return contents.size();
   }
 
-  std::string& operator[](size_t i) {
-    return contents[i];
+  std::string&& move(size_t i) {
+    invalidateCommand();
+    return std::move(contents[i]);
   }
 
   const std::string& operator[](size_t i) const {
@@ -65,23 +63,18 @@ public:
   }
 
   void clear() {
+    invalidateCommand();
     contents.clear();
   }
 
   void emplace_back(std::string &&src) {
     contents.emplace_back(std::move(src));
+    if(contents.size() == 1) parseCommand();
   }
 
   void emplace_back(const char* buf, size_t size) {
     contents.emplace_back(buf, size);
-  }
-
-  iterator begin() {
-    return contents.begin();
-  }
-
-  iterator end() {
-    return contents.end();
+    if(contents.size() == 1) parseCommand();
   }
 
   const_iterator begin() const {
@@ -95,8 +88,26 @@ public:
   void reserve(size_t size) {
     contents.reserve(size);
   }
+
+  RedisCommand getCommand() const {
+    return command;
+  }
+
+  CommandType getCommandType() const {
+    return commandType;
+  }
+
 private:
   std::vector<std::string> contents;
+  RedisCommand command = RedisCommand::INVALID;
+  CommandType commandType = CommandType::INVALID;
+
+  void parseCommand();
+  void invalidateCommand() {
+    command = RedisCommand::INVALID;
+    commandType = CommandType::INVALID;
+  }
+
 };
 
 }

@@ -95,12 +95,10 @@ void Shard::spinup() {
 }
 
 LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
-  auto it = redis_cmd_map.find(req[0]);
-  if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
-
-  RedisCommand cmd = it->second.first;
-
-  switch(cmd) {
+  switch(req.getCommand()) {
+    case RedisCommand::INVALID: {
+      return conn->err(SSTR("unknown command " << quotes(req[0])));
+    }
     case RedisCommand::QUARKDB_START_RESILVERING: {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       if(req.size() != 2) return conn->errArgs(req[0]);

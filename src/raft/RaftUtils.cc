@@ -152,7 +152,7 @@ bool RaftParser::appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &
     RaftEntry tmp;
     if(!my_strtoll(source[index+1], tmp.term)) return false;
     for(int64_t j = 0; j < reqsize; j++) {
-      tmp.request.emplace_back(std::move(source[index+2+j]));
+      tmp.request.emplace_back(source.move(index+2+j));
     }
 
     dest.entries.emplace_back(std::move(tmp));

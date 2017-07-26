@@ -38,11 +38,7 @@ RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &s
 }
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
-  auto it = redis_cmd_map.find(req[0]);
-  if(it == redis_cmd_map.end()) return conn->err(SSTR("unknown command " << quotes(req[0])));
-
-  RedisCommand cmd = it->second.first;
-  switch(cmd) {
+  switch(req.getCommand()) {
     case RedisCommand::RAFT_INFO: {
       // safe, read-only request, does not need authorization
       return conn->vector(this->info().toVector());
@@ -139,13 +135,13 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       std::string err;
       bool rc;
 
-      if(cmd == RedisCommand::RAFT_ADD_OBSERVER) {
+      if(req.getCommand() == RedisCommand::RAFT_ADD_OBSERVER) {
         rc = journal.addObserver(snapshot.term, srv, err);
       }
-      else if(cmd == RedisCommand::RAFT_REMOVE_MEMBER) {
+      else if(req.getCommand() == RedisCommand::RAFT_REMOVE_MEMBER) {
         rc = journal.removeMember(snapshot.term, srv, err);
       }
-      else if(cmd == RedisCommand::RAFT_PROMOTE_OBSERVER) {
+      else if(req.getCommand() == RedisCommand::RAFT_PROMOTE_OBSERVER) {
         rc = journal.promoteObserver(snapshot.term, srv, err);
       }
       else {
@@ -156,14 +152,14 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       return conn->ok();
     }
     default: {
-      return this->service(conn, req, cmd, it->second.second);
+      return this->service(conn, req);
     }
   }
 }
 
-LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCommand &cmd, CommandType &type) {
+LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
   // control command, service even if unavailable
-  if(type == CommandType::CONTROL) {
+  if(req.getCommandType() == CommandType::CONTROL) {
     return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
 
@@ -184,7 +180,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req, RedisCom
   //
   // Ensure the state machine is all caught-up before servicing reads, in order
   // to prevent a linearizability violation.
-  if(type == CommandType::READ) {
+  if(req.getCommandType() == CommandType::READ) {
     if(stateMachine.getLastApplied() < snapshot.leadershipMarker) {
       // TODO: block until the state machine catches up?
       return conn->err("unavailable");
