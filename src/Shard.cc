@@ -72,8 +72,7 @@ void Shard::detach() {
     raftGroup = nullptr;
   }
   else if(stateMachine) {
-    qdb_info("Shutting down the state machine.");
-    delete stateMachine;
+    // The state machine is owned by ShardDirectory, so, don't delete it
     stateMachine = nullptr;
 
     delete dispatcher;
