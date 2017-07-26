@@ -95,8 +95,8 @@ private:
   rocksdb::DB* db = nullptr;
   std::string dbPath;
 
-  using IteratorPtr = std::shared_ptr<rocksdb::Iterator>;
-  using TransactionPtr = std::shared_ptr<rocksdb::Transaction>;
+  using IteratorPtr = std::unique_ptr<rocksdb::Iterator>;
+  using TransactionPtr = std::unique_ptr<rocksdb::Transaction>;
 
   //----------------------------------------------------------------------------
   // Cached values, always backed to stable storage
