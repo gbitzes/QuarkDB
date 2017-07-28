@@ -5,13 +5,13 @@
 #-------------------------------------------------------------------------------
 Summary: A highly available key-value store
 Name: quarkdb
-Version: @VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@
-Release: @VERSION_RELEASE@%{dist}
+Version: @VERSION_FULL@
+Release: 1%{dist}
 Prefix: /usr
 License: none
 Group: Applications/File
 
-Source: %{name}-%{version}-@VERSION_RELEASE@.tar.gz
+Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 BuildRequires: libuuid-devel
 BuildRequires: xrootd
@@ -39,7 +39,7 @@ Requires: xrootd
 A highly available key-value store.
 
 %prep
-%setup -n %{name}-%{version}-@VERSION_RELEASE@
+%setup -n %{name}-%{version}
 
 %build
 mkdir build

@@ -52,14 +52,19 @@ def main():
     versions = latest_tag.split(".")
     if versions[0].startswith('v'): versions[0] = versions[0][1:]
 
+    build = git_describe.split(".")[2]
+    dash = build.find("-")
+
     release = git_describe.split(".")[2]
     dash = release.find("-")
     if dash >= 0:
-        release = release[dash+1:].replace("-", "")
+        parts = build[dash+1:].replace("-", ".").split(".")
+        parts[1] = parts[1][1:] # remove "g" preceeding the SHA1
+        build = ".".join(parts)
+        version_full = versions[0] + "." + versions[1] + "." + versions[2] + "." + build
     else:
-        release = "1"
-
-    version_full = versions[0] + "." + versions[1] + "." + versions[2] + "-" + release
+        build = ""
+        version_full = versions[0] + "." + versions[1] + "." + versions[2]
 
     rocksdb_cache = ""
     try:
@@ -75,7 +80,7 @@ def main():
       ["@VERSION_MAJOR@", versions[0]],
       ["@VERSION_MINOR@", versions[1]],
       ["@VERSION_PATCH@", versions[2]],
-      ["@VERSION_RELEASE@", release],
+      ["@VERSION_BUILD@", build],
       ["@VERSION_FULL@", version_full],
       ["@ROCKSDB_CACHED_BUILD@", rocksdb_cache]
     ]
