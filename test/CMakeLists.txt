@@ -55,6 +55,7 @@ add_executable(quarkdb-bench
 # Build stress tool
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-stress-tests
+  stress/background-flusher.cc
   stress/main.cc
   stress/replication.cc
   stress/resilvering.cc

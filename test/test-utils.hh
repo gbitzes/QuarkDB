@@ -34,6 +34,8 @@
 #include <gtest/gtest.h>
 #include "config/test-config.hh"
 #include "utils/FileUtils.hh"
+#include "StateMachine.hh"
+#include "raft/RaftJournal.hh"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -168,6 +170,39 @@ public:
   TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);
   RaftClusterID clusterID();
+
+  template<typename... Args>
+  bool checkValueConsensus(const std::string &key, const std::string &value, const Args... args) {
+    std::vector<int> arguments = { args... };
+
+    for(size_t i = 0; i < arguments.size(); i++) {
+      std::string tmp;
+      rocksdb::Status st = stateMachine(arguments[i])->get(key, tmp);
+
+      if(!st.ok()) return false;
+      if(tmp != value) return false;
+    }
+
+    return true;
+  }
+
+  template<typename... Args>
+  bool checkJournalConsensus(LogIndex index, const RedisRequest &request, const Args... args) {
+    std::vector<int> arguments = { args... };
+
+    for(size_t i = 0; i < arguments.size(); i++) {
+      RaftEntry entry;
+
+      rocksdb::Status st = journal(arguments[i])->fetch(index, entry);
+      if(!st.ok()) return false;
+
+      if(entry.request != request) {
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   template<typename... Args>
   bool checkStateConsensus(const Args... args) {

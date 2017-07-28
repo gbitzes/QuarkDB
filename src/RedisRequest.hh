@@ -62,6 +62,10 @@ public:
     return contents == rhs.contents;
   }
 
+  bool operator!=(const RedisRequest &rhs) const {
+    return !(contents == rhs.contents);
+  }
+
   void clear() {
     invalidateCommand();
     contents.clear();
