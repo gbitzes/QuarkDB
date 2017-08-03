@@ -52,6 +52,16 @@ add_executable(quarkdb-bench
 )
 
 #-------------------------------------------------------------------------------
+# Build bench-malloc tool
+#-------------------------------------------------------------------------------
+add_executable(quarkdb-bench-malloc
+  bench-malloc/interceptor.cc
+  bench-malloc/main.cc
+  bench-malloc/measure.cc
+  ${COMMON_TEST_SOURCES}
+)
+
+#-------------------------------------------------------------------------------
 # Build stress tool
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-stress-tests
@@ -83,6 +93,15 @@ target_link_libraries(quarkdb-tests
 target_link_libraries(quarkdb-bench
   XrdQuarkDB
   gtest_main
+  ${XROOTD_CL_LIBRARY}
+  ${XROOTD_UTILS_LIBRARY}
+  ${GCOV_LIBS}
+)
+
+target_link_libraries(quarkdb-bench-malloc
+  XrdQuarkDB
+  gtest_main
+  dl
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${GCOV_LIBS}
