@@ -59,7 +59,7 @@ def main():
     dash = release.find("-")
     if dash >= 0:
         parts = build[dash+1:].replace("-", ".").split(".")
-        parts[1] = parts[1][1:] # remove "g" preceeding the SHA1
+        if len(parts) > 1: parts[1] = parts[1][1:] # remove "g" preceeding the SHA1
         build = ".".join(parts)
         version_full = versions[0] + "." + versions[1] + "." + versions[2] + "." + build
     else:
