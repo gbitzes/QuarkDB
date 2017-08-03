@@ -37,7 +37,7 @@ TEST_F(AllocationCount, 30k_entries) {
   int leaderID = getLeaderID();
 
   int64_t startAllocations = getAllocationCount();
-  int64_t startFrees = getAllocationCount();
+  int64_t startFrees = getFreeCount();
 
   std::vector<std::future<redisReplyPtr>> futures;
 
@@ -51,7 +51,7 @@ TEST_F(AllocationCount, 30k_entries) {
   }
 
   int64_t endAllocations = getAllocationCount();
-  int64_t endFrees = getAllocationCount();
+  int64_t endFrees = getFreeCount();
 
   int64_t diffAllocations = endAllocations - startAllocations;
   int64_t diffFrees = endFrees - startFrees;
