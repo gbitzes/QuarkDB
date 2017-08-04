@@ -36,46 +36,6 @@ using namespace quarkdb;
 // Helper functions
 //------------------------------------------------------------------------------
 
-static void append_int_to_string(int64_t source, std::ostringstream &target) {
-  char buff[sizeof(source)];
-  memcpy(&buff, &source, sizeof(source));
-  target.write(buff, sizeof(source));
-}
-
-static int64_t fetch_int_from_string(const char *pos) {
-  int64_t result;
-  memcpy(&result, pos, sizeof(result));
-  return result;
-}
-
-static std::string serializeRedisRequest(RaftTerm term, const RedisRequest &cmd) {
-  std::ostringstream ss;
-  append_int_to_string(term, ss);
-
-  for(size_t i = 0; i < cmd.size(); i++) {
-    append_int_to_string(cmd[i].size(), ss);
-    ss << cmd[i];
-  }
-
-  return ss.str();
-}
-
-static void deserializeRedisRequest(const std::string &data, RaftTerm &term, RedisRequest &cmd) {
-  cmd.clear();
-  term = fetch_int_from_string(data.c_str());
-
-  const char *pos = data.c_str() + sizeof(term);
-  const char *end = data.c_str() + data.size();
-
-  while(pos < end) {
-    int64_t len = fetch_int_from_string(pos);
-    pos += sizeof(len);
-
-    cmd.emplace_back(pos, len);
-    pos += len;
-  }
-}
-
 static std::string encodeEntryKey(LogIndex index) {
   return SSTR("ENTRY_" << intToBinaryString(index));
 }
@@ -105,8 +65,8 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
   this->set_or_die("RAFT_MEMBERS", newMembers.toString());
   this->set_int_or_die("RAFT_MEMBERSHIP_EPOCH", 0);
 
-  RedisRequest req { "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), newClusterID };
-  this->set_or_die(encodeEntryKey(0), serializeRedisRequest(0, req));
+  RaftEntry entry(0, "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), newClusterID);
+  this->set_or_die(encodeEntryKey(0), entry.serialize());
 
   initialize();
 }
@@ -256,8 +216,8 @@ bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers,
     return false;
   }
 
-  RedisRequest req = {"JOURNAL_UPDATE_MEMBERS", newMembers.toString(), clusterID };
-  return appendNoLock(logSize, term, req);
+  RaftEntry entry(term, "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), clusterID);
+  return appendNoLock(logSize, entry);
 }
 
 bool RaftJournal::addObserver(RaftTerm term, const RaftServer &observer, std::string &err) {
@@ -278,26 +238,26 @@ bool RaftJournal::promoteObserver(RaftTerm term, const RaftServer &observer, std
   return membershipUpdate(term, newMembers, err);
 }
 
-bool RaftJournal::appendNoLock(LogIndex index, RaftTerm term, const RedisRequest &req) {
+bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
   if(index != logSize) {
     qdb_warn("attempted to insert journal entry at an invalid position. index = " << index << ", logSize = " << logSize);
     return false;
   }
 
-  if(term > currentTerm) {
-    qdb_warn("attempted to insert journal entry with a higher term than the current one: " << term << " vs " << currentTerm);
+  if(entry.term > currentTerm) {
+    qdb_warn("attempted to insert journal entry with a higher term than the current one: " << entry.term << " vs " << currentTerm);
     return false;
   }
 
-  if(term < termOfLastEntry) {
-    qdb_warn("attempted to insert journal entry with lower term " << term << ", while last one is " << termOfLastEntry);
+  if(entry.term < termOfLastEntry) {
+    qdb_warn("attempted to insert journal entry with lower term " << entry.term << ", while last one is " << termOfLastEntry);
     return false;
   }
 
   TransactionPtr tx(startTransaction());
 
-  if(req[0] == "JOURNAL_UPDATE_MEMBERS") {
-    if(req.size() != 3) qdb_throw("Journal corruption, invalid journal_update_members: " << req);
+  if(entry.request[0] == "JOURNAL_UPDATE_MEMBERS") {
+    if(entry.request.size() != 3) qdb_throw("Journal corruption, invalid journal_update_members: " << entry.request);
 
     //--------------------------------------------------------------------------
     // Special case for membership updates
@@ -307,42 +267,42 @@ bool RaftJournal::appendNoLock(LogIndex index, RaftTerm term, const RedisRequest
     // state machine.
     //--------------------------------------------------------------------------
 
-    if(req[2] == clusterID) {
-      THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", req[1]));
+    if(entry.request[2] == clusterID) {
+      THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", entry.request[1]));
       THROW_ON_ERROR(tx->Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(index)));
 
       THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERS", members.toString()));
       THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERSHIP_EPOCH", intToBinaryString(membershipEpoch)));
 
       qdb_event("Transitioning into a new membership epoch: " << membershipEpoch << " => " << index
-      << ". Old members: " << members.toString() << ", new members: " << req[1]);
+      << ". Old members: " << members.toString() << ", new members: " << entry.request[1]);
 
       std::lock_guard<std::mutex> lock(membersMutex);
-      members = RaftMembers(req[1]);
+      members = RaftMembers(entry.request[1]);
       membershipEpoch = index;
     }
     else {
-      qdb_critical("Received request for membership update " << req << ", but the clusterIDs do not match - mine is " << clusterID
+      qdb_critical("Received request for membership update " << entry.request << ", but the clusterIDs do not match - mine is " << clusterID
       << ". THE MEMBERSHIP UPDATE ENTRY WILL BE IGNORED. Something is either corrupted or you force-reconfigured " <<
       " the nodes recently - if it's the latter, this message is nothing to worry about.");
     }
   }
 
-  THROW_ON_ERROR(tx->Put(encodeEntryKey(index), serializeRedisRequest(term, req)));
+  THROW_ON_ERROR(tx->Put(encodeEntryKey(index), entry.serialize()));
   commitTransaction(tx, index+1);
 
-  termOfLastEntry = term;
+  termOfLastEntry = entry.term;
   logUpdated.notify_all();
   return true;
 }
 
-bool RaftJournal::append(LogIndex index, RaftTerm term, const RedisRequest &req) {
+bool RaftJournal::append(LogIndex index, const RaftEntry &entry) {
   std::lock_guard<std::mutex> lock(contentMutex);
-  return appendNoLock(index, term, req);
+  return appendNoLock(index, entry);
 }
 
 bool RaftJournal::appendLeadershipMarker(LogIndex index, RaftTerm term, const RaftServer &leader) {
-  return append(index, term, {"JOURNAL_LEADERSHIP_MARKER", SSTR(term), leader.toString()});
+  return append(index, RaftEntry(term, "JOURNAL_LEADERSHIP_MARKER", SSTR(term), leader.toString()));
 }
 
 void RaftJournal::trimUntil(LogIndex newLogStart) {
@@ -485,7 +445,7 @@ rocksdb::Status RaftJournal::fetch(LogIndex index, RaftEntry &entry) {
   rocksdb::Status st = db->Get(rocksdb::ReadOptions(), encodeEntryKey(index), &data);
   if(!st.ok()) return st;
 
-  deserializeRedisRequest(data, entry.term, entry.request);
+  RaftEntry::deserialize(entry, data);
   return st;
 }
 

@@ -63,9 +63,9 @@ TEST(RaftTalker, T1) {
                entries // payload
              ), FatalException);
 
-  entries.push_back(RaftEntry {3, {"SET", "abc", "asdf"}});
-  entries.push_back(RaftEntry {12, {"SET", "abcd", "1234"}});
-  entries.push_back(RaftEntry {12, {"HSET", "myhash", "key", "value"}});
+  entries.emplace_back(3, "SET", "abc", "asdf");
+  entries.emplace_back(12, "SET", "abcd", "1234");
+  entries.emplace_back(12, "HSET", "myhash", "key", "value");
 
   // one of the entries has higher term than myself
   ASSERT_THROW(talker.appendEntries(

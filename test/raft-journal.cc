@@ -83,25 +83,31 @@ TEST_F(Raft_Journal, T1) {
 
   ASSERT_EQ(journal.getNodes(), nodes);
 
-  entry1.request = { "set", "abc", "123" };
-  entry1.term = 2;
+  entry1 = RaftEntry(2, "set", "abc", "123");
 
-  ASSERT_TRUE(journal.append(1, entry1.term, entry1.request));
+  ASSERT_TRUE(journal.append(1, entry1));
   ASSERT_OK(journal.fetch(1, entry2));
   ASSERT_EQ(entry1, entry2);
   ASSERT_TRUE(journal.matchEntries(1, 2));
 
   ASSERT_THROW(journal.setCommitIndex(2), FatalException);
-  req = { "set", "qwerty", "asdf" };
-  ASSERT_FALSE(journal.append(2, 4, req));
-  ASSERT_TRUE(journal.append(2, 2, req));
+
+  entry1 = RaftEntry(4, "set", "qwerty", "asdf");
+  ASSERT_FALSE(journal.append(2, entry1));
+
+  entry1.term = 2;
+  ASSERT_TRUE(journal.append(2, entry1));
   ASSERT_TRUE(journal.matchEntries(2, 2));
   journal.setCommitIndex(2);
 
-  req = { "set", "123", "456"};
-  ASSERT_FALSE(journal.append(3, 1, req));
+  entry1 = RaftEntry(1, "set", "123", "456");
+  req = entry1.request;
+
+  ASSERT_FALSE(journal.append(3, entry1));
   ASSERT_TRUE(journal.setCurrentTerm(4, srv));
-  ASSERT_TRUE(journal.append(3, 4, req));
+
+  entry1.term = 4;
+  ASSERT_TRUE(journal.append(3, entry1));
   ASSERT_TRUE(journal.matchEntries(3, 4));
   ASSERT_EQ(journal.getLogSize(), 4);
 
@@ -120,7 +126,8 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(entry1.term, 4);
   ASSERT_EQ(entry1.request, req);
 
-  ASSERT_FALSE(journal.append(4, 3, req));
+  entry1.term = 3;
+  ASSERT_FALSE(journal.append(4, entry1));
   ASSERT_EQ(journal.getLogSize(), 4);
 
   // try to remove committed entry
@@ -140,7 +147,11 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(entry2.request, req);
 
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal.append(3+i, 4, testreqs[i])) << i;
+    RaftEntry tempEntry;
+    tempEntry.term = 4;
+    tempEntry.request = testreqs[i];
+
+    ASSERT_TRUE(journal.append(3+i, tempEntry)) << i;
   }
 
   ASSERT_THROW(journal.trimUntil(4), FatalException); // commit index is 2
@@ -230,8 +241,9 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(journal.getMembership().observers, observers);
 
   // push a regular entry, just because
-  req = { "set", "regular_entry", "just_because" };
-  ASSERT_TRUE(journal.append(size+3, 4, req));
+
+  entry1 = RaftEntry(4, "set", "regular_entry", "just_because");
+  ASSERT_TRUE(journal.append(size+3, entry1));
 
   // remove the last observer again
   ASSERT_TRUE(journal.removeMember(4, observers[0], err));
@@ -270,7 +282,7 @@ TEST_F(Raft_Journal, T1) {
   observers = originalMembership.observers;
   observers.emplace_back("some_node", 567);
 
-  ASSERT_TRUE(journal.append(journal.getLogSize(), 4, make_req("JOURNAL_UPDATE_MEMBERS", RaftMembers(nodes, observers).toString(), "wrong_cluster_id")));
+  ASSERT_TRUE(journal.append(journal.getLogSize(), RaftEntry(4, "JOURNAL_UPDATE_MEMBERS", RaftMembers(nodes, observers).toString(), "wrong_cluster_id")));
   ASSERT_EQ(journal.getMembership(), originalMembership);
 }
 }

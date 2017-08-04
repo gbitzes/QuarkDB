@@ -24,6 +24,7 @@
 #ifndef __QUARKDB_RAFT_COMMON_H__
 #define __QUARKDB_RAFT_COMMON_H__
 
+#include <string.h>
 #include "../Common.hh"
 #include "../Utils.hh"
 
@@ -37,9 +38,57 @@ enum class RaftStatus {
 };
 std::string statusToString(RaftStatus st);
 
+inline void append_int_to_string(int64_t source, std::ostringstream &target) {
+  char buff[sizeof(source)];
+  memcpy(&buff, &source, sizeof(source));
+  target.write(buff, sizeof(source));
+}
+
+inline int64_t fetch_int_from_string(const char *pos) {
+  int64_t result;
+  memcpy(&result, pos, sizeof(result));
+  return result;
+}
+
 struct RaftEntry {
   RaftTerm term;
   RedisRequest request;
+
+  RaftEntry() {}
+
+  RaftEntry(RaftTerm term_, RedisRequest&& req) : term(term_), request(std::move(req)) {}
+  RaftEntry(RaftTerm term_, const RedisRequest& req) : term(term_), request(req) {}
+
+  template<typename... Args>
+  RaftEntry(RaftTerm term_, Args&&... args) : term(term_), request{args...} {}
+
+  std::string serialize() const {
+    std::ostringstream ss;
+    append_int_to_string(term, ss);
+
+    for(size_t i = 0; i < request.size(); i++) {
+      append_int_to_string(request[i].size(), ss);
+      ss << request[i];
+    }
+
+    return ss.str();
+  }
+
+  static void deserialize(RaftEntry &entry, const std::string &data) {
+    entry.request.clear();
+    entry.term = fetch_int_from_string(data.c_str());
+
+    const char *pos = data.c_str() + sizeof(term);
+    const char *end = data.c_str() + data.size();
+
+    while(pos < end) {
+      int64_t len = fetch_int_from_string(pos);
+      pos += sizeof(len);
+
+      entry.request.emplace_back(pos, len);
+      pos += len;
+    }
+  }
 
   bool operator==(const RaftEntry &rhs) const {
     return term == rhs.term && request == rhs.request;

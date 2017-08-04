@@ -193,7 +193,8 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
   std::lock_guard<std::mutex> lock(raftCommand);
 
   LogIndex index = journal.getLogSize();
-  if(!writeTracker.append(index, snapshot.term, std::move(req), conn->getQueue(), redisDispatcher)) {
+
+  if(!writeTracker.append(index, RaftEntry(snapshot.term, std::move(req)), conn->getQueue(), redisDispatcher)) {
     qdb_critical("appending write for index = " << index <<
     " and term " << snapshot.term << " failed when servicing client request");
     return conn->err("unknown error");
@@ -253,7 +254,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     journal.removeEntries(firstInconsistency);
 
     for(size_t i = appendFrom; i < req.entries.size(); i++) {
-      if(!journal.append(req.prevIndex+1+i, req.entries[i].term, req.entries[i].request)) {
+      if(!journal.append(req.prevIndex+1+i, req.entries[i])) {
         qdb_warn("something odd happened when adding entries to the journal.. probably a race condition, but should be harmless");
         return {snapshot.term, journal.getLogSize(), false, "Unknown error"};
       }

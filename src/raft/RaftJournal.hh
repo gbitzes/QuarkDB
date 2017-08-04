@@ -65,7 +65,7 @@ public:
   LogIndex getEpoch() const { return membershipEpoch; }
   RaftMembership getMembership();
 
-  bool append(LogIndex index, RaftTerm term, const RedisRequest &req);
+  bool append(LogIndex index, const RaftEntry &entry);
   rocksdb::Status fetch(LogIndex index, RaftEntry &entry);
   rocksdb::Status fetch(LogIndex index, RaftTerm &term);
   void fetch_or_die(LogIndex index, RaftEntry &entry);
@@ -140,7 +140,7 @@ private:
 
   RaftMembers getMembers();
   bool membershipUpdate(RaftTerm term, const RaftMembers &newMembers, std::string &err);
-  bool appendNoLock(LogIndex index, RaftTerm term, const RedisRequest &req);
+  bool appendNoLock(LogIndex index, const RaftEntry &entry);
 
   void set_or_die(const std::string &key, const std::string &value);
   void set_int_or_die(const std::string &key, int64_t value);

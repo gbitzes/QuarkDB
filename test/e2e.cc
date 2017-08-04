@@ -453,7 +453,7 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
     RaftEntry entry;
     ASSERT_TRUE(journal(firstSlaveID)->fetch(i, entry).ok());
 
-    journal(2)->append(i, entry.term, entry.request);
+    journal(2)->append(i, entry);
   }
 
   // now verify node #2 can be brought up to date successfully

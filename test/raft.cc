@@ -79,7 +79,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
   ASSERT_TRUE(state(0)->ascend(2));
 
   // add an inconsistent journal entry to #1, just for fun
-  ASSERT_TRUE(journal(1)->append(1, 0, make_req("supposed", "to", "be", "removed")));
+  ASSERT_TRUE(journal(1)->append(1, RaftEntry(0, "supposed", "to", "be", "removed")));
 
   ASSERT_EQ(state(1)->getCurrentTerm(), 0);
 
@@ -92,7 +92,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
 
   // populate #0's journal
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal(0)->append(i+2, 2, testreqs[i]));
+    ASSERT_TRUE(journal(0)->append(i+2, RaftEntry(2, testreqs[i])));
   }
 
   // verify #1 recognized #0 as leader and that replication was successful
@@ -146,9 +146,9 @@ TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
   ASSERT_TRUE(state(0)->becomeCandidate(2));
   ASSERT_TRUE(state(0)->ascend(2));
 
-  ASSERT_TRUE(journal(1)->append(1, 0, make_req("supposed", "to", "be", "removed1")));
-  ASSERT_TRUE(journal(1)->append(2, 0, make_req("supposed", "to", "be", "removed2")));
-  ASSERT_TRUE(journal(1)->append(3, 0, make_req("supposed", "to", "be", "removed3")));
+  ASSERT_TRUE(journal(1)->append(1, RaftEntry(0, "supposed", "to", "be", "removed1")));
+  ASSERT_TRUE(journal(1)->append(2, RaftEntry(0, "supposed", "to", "be", "removed2")));
+  ASSERT_TRUE(journal(1)->append(3, RaftEntry(0, "supposed", "to", "be", "removed3")));
 
   ASSERT_EQ(state(1)->getCurrentTerm(), 0);
 
@@ -217,8 +217,8 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.prevTerm = 0;
   req.commitIndex = 0;
 
-  req.entries.push_back(RaftEntry {1, {"set", "qwerty", "123"}});
-  req.entries.push_back(RaftEntry {1, {"hset", "abc", "123", "234"}});
+  req.entries.emplace_back(1, "set", "qwerty", "123");
+  req.entries.emplace_back(1, "hset", "abc", "123", "234");
 
   RaftAppendEntriesResponse resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 2);
@@ -248,9 +248,9 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.prevTerm = 1;
   req.commitIndex = 1;
 
-  req.entries.push_back(RaftEntry {3, {"sadd", "myset", "a"}});
-  req.entries.push_back(RaftEntry {3, {"sadd", "myset", "b"}});
-  req.entries.push_back(RaftEntry {3, {"sadd", "myset", "c"}});
+  req.entries.emplace_back(3, "sadd", "myset", "a");
+  req.entries.emplace_back(3, "sadd", "myset", "b");
+  req.entries.emplace_back(3, "sadd", "myset", "c");
 
   resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 5);
@@ -284,7 +284,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.prevTerm = 3;
   req.commitIndex = 4;
 
-  req.entries.push_back(RaftEntry {3, {"sadd", "myset", "c"}});
+  req.entries.emplace_back(3, "sadd", "myset", "c");
   resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 5);
   ASSERT_TRUE(resp.outcome);
@@ -298,7 +298,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.prevTerm = 3;
   req.commitIndex = 4;
 
-  req.entries.push_back(RaftEntry {3, {"sadd", "myset", "b"}});
+  req.entries.emplace_back(3, "sadd", "myset", "b");
   resp = dispatcher()->appendEntries(std::move(req));
   ASSERT_EQ(resp.term, 5);
   ASSERT_TRUE(resp.outcome);
@@ -313,7 +313,7 @@ TEST_F(Raft_Dispatcher, add_entries) {
   req.prevTerm = 3;
   req.commitIndex = 4;
 
-  req.entries.push_back(RaftEntry {3, {"sadd", "a different set", "c"}});
+  req.entries.emplace_back(3, "sadd", "a different set", "c");
   ASSERT_THROW(dispatcher()->appendEntries(std::move(req)), FatalException);
 }
 
@@ -389,9 +389,9 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   // add a few requests to the log
-  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
-  ASSERT_TRUE(journal()->append(2, 4, testreqs[1]));
-  ASSERT_TRUE(journal()->append(3, 5, testreqs[2]));
+  ASSERT_TRUE(journal()->append(1, RaftEntry(3, testreqs[0])));
+  ASSERT_TRUE(journal()->append(2, RaftEntry(4, testreqs[1])));
+  ASSERT_TRUE(journal()->append(3, RaftEntry(5, testreqs[2])));
 
   req.term = 6;
   req.candidate = myself(2);
@@ -423,9 +423,9 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   // add a few requests to the log
-  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
-  ASSERT_TRUE(journal()->append(2, 4, testreqs[1]));
-  ASSERT_TRUE(journal()->append(3, 5, testreqs[2]));
+  ASSERT_TRUE(journal()->append(1, RaftEntry(3, testreqs[0])));
+  ASSERT_TRUE(journal()->append(2, RaftEntry(4, testreqs[1])));
+  ASSERT_TRUE(journal()->append(3, RaftEntry(5, testreqs[2])));
 
   // commit all of them
   ASSERT_TRUE(journal()->setCommitIndex(3));
@@ -463,9 +463,9 @@ TEST_F(Raft_Voting, smaller_log_but_last_index_higher_term) {
   ASSERT_TRUE(state()->observed(5, {}));
 
   // add a few entries
-  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
-  ASSERT_TRUE(journal()->append(2, 3, testreqs[1]));
-  ASSERT_TRUE(journal()->append(3, 3, testreqs[2]));
+  ASSERT_TRUE(journal()->append(1, RaftEntry(3, testreqs[0])));
+  ASSERT_TRUE(journal()->append(2, RaftEntry(3, testreqs[1])));
+  ASSERT_TRUE(journal()->append(3, RaftEntry(3, testreqs[2])));
 
   RaftVoteRequest req;
   req.term = 9;
@@ -661,7 +661,7 @@ TEST_F(Raft_Director, achieve_natural_election) {
 
   // let's push a bunch of entries to the leader, and verify they get committed
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal(leaderID)->append(i+2, snapshots[0].term, testreqs[i]));
+    ASSERT_TRUE(journal(leaderID)->append(i+2, RaftEntry(snapshots[0].term, testreqs[i])));
   }
 
   RETRY_ASSERT_TRUE(
@@ -742,8 +742,7 @@ TEST_F(Raft_Director, election_with_different_journals) {
   // start an election between #0 and #1 where #1 is guaranteed to win due
   // to more up-to-date journal
 
-  RedisRequest req = {"set", "asdf", "abc"};
-  ASSERT_TRUE(journal(1)->append(1, 0, req));
+  ASSERT_TRUE(journal(1)->append(1, RaftEntry(0, "set", "asdf", "abc")));
 
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
@@ -769,7 +768,7 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
 
   // populate #0's journal
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal(0)->append(i+1, 0, testreqs[i]));
+    ASSERT_TRUE(journal(0)->append(i+1, RaftEntry(0, testreqs[i])));
   }
 
   RaftMatchIndexTracker &matchIndex1 = commitTracker()->getHandler(myself(1));

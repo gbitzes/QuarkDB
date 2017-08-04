@@ -91,16 +91,16 @@ void RaftWriteTracker::flushQueues(const std::string &msg) {
   blockedWrites.flush(msg);
 }
 
-bool RaftWriteTracker::append(LogIndex index, RaftTerm term, RedisRequest &&req, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher) {
+bool RaftWriteTracker::append(LogIndex index, RaftEntry &&entry, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher) {
   std::lock_guard<std::mutex> lock(mtx);
 
-  if(!journal.append(index, term, req)) {
+  if(!journal.append(index, entry)) {
     qdb_critical("appending to journal failed for index = " << index <<
-    " and term " << term << " when appending to write tracker");
+    " and term " << entry.term << " when appending to write tracker");
     return false;
   }
 
   blockedWrites.insert(index, queue);
-  queue->addPendingRequest(&dispatcher, std::move(req), index);
+  queue->addPendingRequest(&dispatcher, std::move(entry.request), index);
   return true;
 }

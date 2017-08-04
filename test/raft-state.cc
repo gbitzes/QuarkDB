@@ -174,10 +174,8 @@ TEST_F(Raft_State, T1) {
 
   // push two changes to the log
   // mark the first as applied, the other as committed
-  RedisRequest req = { "set", "qwerty", "asdf" };
-  ASSERT_TRUE(journal.append(5, 7, req));
-  req = { "set", "1234", "9876" };
-  ASSERT_TRUE(journal.append(6, 7, req));
+  ASSERT_TRUE(journal.append(5, RaftEntry(7, "set", "qwerty", "asdf")));
+  ASSERT_TRUE(journal.append(6, RaftEntry(7, "set", "1234", "9876")));
   ASSERT_TRUE(journal.setCommitIndex(4));
   ASSERT_FALSE(journal.setCommitIndex(0));
   ASSERT_THROW(journal.setCommitIndex(7), FatalException);
