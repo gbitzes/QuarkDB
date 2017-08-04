@@ -290,7 +290,7 @@ void RaftReplicaTracker::main() {
     if(!online) {
       // Print an event if the target just came back online
       online = true;
-      qdb_event("Replication target " << target.toString() << " came back online. Log size: " << resp.logSize << ", lagging " << (journal.getLogSize() - resp.logSize) << " entries behind mine. (approximate)");
+      qdb_event("Replication target " << target.toString() << " came back online. Log size: " << resp.logSize << ", lagging " << (journal.getLogSize() - resp.logSize) << " entries behind me. (approximate)");
     }
 
     state.observed(resp.term, {});

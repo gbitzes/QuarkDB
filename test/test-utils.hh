@@ -94,6 +94,7 @@ public:
   // (often 50+ ms)
 
   ShardDirectory* getShardDirectory(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  void clearConnectionCache();
   const std::string testdir = "/tmp/quarkdb-tests";
   static RaftServer server(int id);
 private:

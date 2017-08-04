@@ -65,6 +65,19 @@ void TestConfig::parseSingle(const std::string &key, const std::string &value) {
       exit(EXIT_FAILURE);
     }
   }
+  else if(key == "QDB_TESTS_DATABASE_REUSE") {
+    databaseReuseOverriden = true;
+    if(value == "yes") {
+      databaseReuse = true;
+    }
+    else if(value == "no") {
+      databaseReuse = false;
+    }
+    else {
+      std::cerr << "Unknown value for " << key << ": '" << value << "'" << std::endl;
+      exit(EXIT_FAILURE);
+    }
+  }
   else {
     std::cerr << "Unknown configuration option: " << key << " => " << value << std::endl;
     exit(EXIT_FAILURE);

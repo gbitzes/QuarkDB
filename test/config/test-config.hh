@@ -40,8 +40,17 @@ struct TestConfig {
     }
   }
 
+  void setDatabaseReuse(bool newVal) {
+    if(!databaseReuseOverriden) {
+      databaseReuse = newVal;
+    }
+  }
+
   RaftTimeouts raftTimeouts {aggressiveTimeouts};
   bool raftTimeoutsOverriden {false};
+
+  bool databaseReuse {true};
+  bool databaseReuseOverriden {false};
 };
 
 extern TestConfig testconfig;

@@ -53,11 +53,26 @@ std::vector<RedisRequest> testreqs = {
   {"hset", "myhash", "key9", "val9"}
 };
 
-void GlobalEnv::TearDown() {
+void GlobalEnv::clearConnectionCache() {
+  qdb_info("Global environment: clearing connection cache.");
+
   for(auto& kv : shardDirCache) {
     delete kv.second;
   }
   shardDirCache.clear();
+
+  if(!testdir.empty()) {
+    system(SSTR("rm -r " << testdir).c_str());
+    system(SSTR("mkdir " << testdir).c_str());
+  }
+}
+
+void GlobalEnv::SetUp() {
+  clearConnectionCache();
+}
+
+void GlobalEnv::TearDown() {
+  clearConnectionCache();
 }
 
 ShardDirectory* GlobalEnv::getShardDirectory(const std::string &path, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
@@ -69,13 +84,6 @@ ShardDirectory* GlobalEnv::getShardDirectory(const std::string &path, RaftCluste
 
   ret->obliterate(clusterID, nodes);
   return ret;
-}
-
-void GlobalEnv::SetUp() {
-  if(!testdir.empty()) {
-    system(SSTR("rm -r " << testdir).c_str());
-    system(SSTR("mkdir " << testdir).c_str());
-  }
 }
 
 RaftServer GlobalEnv::server(int id) {
@@ -97,6 +105,10 @@ TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd)
 TestCluster::~TestCluster() {
   for(auto &kv : testnodes) {
     delete kv.second;
+  }
+
+  if(!testconfig.databaseReuse) {
+    commonState.clearConnectionCache();
   }
 }
 
