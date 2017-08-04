@@ -199,8 +199,7 @@ static std::vector<BenchmarkParams> generateParams() {
 
   for(size_t threads : {1, 2, 4, 8}) {
     for(size_t events : {1000000}) {
-      for(Mode mode : {Mode::kDirect, Mode::kRedisStandalone}) {
-      // for(Mode mode : {Mode::kDirect, Mode::kRedisStandalone, Mode::kConsensus}) {
+      for(Mode mode : {Mode::kDirect, Mode::kRedisStandalone, Mode::kConsensus}) {
         ret.emplace_back(threads, events, mode);
       }
     }

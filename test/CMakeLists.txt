@@ -48,6 +48,7 @@ add_executable(quarkdb-tests
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-bench
   bench/hset.cc
+  bench/main.cc
   ${COMMON_TEST_SOURCES}
 )
 
