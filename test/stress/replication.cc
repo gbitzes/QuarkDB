@@ -102,9 +102,9 @@ TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes)
   ASSERT_TRUE(state(2)->observed(5, {}));
 
   // add a few requests to the log
-  ASSERT_TRUE(journal()->append(1, 3, testreqs[0]));
-  ASSERT_TRUE(journal()->append(2, 4, testreqs[1]));
-  ASSERT_TRUE(journal()->append(3, 5, testreqs[2]));
+  ASSERT_TRUE(journal()->append(1, RaftEntry(3, testreqs[0])));
+  ASSERT_TRUE(journal()->append(2, RaftEntry(4, testreqs[1])));
+  ASSERT_TRUE(journal()->append(3, RaftEntry(5, testreqs[2])));
 
   // commit all of them
   ASSERT_TRUE(journal()->setCommitIndex(3));
