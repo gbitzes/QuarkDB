@@ -235,8 +235,6 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
 }
 
 bool RaftParser::fetchResponse(const redisReplyPtr &source, RaftEntry &entry) {
-  entry = RaftEntry();
-
   if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements < 2) {
     return false;
   }
@@ -250,6 +248,7 @@ bool RaftParser::fetchResponse(const redisReplyPtr &source, RaftEntry &entry) {
   std::string tmp(source->element[0]->str, source->element[0]->len);
   if(!my_strtoll(tmp, entry.term)) return false;
 
+  entry.request.clear();
   for(size_t i = 1; i < source->elements; i++) {
     entry.request.emplace_back(source->element[i]->str, source->element[i]->len);
   }
