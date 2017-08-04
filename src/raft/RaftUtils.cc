@@ -130,33 +130,26 @@ bool RaftParser::appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &
   // We assume source[0] is correct, ie "raft_append_entries"
   //----------------------------------------------------------------------------
 
-  // 7 chunks is the minimum for a 0-entries request
-  if(source.size() < 7) return false;
+  // 3 chunks is the minimum for a 0-entries request
+  if(source.size() < 3) return false;
 
-  if(!my_strtoll(source[1], dest.term)) return false;
-  if(!parseServer(source[2], dest.leader)) return false;
-  if(!my_strtoll(source[3], dest.prevIndex)) return false;
-  if(!my_strtoll(source[4], dest.prevTerm)) return false;
-  if(!my_strtoll(source[5], dest.commitIndex)) return false;
-
+  if(!parseServer(source[1], dest.leader)) return false;
+  if(source[2].size() != sizeof(int64_t) * 5) return false;
   int64_t nreqs;
-  if(!my_strtoll(source[6], nreqs)) return false;
-  if((int) source.size() < 7 + (nreqs*3)) return false;
 
-  int64_t index = 7;
+  dest.term        = binaryStringToInt(source[2].c_str() + 0*sizeof(int64_t) );
+  dest.prevIndex   = binaryStringToInt(source[2].c_str() + 1*sizeof(int64_t) );
+  dest.prevTerm    = binaryStringToInt(source[2].c_str() + 2*sizeof(int64_t) );
+  dest.commitIndex = binaryStringToInt(source[2].c_str() + 3*sizeof(int64_t) );
+  nreqs            = binaryStringToInt(source[2].c_str() + 4*sizeof(int64_t) );
+
+  if((int) source.size() != 3 + nreqs) return false;
+  dest.entries.resize(nreqs);
+
+  int64_t index = 3;
   for(int64_t i = 0; i < nreqs; i++) {
-    int64_t reqsize;
-    if(!my_strtoll(source[index], reqsize)) return false;
-    if((int) source.size() < index+2+reqsize) return false;
-
-    RaftEntry tmp;
-    if(!my_strtoll(source[index+1], tmp.term)) return false;
-    for(int64_t j = 0; j < reqsize; j++) {
-      tmp.request.emplace_back(source.move(index+2+j));
-    }
-
-    dest.entries.emplace_back(std::move(tmp));
-    index += 2+reqsize;
+    RaftEntry::deserialize(dest.entries[i], source[index]);
+    index++;
   }
 
   if(index != (int64_t) source.size()) return false;

@@ -26,11 +26,13 @@
 using namespace quarkdb;
 
 TEST(RaftParser, appendEntries1) {
-  RedisRequest req = { "RAFT_APPEND_ENTRIES", "12", "its_me_ur_leader:1338", "8", "10", "4", "4",
-    "3", "3", "SET", "abc", "12345", // entry #1
-    "3", "12", "SET", "4352", "adsfa", // entry #2
-    "4", "12", "HSET", "myhash", "key", "value", // entry #3
-    "2", "12", "UPDATE_RAFT_NODES", "server1:123,server2:321" // entry #4
+  RedisRequest req = { "RAFT_APPEND_ENTRIES", "its_me_ur_leader:1338",
+    intToBinaryString(12) + intToBinaryString(8) + intToBinaryString(10) +
+    intToBinaryString(4) + intToBinaryString(4),
+    RaftEntry(3, "SET", "abc", "12345").serialize(),
+    RaftEntry(12, "SET", "4352", "adsfa").serialize(),
+    RaftEntry(12, "HSET", "myhash", "key", "value").serialize(),
+    RaftEntry(12, "UPDATE_RAFT_NODES", "server1:123,server2:321").serialize()
   };
 
   RaftAppendEntriesRequest parsed;
@@ -63,7 +65,10 @@ TEST(RaftParser, appendEntries1) {
 
 TEST(RaftParser, appendEntries2) {
   // heartbeat
-  RedisRequest req = { "RAFT_APPEND_ENTRIES", "13", "its_me_ur_leader:1338", "9", "11", "7", "0"};
+  RedisRequest req = { "RAFT_APPEND_ENTRIES", "its_me_ur_leader:1338",
+    intToBinaryString(13) + intToBinaryString(9) + intToBinaryString(11) +
+    intToBinaryString(7) + intToBinaryString(0)
+  };
 
   RaftAppendEntriesRequest parsed;
   ASSERT_TRUE(RaftParser::appendEntries(std::move(req), parsed));
@@ -75,29 +80,4 @@ TEST(RaftParser, appendEntries2) {
   ASSERT_EQ(parsed.commitIndex, 7);
 
   ASSERT_EQ(parsed.entries.size(), 0u);
-}
-
-TEST(RaftParser, appendEntries3) {
-  // malformed entries
-  RedisRequest req = { "RAFT_APPEND_ENTRIES", "13", "no_port_in_leader", "9", "11", "7", "0"};
-  RaftAppendEntriesRequest parsed;
-  ASSERT_FALSE(RaftParser::appendEntries(std::move(req), parsed));
-
-  req = { "RAFT_APPEND_ENTRIES", "13", "its_me_ur_leader:1338", "9", "11", "7", "1",
-          "4", "12", "SET", "abc", "789" // screwed up reqsize
-  };
-
-  ASSERT_FALSE(RaftParser::appendEntries(std::move(req), parsed));
-
-  req = { "RAFT_APPEND_ENTRIES", "13", "its_me_ur_leader:1338", "9", "11", "7", "2", // wrong number of requests
-          "3", "12", "SET", "abc", "789"
-  };
-
-  ASSERT_FALSE(RaftParser::appendEntries(std::move(req), parsed));
-
-  req = { "RAFT_APPEND_ENTRIES", "13", "its_me_ur_leader:1338", "9", "11", "7", "1",
-          "3", "12", "SET", "abc", "789", "wheee" // extra chunk
-  };
-
-  ASSERT_FALSE(RaftParser::appendEntries(std::move(req), parsed));
 }

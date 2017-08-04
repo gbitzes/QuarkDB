@@ -85,10 +85,12 @@ TEST(RaftTalker, T1) {
 
   while( (rc = parser.fetch(req)) == 0) ;
   ASSERT_EQ(rc, 1);
-  tmp = {"RAFT_APPEND_ENTRIES", "12", "its_me_ur_leader:1337", "7", "11", "3", "3",
-         "3", "3", "SET", "abc", "asdf", // entry #1
-         "3", "12", "SET", "abcd", "1234", // entry #2
-         "4", "12", "HSET", "myhash", "key", "value" // entry #3
+  tmp = {"RAFT_APPEND_ENTRIES", "its_me_ur_leader:1337",
+         intToBinaryString(12) + intToBinaryString(7) + intToBinaryString(11) +
+         intToBinaryString(3) + intToBinaryString(3),
+         entries[0].serialize(),
+         entries[1].serialize(),
+         entries[2].serialize()
   };
 
   ASSERT_EQ(req, tmp);

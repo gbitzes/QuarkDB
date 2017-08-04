@@ -44,59 +44,34 @@ std::future<redisReplyPtr> RaftTalker::appendEntries(
     qdb_throw(SSTR("term < prevTerm.. " << prevTerm << "," << term));
   }
 
-  RedisRequest header;
-  header.emplace_back("RAFT_APPEND_ENTRIES");
-  header.emplace_back(std::to_string(term));
-  header.emplace_back(leader.toString());
-  header.emplace_back(std::to_string(prevIndex));
-  header.emplace_back(std::to_string(prevTerm));
-  header.emplace_back(std::to_string(commit));
-  header.emplace_back(std::to_string(entries.size()));
+  RedisRequest payload;
+  payload.reserve(3 + entries.size());
 
-  size_t payloadSize = header.size();
+  payload.emplace_back("RAFT_APPEND_ENTRIES");
+  payload.emplace_back(leader.toString());
+
+  char buffer[sizeof(int64_t) * 5];
+  intToBinaryString(term,             buffer + 0*sizeof(int64_t));
+  intToBinaryString(prevIndex,        buffer + 1*sizeof(int64_t));
+  intToBinaryString(prevTerm,         buffer + 2*sizeof(int64_t));
+  intToBinaryString(commit,           buffer + 3*sizeof(int64_t));
+  intToBinaryString(entries.size(),   buffer + 4*sizeof(int64_t));
+
+  payload.emplace_back(buffer, 5*sizeof(int64_t));
+
   for(size_t i = 0; i < entries.size(); i++) {
-    payloadSize += 2 + entries[i].request.size();
-  }
-
-  const char *payload[payloadSize];
-  size_t sizes[payloadSize];
-
-  // add header to payload
-  for(size_t i = 0; i < header.size(); i++) {
-    payload[i] = header[i].c_str();
-    sizes[i] = header[i].size();
-  }
-
-  RedisRequest helper;
-  helper.reserve(entries.size()*2 + 10);
-
-  size_t index = header.size();
-  for(size_t i = 0; i < entries.size(); i++) {
-    if(i > 0 && entries[i].term < entries[i-1].term) {
-      qdb_throw(SSTR("entry terms went down .. i = " << i << ", entries[i].term = " << entries[i].term << ", entries[i-1].term == " << entries[i-1].term));
-    }
-
-    helper.emplace_back(std::to_string(entries[i].request.size()));
-    payload[index] = helper[helper.size()-1].c_str();
-    sizes[index] = helper[helper.size()-1].size();
-
     if(term < entries[i].term) {
       qdb_throw(SSTR("term < entries[i].term  .. i = " << i << ", term = " << term << ", entries[i].term = " << entries[i].term));
     }
 
-    helper.emplace_back(std::to_string(entries[i].term));
-    payload[index+1] = helper[helper.size()-1].c_str();
-    sizes[index+1] = helper[helper.size()-1].size();
-
-    for(size_t j = 0; j < entries[i].request.size(); j++) {
-      payload[index+j+2] = entries[i].request[j].c_str();
-      sizes[index+j+2] = entries[i].request[j].size();
+    if(i > 0 && entries[i].term < entries[i-1].term) {
+      qdb_throw(SSTR("entry terms went down .. i = " << i << ", entries[i].term = " << entries[i].term << ", entries[i-1].term == " << entries[i-1].term));
     }
 
-    index += entries[i].request.size() + 2;
+    payload.emplace_back(entries[i].serialize());
   }
 
-  return tunnel.execute(payloadSize, payload, sizes);
+  return tunnel.execute(payload);
 }
 
 std::future<redisReplyPtr> RaftTalker::requestVote(const RaftVoteRequest &req) {
