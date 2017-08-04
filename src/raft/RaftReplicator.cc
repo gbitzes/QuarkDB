@@ -92,19 +92,16 @@ RaftReplicaTracker::~RaftReplicaTracker() {
 }
 
 bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
-  std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize) {
+  std::vector<RaftEntry> &entries, int64_t &payloadSize) {
 
   payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
-  for(int64_t i = nextIndex; i < nextIndex+payloadSize; i++) {
-    RaftEntry entry;
+  entries.resize(payloadSize);
 
-    if(!journal.fetch(i, entry).ok()) {
+  for(int64_t i = nextIndex; i < nextIndex+payloadSize; i++) {
+    if(!journal.fetch(i, entries[i-nextIndex]).ok()) {
       qdb_critical("could not fetch entry with term " << i << " .. aborting building payload");
       return false;
     }
-
-    reqs.push_back(std::move(entry.request));
-    terms.push_back(entry.term);
   }
   return true;
 }
@@ -203,18 +200,17 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
       continue;
     }
 
-    std::vector<RedisRequest> reqs;
-    std::vector<RaftTerm> terms;
+    std::vector<RaftEntry> entries;
 
     int64_t payloadSize = 0;
-    if(!buildPayload(nextIndex, payloadLimit, reqs, terms, payloadSize)) {
+    if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {
       state.wait(timeouts.getHeartbeatInterval());
       continue;
     }
 
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
     inflight.emplace(
-      talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), reqs, terms),
+      talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries),
       contact,
       nextIndex,
       payloadSize
@@ -268,17 +264,16 @@ void RaftReplicaTracker::main() {
       continue;
     }
 
-    std::vector<RedisRequest> reqs;
-    std::vector<RaftTerm> terms;
+    std::vector<RaftEntry> entries;
 
     int64_t payloadSize = 0;
-    if(!buildPayload(nextIndex, payloadLimit, reqs, terms, payloadSize)) {
+    if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {
       state.wait(timeouts.getHeartbeatInterval());
       continue;
     }
 
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
-    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), reqs, terms);
+    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
     RaftAppendEntriesResponse resp;
 
     // Check: Is the target even online?

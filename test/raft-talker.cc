@@ -53,32 +53,26 @@ TEST(RaftTalker, T1) {
   ASSERT_EQ(req, tmp);
 
   // send an append entries message over the talker
-  std::vector<RedisRequest> requests;
-  std::vector<RaftTerm> terms;
+  std::vector<RaftEntry> entries;
 
   // previous entry has higher term than myself
   ASSERT_THROW(talker.appendEntries(
                10, myself, // my state
                7, 11, // previous entry
                3, // commit index
-               requests, terms // payload
+               entries // payload
              ), FatalException);
 
-  requests.push_back( {"SET", "abc", "asdf"} );
-  terms.push_back(3);
-
-  requests.push_back( {"SET", "abcd", "1234"} );
-  terms.push_back(12);
-
-  requests.push_back( {"HSET", "myhash", "key", "value"});
-  terms.push_back(12);
+  entries.push_back(RaftEntry {3, {"SET", "abc", "asdf"}});
+  entries.push_back(RaftEntry {12, {"SET", "abcd", "1234"}});
+  entries.push_back(RaftEntry {12, {"HSET", "myhash", "key", "value"}});
 
   // one of the entries has higher term than myself
   ASSERT_THROW(talker.appendEntries(
                11, myself, // my state
                7, 11, // previous entry
                3, // commit index
-               requests, terms // payload
+               entries // payload
              ), FatalException);
 
   // valid request
@@ -86,7 +80,7 @@ TEST(RaftTalker, T1) {
                12, myself, // my state
                7, 11, // previous entry
                3, // commit index
-               requests, terms // payload
+               entries // payload
              );
 
   while( (rc = parser.fetch(req)) == 0) ;
@@ -100,12 +94,12 @@ TEST(RaftTalker, T1) {
   ASSERT_EQ(req, tmp);
 
   // terms in entries go down
-  terms[terms.size()-1] = 11;
+  entries[entries.size()-1].term = 11;
   ASSERT_THROW(talker.appendEntries(
                12, myself, // my state
                7, 11, // previous entry
                3, // commit index
-               requests, terms // payload
+               entries // payload
              ), FatalException);
 
 }

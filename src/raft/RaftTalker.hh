@@ -40,8 +40,7 @@ public:
   RaftTalker(const RaftServer &server);
   std::future<redisReplyPtr> appendEntries(RaftTerm term, RaftServer leader, LogIndex prevIndex,
                                            RaftTerm prevTerm, LogIndex commit,
-                                           const std::vector<RedisRequest> &reqs,
-                                           const std::vector<RaftTerm> &entryTerms);
+                                           const std::vector<RaftEntry> &entries);
 
   std::future<redisReplyPtr> requestVote(const RaftVoteRequest &req);
   std::future<redisReplyPtr> fetch(LogIndex index);

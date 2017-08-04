@@ -65,8 +65,7 @@ private:
   bool checkPendingQueue(std::queue<PendingResponse> &inflight);
 
   void triggerResilvering();
-  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit,
-    std::vector<RedisRequest> &reqs, std::vector<RaftTerm> &terms, int64_t &payloadSize);
+  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftEntry> &entries, int64_t &payloadSize);
 
   RaftServer target;
   RaftStateSnapshot snapshot;
