@@ -104,8 +104,10 @@ bool ResilveringHistory::deserialize(const std::string &str, ResilveringHistory 
 }
 
 bool ResilveringHistory::operator==(const ResilveringHistory& rhs) const {
-  std::lock_guard<std::mutex> lock(mtx);
-  std::lock_guard<std::mutex> lock2(rhs.mtx);
+  std::lock(mtx, rhs.mtx);
+
+  std::lock_guard<std::mutex> lock1(mtx, std::adopt_lock);
+  std::lock_guard<std::mutex> lock2(rhs.mtx, std::adopt_lock);
 
   return VectorUtils::checkEquality(events, rhs.events);
 }
