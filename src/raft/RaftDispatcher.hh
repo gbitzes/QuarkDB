@@ -37,12 +37,12 @@ namespace quarkdb {
 // Forward declarations
 //------------------------------------------------------------------------------
 class RaftJournal; class RaftState; class RaftClock; class RaftWriteTracker;
-
+class RaftReplicator;
 
 
 class RaftDispatcher : public Dispatcher {
 public:
-  RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &rt);
+  RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &rt, RaftReplicator &replicator);
   DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
@@ -74,6 +74,7 @@ private:
   RaftClock &raftClock;
   RedisDispatcher redisDispatcher;
   RaftWriteTracker& writeTracker;
+  RaftReplicator &replicator;
 
   //----------------------------------------------------------------------------
   // Print a message when a follower is too far behind in regular intervals

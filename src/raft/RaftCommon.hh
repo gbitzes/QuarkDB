@@ -174,6 +174,29 @@ struct RaftVoteResponse {
 
 };
 
+struct ReplicaStatus {
+  RaftServer target;
+  bool online;
+  LogIndex nextIndex;
+
+  std::string toString() {
+    std::stringstream ss;
+    ss << target.toString() << " is ";
+    if(online) {
+      ss << "ONLINE - index: " << nextIndex;
+    }
+    else {
+      ss << "OFFLINE";
+    }
+
+    return ss.str();
+  }
+};
+
+struct ReplicationStatus {
+  std::vector<ReplicaStatus> replicas;
+};
+
 struct RaftInfo {
   RaftClusterID clusterID;
   RaftServer myself;
@@ -188,22 +211,53 @@ struct RaftInfo {
   LogIndex commitIndex;
   LogIndex lastApplied;
   size_t blockedWrites;
+  ReplicationStatus replicationStatus;
 
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
     ret.push_back(SSTR("TERM " << term));
     ret.push_back(SSTR("LOG-START " << logStart));
     ret.push_back(SSTR("LOG-SIZE " << logSize));
-    ret.push_back(SSTR("MYSELF " << myself.toString()));
     ret.push_back(SSTR("LEADER " << leader.toString()));
-    ret.push_back(SSTR("MEMBERSHIP-EPOCH " << membershipEpoch));
-    ret.push_back(SSTR("NODES " << serializeNodes(nodes)));
-    ret.push_back(SSTR("OBSERVERS " << serializeNodes(observers)));
     ret.push_back(SSTR("CLUSTER-ID " << clusterID));
-    ret.push_back(SSTR("STATUS " << statusToString(status)));
     ret.push_back(SSTR("COMMIT-INDEX " << commitIndex));
     ret.push_back(SSTR("LAST-APPLIED " << lastApplied));
     ret.push_back(SSTR("BLOCKED-WRITES " << blockedWrites));
+
+    ret.push_back("----------");
+    ret.push_back(SSTR("MYSELF " << myself.toString()));
+    ret.push_back(SSTR("STATUS " << statusToString(status)));
+
+    ret.push_back("----------");
+    ret.push_back(SSTR("MEMBERSHIP-EPOCH " << membershipEpoch));
+    ret.push_back(SSTR("NODES " << serializeNodes(nodes)));
+    ret.push_back(SSTR("OBSERVERS " << serializeNodes(observers)));
+
+    if(!replicationStatus.replicas.empty()) {
+      ret.push_back("----------");
+    }
+
+    for(auto it = replicationStatus.replicas.begin(); it != replicationStatus.replicas.end(); it++) {
+      std::stringstream ss;
+      ss << "REPLICA " << it->target.toString() << " ";
+      if(it->online) {
+        ss << "ONLINE | ";
+        if(logSize - it->nextIndex > 30000) {
+          ss << "LAGGING    | ";
+        }
+        else {
+          ss << "UP-TO-DATE | ";
+        }
+
+        ss << "NEXT-INDEX " << it->nextIndex;
+      }
+      else {
+        ss << "OFFLINE";
+      }
+
+      ret.push_back(ss.str());
+    }
+
     return ret;
   }
 };

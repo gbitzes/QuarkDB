@@ -31,8 +31,7 @@ using namespace quarkdb;
 const std::string trimConfigKey("raft.trimming");
 const std::string resilveringEnabledKey("raft.resilvering.enabled");
 
-RaftConfig::RaftConfig(RaftDispatcher &disp, StateMachine &sm)
-: dispatcher(disp), stateMachine(sm) {
+RaftConfig::RaftConfig(StateMachine &sm) : stateMachine(sm) {
 
 }
 
@@ -59,9 +58,9 @@ bool RaftConfig::getResilveringEnabled() {
   qdb_throw("Invalid value for raft resilvering flag: " << value);
 }
 
-LinkStatus RaftConfig::setResilveringEnabled(Connection *conn, bool value) {
+EncodedConfigChange RaftConfig::setResilveringEnabled(bool value) {
   RedisRequest req { "CONFIG_SET", resilveringEnabledKey, boolToString(value) };
-  return dispatcher.dispatch(conn, req);
+  return { "", req };
 }
 
 TrimmingConfig RaftConfig::getTrimmingConfig() {
@@ -85,20 +84,20 @@ TrimmingConfig RaftConfig::getTrimmingConfig() {
   return ret;
 }
 
-LinkStatus RaftConfig::setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety) {
+EncodedConfigChange RaftConfig::setTrimmingConfig(const TrimmingConfig &trimConfig, bool overrideSafety) {
   // A 'keepAtLeast' value lower than 100k probably means an operator error.
   // By default, prevent such low values unless overrideSafety is set.
   if(!overrideSafety && trimConfig.keepAtLeast <= 100000) {
     qdb_critical("attempted to set journal 'keepAtLeast' configuration to very low value: " << trimConfig.keepAtLeast);
-    return conn->err(SSTR("new 'keepAtLeast' too small: " << trimConfig.keepAtLeast));
+    return { SSTR("new 'keepAtLeast' too small: " << trimConfig.keepAtLeast), {} };
   }
 
   // A step value lower than 10k probably means an operator error.
   if(!overrideSafety && trimConfig.step <= 10000) {
     qdb_critical("attempted to set journal 'step' configuration to very low value: " << trimConfig.step);
-    return conn->err(SSTR("new 'step' too small: " << trimConfig.step));
+    return { SSTR("new 'step' too small: " << trimConfig.step), {} };
   }
 
   RedisRequest req { "CONFIG_SET", trimConfigKey, intToBinaryString(trimConfig.keepAtLeast) + intToBinaryString(trimConfig.step)};
-  return dispatcher.dispatch(conn, req);
+  return { "", req};
 }

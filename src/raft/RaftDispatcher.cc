@@ -26,6 +26,7 @@
 #include "RaftJournal.hh"
 #include "RaftWriteTracker.hh"
 #include "RaftState.hh"
+#include "RaftReplicator.hh"
 #include "../StateMachine.hh"
 
 #include <random>
@@ -33,8 +34,8 @@
 
 using namespace quarkdb;
 
-RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &wt)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt) {
+RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &wt, RaftReplicator &rep)
+: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt), replicator(rep) {
 }
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
@@ -406,9 +407,10 @@ RaftInfo RaftDispatcher::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshot snapshot = state.getSnapshot();
   RaftMembership membership = journal.getMembership();
+  ReplicationStatus replicationStatus = replicator.getStatus();
 
   return {journal.getClusterID(), state.getMyself(), snapshot.leader, membership.epoch, membership.nodes, membership.observers, snapshot.term, journal.getLogStart(),
-          journal.getLogSize(), snapshot.status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size() };
+          journal.getLogSize(), snapshot.status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size(), replicationStatus };
 }
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {

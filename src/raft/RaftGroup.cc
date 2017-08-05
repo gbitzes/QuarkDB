@@ -58,6 +58,14 @@ void RaftGroup::spindown() {
     delete directorptr;
     directorptr = nullptr;
   }
+  if(dispatcherptr) {
+    delete dispatcherptr;
+    dispatcherptr = nullptr;
+  }
+  if(replicatorptr) {
+    delete replicatorptr;
+    replicatorptr = nullptr;
+  }
   if(trimmerptr) {
     delete trimmerptr;
     trimmerptr = nullptr;
@@ -65,10 +73,6 @@ void RaftGroup::spindown() {
   if(configptr) {
     delete configptr;
     configptr = nullptr;
-  }
-  if(dispatcherptr) {
-    delete dispatcherptr;
-    dispatcherptr = nullptr;
   }
   if(wtptr) {
     delete wtptr;
@@ -108,7 +112,7 @@ RaftJournal* RaftGroup::journal() {
 
 RaftDispatcher* RaftGroup::dispatcher() {
   if(dispatcherptr == nullptr) {
-    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock(), *writeTracker());
+    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock(), *writeTracker(), *replicator());
   }
   return dispatcherptr;
 }
@@ -129,7 +133,7 @@ RaftState* RaftGroup::state() {
 
 RaftDirector* RaftGroup::director() {
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*dispatcher(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), *trimmer(), shardDirectory, *config());
+    directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), shardDirectory, *config(), *replicator());
   }
   return directorptr;
 }
@@ -164,7 +168,14 @@ RaftTrimmer* RaftGroup::trimmer() {
 
 RaftConfig* RaftGroup::config() {
   if(configptr == nullptr) {
-    configptr = new RaftConfig(*dispatcher(), *stateMachine());
+    configptr = new RaftConfig(*stateMachine());
   }
   return configptr;
+}
+
+RaftReplicator* RaftGroup::replicator() {
+  if(replicatorptr == nullptr) {
+    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), shardDirectory, *config(), timeouts);
+  }
+  return replicatorptr;
 }

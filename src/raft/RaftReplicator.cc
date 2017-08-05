@@ -39,15 +39,13 @@
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftStateSnapshot &snapshot_, RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
-: snapshot(snapshot_), journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t) {
+RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
+: journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t) {
 
 }
 
 RaftReplicator::~RaftReplicator() {
-  for(auto it = targets.begin(); it != targets.end(); it++) {
-    delete it->second;
-  }
+  deactivate();
 }
 
 RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshot &snapshot_, RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
@@ -220,6 +218,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
     // if there are more entries.
     nextIndex += payloadSize;
 
+    updateStatus(true, nextIndex);
     if(nextIndex >= journal.getLogSize()) {
       journal.waitForUpdates(nextIndex, timeouts.getHeartbeatInterval());
     }
@@ -231,6 +230,15 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
   // Again, no guarantees this is the actual, current logSize of the target,
   // but the parent will figure it out.
   return nextIndex;
+}
+
+void RaftReplicaTracker::updateStatus(bool online, LogIndex nextIndex) {
+  statusOnline = online;
+  statusNextIndex = nextIndex;
+}
+
+ReplicaStatus RaftReplicaTracker::getStatus() {
+  return { target, statusOnline, statusNextIndex };
 }
 
 void RaftReplicaTracker::main() {
@@ -343,6 +351,7 @@ void RaftReplicaTracker::main() {
     }
 
 nextRound:
+    updateStatus(online, nextIndex);
     if(!online || needResilvering) {
       state.wait(timeouts.getHeartbeatInterval());
     }
@@ -357,8 +366,43 @@ nextRound:
   running = false;
 }
 
+void RaftReplicator::activate(RaftStateSnapshot &snapshot_) {
+  std::lock_guard<std::mutex> lock(mtx);
+
+  qdb_assert(targets.empty());
+  snapshot = snapshot_;
+
+  qdb_event("Activating replicator for term " << snapshot.term);
+}
+
+void RaftReplicator::deactivate() {
+  std::lock_guard<std::mutex> lock(mtx);
+
+  for(auto it = targets.begin(); it != targets.end(); it++) {
+    delete it->second;
+  }
+  targets.clear();
+
+  snapshot = {};
+}
+
+ReplicationStatus RaftReplicator::getStatus() {
+  std::lock_guard<std::mutex> lock(mtx);
+
+  ReplicationStatus ret;
+  for(auto it = targets.begin(); it != targets.end(); it++) {
+    ret.replicas.emplace_back(it->second->getStatus());
+  }
+
+  return ret;
+}
+
 void RaftReplicator::setTargets(const std::vector<RaftServer> &newTargets) {
   std::lock_guard<std::mutex> lock(mtx);
+
+  // propagate change
+  commitTracker.updateTargets(newTargets);
+  lease.updateTargets(newTargets);
 
   // add targets?
   for(size_t i = 0; i < newTargets.size(); i++) {

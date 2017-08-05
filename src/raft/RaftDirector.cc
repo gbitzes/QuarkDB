@@ -28,8 +28,8 @@
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftDispatcher &disp, RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf)
-: dispatcher(disp), journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), trimmer(trim), shardDirectory(sharddir), config(conf) {
+RaftDirector::RaftDirector(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &conf, RaftReplicator &rep)
+: journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), shardDirectory(sharddir), config(conf), replicator(rep) {
   mainThread = std::thread(&RaftDirector::main, this);
 }
 
@@ -85,7 +85,8 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   RaftMembership membership = journal.getMembership();
   membership.epoch = -1;
 
-  RaftReplicator replicator(snapshot, journal, stateMachine, state, lease, commitTracker, trimmer, shardDirectory, config, raftClock.getTimeouts());
+  replicator.activate(snapshot);
+
   while(snapshot.term == state.getCurrentTerm() &&
         state.getSnapshot().status == RaftStatus::LEADER) {
 
@@ -103,8 +104,6 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
       }
 
       // now set them
-      commitTracker.updateTargets(targets);
-      lease.updateTargets(targets);
       replicator.setTargets(targets);
     }
 
@@ -113,11 +112,12 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
       qdb_event("My leader lease has expired, I no longer control a quorum, stepping down.");
       state.observed(snapshot.term+1, {});
       writeTracker.flushQueues("unavailable");
-      return;
+      break;
     }
 
     state.wait_until(deadline);
   }
+  replicator.deactivate();
 }
 
 void RaftDirector::runForLeader() {

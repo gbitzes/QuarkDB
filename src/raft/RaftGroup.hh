@@ -59,6 +59,7 @@ public:
   RaftWriteTracker *writeTracker();
   RaftTrimmer *trimmer();
   RaftConfig *config();
+  RaftReplicator *replicator();
 
   RaftServer myself();
 
@@ -84,6 +85,7 @@ private:
   RaftWriteTracker *wtptr = nullptr;
   RaftTrimmer *trimmerptr = nullptr;
   RaftConfig *configptr = nullptr;
+  RaftReplicator *replicatorptr = nullptr;
 };
 
 }

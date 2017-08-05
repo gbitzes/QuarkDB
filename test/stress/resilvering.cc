@@ -52,10 +52,10 @@ TEST_F(Trimming, configurable_trimming_limit) {
   // Set journal trim config to ridiculously low values.
   // This is to ensure the trimmer never tries to remove non-committed or non-applied entries.
   // With a sane trim limit in the millions, this would never happen anyway, but let's be paranoid.
-  Link link;
-  Connection dummy(&link);
   TrimmingConfig trimConfig { 2, 1 };
-  raftconfig(leaderID)->setTrimmingConfig(&dummy, trimConfig, true);
+  EncodedConfigChange configChange = raftconfig(leaderID)->setTrimmingConfig(trimConfig, true);
+  ASSERT_TRUE(configChange.error.empty());
+  ASSERT_REPLY(tunnel(leaderID)->execute(configChange.request), "OK");
 
   // some more updates...
   for(size_t i = NENTRIES; i < NENTRIES*2; i++) {
@@ -126,10 +126,10 @@ TEST_F(Resilvering, automatic) {
   int leaderID = getLeaderID();
 
   // Lower the journal trim limit, so as to trigger a resilvering.
-  Link link;
-  Connection dummy(&link);
   TrimmingConfig trimConfig { 1000, 1000 };
-  raftconfig(leaderID)->setTrimmingConfig(&dummy, trimConfig, true);
+  EncodedConfigChange configChange = raftconfig(leaderID)->setTrimmingConfig(trimConfig, true);
+  ASSERT_TRUE(configChange.error.empty());
+  ASSERT_REPLY(tunnel(leaderID)->execute(configChange.request), "OK");
 
   // push lots of updates
   const int64_t NENTRIES = 5000;

@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include "../Link.hh"
+#include "../RedisRequest.hh"
 
 namespace quarkdb {
 
@@ -39,18 +40,26 @@ struct TrimmingConfig {
   int64_t step;
 };
 
+struct EncodedConfigChange {
+  std::string error;
+  RedisRequest request;
+};
+
+// A configuration update must be propagated throughout the cluster.. this object
+// will simply validate if the parameters given look OK, and give you back the
+// request to run to make it happen.
+
 class RaftConfig {
 public:
-  RaftConfig(RaftDispatcher &dispatcher, StateMachine &sm);
+  RaftConfig(StateMachine &stateMachine);
 
   TrimmingConfig getTrimmingConfig();
-  LinkStatus setTrimmingConfig(Connection *conn, const TrimmingConfig &trimConfig, bool overrideSafety = false);
+  EncodedConfigChange setTrimmingConfig(const TrimmingConfig &trimConfig, bool overrideSafety = false);
 
   bool getResilveringEnabled();
-  LinkStatus setResilveringEnabled(Connection *conn, bool value);
+  EncodedConfigChange setResilveringEnabled(bool value);
 
 private:
-  RaftDispatcher &dispatcher;
   StateMachine &stateMachine;
 };
 

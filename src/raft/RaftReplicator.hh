@@ -43,11 +43,13 @@ class RaftCommitTracker; class RaftMatchIndexTracker; class RaftLastContact;
 //------------------------------------------------------------------------------
 // Tracks a single raft replica
 //------------------------------------------------------------------------------
+
 class RaftReplicaTracker {
 public:
   RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicaTracker();
 
+  ReplicaStatus getStatus();
   bool isRunning() { return running; }
 private:
   struct PendingResponse {
@@ -69,6 +71,15 @@ private:
 
   RaftServer target;
   RaftStateSnapshot snapshot;
+
+  void updateStatus(bool online, LogIndex nextIndex);
+
+  // Values to report when getStatus is called. Updated infrequently to avoid
+  // overhead of atomics.
+  std::atomic<bool> statusOnline {false};
+  std::atomic<LogIndex> statusNextIndex {-1};
+
+  ReplicaStatus currentStatus;
 
   RaftJournal &journal;
   StateMachine &stateMachine;
@@ -95,11 +106,16 @@ private:
 // A class that tracks multiple raft replicas over the duration of a single
 // term
 //------------------------------------------------------------------------------
+
 class RaftReplicator {
 public:
-  RaftReplicator(RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
+  RaftReplicator(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicator();
 
+  void activate(RaftStateSnapshot &snapshot);
+  void deactivate();
+
+  ReplicationStatus getStatus();
   void setTargets(const std::vector<RaftServer> &targets);
 private:
   RaftStateSnapshot snapshot;
