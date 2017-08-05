@@ -3,8 +3,8 @@
 [quarkdb](https://gitlab.cern.ch/eos/quarkdb) is a highly available key-value store that implements a small subset
 of the redis command set, developed by IT-ST at CERN.
 
-We build on top of [rocksdb](https://github.com/facebook/rocksdb), a strongly
-consistent, embeddable key-value store.
+We build on top of [rocksdb](https://github.com/facebook/rocksdb), an embeddable, transactional
+key-value store.
 
 High availability is achieved through multiple replicated nodes and the
 [raft](https://raft.github.io) distributed consensus algorithm.

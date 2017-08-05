@@ -368,7 +368,7 @@ nextRound:
 
 void RaftReplicator::activate(RaftStateSnapshot &snapshot_) {
   std::lock_guard<std::recursive_mutex> lock(mtx);
-  qdb_event("Activating replicator for term " << snapshot.term);
+  qdb_event("Activating replicator for term " << snapshot_.term);
 
   qdb_assert(targets.empty());
   snapshot = snapshot_;
