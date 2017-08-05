@@ -43,6 +43,11 @@ struct RaftStateSnapshot {
   RaftServer votedFor;
   LogIndex leadershipMarker;
 
+  RaftStateSnapshot() {}
+  RaftStateSnapshot(RaftTerm trm, RaftStatus st, const RaftServer &ld,
+    const RaftServer &vote, LogIndex marker) : term(trm), status(st), leader(ld),
+    votedFor(vote), leadershipMarker(marker) {}
+
   bool operator==(const RaftStateSnapshot& rhs) const {
     return term == rhs.term && status == rhs.status && leader == rhs.leader &&
            votedFor == rhs.votedFor && leadershipMarker == rhs.leadershipMarker;
