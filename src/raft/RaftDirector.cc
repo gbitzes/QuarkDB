@@ -60,52 +60,14 @@ void RaftDirector::main() {
   }
 }
 
-static std::vector<RaftServer> all_servers_except_myself(const std::vector<RaftServer> &nodes, const RaftServer &myself) {
-  std::vector<RaftServer> remaining;
-  size_t skipped = 0;
-
-  for(size_t i = 0; i < nodes.size(); i++) {
-    if(myself == nodes[i]) {
-      if(skipped != 0) qdb_throw("found myself in the nodes list twice");
-      skipped++;
-      continue;
-    }
-    remaining.push_back(nodes[i]);
-  }
-
-  if(skipped != 1) qdb_throw("unexpected value for 'skipped', got " << skipped << " instead of 1");
-  if(remaining.size() != nodes.size()-1) qdb_throw("unexpected size for remaining: " << remaining.size() << " instead of " << nodes.size()-1);
-  return remaining;
-}
-
 void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
   qdb_info("Starting replicator for term " << snapshot.term);
   if(snapshot.leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
-
-  RaftMembership membership = journal.getMembership();
-  membership.epoch = -1;
 
   replicator.activate(snapshot);
 
   while(snapshot.term == state.getCurrentTerm() &&
         state.getSnapshot().status == RaftStatus::LEADER) {
-
-    // new membership epoch?
-    if(membership.epoch != journal.getEpoch()) {
-      membership = journal.getMembership();
-      qdb_info("Reconfiguring replicator for membership epoch " << membership.epoch);
-
-      // Build list of targets
-      std::vector<RaftServer> targets = all_servers_except_myself(membership.nodes, state.getMyself());
-      // add observers
-      for(const RaftServer& srv : membership.observers) {
-        if(srv == state.getMyself()) qdb_throw("found myself in the list of observers, even though I'm leader: " << serializeNodes(membership.observers));
-        targets.push_back(srv);
-      }
-
-      // now set them
-      replicator.setTargets(targets);
-    }
 
     std::chrono::steady_clock::time_point deadline = lease.getDeadline();
     if(deadline < std::chrono::steady_clock::now()) {

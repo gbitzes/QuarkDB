@@ -367,16 +367,18 @@ nextRound:
 }
 
 void RaftReplicator::activate(RaftStateSnapshot &snapshot_) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::lock_guard<std::recursive_mutex> lock(mtx);
+  qdb_event("Activating replicator for term " << snapshot.term);
 
   qdb_assert(targets.empty());
   snapshot = snapshot_;
 
-  qdb_event("Activating replicator for term " << snapshot.term);
+  reconfigure();
 }
 
 void RaftReplicator::deactivate() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::lock_guard<std::recursive_mutex> lock(mtx);
+  qdb_event("De-activating replicator");
 
   for(auto it = targets.begin(); it != targets.end(); it++) {
     delete it->second;
@@ -387,7 +389,7 @@ void RaftReplicator::deactivate() {
 }
 
 ReplicationStatus RaftReplicator::getStatus() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::lock_guard<std::recursive_mutex> lock(mtx);
 
   ReplicationStatus ret;
   for(auto it = targets.begin(); it != targets.end(); it++) {
@@ -397,12 +399,48 @@ ReplicationStatus RaftReplicator::getStatus() {
   return ret;
 }
 
-void RaftReplicator::setTargets(const std::vector<RaftServer> &newTargets) {
-  std::lock_guard<std::mutex> lock(mtx);
+static std::vector<RaftServer> all_servers_except_myself(const std::vector<RaftServer> &nodes, const RaftServer &myself) {
+  std::vector<RaftServer> remaining;
+  size_t skipped = 0;
 
-  // propagate change
-  commitTracker.updateTargets(newTargets);
-  lease.updateTargets(newTargets);
+  for(size_t i = 0; i < nodes.size(); i++) {
+    if(myself == nodes[i]) {
+      if(skipped != 0) qdb_throw("found myself in the nodes list twice");
+      skipped++;
+      continue;
+    }
+    remaining.push_back(nodes[i]);
+  }
+
+  if(skipped != 1) qdb_throw("unexpected value for 'skipped', got " << skipped << " instead of 1");
+  if(remaining.size() != nodes.size()-1) qdb_throw("unexpected size for remaining: " << remaining.size() << " instead of " << nodes.size()-1);
+  return remaining;
+}
+
+void RaftReplicator::reconfigure() {
+  RaftMembership membership = journal.getMembership();
+  qdb_info("Reconfiguring replicator for membership epoch " << membership.epoch);
+
+  // Build list of targets
+  std::vector<RaftServer> full_nodes = all_servers_except_myself(membership.nodes, state.getMyself());
+  std::vector<RaftServer> targets = full_nodes;
+
+  // add observers
+  for(const RaftServer& srv : membership.observers) {
+    if(srv == state.getMyself()) qdb_throw("found myself in the list of observers, even though I'm leader: " << serializeNodes(membership.observers));
+    targets.push_back(srv);
+  }
+
+  // reconfigure lease and commit tracker - only take into account full nodes!
+  commitTracker.updateTargets(full_nodes);
+  lease.updateTargets(full_nodes);
+
+  // now set them
+  setTargets(targets);
+}
+
+void RaftReplicator::setTargets(const std::vector<RaftServer> &newTargets) {
+  std::lock_guard<std::recursive_mutex> lock(mtx);
 
   // add targets?
   for(size_t i = 0; i < newTargets.size(); i++) {

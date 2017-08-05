@@ -116,8 +116,10 @@ public:
   void deactivate();
 
   ReplicationStatus getStatus();
-  void setTargets(const std::vector<RaftServer> &targets);
+  void reconfigure();
 private:
+  void setTargets(const std::vector<RaftServer> &targets);
+
   RaftStateSnapshot snapshot;
   RaftJournal &journal;
   StateMachine &stateMachine;
@@ -130,7 +132,7 @@ private:
   const RaftTimeouts timeouts;
 
   std::map<RaftServer, RaftReplicaTracker*> targets;
-  std::mutex mtx;
+  std::recursive_mutex mtx;
 
 };
 

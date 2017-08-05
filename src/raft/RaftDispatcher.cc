@@ -150,6 +150,9 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       }
 
       if(!rc) return conn->err(err);
+
+      // All clear, propagate the update
+      replicator.reconfigure();
       return conn->ok();
     }
     default: {
