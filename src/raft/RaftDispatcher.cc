@@ -131,7 +131,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
       RaftStateSnapshot snapshot = state.getSnapshot();
       if(snapshot.status != RaftStatus::LEADER) return conn->err("not a leader");
-      if(srv == state.getMyself()) conn->err("cannot perform membership changes on current leader");
+      if(srv == state.getMyself()) return conn->err("cannot perform membership changes on current leader");
 
       std::string err;
       bool rc;
@@ -140,9 +140,26 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         rc = journal.addObserver(snapshot.term, srv, err);
       }
       else if(req.getCommand() == RedisCommand::RAFT_REMOVE_MEMBER) {
+        // Build a replication status object with how the full members would
+        // look like after the update
+        ReplicationStatus replicationStatus = replicator.getStatus();
+        replicationStatus.removeReplicas(journal.getMembership().observers);
+
+        ReplicaStatus leaderStatus = { state.getMyself(), true, journal.getLogSize() };
+        replicationStatus.addReplica(leaderStatus);
+        replicationStatus.removeReplica(srv);
+
+        if(!replicationStatus.quorumUpToDate(leaderStatus.nextIndex)) {
+          return conn->err("membership update blocked, new cluster would not have an up-to-date quorum");
+        }
         rc = journal.removeMember(snapshot.term, srv, err);
       }
       else if(req.getCommand() == RedisCommand::RAFT_PROMOTE_OBSERVER) {
+        ReplicationStatus replicationStatus = replicator.getStatus();
+        if(!replicationStatus.getReplicaStatus(srv).upToDate(journal.getLogSize())) {
+          return conn->err("membership update blocked, observer is not up-to-date");
+        }
+
         rc = journal.promoteObserver(snapshot.term, srv, err);
       }
       else {

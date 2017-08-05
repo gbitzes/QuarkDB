@@ -26,6 +26,7 @@
 #include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
+#include "raft/RaftReplicator.hh"
 #include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
@@ -38,6 +39,7 @@
 
 using namespace quarkdb;
 class Replication : public TestCluster3NodesFixture {};
+class Membership : public TestCluster5NodesFixture {};
 
 TEST_F(Replication, entries_50k_with_follower_loss) {
   // let's get this party started
@@ -258,4 +260,46 @@ TEST_F(Replication, linearizability_during_failover) {
 
   qdb_info("After " << responses << " reads, linearizability was violated " << violations << " times.");
   ASSERT_EQ(violations, 0);
+}
+
+TEST_F(Membership, prevent_promotion_of_outdated_observer) {
+  // Only start nodes 0, 1, 2 of a 5-node cluster
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  // Remove #4 and #5
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(3).toString()), "OK");
+  RETRY_ASSERT_TRUE(journal(leaderID)->getEpoch() <= journal(leaderID)->getCommitIndex());
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(4).toString()), "OK");
+  RETRY_ASSERT_TRUE(journal(leaderID)->getEpoch() <= journal(leaderID)->getCommitIndex());
+
+  // turn off one of the active nodes - now only 2 out of 3 are active
+  int victim = (leaderID + 1) % 3;
+  spindown(victim);
+
+  // push lots of updates
+  std::vector<std::future<redisReplyPtr>> futures;
+  const int64_t NENTRIES = 50000;
+  for(size_t i = 0; i < NENTRIES; i++) {
+    futures.emplace_back(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)));
+  }
+
+  for(size_t i = 0; i < futures.size(); i++) {
+    ASSERT_REPLY(futures[i], "OK");
+  }
+
+  // add back #3 as observer, try to promote them right away, ensure it gets
+  // blocked.
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_ADD_OBSERVER", myself(4).toString()), "OK");
+  RETRY_ASSERT_TRUE(journal(leaderID)->getEpoch() <= journal(leaderID)->getCommitIndex());
+
+  // let #4 be brought up to date, then add it as observer
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(4).toString()), "ERR membership update blocked, observer is not up-to-date");
+  spinup(4);
+
+  RETRY_ASSERT_TRUE(journal(4)->getCommitIndex() == journal(leaderID)->getCommitIndex());
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(4).toString()), "OK");
 }

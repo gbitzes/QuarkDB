@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_PARSER_H__
-#define __QUARKDB_RAFT_PARSER_H__
+#ifndef __QUARKDB_RAFT_UTILS_H__
+#define __QUARKDB_RAFT_UTILS_H__
 
 #include <qclient/QClient.hh>
 #include "RaftCommon.hh"
@@ -35,11 +35,6 @@ namespace quarkdb {
 // Forward declarations
 //------------------------------------------------------------------------------
 class RaftState; class RaftLease;
-
-
-inline size_t calculateQuorumSize(size_t members) {
-  return (members / 2) + 1;
-}
 
 class RaftParser {
 public:

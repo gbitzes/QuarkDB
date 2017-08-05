@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include <gtest/gtest.h>
+#include "raft/RaftCommon.hh"
 #include "utils/FileUtils.hh"
 #include "utils/Resilvering.hh"
 #include "Utils.hh"
@@ -97,4 +98,33 @@ TEST(Utils, resilvering_history_parsing) {
   ASSERT_TRUE(history3 == history4);
   ASSERT_FALSE(history == history3);
   ASSERT_FALSE(history3 == history);
+}
+
+TEST(Utils, replication_status) {
+  ReplicationStatus status;
+  ReplicaStatus replica { RaftServer("localhost", 123), true, 10000 };
+
+  status.addReplica(replica);
+  ASSERT_THROW(status.addReplica(replica), FatalException);
+
+  replica.target = RaftServer("localhost", 456);
+  replica.nextIndex = 20000;
+  status.addReplica(replica);
+
+  replica.target = RaftServer("localhost", 567);
+  replica.online = false;
+  status.addReplica(replica);
+
+  ASSERT_EQ(status.replicasOnline(), 2u);
+  ASSERT_EQ(status.replicasUpToDate(30000), 2u);
+  ASSERT_EQ(status.replicasUpToDate(40001), 1u);
+  ASSERT_EQ(status.replicasUpToDate(50001), 0u);
+
+  ASSERT_THROW(status.removeReplica(RaftServer("localhost", 789)), FatalException);
+  status.removeReplica(RaftServer("localhost", 456));
+  ASSERT_EQ(status.replicasOnline(), 1u);
+  ASSERT_EQ(status.replicasUpToDate(30000), 1u);
+
+  ASSERT_EQ(status.getReplicaStatus(RaftServer("localhost", 123)).target, RaftServer("localhost", 123));
+  ASSERT_THROW(status.getReplicaStatus(RaftServer("localhost", 456)).target, FatalException);
 }

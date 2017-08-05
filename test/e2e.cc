@@ -508,6 +508,17 @@ TEST_F(Raft_e2e, membership_updates) {
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 }
 
+TEST_F(Raft_e2e, reject_dangerous_membership_update) {
+  spinup(0); spinup(1);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  int leaderID = getLeaderID();
+
+  // make sure dangerous node removal is prevented
+  int victim = (leaderID+1) % 2;
+  redisReplyPtr reply = tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(victim).toString()).get();
+  ASSERT_ERR(reply, "ERR membership update blocked, new cluster would not have an up-to-date quorum");
+}
+
 TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   // let's get this party started
   spinup(0); spinup(1); spinup(2); spinup(3);

@@ -174,27 +174,87 @@ struct RaftVoteResponse {
 
 };
 
+inline size_t calculateQuorumSize(size_t members) {
+  return (members / 2) + 1;
+}
+
 struct ReplicaStatus {
   RaftServer target;
   bool online;
   LogIndex nextIndex;
 
-  std::string toString() {
-    std::stringstream ss;
-    ss << target.toString() << " is ";
-    if(online) {
-      ss << "ONLINE - index: " << nextIndex;
-    }
-    else {
-      ss << "OFFLINE";
-    }
-
-    return ss.str();
+  bool upToDate(LogIndex leaderLogSize) {
+    return online && (leaderLogSize - nextIndex < 30000);
   }
 };
 
 struct ReplicationStatus {
   std::vector<ReplicaStatus> replicas;
+
+  size_t replicasOnline() {
+    size_t ret = 0;
+
+    for(size_t i = 0; i < replicas.size(); i++) {
+      if(replicas[i].online) {
+        ret++;
+      }
+    }
+
+    return ret;
+  }
+
+  size_t replicasUpToDate(LogIndex leaderLogSize) {
+    size_t ret = 0;
+
+    for(size_t i = 0; i < replicas.size(); i++) {
+      if(replicas[i].upToDate(leaderLogSize)) {
+        ret++;
+      }
+    }
+
+    return ret;
+  }
+
+  bool quorumUpToDate(LogIndex leaderLogSize) {
+    if(replicas.size() == 1) return false;
+    return calculateQuorumSize(replicas.size()) <= replicasUpToDate(leaderLogSize);
+  }
+
+  ReplicaStatus getReplicaStatus(const RaftServer &replica) {
+    for(size_t i = 0; i < replicas.size(); i++) {
+      if(replicas[i].target == replica) {
+        return replicas[i];
+      }
+    }
+
+    qdb_throw("Replica " << " replica.target.toString() " << " not found");
+  }
+
+  void removeReplica(const RaftServer &replica) {
+    for(size_t i = 0; i < replicas.size(); i++) {
+      if(replicas[i].target == replica) {
+        replicas.erase(replicas.begin()+i);
+        return;
+      }
+    }
+
+    qdb_throw("Replica " << " replica.target.toString() " << " not found");
+  }
+
+  void removeReplicas(const std::vector<RaftServer> &replicas) {
+    for(size_t i = 0; i < replicas.size(); i++) {
+      removeReplica(replicas[i]);
+    }
+  }
+
+  void addReplica(const ReplicaStatus &replica) {
+    for(size_t i = 0; i < replicas.size(); i++) {
+      if(replicas[i].target == replica.target) {
+        qdb_throw("Targer " << replica.target.toString() << " already exists in the list");
+      }
+    }
+    replicas.push_back(replica);
+  }
 };
 
 struct RaftInfo {
@@ -242,7 +302,7 @@ struct RaftInfo {
       ss << "REPLICA " << it->target.toString() << " ";
       if(it->online) {
         ss << "ONLINE | ";
-        if(logSize - it->nextIndex > 30000) {
+        if(it->upToDate(logSize)) {
           ss << "LAGGING    | ";
         }
         else {

@@ -393,7 +393,7 @@ ReplicationStatus RaftReplicator::getStatus() {
 
   ReplicationStatus ret;
   for(auto it = targets.begin(); it != targets.end(); it++) {
-    ret.replicas.emplace_back(it->second->getStatus());
+    ret.addReplica(it->second->getStatus());
   }
 
   return ret;

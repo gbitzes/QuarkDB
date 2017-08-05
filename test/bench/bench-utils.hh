@@ -43,6 +43,12 @@ public:
     endTime = std::chrono::high_resolution_clock::now();
   }
 
+  float spotRate(size_t eventsThusFar) {
+    std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+    return (float) eventsThusFar / ((float) duration / (float) 1000);
+  }
+
   // returns rate in Hz
   float rate() {
     auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
