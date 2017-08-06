@@ -35,21 +35,6 @@ std::string pathJoin(const std::string &part1, const std::string &part2) {
   return part1 + "/" + part2;
 }
 
-std::string pathJoin(const std::string &part1, const std::string &part2, const std::string &part3) {
-  return pathJoin(part1, pathJoin(part2, part3));
-}
-
-std::string chopPath(const std::string &path) {
-  std::vector<std::string> parts = split(path, "/");
-  std::stringstream ss;
-
-  for(size_t i = 1; i < parts.size()-1; i++) {
-    ss << "/" << parts[i];
-  }
-
-  return ss.str();
-}
-
 bool mkpath(const std::string &path, mode_t mode, std::string &err) {
   size_t pos = path.find("/");
 

@@ -59,7 +59,7 @@ Issue `raft_remove_member server_hostname:server_port` towards the current leade
 Works both on full members, as well as observers.
 
 It's not possible to remove a node which is currently a leader. To do that, stop
-the node, wait until the new leader emerges, and issue `raft_remove_node` towards
+the node, wait until the new leader emerges, and issue `raft_remove_member` towards
 it.
 
 A membership update is represented internally as a special kind of log entry.
