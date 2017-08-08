@@ -65,7 +65,11 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log)
   options.create_if_missing = !dirExists;
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
-  rocksdb::Status status = rocksdb::TransactionDB::Open(options, rocksdb::TransactionDBOptions(), filename, &transactionDB);
+  rocksdb::TransactionDBOptions txopts;
+  txopts.transaction_lock_timeout = -1;
+  txopts.default_lock_timeout = -1;
+
+  rocksdb::Status status = rocksdb::TransactionDB::Open(options, txopts, filename, &transactionDB);
   if(!status.ok()) qdb_throw("Cannot open " << quotes(filename) << ":" << status.ToString());
 
   db = transactionDB->GetBaseDB();
