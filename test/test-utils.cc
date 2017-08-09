@@ -181,13 +181,15 @@ void TestCluster::killTunnel(int id) {
 }
 
 TestNode* TestCluster::node(int id, const RaftServer &srv) {
-  TestNode *ret = testnodes[id];
-  if(ret == nullptr) {
-    RaftServer newserver = srv;
-    if(newserver.empty()) newserver = initialNodes[id];
-    ret = new TestNode(newserver, clusterID(), initialNodes);
-    testnodes[id] = ret;
+  auto it = testnodes.find(id);
+  if(it != testnodes.end()) {
+    return it->second;
   }
+
+  RaftServer newserver = srv;
+  if(newserver.empty()) newserver = initialNodes[id];
+  TestNode *ret = new TestNode(newserver, clusterID(), initialNodes);
+  testnodes[id] = ret;
   return ret;
 }
 
