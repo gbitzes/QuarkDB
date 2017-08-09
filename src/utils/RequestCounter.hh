@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: RequestCounter.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,43 +21,34 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_SHARD_H__
-#define __QUARKDB_SHARD_H__
+#ifndef __QUARKDB_REQUEST_COUNTER_H__
+#define __QUARKDB_REQUEST_COUNTER_H__
 
-#include "raft/RaftTimeouts.hh"
-#include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "utils/InFlightTracker.hh"
-#include "utils/RequestCounter.hh"
+#include <atomic>
+#include "../Utils.hh"
+#include "AssistedThread.hh"
 
 namespace quarkdb {
 
-class RaftGroup; class ShardDirectory;
-class Shard : public Dispatcher {
+class RedisRequest;
+
+//------------------------------------------------------------------------------
+// Count what types of requests we've been servicing, and reports statistics
+// every few seconds.
+//------------------------------------------------------------------------------
+
+class RequestCounter {
 public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
-  ~Shard();
+  RequestCounter(std::chrono::seconds interval);
 
-  RaftGroup* getRaftGroup();
-  void spinup();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  void account(const RedisRequest &req);
+  void mainThread(ThreadAssistant &assistant);
 private:
-  void detach();
-  void attach();
-  void start();
+  std::chrono::seconds interval;
+  AssistedThread thread;
 
-  ShardDirectory *shardDirectory;
-
-  RaftGroup *raftGroup = nullptr;
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-
-  InFlightTracker inFlightTracker;
-  RequestCounter requestCounter;
+  std::atomic<int64_t> reads {0};
+  std::atomic<int64_t> writes {0};
 };
 
 }

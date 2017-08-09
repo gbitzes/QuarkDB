@@ -27,11 +27,13 @@
 #include "raft/RaftGroup.hh"
 #include "raft/RaftDispatcher.hh"
 #include "utils/ScopedAdder.hh"
+#include "utils/RequestCounter.hh"
 
 using namespace quarkdb;
 
 Shard::Shard(ShardDirectory *shardDir, const RaftServer &me, Mode m, const RaftTimeouts &t)
-: shardDirectory(shardDir), myself(me), mode(m), timeouts(t), inFlightTracker(false) {
+: shardDirectory(shardDir), myself(me), mode(m), timeouts(t), inFlightTracker(false),
+  requestCounter(std::chrono::seconds(10)) {
   attach();
 }
 
@@ -148,6 +150,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err("unavailable");
       }
 
+      requestCounter.account(req);
       return dispatcher->dispatch(conn, req);
     }
   }

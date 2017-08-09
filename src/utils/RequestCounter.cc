@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: RequestCounter.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,45 +21,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_SHARD_H__
-#define __QUARKDB_SHARD_H__
+#include "../Utils.hh"
+#include "RequestCounter.hh"
+#include "../Commands.hh"
+using namespace quarkdb;
 
-#include "raft/RaftTimeouts.hh"
-#include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "utils/InFlightTracker.hh"
-#include "utils/RequestCounter.hh"
+RequestCounter::RequestCounter(std::chrono::seconds intv)
+  : interval(intv), thread(&RequestCounter::mainThread, this) { }
 
-namespace quarkdb {
-
-class RaftGroup; class ShardDirectory;
-class Shard : public Dispatcher {
-public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
-  ~Shard();
-
-  RaftGroup* getRaftGroup();
-  void spinup();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-private:
-  void detach();
-  void attach();
-  void start();
-
-  ShardDirectory *shardDirectory;
-
-  RaftGroup *raftGroup = nullptr;
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-
-  InFlightTracker inFlightTracker;
-  RequestCounter requestCounter;
-};
-
+void RequestCounter::account(const RedisRequest &req) {
+  if(req.getCommandType() == CommandType::READ) {
+    reads++;
+  }
+  else if(req.getCommandType() == CommandType::WRITE) {
+    writes++;
+  }
 }
 
-#endif
+void RequestCounter::mainThread(ThreadAssistant &assistant) {
+  while(!assistant.terminationRequested()) {
+
+    int64_t localReads = reads.exchange(0);
+    int64_t localWrites = writes.exchange(0);
+
+    if(localReads != 0 || localWrites != 0) {
+      qdb_info("Over the last " << interval.count() << " seconds, I serviced reads at a rate of " << localReads / interval.count() << " Hz, and writes at " << localWrites / interval.count() << " Hz");
+    }
+
+    assistant.wait_for(interval);
+  }
+}
