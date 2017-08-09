@@ -303,10 +303,10 @@ struct RaftInfo {
       if(it->online) {
         ss << "ONLINE | ";
         if(it->upToDate(logSize)) {
-          ss << "LAGGING    | ";
+          ss << "UP-TO-DATE | ";
         }
         else {
-          ss << "UP-TO-DATE | ";
+          ss << "LAGGING    | ";
         }
 
         ss << "NEXT-INDEX " << it->nextIndex;
