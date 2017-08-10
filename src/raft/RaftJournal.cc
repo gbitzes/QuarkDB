@@ -27,6 +27,7 @@
 #include "../Common.hh"
 #include "../Utils.hh"
 #include "../utils/IntToBinaryString.hh"
+#include "../utils/StaticBuffer.hh"
 #include "RaftState.hh"
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>
@@ -39,8 +40,17 @@ using namespace quarkdb;
 // Helper functions
 //------------------------------------------------------------------------------
 
+constexpr size_t kEntryKeySize = 1 + sizeof(LogIndex);
+using KeyBuffer = StaticBuffer<kEntryKeySize>;
+
 static std::string encodeEntryKey(LogIndex index) {
-  return SSTR("ENTRY_" << intToBinaryString(index));
+  return SSTR("E" << intToBinaryString(index));
+}
+
+QDB_ALWAYS_INLINE
+inline void encodeEntryKey(LogIndex index, KeyBuffer &key) {
+  key.data()[0] = 'E';
+  intToBinaryString(index, key.data()+1);
 }
 
 //------------------------------------------------------------------------------
@@ -296,7 +306,10 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
     }
   }
 
-  THROW_ON_ERROR(tx->Put(encodeEntryKey(index), entry.serialize()));
+  KeyBuffer keyBuffer;
+  encodeEntryKey(index, keyBuffer);
+  THROW_ON_ERROR(tx->Put(keyBuffer.toSlice(), entry.serialize()));
+
   commitTransaction(tx, index+1);
 
   termOfLastEntry = entry.term;
