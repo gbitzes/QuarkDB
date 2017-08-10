@@ -150,8 +150,9 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err("unavailable");
       }
 
+      LinkStatus ret = dispatcher->dispatch(conn, req);
       requestCounter.account(req);
-      return dispatcher->dispatch(conn, req);
+      return ret;
     }
   }
 }

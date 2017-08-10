@@ -44,11 +44,13 @@ public:
   void account(const RedisRequest &req);
   void mainThread(ThreadAssistant &assistant);
 private:
+  std::atomic<int64_t> reads {0};
+  std::atomic<int64_t> writes {0};
+  bool paused = true;
+
   std::chrono::seconds interval;
   AssistedThread thread;
 
-  std::atomic<int64_t> reads {0};
-  std::atomic<int64_t> writes {0};
 };
 
 }
