@@ -65,16 +65,6 @@ extern std::mutex logMutex;
 #define qdb_throw(message) throw FatalException(SSTR(message))
 #define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition))
 
-// store/retrieve int64 inside a *big endian* binary string
-int64_t binaryStringToInt(const char* buff);
-void intToBinaryString(int64_t num, char* buff);
-std::string intToBinaryString(int64_t num);
-
-// store/retrieve uint64 inside a *big endian* binary string
-uint64_t binaryStringToUnsignedInt(const char* buff);
-void unsignedIntToBinaryString(uint64_t num, char* buff);
-std::string unsignedIntToBinaryString(uint64_t num);
-
 bool my_strtoll(const std::string &str, int64_t &ret);
 bool my_strtod(const std::string &str, double &ret);
 std::vector<std::string> split(std::string data, std::string token);

@@ -23,6 +23,7 @@
 
 #include "StateMachine.hh"
 #include "Utils.hh"
+#include "utils/IntToBinaryString.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>

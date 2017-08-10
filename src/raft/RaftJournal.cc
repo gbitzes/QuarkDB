@@ -26,6 +26,7 @@
 #include "RaftMembers.hh"
 #include "../Common.hh"
 #include "../Utils.hh"
+#include "../utils/IntToBinaryString.hh"
 #include "RaftState.hh"
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>

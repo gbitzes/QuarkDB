@@ -25,6 +25,7 @@
 #include "RaftDispatcher.hh"
 #include "../Connection.hh"
 #include "../StateMachine.hh"
+#include "../utils/IntToBinaryString.hh"
 
 using namespace quarkdb;
 

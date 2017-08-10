@@ -52,6 +52,7 @@ add_library(XrdQuarkDB SHARED
                              utils/AssistedThread.hh
   utils/DirectoryIterator.cc utils/DirectoryIterator.hh
   utils/FileUtils.cc         utils/FileUtils.hh
+                             utils/IntToBinaryString.hh
   utils/RequestCounter.cc    utils/RequestCounter.hh
   utils/Resilvering.cc       utils/Resilvering.hh
                              utils/ScopedAdder.hh

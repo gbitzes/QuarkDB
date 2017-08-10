@@ -22,7 +22,6 @@
  ************************************************************************/
 
 #include <climits>
-#include <endian.h>
 #include "Utils.hh"
 #include <memory.h>
 #include <math.h>
@@ -56,41 +55,6 @@ bool my_strtod(const std::string &str, double &ret) {
     return false;
   }
   return true;
-}
-
-
-int64_t binaryStringToInt(const char* buff) {
-  int64_t result;
-  memcpy(&result, buff, sizeof(result));
-  return be64toh(result);
-}
-
-void intToBinaryString(int64_t num, char* buff) {
-  int64_t be = htobe64(num);
-  memcpy(buff, &be, sizeof(be));
-}
-
-std::string intToBinaryString(int64_t num) {
-  char buff[sizeof(num)];
-  intToBinaryString(num, buff);
-  return std::string(buff, sizeof(num));
-}
-
-uint64_t binaryStringToUnsignedInt(const char* buff) {
-  uint64_t result;
-  memcpy(&result, buff, sizeof(result));
-  return be64toh(result);
-}
-
-void unsignedIntToBinaryString(uint64_t num, char* buff) {
-  uint64_t be = htobe64(num);
-  memcpy(buff, &be, sizeof(be));
-}
-
-std::string unsignedIntToBinaryString(uint64_t num) {
-  char buff[sizeof(num)];
-  unsignedIntToBinaryString(num, buff);
-  return std::string(buff, sizeof(num));
 }
 
 std::vector<std::string> split(std::string data, std::string token) {

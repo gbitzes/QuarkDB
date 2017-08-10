@@ -23,6 +23,7 @@
 
 #include <gtest/gtest.h>
 #include "raft/RaftCommon.hh"
+#include "utils/IntToBinaryString.hh"
 #include "utils/FileUtils.hh"
 #include "utils/Resilvering.hh"
 #include "Utils.hh"
