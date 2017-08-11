@@ -25,8 +25,6 @@
 #define __QUARKDB_RAFT_JOURNAL_H__
 
 #include <rocksdb/db.h>
-#include <rocksdb/utilities/transaction_db.h>
-#include <rocksdb/utilities/transaction.h>
 
 #include <mutex>
 #include <condition_variable>
@@ -91,12 +89,10 @@ public:
 private:
   void openDB(const std::string &path);
 
-  rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;
   std::string dbPath;
 
   using IteratorPtr = std::unique_ptr<rocksdb::Iterator>;
-  using TransactionPtr = std::unique_ptr<rocksdb::Transaction>;
 
   //----------------------------------------------------------------------------
   // Cached values, always backed to stable storage
@@ -122,11 +118,10 @@ private:
   std::condition_variable logUpdated;
 
   //----------------------------------------------------------------------------
-  // Utility functions for transactions
+  // Utility functions for write batches
   //----------------------------------------------------------------------------
 
-  TransactionPtr startTransaction();
-  void commitTransaction(TransactionPtr &tx, LogIndex index = -1);
+  void commitBatch(rocksdb::WriteBatch &batch, LogIndex index = -1);
 
   //----------------------------------------------------------------------------
   // Transient values, can always be inferred from stable storage

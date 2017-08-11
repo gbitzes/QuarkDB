@@ -112,10 +112,8 @@ void RaftJournal::openDB(const std::string &path) {
 
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
   options.create_if_missing = true;
-  rocksdb::Status status = rocksdb::TransactionDB::Open(options, rocksdb::TransactionDBOptions(), path, &transactionDB);
+  rocksdb::Status status = rocksdb::DB::Open(options, path, &db);
   if(!status.ok()) qdb_throw("Error while opening journal in " << path << ":" << status.ToString());
-
-  db = transactionDB->GetBaseDB();
 }
 
 RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
@@ -126,9 +124,8 @@ RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, c
 RaftJournal::~RaftJournal() {
   qdb_info("Closing raft journal " << quotes(dbPath));
 
-  if(transactionDB) {
-    delete transactionDB;
-    transactionDB = nullptr;
+  if(db) {
+    delete db;
     db = nullptr;
   }
 }
@@ -161,10 +158,10 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   // Atomically update currentTerm and votedFor
   //----------------------------------------------------------------------------
 
-  TransactionPtr tx(startTransaction());
-  THROW_ON_ERROR(tx->Put("RAFT_CURRENT_TERM", intToBinaryString(term)));
-  THROW_ON_ERROR(tx->Put("RAFT_VOTED_FOR", vote.toString()));
-  commitTransaction(tx);
+  rocksdb::WriteBatch batch;
+  THROW_ON_ERROR(batch.Put("RAFT_CURRENT_TERM", intToBinaryString(term)));
+  THROW_ON_ERROR(batch.Put("RAFT_VOTED_FOR", vote.toString()));
+  commitBatch(batch);
 
   currentTerm = term;
   votedFor = vote;
@@ -198,20 +195,16 @@ bool RaftJournal::waitForCommits(const LogIndex currentCommit) {
   return true;
 }
 
-RaftJournal::TransactionPtr RaftJournal::startTransaction() {
-  return TransactionPtr(transactionDB->BeginTransaction(rocksdb::WriteOptions()));
-}
-
-void RaftJournal::commitTransaction(TransactionPtr &tx, LogIndex index) {
+void RaftJournal::commitBatch(rocksdb::WriteBatch &batch, LogIndex index) {
   if(index >= 0 && index <= commitIndex) {
     qdb_throw("Attempted to remove committed entries by setting logSize to " << index << " while commitIndex = " << commitIndex);
   }
 
   if(index >= 0 && index != logSize) {
-    THROW_ON_ERROR(tx->Put("RAFT_LOG_SIZE", intToBinaryString(index)));
+    THROW_ON_ERROR(batch.Put("RAFT_LOG_SIZE", intToBinaryString(index)));
   }
 
-  rocksdb::Status st = tx->Commit();
+  rocksdb::Status st = db->Write(rocksdb::WriteOptions(), &batch);
   if(!st.ok()) qdb_throw("unable to commit journal transaction: " << st.ToString());
   if(index >= 0) logSize = index;
 }
@@ -272,7 +265,7 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
     return false;
   }
 
-  TransactionPtr tx(startTransaction());
+  rocksdb::WriteBatch batch;
 
   if(entry.request[0] == "JOURNAL_UPDATE_MEMBERS") {
     if(entry.request.size() != 3) qdb_throw("Journal corruption, invalid journal_update_members: " << entry.request);
@@ -286,11 +279,11 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
     //--------------------------------------------------------------------------
 
     if(entry.request[2] == clusterID) {
-      THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", entry.request[1]));
-      THROW_ON_ERROR(tx->Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(index)));
+      THROW_ON_ERROR(batch.Put("RAFT_MEMBERS", entry.request[1]));
+      THROW_ON_ERROR(batch.Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(index)));
 
-      THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERS", members.toString()));
-      THROW_ON_ERROR(tx->Put("RAFT_PREVIOUS_MEMBERSHIP_EPOCH", intToBinaryString(membershipEpoch)));
+      THROW_ON_ERROR(batch.Put("RAFT_PREVIOUS_MEMBERS", members.toString()));
+      THROW_ON_ERROR(batch.Put("RAFT_PREVIOUS_MEMBERSHIP_EPOCH", intToBinaryString(membershipEpoch)));
 
       qdb_event("Transitioning into a new membership epoch: " << membershipEpoch << " => " << index
       << ". Old members: " << members.toString() << ", new members: " << entry.request[1]);
@@ -308,9 +301,9 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
 
   KeyBuffer keyBuffer;
   encodeEntryKey(index, keyBuffer);
-  THROW_ON_ERROR(tx->Put(keyBuffer.toSlice(), entry.serialize()));
+  THROW_ON_ERROR(batch.Put(keyBuffer.toSlice(), entry.serialize()));
 
-  commitTransaction(tx, index+1);
+  commitBatch(batch, index+1);
 
   termOfLastEntry = entry.term;
   logUpdated.notify_all();
@@ -335,15 +328,14 @@ void RaftJournal::trimUntil(LogIndex newLogStart) {
   if(commitIndex < newLogStart) qdb_throw("attempted to trim non-committed entries. commitIndex: " << commitIndex << ", new log start: " << newLogStart);
 
   qdb_info("Trimming raft journal from #" << logStart << " until #" << newLogStart);
-  TransactionPtr tx(startTransaction());
+  rocksdb::WriteBatch batch;
 
   for(LogIndex i = logStart; i < newLogStart; i++) {
-    rocksdb::Status st = tx->Delete(encodeEntryKey(i));
-    if(!st.ok()) qdb_throw("Error when trimming journal, cannot delete entry " << i << ": " << st.ToString());
+    THROW_ON_ERROR(batch.Delete(encodeEntryKey(i)));
   }
 
-  THROW_ON_ERROR(tx->Put("RAFT_LOG_START", intToBinaryString(newLogStart)));
-  commitTransaction(tx);
+  THROW_ON_ERROR(batch.Put("RAFT_LOG_START", intToBinaryString(newLogStart)));
+  commitBatch(batch);
   logStart = newLogStart;
 }
 
@@ -377,10 +369,9 @@ bool RaftJournal::removeEntries(LogIndex from) {
   if(from <= commitIndex) qdb_throw("attempted to remove committed entries. commitIndex: " << commitIndex << ", from: " << from);
   qdb_warn("Removing inconsistent log entries: [" << from << "," << logSize-1 << "]");
 
-  TransactionPtr tx(startTransaction());
+  rocksdb::WriteBatch batch;
   for(LogIndex i = from; i < logSize; i++) {
-    rocksdb::Status st = tx->Delete(encodeEntryKey(i));
-    if(!st.ok()) qdb_critical("Error when deleting entry " << i << ": " << st.ToString());
+    THROW_ON_ERROR(batch.Delete(encodeEntryKey(i)));
   }
 
   //----------------------------------------------------------------------------
@@ -397,8 +388,8 @@ bool RaftJournal::removeEntries(LogIndex from) {
     LogIndex previousMembershipEpoch = this->get_int_or_die("RAFT_PREVIOUS_MEMBERSHIP_EPOCH");
     std::string previousMembers = this->get_or_die("RAFT_PREVIOUS_MEMBERS");
 
-    THROW_ON_ERROR(tx->Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(previousMembershipEpoch)));
-    THROW_ON_ERROR(tx->Put("RAFT_MEMBERS", previousMembers));
+    THROW_ON_ERROR(batch.Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(previousMembershipEpoch)));
+    THROW_ON_ERROR(batch.Put("RAFT_MEMBERS", previousMembers));
 
     qdb_critical("Rolling back an uncommitted membership epoch. Transitioning from " <<
     membershipEpoch << " => " << previousMembershipEpoch << ". Old members: " << members.toString() <<
@@ -408,7 +399,7 @@ bool RaftJournal::removeEntries(LogIndex from) {
     membershipEpoch = previousMembershipEpoch;
   }
 
-  commitTransaction(tx, from);
+  commitBatch(batch, from);
   fetch_or_die(from-1, termOfLastEntry);
   return true;
 }
