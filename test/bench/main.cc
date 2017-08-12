@@ -27,8 +27,8 @@ using namespace quarkdb;
 
 int main(int argc, char **argv) {
   printf("Running main() from bench/main.cc\n");
-  testconfig.setDefaultTimeout(defaultTimeouts);
-  testconfig.setDatabaseReuse(false);
+  testconfig.raftTimeouts.setStatic(defaultTimeouts);
+  testconfig.databaseReuse.setStatic(false);
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

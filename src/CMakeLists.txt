@@ -53,9 +53,13 @@ add_library(XrdQuarkDB SHARED
   utils/DirectoryIterator.cc utils/DirectoryIterator.hh
   utils/FileUtils.cc         utils/FileUtils.hh
                              utils/IntToBinaryString.hh
+                             utils/ParseUtils.hh
   utils/RequestCounter.cc    utils/RequestCounter.hh
   utils/Resilvering.cc       utils/Resilvering.hh
                              utils/ScopedAdder.hh
+                             utils/StaticBuffer.hh
+                             utils/Uuid.hh
+                             utils/VectorUtils.hh
 
   ${BACKWARD_ENABLE}
 )

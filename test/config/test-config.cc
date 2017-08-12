@@ -23,6 +23,7 @@
 
 #include <climits>
 #include "test-config.hh"
+#include "utils/ParseUtils.hh"
 #include <unistd.h>
 
 using namespace quarkdb;
@@ -35,7 +36,7 @@ TestConfig::TestConfig() {
 
   for (; s; i++) {
     std::string var(s);
-    if(startswith(var, "QDB_TESTS_")) {
+    if(startswith(var, "QDB_")) {
       std::vector<std::string> chunks = split(var, "=");
       if(chunks.size() != 2) {
         std::cerr << "Could not parse environment variable: " << var << std::endl;
@@ -49,38 +50,56 @@ TestConfig::TestConfig() {
 }
 
 void TestConfig::parseSingle(const std::string &key, const std::string &value) {
-  if(key == "QDB_TESTS_TIMEOUTS") {
-    raftTimeoutsOverriden = true;
+  std::cerr << "Applying runtime configuration option: " << key << " => " << value << std::endl;
+
+  if(key == "QDB_TEST_TIMEOUT") {
     if(value == "aggressive") {
-      raftTimeouts = aggressiveTimeouts;
+      return raftTimeouts.setRuntime(aggressiveTimeouts);
     }
-    else if(value == "tight") {
-      raftTimeouts = tightTimeouts;
+
+    if(value == "tight") {
+      return raftTimeouts.setRuntime(tightTimeouts);
     }
-    else if(value == "default") {
-      raftTimeouts = defaultTimeouts;
+
+    if(value == "default") {
+      return raftTimeouts.setRuntime(defaultTimeouts);
     }
-    else {
-      std::cerr << "Unknown value for " << key << ": '" << value << "'" << std::endl;
-      exit(EXIT_FAILURE);
-    }
+
+    goto parse_error;
   }
-  else if(key == "QDB_TESTS_DATABASE_REUSE") {
-    databaseReuseOverriden = true;
+
+  if(key == "QDB_TESTS_DATABASE_REUSE") {
     if(value == "yes") {
-      databaseReuse = true;
+      return databaseReuse.setRuntime(true);
     }
-    else if(value == "no") {
-      databaseReuse = false;
+
+    if(value == "no") {
+      return databaseReuse.setRuntime(false);
     }
-    else {
-      std::cerr << "Unknown value for " << key << ": '" << value << "'" << std::endl;
-      exit(EXIT_FAILURE);
-    }
+
+    goto parse_error;
   }
-  else {
-    std::cerr << "Unknown configuration option: " << key << " => " << value << std::endl;
-    exit(EXIT_FAILURE);
+
+  if(key == "QDB_BENCH_THREADS") {
+    std::vector<int64_t> threads;
+    if(!ParseUtils::parseIntegerList(value, threads)) {
+      goto parse_error;
+    }
+
+    return benchmarkThreads.setRuntime(threads);
   }
-  std::cerr << "Applying configuration option: " << key << " => " << value << std::endl;
+
+  if(key == "QDB_BENCH_EVENTS") {
+    std::vector<int64_t> events;
+    if(!ParseUtils::parseIntegerList(value, events)) {
+      goto parse_error;
+    }
+
+    return benchmarkEvents.setRuntime(events);
+  }
+
+  qdb_throw("Unknown configuration option: " << key << " => " << value);
+
+parse_error:
+  qdb_throw("Cannot parse configuration value for key " << key << ": '" << value << "'");
 }

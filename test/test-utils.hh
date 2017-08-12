@@ -65,7 +65,7 @@ class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
   ASSERT_TRUE(cond) << " - failure after " << nretries << " retries "; \
 }
 
-#define NUMBER_OF_RETRIES ( (size_t) testconfig.raftTimeouts.getLow().count() * 10)
+#define NUMBER_OF_RETRIES ( (size_t) testconfig.raftTimeouts->getLow().count() * 10)
 
 // retry every 10ms
 #define RETRY_ASSERT_TRUE(cond) RETRY_ASSERT_TRUE_3(cond, NUMBER_OF_RETRIES, 10)

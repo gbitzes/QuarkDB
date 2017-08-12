@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 #include "raft/RaftCommon.hh"
 #include "utils/IntToBinaryString.hh"
+#include "utils/ParseUtils.hh"
 #include "utils/FileUtils.hh"
 #include "utils/Resilvering.hh"
 #include "Utils.hh"
@@ -128,4 +129,18 @@ TEST(Utils, replication_status) {
 
   ASSERT_EQ(status.getReplicaStatus(RaftServer("localhost", 123)).target, RaftServer("localhost", 123));
   ASSERT_THROW(status.getReplicaStatus(RaftServer("localhost", 456)).target, FatalException);
+}
+
+TEST(Utils, parseIntegerList) {
+  std::vector<int64_t> res, tmp;
+  ASSERT_TRUE(ParseUtils::parseIntegerList("1,4,7", res));
+
+  tmp = {1, 4, 7};
+  ASSERT_EQ(res, tmp);
+  // ASSERT_FALSE(ParseUtils::parseIntegerList("1, 4, 7", res));
+  ASSERT_FALSE(ParseUtils::parseIntegerList("14 - 7", res));
+
+  ASSERT_TRUE(ParseUtils::parseIntegerList("147", res));
+  tmp = {147};
+  ASSERT_EQ(res, tmp);
 }

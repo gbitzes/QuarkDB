@@ -29,28 +29,57 @@
 
 namespace quarkdb {
 
+class TestConfig;
+
+// A configuration option which can be given a global default, a local default
+// through setStatic, but also overriden during runtime through environment
+// variables.
+template<typename T>
+class ConfigurationOption {
+public:
+  template<typename... Args>
+  ConfigurationOption(Args&&... args) : value{std::forward<Args>(args)...} {}
+
+  T* operator->() {
+    return &value;
+  }
+
+  operator T() {
+    return value;
+  }
+
+  T get() {
+    return value;
+  }
+
+  void setStatic(const T& val) {
+    if(overridenAtRuntime) return;
+    value = val;
+  }
+
+private:
+  T value;
+  bool overridenAtRuntime = false;
+
+  void setRuntime(const T& val) {
+    overridenAtRuntime = true;
+    value = val;
+  }
+
+  friend class TestConfig;
+};
+
 struct TestConfig {
   // parse environment variables to give the possibility to override defaults
   TestConfig();
   void parseSingle(const std::string &key, const std::string &value);
 
-  void setDefaultTimeout(const RaftTimeouts &t) {
-    if(!raftTimeoutsOverriden) {
-      raftTimeouts = t;
-    }
-  }
+  ConfigurationOption<RaftTimeouts> raftTimeouts {aggressiveTimeouts};
+  ConfigurationOption<bool> databaseReuse {true};
 
-  void setDatabaseReuse(bool newVal) {
-    if(!databaseReuseOverriden) {
-      databaseReuse = newVal;
-    }
-  }
+  ConfigurationOption<std::vector<int64_t>> benchmarkThreads {1, 2, 4, 8};
+  ConfigurationOption<std::vector<int64_t>> benchmarkEvents {1000000};
 
-  RaftTimeouts raftTimeouts {aggressiveTimeouts};
-  bool raftTimeoutsOverriden {false};
-
-  bool databaseReuse {true};
-  bool databaseReuseOverriden {false};
 };
 
 extern TestConfig testconfig;
