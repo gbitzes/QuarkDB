@@ -23,6 +23,7 @@
 
 #include "StateMachine.hh"
 #include "Utils.hh"
+#include "../deps/StringMatchLen.h"
 #include "storage/KeyDescriptor.hh"
 #include "utils/IntToBinaryString.hh"
 #include <sys/stat.h>

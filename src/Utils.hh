@@ -132,9 +132,6 @@ bool all_identical(const std::vector<T> &v) {
   return true;
 }
 
-int stringmatchlen(const char *pattern, int patternLen,
-  const char *string, int stringLen, int nocase);
-
 }
 
 #endif
