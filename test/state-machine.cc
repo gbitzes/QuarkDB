@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "storage/KeyDescriptor.hh"
 #include "StateMachine.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
@@ -507,4 +508,65 @@ TEST_F(State_Machine, keys) {
   ASSERT_OK(stateMachine()->set("*", "1"));
   ASSERT_OK(stateMachine()->keys("\\*", keys));
   ASSERT_EQ(keys, make_vec("*"));
+}
+
+static std::string sliceToString(const rocksdb::Slice &slice) {
+  return std::string(slice.data(), slice.size());
+}
+
+void assertEqualDescriptors(KeyDescriptor &desc, KeyDescriptor &desc2) {
+  ASSERT_EQ(desc.getKeyType(), desc2.getKeyType());
+  ASSERT_EQ(desc, desc2);
+  ASSERT_EQ(desc2, desc);
+  ASSERT_EQ(sliceToString(desc.serialize()), sliceToString(desc2.serialize()));
+}
+
+TEST(KeyDescriptor, BasicSanity) {
+  KeyDescriptor stringDesc;
+  ASSERT_THROW(stringDesc.serialize(), FatalException);
+
+  stringDesc.setKeyType(KeyType::kString);
+  stringDesc.setSize(3);
+  ASSERT_THROW(stringDesc.setStartIndex(2), FatalException);
+  ASSERT_THROW(stringDesc.setStartIndex(4), FatalException);
+
+  ASSERT_EQ(stringDesc, stringDesc);
+
+  KeyDescriptor stringDesc2(sliceToString(stringDesc.serialize()));
+  ASSERT_EQ(stringDesc2.getKeyType(), KeyType::kString);
+  assertEqualDescriptors(stringDesc, stringDesc2);
+
+  KeyDescriptor hashDesc;
+  hashDesc.setKeyType(KeyType::kHash);
+  hashDesc.setSize(7);
+  ASSERT_THROW(hashDesc.setStartIndex(2), FatalException);
+  ASSERT_THROW(hashDesc.setStartIndex(4), FatalException);
+
+  KeyDescriptor hashDesc2(sliceToString(hashDesc.serialize()));
+  ASSERT_EQ(hashDesc2.getKeyType(), KeyType::kHash);
+  assertEqualDescriptors(hashDesc, hashDesc2);
+
+  ASSERT_FALSE(stringDesc == hashDesc);
+
+  KeyDescriptor listDesc;
+  listDesc.setKeyType(KeyType::kList);
+  listDesc.setSize(10);
+  listDesc.setStartIndex(1500);
+  listDesc.setEndIndex(1000);
+  ASSERT_THROW(listDesc.serialize(), FatalException);
+  listDesc.setEndIndex(1600);
+
+  KeyDescriptor listDesc2(sliceToString(listDesc.serialize()));
+  assertEqualDescriptors(listDesc, listDesc2);
+
+  KeyDescriptor setDesc;
+  setDesc.setKeyType(KeyType::kSet);
+  setDesc.setSize(9);
+  ASSERT_THROW(setDesc.setStartIndex(2), FatalException);
+  ASSERT_THROW(setDesc.setStartIndex(4), FatalException);
+
+  KeyDescriptor setDesc2(sliceToString(setDesc.serialize()));
+  ASSERT_EQ(setDesc2.getKeyType(), KeyType::kSet);
+  ASSERT_EQ(setDesc2.getSize(), 9);
+  assertEqualDescriptors(setDesc, setDesc2);
 }

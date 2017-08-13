@@ -26,6 +26,7 @@
 
 #include "Common.hh"
 #include "Utils.hh"
+#include "storage/KeyDescriptor.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -100,17 +101,9 @@ public:
   //----------------------------------------------------------------------------
   std::string statistics();
 
-  enum class KeyType : char {
-    kNull = '\0',
-    kConfiguration = '~',
-    kString = 'a',
-    kHash = 'b',
-    kSet = 'c',
-    kList = 'e'
-  };
-
   enum class InternalKeyType : char {
     kInternal = '_',
+    kConfiguration = '~',
     kDescriptor = 'd'
   };
 
@@ -127,21 +120,6 @@ private:
     DISALLOW_COPY_AND_ASSIGN(Snapshot);
   };
 
-  enum class Direction : int {
-    kLeft = -1,
-    kRight = 1
-  };
-
-  static Direction flipDirection(Direction direction) {
-    if(direction == Direction::kLeft) {
-      return Direction::kRight;
-    }
-    else if(direction == Direction::kRight) {
-      return Direction::kLeft;
-    }
-    qdb_throw("should never happen");
-  }
-
   TransactionPtr startTransaction();
   void commitTransaction(TransactionPtr &tx, LogIndex index);
   rocksdb::Status finalize(TransactionPtr &tx, LogIndex index);
@@ -149,71 +127,6 @@ private:
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
   rocksdb::Status listPop(Direction direction, const std::string &key, std::string &item, LogIndex index);
   rocksdb::Status listPush(Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
-
-  class KeyDescriptor {
-  public:
-    const std::string& getRawKey() {
-      return dkey;
-    }
-
-    bool exists() {
-      return existence;
-    }
-
-    void initializeType(KeyType type) {
-      if(existence || keytype != KeyType::kNull) qdb_throw("attempted to overwrite the type of a KeyDescriptor");
-      keytype = type;
-    }
-
-    KeyType type() {
-      return keytype;
-    }
-
-    int64_t size() {
-      return size_;
-    }
-
-    void setSize(int64_t size) {
-      size_ = size;
-    }
-
-    uint64_t getListIndex(Direction direction) {
-      qdb_assert(keytype == KeyType::kList);
-      if(direction == Direction::kLeft) {
-        return listStartIndex;
-      }
-      else if(direction == Direction::kRight) {
-        return listEndIndex;
-      }
-      qdb_throw("should never happen");
-    }
-
-    void setListIndex(Direction direction, uint64_t newindex) {
-      qdb_assert(keytype == KeyType::kList);
-      if(direction == Direction::kLeft) {
-        listStartIndex = newindex;
-        return;
-      }
-      else if(direction == Direction::kRight) {
-        listEndIndex = newindex;
-        return;
-      }
-      qdb_throw("should never happen");
-    }
-
-    std::string serialize() const;
-    static KeyDescriptor construct(const rocksdb::Status &st, const std::string &str, std::string &&tkey);
-  private:
-    bool existence;
-    std::string dkey; // raw key descriptor, as stored on disk
-    KeyType keytype = KeyType::kNull;
-    int64_t size_ = 0;
-
-    // used only for lists
-    static constexpr uint64_t listIndexInitialize = std::numeric_limits<uint64_t>::max() / 2;
-    uint64_t listStartIndex = listIndexInitialize;
-    uint64_t listEndIndex = listIndexInitialize;
-  };
 
   class WriteOperation {
   public:
@@ -243,6 +156,7 @@ private:
 
     KeyType expectedType;
     KeyDescriptor keyinfo;
+    std::string dkey;
 
     bool redisKeyExists;
     bool isValid = false;

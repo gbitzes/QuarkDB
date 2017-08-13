@@ -51,6 +51,10 @@ public:
     runtime_size = newsize;
   }
 
+  char& operator[](size_t i) {
+    return contents[i];
+  }
+
 private:
   char contents[static_size];
   size_t runtime_size = static_size;

@@ -43,7 +43,7 @@ inline std::vector<std::string> split(std::string data, const std::string &token
   return output;
 }
 
-inline bool parseInteger(const std::string &str, int64_t &ret) {
+inline bool parseInt64(const std::string &str, int64_t &ret) {
   char *endptr = NULL;
   ret = strtoll(str.c_str(), &endptr, 10);
   if(endptr != str.c_str() + str.size() || ret == LLONG_MIN || ret == LONG_LONG_MAX) {
@@ -59,7 +59,7 @@ inline bool parseIntegerList(const std::string &buffer, std::vector<int64_t> &re
 
   for(size_t i = 0; i < items.size(); i++) {
     int64_t value;
-    if(!ParseUtils::parseInteger(items[i], value)) {
+    if(!ParseUtils::parseInt64(items[i], value)) {
       return false;
     }
 

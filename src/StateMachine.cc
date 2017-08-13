@@ -23,6 +23,7 @@
 
 #include "StateMachine.hh"
 #include "Utils.hh"
+#include "storage/KeyDescriptor.hh"
 #include "utils/IntToBinaryString.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
@@ -176,14 +177,18 @@ static void escape(std::string &str) {
 //   return key;
 // }
 
-static std::string translate_key(const StateMachine::KeyType type, const std::string &key) {
+static std::string translate_key(const StateMachine::InternalKeyType type, const std::string &key) {
+  return std::string(1, char(type)) + key;
+}
+
+static std::string translate_key(const KeyType type, const std::string &key) {
   std::string escaped = key;
   escape(escaped);
 
   return std::string(1, char(type)) + escaped;
 }
 
-static std::string translate_key(const StateMachine::KeyType type, const std::string &key, const std::string &field) {
+static std::string translate_key(const KeyType type, const std::string &key, const std::string &field) {
   std::string translated = translate_key(type, key) + "#" + field;
   return translated;
 }
@@ -192,93 +197,39 @@ static rocksdb::Status wrong_type() {
   return rocksdb::Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
 }
 
-std::string StateMachine::KeyDescriptor::serialize() const {
-  if(this->keytype == KeyType::kNull) {
-    qdb_throw("attempted to serialize null descriptor");
-  }
-  else if(this->keytype == KeyType::kList) {
-    return SSTR(char(this->keytype) << "-" << intToBinaryString(this->size_) << "-" << unsignedIntToBinaryString(this->listStartIndex) << "-" << unsignedIntToBinaryString(this->listEndIndex));
-  }
-  else {
-    return SSTR(char(this->keytype) << "-" << intToBinaryString(this->size_));
-  }
-}
-
-StateMachine::KeyDescriptor StateMachine::KeyDescriptor::construct(const rocksdb::Status &st, const std::string &str, std::string &&dkey) {
-  KeyDescriptor keyinfo;
-  keyinfo.dkey = std::move(dkey);
-
+static KeyDescriptor constructDescriptor(rocksdb::Status &st, const std::string &serialization) {
   if(st.IsNotFound()) {
-    keyinfo.existence = false;
-    keyinfo.size_ = 0;
-    return keyinfo;
+    return KeyDescriptor();
   }
 
-  if(!st.ok()) qdb_throw("unexpected rocksdb status when inspecting KeyType entry " << keyinfo.dkey << ": " << st.ToString());
-  keyinfo.existence = true;
-  qdb_assert(!str.empty());
-
-  if(str[0] == char(KeyType::kString)) {
-    keyinfo.keytype = KeyType::kString;
-  }
-  else if(str[0] == char(KeyType::kHash)) {
-    keyinfo.keytype = KeyType::kHash;
-  }
-  else if(str[0] == char(KeyType::kSet)) {
-    keyinfo.keytype = KeyType::kSet;
-  }
-  else if(str[0] == char(KeyType::kList)) {
-    keyinfo.keytype = KeyType::kList;
-  }
-  else {
-    qdb_throw("unable to parse keyInfo, unknown key type: '" << str[0] << "'");
-  }
-
-  if(keyinfo.keytype == KeyType::kList) {
-    qdb_assert(str.size() == 28);
-  }
-  else {
-    qdb_assert(str.size() == 10);
-  }
-
-  if(str[1] != '-') qdb_throw("unable to parse keyInfo, unexpected char for key type descriptor, expected '-': " << str[1]);
-  keyinfo.size_ = binaryStringToInt(str.c_str()+2);
-
-  if(keyinfo.keytype == KeyType::kList) {
-    if(str[10] != '-') qdb_throw("unable to parse keyInfo, unexpected char for key type descriptor, expected '-': " << str[10]);
-    if(str[19] != '-') qdb_throw("unable to parse keyInfo, unexpected char for key type descriptor, expected '-': " << str[19]);
-
-    keyinfo.listStartIndex = binaryStringToUnsignedInt(str.c_str()+11);
-    keyinfo.listEndIndex = binaryStringToUnsignedInt(str.c_str()+20);
-    qdb_assert(keyinfo.listStartIndex <= keyinfo.listEndIndex);
-  }
-  return keyinfo;
+  if(!st.ok()) qdb_throw("unexpected rocksdb status when inspecting key descriptor");
+  return KeyDescriptor(serialization);
 }
 
-StateMachine::KeyDescriptor StateMachine::getKeyDescriptor(const std::string &redisKey) {
+KeyDescriptor StateMachine::getKeyDescriptor(const std::string &redisKey) {
   std::string tmp;
   std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
   rocksdb::Status st = db->Get(rocksdb::ReadOptions(), dkey, &tmp);
-  return KeyDescriptor::construct(st, tmp, std::move(dkey));
+  return constructDescriptor(st, tmp);
 }
 
-StateMachine::KeyDescriptor StateMachine::getKeyDescriptor(StateMachine::Snapshot &snapshot, const std::string &redisKey) {
+KeyDescriptor StateMachine::getKeyDescriptor(StateMachine::Snapshot &snapshot, const std::string &redisKey) {
   std::string tmp;
   std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
   rocksdb::Status st = db->Get(snapshot.opts(), dkey, &tmp);
-  return KeyDescriptor::construct(st, tmp, std::move(dkey));
+  return constructDescriptor(st, tmp);
 }
 
-StateMachine::KeyDescriptor StateMachine::lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey) {
-  std::string tmp, tkey;
-  tkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
-  return KeyDescriptor::construct(st, tmp, std::move(tkey));
+KeyDescriptor StateMachine::lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey) {
+  std::string tmp;
+  std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dkey, &tmp);
+  return constructDescriptor(st, tmp);
 }
 
 bool StateMachine::assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype) {
   KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
-  if(keyinfo.exists() && keyinfo.type() != keytype) return false;
+  if(!keyinfo.empty() && keyinfo.getKeyType() != keytype) return false;
   return true;
 }
 
@@ -457,13 +408,17 @@ rocksdb::Status StateMachine::hdel(const std::string &key, const VecIterator &st
   return finalize(tx, index);
 }
 
+static bool isWrongType(KeyDescriptor &descriptor, KeyType keyType) {
+  return !descriptor.empty() && (descriptor.getKeyType() != keyType);
+}
+
 rocksdb::Status StateMachine::hlen(const std::string &key, size_t &len) {
   len = 0;
 
   KeyDescriptor keyinfo = getKeyDescriptor(key);
-  if(keyinfo.exists() && keyinfo.type() != KeyType::kHash) return wrong_type();
+  if(isWrongType(keyinfo, KeyType::kHash)) return wrong_type();
 
-  len = keyinfo.size();
+  len = keyinfo.getSize();
   return rocksdb::Status::OK();
 }
 
@@ -532,8 +487,7 @@ rocksdb::Status StateMachine::sadd(const std::string &key, const VecIterator &st
 
 rocksdb::Status StateMachine::sismember(const std::string &key, const std::string &element) {
   Snapshot snapshot(db);
-  KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
-  if(keyinfo.exists() && keyinfo.type() != KeyType::kSet) return wrong_type();
+  if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
   std::string tkey = translate_key(KeyType::kSet, key, element);
 
   std::string tmp;
@@ -575,15 +529,15 @@ rocksdb::Status StateMachine::scard(const std::string &key, size_t &count) {
   count = 0;
 
   KeyDescriptor keyinfo = getKeyDescriptor(key);
-  if(keyinfo.exists() && keyinfo.type() != KeyType::kSet) return wrong_type();
+  if(isWrongType(keyinfo, KeyType::kSet)) return wrong_type();
 
-  count = keyinfo.size();
+  count = keyinfo.getSize();
   return rocksdb::Status::OK();
 }
 
 rocksdb::Status StateMachine::configGet(const std::string &key, std::string &value) {
   Snapshot snapshot(db);
-  std::string tkey = translate_key(KeyType::kConfiguration, key);
+  std::string tkey = translate_key(InternalKeyType::kConfiguration, key);
   return db->Get(snapshot.opts(), tkey, &value);
 }
 
@@ -591,7 +545,7 @@ rocksdb::Status StateMachine::configSet(const std::string &key, const std::strin
   // We don't use WriteOperation or key descriptors here,
   // since kConfiguration is special.
 
-  std::string tkey = translate_key(KeyType::kConfiguration, key);
+  std::string tkey = translate_key(InternalKeyType::kConfiguration, key);
 
   TransactionPtr tx = startTransaction();
   THROW_ON_ERROR(tx->Put(tkey, value));
@@ -604,10 +558,10 @@ rocksdb::Status StateMachine::configGetall(std::vector<std::string> &res) {
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   res.clear();
 
-  std::string searchPrefix(1, char(KeyType::kConfiguration));
+  std::string searchPrefix(1, char(InternalKeyType::kConfiguration));
   for(iter->Seek(searchPrefix); iter->Valid(); iter->Next()) {
     std::string rkey = iter->key().ToString();
-    if(rkey.size() == 0 || rkey[0] != char(KeyType::kConfiguration)) break;
+    if(rkey.size() == 0 || rkey[0] != char(InternalKeyType::kConfiguration)) break;
 
     res.push_back(rkey.substr(1));
     res.push_back(iter->value().ToString());
@@ -626,16 +580,26 @@ StateMachine::WriteOperation::~WriteOperation() {
 StateMachine::WriteOperation::WriteOperation(StateMachine::TransactionPtr &tx_, const std::string &key, const KeyType &type)
 : tx(tx_), redisKey(key), expectedType(type) {
 
-  std::string tmp, dkey;
+  std::string tmp;
   dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
   rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dkey, &tmp);
-  keyinfo = KeyDescriptor::construct(st, tmp, std::move(dkey));
 
-  redisKeyExists = keyinfo.exists();
-  isValid = (!keyinfo.exists()) || (keyinfo.type() == type);
+  if(st.IsNotFound()) {
+    keyinfo = KeyDescriptor();
+  }
+  else if(st.ok()) {
+    keyinfo = KeyDescriptor(tmp);
+  }
+  else {
+    DBG("....");
+    qdb_throw("unexpected rocksdb status when inspecting KeyType entry " << dkey << ": " << st.ToString());
+  }
 
-  if(!keyinfo.exists() && isValid) {
-    keyinfo.initializeType(expectedType);
+  redisKeyExists = !keyinfo.empty();
+  isValid = (keyinfo.empty()) || (keyinfo.getKeyType() == type);
+
+  if(keyinfo.empty() && isValid) {
+    keyinfo.setKeyType(expectedType);
   }
 
   finalized = !isValid;
@@ -652,14 +616,14 @@ bool StateMachine::WriteOperation::keyExists() {
 bool StateMachine::WriteOperation::getField(const std::string &field, std::string &out) {
   assertWritable();
 
-  std::string tkey = translate_key(keyinfo.type(), redisKey, field);
+  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey, field);
   rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &out);
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
 
 int64_t StateMachine::WriteOperation::keySize() {
-  return keyinfo.size();
+  return keyinfo.getSize();
 }
 
 void StateMachine::WriteOperation::assertWritable() {
@@ -670,22 +634,22 @@ void StateMachine::WriteOperation::assertWritable() {
 void StateMachine::WriteOperation::write(const std::string &value) {
   assertWritable();
 
-  if(keyinfo.type() != KeyType::kString) {
+  if(keyinfo.getKeyType() != KeyType::kString) {
     qdb_throw("writing without a field makes sense only for strings");
   }
 
-  std::string tkey = translate_key(keyinfo.type(), redisKey);
+  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey);
   THROW_ON_ERROR(tx->Put(tkey, value));
 }
 
 void StateMachine::WriteOperation::writeField(const std::string &field, const std::string &value) {
   assertWritable();
 
-  if(keyinfo.type() != KeyType::kHash && keyinfo.type() != KeyType::kSet && keyinfo.type() != KeyType::kList) {
+  if(keyinfo.getKeyType() != KeyType::kHash && keyinfo.getKeyType() != KeyType::kSet && keyinfo.getKeyType() != KeyType::kList) {
     qdb_throw("writing with a field makes sense only for hashes, sets, or lists");
   }
 
-  std::string tkey = translate_key(keyinfo.type(), redisKey, field);
+  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey, field);
   THROW_ON_ERROR(tx->Put(tkey, value));
 }
 
@@ -695,11 +659,11 @@ void StateMachine::WriteOperation::finalize(int64_t newsize) {
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
 
   if(newsize == 0) {
-    THROW_ON_ERROR(tx->Delete(keyinfo.getRawKey()));
+    THROW_ON_ERROR(tx->Delete(dkey));
   }
-  else if(keyinfo.size() != newsize) {
+  else if(keyinfo.getSize() != newsize) {
     keyinfo.setSize(newsize);
-    THROW_ON_ERROR(tx->Put(keyinfo.getRawKey(), keyinfo.serialize()));
+    THROW_ON_ERROR(tx->Put(dkey, keyinfo.serialize()));
   }
 
   finalized = true;
@@ -716,7 +680,7 @@ bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   assertWritable();
 
   std::string tmp;
-  std::string tkey = translate_key(keyinfo.type(), redisKey, field);
+  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey, field);
   rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
   ASSERT_OK_OR_NOTFOUND(st);
 
@@ -764,9 +728,9 @@ rocksdb::Status StateMachine::llen(const std::string &key, size_t &len) {
   len = 0;
 
   KeyDescriptor keyinfo = getKeyDescriptor(key);
-  if(keyinfo.exists() && keyinfo.type() != KeyType::kList) return wrong_type();
+  if(isWrongType(keyinfo, KeyType::kList)) return wrong_type();
 
-  len = keyinfo.size();
+  len = keyinfo.getSize();
   return rocksdb::Status::OK();
 }
 
@@ -845,7 +809,7 @@ void StateMachine::remove_all_with_prefix(const std::string &prefix, int64_t &re
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
     if(!startswith(key, prefix)) break;
-    if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(KeyType::kConfiguration))) continue;
+    if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(InternalKeyType::kConfiguration))) continue;
 
     THROW_ON_ERROR(tx->Delete(key));
     removed++;
@@ -858,27 +822,27 @@ rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &e
 
   for(VecIterator it = start; it != end; it++) {
     KeyDescriptor keyInfo = lockKeyDescriptor(tx, *it);
-    if(!keyInfo.exists()) continue;
+    if(keyInfo.empty()) continue;
 
     std::string tkey, tmp;
 
-    if(keyInfo.type() == KeyType::kString) {
+    if(keyInfo.getKeyType() == KeyType::kString) {
       tkey = translate_key(KeyType::kString, *it);
       THROW_ON_ERROR(tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp));
       THROW_ON_ERROR(tx->Delete(tkey));
     }
-    else if(keyInfo.type() == KeyType::kHash || keyInfo.type() == KeyType::kSet || keyInfo.type() == KeyType::kList) {
-      tkey = translate_key(keyInfo.type(), *it) + "#";
+    else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kList) {
+      tkey = translate_key(keyInfo.getKeyType(), *it) + "#";
       int64_t count = 0;
       remove_all_with_prefix(tkey, count, tx);
-      if(count != keyInfo.size()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.size());
+      if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
     else {
       qdb_throw("should never happen");
     }
 
     removed++;
-    THROW_ON_ERROR(tx->Delete(keyInfo.getRawKey()));
+    THROW_ON_ERROR(tx->Delete(SSTR(char(InternalKeyType::kDescriptor) << *it)));
   }
 
   return finalize(tx, index);
@@ -886,7 +850,7 @@ rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &e
 
 rocksdb::Status StateMachine::exists(const std::string &key) {
   KeyDescriptor keyinfo = getKeyDescriptor(key);
-  if(keyinfo.exists()) return rocksdb::Status::OK();
+  if(!keyinfo.empty()) return rocksdb::Status::OK();
   return rocksdb::Status::NotFound();
 }
 
