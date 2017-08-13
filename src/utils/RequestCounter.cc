@@ -46,11 +46,11 @@ void RequestCounter::mainThread(ThreadAssistant &assistant) {
 
     if(localReads != 0 || localWrites != 0) {
       paused = false;
-      qdb_info("Over the last " << interval.count() << " seconds, I serviced reads at a rate of " << localReads / interval.count() << " Hz, and writes at " << localWrites / interval.count() << " Hz");
+      qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads (" << localReads / interval.count() << " Hz), and " << localWrites << " writes (" << localWrites / interval.count() << " Hz)");
     }
     else if(!paused) {
       paused = true;
-      qdb_info("No reads or writes during the last " << interval.count() << " seconds - will report again when load re-appears.");
+      qdb_info("No reads or writes during the last " << interval.count() << " seconds - will report again once load re-appears.");
     }
 
     assistant.wait_for(interval);
