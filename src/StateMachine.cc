@@ -65,6 +65,14 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log)
   table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(32, false));
   table_options.block_size = 16 * 1024;
 
+  // The default settings for rate limiting are a bit too conservative, causing
+  // bulk loading to stall heavily.
+  options.max_write_buffer_number = 6;
+  options.soft_pending_compaction_bytes_limit = 256 * 1073741824ull;
+  options.hard_pending_compaction_bytes_limit = 512 * 1073741824ull;
+  options.level0_slowdown_writes_trigger = 50;
+  options.level0_stop_writes_trigger = 75;
+
   options.create_if_missing = !dirExists;
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
