@@ -25,6 +25,7 @@
 #include "Utils.hh"
 #include "../deps/StringMatchLen.h"
 #include "storage/KeyDescriptor.hh"
+#include "storage/KeyLocators.hh"
 #include "utils/IntToBinaryString.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
@@ -186,7 +187,7 @@ static void escape(std::string &str) {
 //   return key;
 // }
 
-static std::string translate_key(const StateMachine::InternalKeyType type, const std::string &key) {
+static std::string translate_key(const InternalKeyType type, const std::string &key) {
   return std::string(1, char(type)) + key;
 }
 
@@ -217,22 +218,21 @@ static KeyDescriptor constructDescriptor(rocksdb::Status &st, const std::string 
 
 KeyDescriptor StateMachine::getKeyDescriptor(const std::string &redisKey) {
   std::string tmp;
-  std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), dkey, &tmp);
+  DescriptorLocator dlocator(redisKey);
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), dlocator.toSlice(), &tmp);
   return constructDescriptor(st, tmp);
 }
 
 KeyDescriptor StateMachine::getKeyDescriptor(StateMachine::Snapshot &snapshot, const std::string &redisKey) {
   std::string tmp;
-  std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
-  rocksdb::Status st = db->Get(snapshot.opts(), dkey, &tmp);
+  DescriptorLocator dlocator(redisKey);
+  rocksdb::Status st = db->Get(snapshot.opts(), dlocator.toSlice(), &tmp);
   return constructDescriptor(st, tmp);
 }
 
-KeyDescriptor StateMachine::lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey) {
+KeyDescriptor StateMachine::lockKeyDescriptor(TransactionPtr &tx, DescriptorLocator &dlocator) {
   std::string tmp;
-  std::string dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dkey, &tmp);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dlocator.toSlice(), &tmp);
   return constructDescriptor(st, tmp);
 }
 
@@ -590,8 +590,9 @@ StateMachine::WriteOperation::WriteOperation(StateMachine::TransactionPtr &tx_, 
 : tx(tx_), redisKey(key), expectedType(type) {
 
   std::string tmp;
-  dkey = SSTR(char(InternalKeyType::kDescriptor) << redisKey);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dkey, &tmp);
+
+  dlocator.reset(redisKey);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dlocator.toSlice(), &tmp);
 
   if(st.IsNotFound()) {
     keyinfo = KeyDescriptor();
@@ -600,8 +601,7 @@ StateMachine::WriteOperation::WriteOperation(StateMachine::TransactionPtr &tx_, 
     keyinfo = KeyDescriptor(tmp);
   }
   else {
-    DBG("....");
-    qdb_throw("unexpected rocksdb status when inspecting KeyType entry " << dkey << ": " << st.ToString());
+    qdb_throw("unexpected rocksdb status when inspecting KeyType entry " << dlocator.toString() << ": " << st.ToString());
   }
 
   redisKeyExists = !keyinfo.empty();
@@ -647,8 +647,8 @@ void StateMachine::WriteOperation::write(const std::string &value) {
     qdb_throw("writing without a field makes sense only for strings");
   }
 
-  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey);
-  THROW_ON_ERROR(tx->Put(tkey, value));
+  StringLocator slocator(redisKey);
+  THROW_ON_ERROR(tx->Put(slocator.toSlice(), value));
 }
 
 void StateMachine::WriteOperation::writeField(const std::string &field, const std::string &value) {
@@ -668,11 +668,11 @@ void StateMachine::WriteOperation::finalize(int64_t newsize) {
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
 
   if(newsize == 0) {
-    THROW_ON_ERROR(tx->Delete(dkey));
+    THROW_ON_ERROR(tx->Delete(dlocator.toSlice()));
   }
   else if(keyinfo.getSize() != newsize) {
     keyinfo.setSize(newsize);
-    THROW_ON_ERROR(tx->Put(dkey, keyinfo.serialize()));
+    THROW_ON_ERROR(tx->Put(dlocator.toSlice(), keyinfo.serialize()));
   }
 
   finalized = true;
@@ -805,8 +805,8 @@ rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kString)) return wrong_type();
 
-  std::string tkey = translate_key(KeyType::kString, key);
-  return db->Get(snapshot.opts(), tkey, &value);
+  StringLocator slocator(key);
+  return db->Get(snapshot.opts(), slocator.toSlice(), &value);
 }
 
 void StateMachine::remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx) {
@@ -830,18 +830,19 @@ rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &e
   TransactionPtr tx = startTransaction();
 
   for(VecIterator it = start; it != end; it++) {
-    KeyDescriptor keyInfo = lockKeyDescriptor(tx, *it);
+    DescriptorLocator dlocator(*it);
+    KeyDescriptor keyInfo = lockKeyDescriptor(tx, dlocator);
     if(keyInfo.empty()) continue;
 
-    std::string tkey, tmp;
+    std::string tmp;
 
     if(keyInfo.getKeyType() == KeyType::kString) {
-      tkey = translate_key(KeyType::kString, *it);
-      THROW_ON_ERROR(tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp));
-      THROW_ON_ERROR(tx->Delete(tkey));
+      StringLocator slocator(*it);
+      THROW_ON_ERROR(tx->GetForUpdate(rocksdb::ReadOptions(), slocator.toSlice(), &tmp));
+      THROW_ON_ERROR(tx->Delete(slocator.toSlice()));
     }
     else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kList) {
-      tkey = translate_key(keyInfo.getKeyType(), *it) + "#";
+      std::string tkey = translate_key(keyInfo.getKeyType(), *it) + "#";
       int64_t count = 0;
       remove_all_with_prefix(tkey, count, tx);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
@@ -851,7 +852,7 @@ rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &e
     }
 
     removed++;
-    THROW_ON_ERROR(tx->Delete(SSTR(char(InternalKeyType::kDescriptor) << *it)));
+    THROW_ON_ERROR(tx->Delete(dlocator.toSlice()));
   }
 
   return finalize(tx, index);

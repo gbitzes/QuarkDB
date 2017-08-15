@@ -27,6 +27,7 @@
 #include "Common.hh"
 #include "Utils.hh"
 #include "storage/KeyDescriptor.hh"
+#include "storage/KeyLocators.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -101,12 +102,6 @@ public:
   //----------------------------------------------------------------------------
   std::string statistics();
 
-  enum class InternalKeyType : char {
-    kInternal = '_',
-    kConfiguration = '~',
-    kDescriptor = 'd'
-  };
-
 private:
   class Snapshot {
   public:
@@ -156,7 +151,7 @@ private:
 
     KeyType expectedType;
     KeyDescriptor keyinfo;
-    std::string dkey;
+    DescriptorLocator dlocator;
 
     bool redisKeyExists;
     bool isValid = false;
@@ -166,7 +161,7 @@ private:
 
   KeyDescriptor getKeyDescriptor(const std::string &redisKey);
   KeyDescriptor getKeyDescriptor(Snapshot &snapshot, const std::string &redisKey);
-  KeyDescriptor lockKeyDescriptor(TransactionPtr &tx, const std::string &redisKey);
+  KeyDescriptor lockKeyDescriptor(TransactionPtr &tx, DescriptorLocator &dlocator);
 
   rocksdb::Status wrongKeyType(TransactionPtr &tx, LogIndex index);
 

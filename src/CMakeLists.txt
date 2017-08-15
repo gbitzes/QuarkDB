@@ -49,6 +49,9 @@ add_library(XrdQuarkDB SHARED
   raft/RaftTrimmer.cc        raft/RaftTrimmer.hh
   raft/RaftLease.cc          raft/RaftLease.hh
 
+                             storage/KeyDescriptor.hh
+                             storage/KeyLocators.hh
+
                              utils/AssistedThread.hh
   utils/DirectoryIterator.cc utils/DirectoryIterator.hh
   utils/FileUtils.cc         utils/FileUtils.hh
