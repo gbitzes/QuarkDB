@@ -27,6 +27,7 @@
 #include "utils/ParseUtils.hh"
 #include "utils/FileUtils.hh"
 #include "utils/Resilvering.hh"
+#include "utils/SmartBuffer.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -137,10 +138,44 @@ TEST(Utils, parseIntegerList) {
 
   tmp = {1, 4, 7};
   ASSERT_EQ(res, tmp);
-  // ASSERT_FALSE(ParseUtils::parseIntegerList("1, 4, 7", res));
   ASSERT_FALSE(ParseUtils::parseIntegerList("14 - 7", res));
 
   ASSERT_TRUE(ParseUtils::parseIntegerList("147", res));
   tmp = {147};
   ASSERT_EQ(res, tmp);
+}
+
+template <class T>
+class Smart_Buffer : public testing::Test {
+protected:
+  T buff;
+};
+
+typedef ::testing::Types<
+  SmartBuffer<1>, SmartBuffer<2>, SmartBuffer<3>, SmartBuffer<4>, SmartBuffer<5>,
+  SmartBuffer<6>, SmartBuffer<7>, SmartBuffer<8>, SmartBuffer<9>, SmartBuffer<10>,
+  SmartBuffer<11>, SmartBuffer<13>, SmartBuffer<16>, SmartBuffer<20>, SmartBuffer<32>,
+  SmartBuffer<100>, SmartBuffer<128>, SmartBuffer<200>, SmartBuffer<333>> Implementations;
+
+TYPED_TEST_CASE(Smart_Buffer, Implementations);
+
+TYPED_TEST(Smart_Buffer, BasicSanity) {
+  std::vector<std::string> strings;
+  strings.emplace_back("1234");
+  strings.emplace_back("adfafasfad2y45uahfdgakh");
+  strings.emplace_back("The quick brown fox jumps over the lazy dog");
+  strings.emplace_back("1");
+  strings.emplace_back(256, 'z');
+  strings.emplace_back("3");
+  strings.emplace_back(1337, 'y');
+  strings.emplace_back(3, 'k');
+  strings.emplace_back("what am i doing");
+  strings.emplace_back(13, 'f');
+
+  for(size_t i = 0; i < strings.size(); i++) {
+    this->buff.resize(strings[i].size());
+    memcpy(this->buff.data(), strings[i].c_str(), strings[i].size());
+    ASSERT_EQ(this->buff.toString(), strings[i]);
+  }
+
 }
