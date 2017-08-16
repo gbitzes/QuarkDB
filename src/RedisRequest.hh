@@ -54,6 +54,10 @@ public:
     return std::move(contents[i]);
   }
 
+  std::string& operator[](size_t i) {
+    return contents[i];
+  }
+
   const std::string& operator[](size_t i) const {
     return contents[i];
   }
@@ -101,12 +105,17 @@ public:
     return commandType;
   }
 
+  void resize(size_t n) {
+    contents.resize(n);
+  }
+
+  void parseCommand();
+
 private:
   std::vector<std::string> contents;
   RedisCommand command = RedisCommand::INVALID;
   CommandType commandType = CommandType::INVALID;
 
-  void parseCommand();
   void invalidateCommand() {
     command = RedisCommand::INVALID;
     commandType = CommandType::INVALID;

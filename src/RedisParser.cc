@@ -41,15 +41,13 @@ int RedisParser::fetch(RedisRequest &req) {
     element_size = 0;
     current_element = 0;
 
+    req.resize(request_size);
     qdb_debug("Received size of redis request: " << request_size);
   }
 
   for( ; current_element < request_size; current_element++) {
-    std::string str;
-    int rc = readElement(str);
+    int rc = readElement(req[current_element]);
     if(rc <= 0) return rc;
-
-    req.emplace_back(std::move(str));
     element_size = 0;
   }
 
@@ -60,6 +58,7 @@ int RedisParser::fetch(RedisRequest &req) {
     qdb_debug(req[i]);
   }
 
+  req.parseCommand();
   return 1;
 }
 
