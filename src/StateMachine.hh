@@ -71,7 +71,7 @@ public:
   rocksdb::Status set(const std::string& key, const std::string& value, LogIndex index = 0);
   rocksdb::Status get(const std::string &key, std::string &value);
   rocksdb::Status del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
-  rocksdb::Status exists(const std::string &key);
+  rocksdb::Status exists(const VecIterator &start, const VecIterator &end, int64_t &count);
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status flushall(LogIndex index = 0);
   rocksdb::Status lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);

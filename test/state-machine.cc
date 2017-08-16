@@ -181,7 +181,9 @@ TEST_F(State_Machine, basic_sanity) {
   ASSERT_EQ(count, 1);
 
   ASSERT_NOTFOUND(stateMachine()->get("abc", buffer));
-  ASSERT_NOTFOUND(stateMachine()->exists("abc"));
+  ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 0);
+
   elem = {"abc"};
   ASSERT_OK(stateMachine()->del(elem.begin(), elem.end(), count));
   ASSERT_EQ(count, 0);
@@ -194,7 +196,11 @@ TEST_F(State_Machine, basic_sanity) {
   ASSERT_EQ(vec, vec2);
 
   ASSERT_OK(stateMachine()->flushall());
-  ASSERT_NOTFOUND(stateMachine()->exists("123"));
+
+  elem = {"123", "qwerty" };
+  ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 0);
+
   ASSERT_OK(stateMachine()->keys("*", vec));
   ASSERT_EQ(vec.size(), 0u);
 
@@ -436,15 +442,22 @@ TEST_F(State_Machine, config) {
   ASSERT_OK(stateMachine()->configGet("raft.trimming.limit", item));
   ASSERT_EQ(item, "1000");
 
-  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.limit"));
-  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.step"));
+  std::vector<std::string> elem = { "raft.trimming.limit", "raft.trimming.step" };
+  int64_t count;
+  ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 0u);
 
   ASSERT_OK(stateMachine()->set("raft.trimming.step", "evil", ++commitIndex));
   ASSERT_OK(stateMachine()->configGet("raft.trimming.step", item));
   ASSERT_EQ(item, "123");
 
-  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.limit"));
-  ASSERT_OK(stateMachine()->exists("raft.trimming.step"));
+  elem = {"raft.trimming.limit"};
+  ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 0);
+
+  elem = {"raft.trimming.step"};
+  ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 1);
 
   std::vector<std::string> keysToDelete = {"raft.trimming.step"};
   int64_t num = 0;
@@ -453,7 +466,9 @@ TEST_F(State_Machine, config) {
   ASSERT_OK(stateMachine()->configGet("raft.trimming.step", item));
   ASSERT_EQ(item, "123");
 
-  ASSERT_NOTFOUND(stateMachine()->exists("raft.trimming.limit"));
+  elem = {"raft.trimming.limit"};
+  ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
+  ASSERT_EQ(count, 0);
 
   ASSERT_OK(stateMachine()->set("random key", "random value", ++commitIndex));
   ASSERT_OK(stateMachine()->set("random key 2", "random value 2", ++commitIndex));

@@ -83,11 +83,8 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
     case RedisCommand::EXISTS: {
       if(request.size() <= 1) return errArgs(request, commit);
       int64_t count = 0;
-      for(size_t i = 1; i < request.size(); i++) {
-        rocksdb::Status st = store.exists(request[i]);
-        if(st.ok()) count++;
-        else if(!st.IsNotFound()) return Formatter::fromStatus(st);
-      }
+      rocksdb::Status st = store.exists(request.begin()+1, request.end(), count);
+      if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
     case RedisCommand::DEL: {

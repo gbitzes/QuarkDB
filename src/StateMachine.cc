@@ -858,10 +858,19 @@ rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &e
   return finalize(tx, index);
 }
 
-rocksdb::Status StateMachine::exists(const std::string &key) {
-  KeyDescriptor keyinfo = getKeyDescriptor(key);
-  if(!keyinfo.empty()) return rocksdb::Status::OK();
-  return rocksdb::Status::NotFound();
+rocksdb::Status StateMachine::exists(const VecIterator &start, const VecIterator &end, int64_t &count) {
+  count = 0;
+  Snapshot snapshot(db);
+
+  for(auto it = start; it != end; it++) {
+    KeyDescriptor keyinfo = getKeyDescriptor(snapshot, *it);
+
+    if(!keyinfo.empty()) {
+      count++;
+    }
+  }
+
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status StateMachine::keys(const std::string &pattern, std::vector<std::string> &result) {
