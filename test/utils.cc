@@ -177,5 +177,31 @@ TYPED_TEST(Smart_Buffer, BasicSanity) {
     memcpy(this->buff.data(), strings[i].c_str(), strings[i].size());
     ASSERT_EQ(this->buff.toString(), strings[i]);
   }
+}
 
+TYPED_TEST(Smart_Buffer, Expansion) {
+  std::string contents = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Mauris porttitor urna in diam ultricies semper. Vivamus gravida purus eu erat condimentum, ullamcorper aliquam dui commodo. Fusce id nunc euismod mauris venenatis cursus non vel odio. Aliquam porttitor urna eget nibh cursus, eget ultricies quam sagittis. Donec pulvinar fermentum nunc, id rhoncus justo convallis sed. Donec suscipit quis lectus eget maximus. Etiam ut pharetra odio. Morbi ac nulla rhoncus, placerat quam varius, ultrices justo.";
+
+  this->buff.resize(1);
+  this->buff[0] = 'L';
+
+  size_t prevSize = 1;
+
+  for(size_t i = 5; i < contents.size(); i++) {
+    ASSERT_EQ(prevSize, this->buff.size());
+
+    this->buff.expand(i);
+
+    // ensure old contents are still there!
+    ASSERT_EQ(memcmp(this->buff.data(), contents.data(), prevSize), 0);
+
+    // copy over new contents
+    memcpy(this->buff.data(), contents.data(), i);
+
+    prevSize = i;
+    i += (rand() % 10) + 1;
+  }
+
+  this->buff.shrink(2);
+  ASSERT_EQ(this->buff.size(), 2u);
 }

@@ -53,6 +53,37 @@ public:
     realSize = size;
   }
 
+  // We always keep the old contents
+  void shrink(size_t size) {
+    qdb_assert(size <= realSize);
+    realSize = size;
+  }
+
+  // We keep the old contents, even in the case of re-allocation
+  void expand(size_t size) {
+    qdb_assert(realSize < size);
+
+    if(size < containerSize()) {
+      // Easy path, no copying necessary
+      realSize = size;
+      return;
+    }
+
+    // Must re-allocate, while keeping the old contents - tricky
+    char* oldHeapBuffer = heapBuffer;
+    allocate(size);
+
+    if(oldHeapBuffer) {
+      memcpy(data(), oldHeapBuffer, realSize);
+      free(oldHeapBuffer);
+    }
+    else {
+      memcpy(data(), staticBuffer, realSize);
+    }
+
+    realSize = size;
+  }
+
   ~SmartBuffer() {
     deallocate();
   }
