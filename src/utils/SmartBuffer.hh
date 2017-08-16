@@ -61,7 +61,7 @@ public:
 
   // We keep the old contents, even in the case of re-allocation
   void expand(size_t size) {
-    qdb_assert(realSize < size);
+    qdb_assert(realSize <= size);
 
     if(size < containerSize()) {
       // Easy path, no copying necessary

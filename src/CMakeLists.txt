@@ -61,6 +61,7 @@ add_library(XrdQuarkDB SHARED
   utils/Resilvering.cc       utils/Resilvering.hh
                              utils/ScopedAdder.hh
                              utils/StaticBuffer.hh
+                             utils/StringUtils.hh
                              utils/Uuid.hh
                              utils/VectorUtils.hh
 

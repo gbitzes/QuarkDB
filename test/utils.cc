@@ -25,6 +25,7 @@
 #include "raft/RaftCommon.hh"
 #include "utils/IntToBinaryString.hh"
 #include "utils/ParseUtils.hh"
+#include "utils/StringUtils.hh"
 #include "utils/FileUtils.hh"
 #include "utils/Resilvering.hh"
 #include "utils/SmartBuffer.hh"
@@ -204,4 +205,11 @@ TYPED_TEST(Smart_Buffer, Expansion) {
 
   this->buff.shrink(2);
   ASSERT_EQ(this->buff.size(), 2u);
+}
+
+TEST(StringUtils, CountOccurences) {
+  ASSERT_EQ(StringUtils::countOccurences("abc", 'a'), 1u);
+  ASSERT_EQ(StringUtils::countOccurences("adfas#abc", '#'), 1u);
+  ASSERT_EQ(StringUtils::countOccurences("adfasabc", '#'), 0u);
+  ASSERT_EQ(StringUtils::countOccurences("#adfa#sabc#", '#'), 3u);
 }

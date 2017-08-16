@@ -147,21 +147,6 @@ LogIndex StateMachine::getLastApplied() {
   return lastApplied;
 }
 
-// it's rare to have to escape a key, most don't contain #
-// so don't make a copy, just change the existing string
-static void escape(std::string &str) {
-  char replacement[3];
-  replacement[0] = '|';
-  replacement[1] = '#';
-  replacement[2] = '\0';
-
-  size_t pos = 0;
-  while((pos = str.find('#', pos)) != std::string::npos) {
-    str.replace(pos, 1, replacement);
-    pos += 2;
-  }
-}
-
 // given a rocksdb key (might also contain a field),
 // extract the original redis key.
 // Currently not needed
@@ -189,18 +174,6 @@ static void escape(std::string &str) {
 
 static std::string translate_key(const InternalKeyType type, const std::string &key) {
   return std::string(1, char(type)) + key;
-}
-
-static std::string translate_key(const KeyType type, const std::string &key) {
-  std::string escaped = key;
-  escape(escaped);
-
-  return std::string(1, char(type)) + escaped;
-}
-
-static std::string translate_key(const KeyType type, const std::string &key, const std::string &field) {
-  std::string translated = translate_key(type, key) + "#" + field;
-  return translated;
 }
 
 static rocksdb::Status wrong_type() {
@@ -246,8 +219,8 @@ rocksdb::Status StateMachine::hget(const std::string &key, const std::string &fi
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
-  std::string tkey = translate_key(KeyType::kHash, key, field);
-  return db->Get(snapshot.opts(), tkey, &value);
+  FieldLocator locator(KeyType::kHash, key, field);
+  return db->Get(snapshot.opts(), locator.toSlice(), &value);
 }
 
 rocksdb::Status StateMachine::hexists(const std::string &key, const std::string &field) {
@@ -259,14 +232,14 @@ rocksdb::Status StateMachine::hkeys(const std::string &key, std::vector<std::str
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
-  std::string tkey = translate_key(KeyType::kHash, key) + "#";
   keys.clear();
+  FieldLocator locator(KeyType::kHash, key);
 
   IteratorPtr iter(db->NewIterator(snapshot.opts()));
-  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!startswith(tmp, tkey)) break;
-    keys.push_back(std::string(tmp.begin()+tkey.size(), tmp.end()));
+    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    keys.push_back(std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()));
   }
   return rocksdb::Status::OK();
 }
@@ -275,14 +248,14 @@ rocksdb::Status StateMachine::hgetall(const std::string &key, std::vector<std::s
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
-  std::string tkey = translate_key(KeyType::kHash, key) + "#";
   res.clear();
+  FieldLocator locator(KeyType::kHash, key);
 
   IteratorPtr iter(db->NewIterator(snapshot.opts()));
-  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!startswith(tmp, tkey)) break;
-    res.push_back(std::string(tmp.begin()+tkey.size(), tmp.end()));
+    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    res.push_back(std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()));
     res.push_back(iter->value().ToString());
   }
   return rocksdb::Status::OK();
@@ -354,8 +327,6 @@ rocksdb::Status StateMachine::hincrby(const std::string &key, const std::string 
   WriteOperation operation(tx, key, KeyType::kHash);
   if(!operation.valid()) return wrongKeyType(tx, index);
 
-  std::string tkey = translate_key(KeyType::kHash, key, field);
-
   std::string value;
   bool exists = operation.getField(field, value);
 
@@ -382,8 +353,6 @@ rocksdb::Status StateMachine::hincrbyfloat(const std::string &key, const std::st
 
   WriteOperation operation(tx, key, KeyType::kHash);
   if(!operation.valid()) return wrongKeyType(tx, index);
-
-  std::string tkey = translate_key(KeyType::kHash, key, field);
 
   std::string value;
   bool exists = operation.getField(field, value);
@@ -435,18 +404,17 @@ rocksdb::Status StateMachine::hscan(const std::string &key, const std::string &c
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
-  std::string prefix = translate_key(KeyType::kHash, key) + "#";
-  std::string tkey = translate_key(KeyType::kHash, key, cursor);
+  FieldLocator locator(KeyType::kHash, key, cursor);
   res.clear();
 
   newCursor = "";
   IteratorPtr iter(db->NewIterator(snapshot.opts()));
-  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
-    if(!startswith(tmp, prefix)) break;
+    if(!StringUtils::startswith(tmp, locator.getPrefix())) break;
 
-    std::string fieldname = std::string(tmp.begin()+prefix.size(), tmp.end());
+    std::string fieldname = std::string(tmp.begin()+locator.getPrefixSize(), tmp.end());
     if(res.size() >= count*2) {
       newCursor = fieldname;
       break;
@@ -463,13 +431,13 @@ rocksdb::Status StateMachine::hvals(const std::string &key, std::vector<std::str
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
 
-  std::string tkey = translate_key(KeyType::kHash, key) + "#";
+  FieldLocator locator(KeyType::kHash, key);
   vals.clear();
 
   IteratorPtr iter(db->NewIterator(snapshot.opts()));
-  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!startswith(tmp, tkey)) break;
+    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
     vals.push_back(iter->value().ToString());
   }
   return rocksdb::Status::OK();
@@ -497,10 +465,10 @@ rocksdb::Status StateMachine::sadd(const std::string &key, const VecIterator &st
 rocksdb::Status StateMachine::sismember(const std::string &key, const std::string &element) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
-  std::string tkey = translate_key(KeyType::kSet, key, element);
+  FieldLocator locator(KeyType::kSet, key, element);
 
   std::string tmp;
-  return db->Get(snapshot.opts(), tkey, &tmp);
+  return db->Get(snapshot.opts(), locator.toSlice(), &tmp);
 }
 
 rocksdb::Status StateMachine::srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
@@ -522,14 +490,14 @@ rocksdb::Status StateMachine::smembers(const std::string &key, std::vector<std::
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
 
-  std::string tkey = translate_key(KeyType::kSet, key) + "#";
+  FieldLocator locator(KeyType::kSet, key);
   members.clear();
 
   IteratorPtr iter(db->NewIterator(snapshot.opts()));
-  for(iter->Seek(tkey); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!startswith(tmp, tkey)) break;
-    members.push_back(std::string(tmp.begin()+tkey.size(), tmp.end()));
+    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    members.push_back(std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()));
   }
   return rocksdb::Status::OK();
 }
@@ -625,8 +593,8 @@ bool StateMachine::WriteOperation::keyExists() {
 bool StateMachine::WriteOperation::getField(const std::string &field, std::string &out) {
   assertWritable();
 
-  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &out);
+  FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), locator.toSlice(), &out);
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
@@ -658,8 +626,8 @@ void StateMachine::WriteOperation::writeField(const std::string &field, const st
     qdb_throw("writing with a field makes sense only for hashes, sets, or lists");
   }
 
-  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey, field);
-  THROW_ON_ERROR(tx->Put(tkey, value));
+  FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
+  THROW_ON_ERROR(tx->Put(locator.toSlice(), value));
 }
 
 void StateMachine::WriteOperation::finalize(int64_t newsize) {
@@ -689,11 +657,12 @@ bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   assertWritable();
 
   std::string tmp;
-  std::string tkey = translate_key(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), tkey, &tmp);
+
+  FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
+  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), locator.toSlice(), &tmp);
   ASSERT_OK_OR_NOTFOUND(st);
 
-  if(st.ok()) THROW_ON_ERROR(tx->Delete(tkey));
+  if(st.ok()) THROW_ON_ERROR(tx->Delete(locator.toSlice()));
   return st.ok();
 }
 
@@ -809,7 +778,7 @@ rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
   return db->Get(snapshot.opts(), slocator.toSlice(), &value);
 }
 
-void StateMachine::remove_all_with_prefix(const std::string &prefix, int64_t &removed, TransactionPtr &tx) {
+void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, TransactionPtr &tx) {
   removed = 0;
 
   std::string tmp;
@@ -817,7 +786,7 @@ void StateMachine::remove_all_with_prefix(const std::string &prefix, int64_t &re
 
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
-    if(!startswith(key, prefix)) break;
+    if(!StringUtils::startswith(key, prefix)) break;
     if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(InternalKeyType::kConfiguration))) continue;
 
     THROW_ON_ERROR(tx->Delete(key));
@@ -842,9 +811,9 @@ rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &e
       THROW_ON_ERROR(tx->Delete(slocator.toSlice()));
     }
     else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kList) {
-      std::string tkey = translate_key(keyInfo.getKeyType(), *it) + "#";
+      FieldLocator locator(keyInfo.getKeyType(), *it);
       int64_t count = 0;
-      remove_all_with_prefix(tkey, count, tx);
+      remove_all_with_prefix(locator.toSlice(), count, tx);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
     else {

@@ -26,6 +26,7 @@
 
 #include "KeyDescriptor.hh"
 #include "../utils/SmartBuffer.hh"
+#include "../utils/StringUtils.hh"
 
 namespace quarkdb {
 
@@ -36,7 +37,6 @@ enum class InternalKeyType : char {
   kConfiguration = '~',
   kDescriptor = '!'
 };
-
 
 class DescriptorLocator {
 public:
@@ -80,6 +80,64 @@ public:
     return keyBuffer.toSlice();
   }
 private:
+  KeyBuffer keyBuffer;
+};
+
+class FieldLocator {
+public:
+  FieldLocator(const KeyType &keyType, const std::string &redisKey) {
+    resetKey(keyType, redisKey);
+  }
+
+  FieldLocator(const KeyType &keyType, const std::string &redisKey, const std::string &field) {
+    resetKey(keyType, redisKey);
+    resetField(field);
+  }
+
+  void resetKey(const KeyType &keyType, const std::string &redisKey) {
+    qdb_assert(keyType == KeyType::kHash || keyType == KeyType::kSet || keyType == KeyType::kList);
+    keyBuffer.resize(1 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 1);
+
+    keyBuffer[0] = char(keyType);
+
+    size_t targetIndex = 1;
+    for(size_t i = 0; i < redisKey.size(); i++) {
+      if(redisKey[i] != '#') {
+        keyBuffer[targetIndex] = redisKey[i];
+        targetIndex++;
+      }
+      else {
+        keyBuffer[targetIndex] = '|';
+        keyBuffer[targetIndex+1] = '#';
+
+        targetIndex += 2;
+      }
+    }
+
+    keyBuffer[targetIndex] = '#';
+    keyPrefixSize = targetIndex + 1;
+  }
+
+  void resetField(const std::string &field) {
+    keyBuffer.shrink(keyPrefixSize);
+    keyBuffer.expand(keyPrefixSize + field.size());
+    memcpy(keyBuffer.data() + keyPrefixSize, field.data(), field.size());
+  }
+
+  rocksdb::Slice getPrefix() {
+    return rocksdb::Slice(keyBuffer.data(), keyPrefixSize);
+  }
+
+  size_t getPrefixSize() {
+    return keyPrefixSize;
+  }
+
+  rocksdb::Slice toSlice() {
+    return keyBuffer.toSlice();
+  }
+
+private:
+  size_t keyPrefixSize = 0;
   KeyBuffer keyBuffer;
 };
 
