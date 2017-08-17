@@ -520,6 +520,25 @@ TEST_F(Raft_e2e, reject_dangerous_membership_update) {
   int victim = (leaderID+1) % 2;
   redisReplyPtr reply = tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(victim).toString()).get();
   ASSERT_ERR(reply, "ERR membership update blocked, new cluster would not have an up-to-date quorum");
+
+  // Try to remove a non-existent node
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", RaftServer("random_host", 123).toString()),
+    "ERR random_host:123 is neither an observer nor a full node.");
+
+  // Make sure we can remove the third node
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(2).toString()), "OK");
+  RaftMembership membership = journal(leaderID)->getMembership();
+  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
+
+  // Add it back as observer
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_ADD_OBSERVER", myself(2).toString()), "OK");
+  membership = journal(leaderID)->getMembership();
+  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
+
+  // Remove it again
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(2).toString()), "OK");
+  membership = journal(leaderID)->getMembership();
+  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
 }
 
 TEST_F(Raft_e2e5, membership_updates_with_disruptions) {

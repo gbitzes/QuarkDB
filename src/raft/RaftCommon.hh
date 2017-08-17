@@ -255,6 +255,13 @@ struct ReplicationStatus {
     }
     replicas.push_back(replica);
   }
+
+  bool contains(const RaftServer &replica) {
+    for(size_t i = 0; i < replicas.size(); i++) {
+      if(replicas[i].target == replica) return true;
+    }
+    return false;
+  }
 };
 
 struct RaftInfo {
