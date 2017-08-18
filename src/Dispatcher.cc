@@ -166,7 +166,7 @@ std::string RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisReques
 LinkStatus RedisDispatcher::dispatch(Connection *conn, WriteBatch &batch) {
   StagingArea stagingArea(store);
 
-  LinkStatus lastStatus;
+  LinkStatus lastStatus = 0;
   for(size_t i = 0; i < batch.requests.size(); i++) {
     lastStatus = conn->raw(dispatchWrite(stagingArea, batch.requests[i]));
   }
