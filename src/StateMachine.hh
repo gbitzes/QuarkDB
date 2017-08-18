@@ -49,7 +49,30 @@ public:
   using TransactionPtr = std::unique_ptr<rocksdb::Transaction>;
 
   //----------------------------------------------------------------------------
-  // Main API
+  // API for batched writes - in this case, lastApplied increments once per
+  // batch, not per individual operation.
+  //----------------------------------------------------------------------------
+  rocksdb::Status set(StagingArea &stagingArea, const std::string& key, const std::string& value);
+  rocksdb::Status del(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status flushall(StagingArea &stagingArea);
+
+  rocksdb::Status hset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated);
+  rocksdb::Status hmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
+  rocksdb::Status hsetnx(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated);
+  rocksdb::Status hincrby(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, int64_t &result);
+  rocksdb::Status hincrbyfloat(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, double &result);
+  rocksdb::Status hdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+
+  rocksdb::Status sadd(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added);
+  rocksdb::Status srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+
+  rocksdb::Status lpush(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status rpush(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status lpop(StagingArea &stagingArea, const std::string &key, std::string &item);
+  rocksdb::Status rpop(StagingArea &stagingArea, const std::string &key, std::string &item);
+
+  //----------------------------------------------------------------------------
+  // Simple API
   //----------------------------------------------------------------------------
 
   rocksdb::Status hget(const std::string &key, const std::string &field, std::string &value);
@@ -121,10 +144,9 @@ private:
 
   TransactionPtr startTransaction();
   void commitTransaction(TransactionPtr &tx, LogIndex index);
-  rocksdb::Status malformedRequest(StagingArea &stagingArea, LogIndex index, std::string message);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
-  rocksdb::Status listPop(Direction direction, const std::string &key, std::string &item, LogIndex index);
-  rocksdb::Status listPush(Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
+  rocksdb::Status listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
+  rocksdb::Status listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
 
   class WriteOperation {
   public:
@@ -143,7 +165,7 @@ private:
     bool fieldExists(const std::string &field);
     bool deleteField(const std::string &field);
 
-    void finalize(int64_t newsize);
+    rocksdb::Status finalize(int64_t newsize);
 
     KeyDescriptor& descriptor() {
       return keyinfo;
@@ -165,8 +187,6 @@ private:
   KeyDescriptor getKeyDescriptor(const std::string &redisKey);
   KeyDescriptor getKeyDescriptor(Snapshot &snapshot, const std::string &redisKey);
   KeyDescriptor lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator);
-
-  rocksdb::Status wrongKeyType(StagingArea &stagingArea, LogIndex index);
 
   void retrieveLastApplied();
   void ensureCompatibleFormat(bool justCreated);

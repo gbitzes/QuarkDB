@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "storage/KeyDescriptor.hh"
+#include "storage/StagingArea.hh"
 #include "StateMachine.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
@@ -523,6 +524,31 @@ TEST_F(State_Machine, keys) {
   ASSERT_OK(stateMachine()->set("*", "1"));
   ASSERT_OK(stateMachine()->keys("\\*", keys));
   ASSERT_EQ(keys, make_vec("*"));
+}
+
+TEST_F(State_Machine, BatchedWrites) {
+  StagingArea stagingArea(*stateMachine());
+
+  bool fieldcreated;
+  ASSERT_OK(stateMachine()->set(stagingArea, "one", "1"));
+  ASSERT_OK(stateMachine()->set(stagingArea, "two", "2"));
+  ASSERT_OK(stateMachine()->hset(stagingArea, "key", "field", "value", fieldcreated));
+  ASSERT_TRUE(fieldcreated);
+
+  ASSERT_OK(stateMachine()->hset(stagingArea, "key", "field", "value", fieldcreated));
+  ASSERT_FALSE(fieldcreated);
+
+  stagingArea.commit(1);
+
+  std::string val;
+  ASSERT_OK(stateMachine()->get("one", val));
+  ASSERT_EQ(val, "1");
+
+  ASSERT_OK(stateMachine()->get("two", val));
+  ASSERT_EQ(val, "2");
+
+  ASSERT_OK(stateMachine()->hget("key", "field", val));
+  ASSERT_EQ(val, "value");
 }
 
 static std::string sliceToString(const rocksdb::Slice &slice) {
