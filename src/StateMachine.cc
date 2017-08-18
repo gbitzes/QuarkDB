@@ -26,6 +26,7 @@
 #include "../deps/StringMatchLen.h"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
+#include "storage/StagingArea.hh"
 #include "utils/IntToBinaryString.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
@@ -203,9 +204,9 @@ KeyDescriptor StateMachine::getKeyDescriptor(StateMachine::Snapshot &snapshot, c
   return constructDescriptor(st, tmp);
 }
 
-KeyDescriptor StateMachine::lockKeyDescriptor(TransactionPtr &tx, DescriptorLocator &dlocator) {
+KeyDescriptor StateMachine::lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator) {
   std::string tmp;
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dlocator.toSlice(), &tmp);
+  rocksdb::Status st = stagingArea.getForUpdate(dlocator.toSlice(), tmp);
   return constructDescriptor(st, tmp);
 }
 
@@ -262,16 +263,16 @@ rocksdb::Status StateMachine::hgetall(const std::string &key, std::vector<std::s
 }
 
 
-rocksdb::Status StateMachine::wrongKeyType(TransactionPtr &tx, LogIndex index) {
-  commitTransaction(tx, index);
+rocksdb::Status StateMachine::wrongKeyType(StagingArea &stagingArea, LogIndex index) {
+  stagingArea.commit(index);
   return wrong_type();
 }
 
 rocksdb::Status StateMachine::hset(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kHash);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   fieldcreated = !operation.fieldExists(field);
   int64_t newsize = operation.keySize() + fieldcreated;
@@ -279,15 +280,15 @@ rocksdb::Status StateMachine::hset(const std::string &key, const std::string &fi
   operation.writeField(field, value);
   operation.finalize(newsize);
 
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::hmset(const std::string &key, const VecIterator &start, const VecIterator &end, LogIndex index) {
   if((end - start) % 2 != 0) qdb_throw("hmset: distance between start and end iterators must be an even number");
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kHash);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   int64_t newsize = operation.keySize();
   for(VecIterator it = start; it != end; it += 2) {
@@ -296,14 +297,14 @@ rocksdb::Status StateMachine::hmset(const std::string &key, const VecIterator &s
   }
 
   operation.finalize(newsize);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::hsetnx(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kHash);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   fieldcreated = !operation.fieldExists(field);
   int64_t newsize = operation.keySize() + fieldcreated;
@@ -313,19 +314,19 @@ rocksdb::Status StateMachine::hsetnx(const std::string &key, const std::string &
   }
 
   operation.finalize(newsize);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index) {
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
   int64_t incrbyInt64;
   if(!my_strtoll(incrby, incrbyInt64)) {
-    return malformedRequest(tx, index, "value is not an integer or out of range");
+    return malformedRequest(stagingArea, index, "value is not an integer or out of range");
   }
 
-  WriteOperation operation(tx, key, KeyType::kHash);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   std::string value;
   bool exists = operation.getField(field, value);
@@ -333,26 +334,26 @@ rocksdb::Status StateMachine::hincrby(const std::string &key, const std::string 
   result = 0;
   if(exists && !my_strtoll(value, result)) {
     operation.finalize(operation.keySize());
-    return malformedRequest(tx, index, "hash value is not an integer");
+    return malformedRequest(stagingArea, index, "hash value is not an integer");
   }
 
   result += incrbyInt64;
 
   operation.writeField(field, std::to_string(result));
   operation.finalize(operation.keySize() + !exists);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index) {
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
   double incrByDouble;
   if(!my_strtod(incrby, incrByDouble)) {
-    return malformedRequest(tx, index, "value is not a float or out of range");
+    return malformedRequest(stagingArea, index, "value is not a float or out of range");
   }
 
-  WriteOperation operation(tx, key, KeyType::kHash);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   std::string value;
   bool exists = operation.getField(field, value);
@@ -360,22 +361,22 @@ rocksdb::Status StateMachine::hincrbyfloat(const std::string &key, const std::st
   result = 0;
   if(exists && !my_strtod(value, result)) {
     operation.finalize(operation.keySize());
-    return malformedRequest(tx, index, "hash value is not a float");
+    return malformedRequest(stagingArea, index, "hash value is not a float");
   }
 
   result += incrByDouble;
 
   operation.writeField(field, std::to_string(result));
   operation.finalize(operation.keySize() + !exists);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::hdel(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kHash);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kHash);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   for(VecIterator it = start; it != end; it++) {
     removed += operation.deleteField(*it);
@@ -383,7 +384,7 @@ rocksdb::Status StateMachine::hdel(const std::string &key, const VecIterator &st
 
   int64_t newsize = operation.keySize() - removed;
   operation.finalize(newsize);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 static bool isWrongType(KeyDescriptor &descriptor, KeyType keyType) {
@@ -445,10 +446,10 @@ rocksdb::Status StateMachine::hvals(const std::string &key, std::vector<std::str
 
 rocksdb::Status StateMachine::sadd(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added, LogIndex index) {
   added = 0;
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kSet);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kSet);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   for(VecIterator it = start; it != end; it++) {
     bool exists = operation.fieldExists(*it);
@@ -459,7 +460,7 @@ rocksdb::Status StateMachine::sadd(const std::string &key, const VecIterator &st
   }
 
   operation.finalize(operation.keySize() + added);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::sismember(const std::string &key, const std::string &element) {
@@ -473,17 +474,17 @@ rocksdb::Status StateMachine::sismember(const std::string &key, const std::strin
 
 rocksdb::Status StateMachine::srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kSet);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kSet);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   for(VecIterator it = start; it != end; it++) {
     removed += operation.deleteField(*it);
   }
 
   operation.finalize(operation.keySize() - removed);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::smembers(const std::string &key, std::vector<std::string> &members) {
@@ -554,13 +555,13 @@ StateMachine::WriteOperation::~WriteOperation() {
   }
 }
 
-StateMachine::WriteOperation::WriteOperation(StateMachine::TransactionPtr &tx_, const std::string &key, const KeyType &type)
-: tx(tx_), redisKey(key), expectedType(type) {
+StateMachine::WriteOperation::WriteOperation(StagingArea &staging, const std::string &key, const KeyType &type)
+: stagingArea(staging), redisKey(key), expectedType(type) {
 
   std::string tmp;
 
   dlocator.reset(redisKey);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), dlocator.toSlice(), &tmp);
+  rocksdb::Status st = stagingArea.getForUpdate(dlocator.toSlice(), tmp);
 
   if(st.IsNotFound()) {
     keyinfo = KeyDescriptor();
@@ -594,7 +595,7 @@ bool StateMachine::WriteOperation::getField(const std::string &field, std::strin
   assertWritable();
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), locator.toSlice(), &out);
+  rocksdb::Status st = stagingArea.getForUpdate(locator.toSlice(), out);
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
@@ -616,7 +617,7 @@ void StateMachine::WriteOperation::write(const std::string &value) {
   }
 
   StringLocator slocator(redisKey);
-  THROW_ON_ERROR(tx->Put(slocator.toSlice(), value));
+  stagingArea.put(slocator.toSlice(), value);
 }
 
 void StateMachine::WriteOperation::writeField(const std::string &field, const std::string &value) {
@@ -627,7 +628,7 @@ void StateMachine::WriteOperation::writeField(const std::string &field, const st
   }
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  THROW_ON_ERROR(tx->Put(locator.toSlice(), value));
+  stagingArea.put(locator.toSlice(), value);
 }
 
 void StateMachine::WriteOperation::finalize(int64_t newsize) {
@@ -636,11 +637,11 @@ void StateMachine::WriteOperation::finalize(int64_t newsize) {
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
 
   if(newsize == 0) {
-    THROW_ON_ERROR(tx->Delete(dlocator.toSlice()));
+    stagingArea.del(dlocator.toSlice());
   }
   else if(keyinfo.getSize() != newsize) {
     keyinfo.setSize(newsize);
-    THROW_ON_ERROR(tx->Put(dlocator.toSlice(), keyinfo.serialize()));
+    stagingArea.put(dlocator.toSlice(), keyinfo.serialize());
   }
 
   finalized = true;
@@ -659,30 +660,30 @@ bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   std::string tmp;
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = tx->GetForUpdate(rocksdb::ReadOptions(), locator.toSlice(), &tmp);
+  rocksdb::Status st = stagingArea.getForUpdate(locator.toSlice(), tmp);
   ASSERT_OK_OR_NOTFOUND(st);
 
-  if(st.ok()) THROW_ON_ERROR(tx->Delete(locator.toSlice()));
+  if(st.ok()) stagingArea.del(locator.toSlice());
   return st.ok();
 }
 
 rocksdb::Status StateMachine::set(const std::string& key, const std::string& value, LogIndex index) {
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kString);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kString);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   operation.write(value);
   operation.finalize(value.size());
 
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::listPush(Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kList);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kList);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   KeyDescriptor &descriptor = operation.descriptor();
 
@@ -699,7 +700,7 @@ rocksdb::Status StateMachine::listPush(Direction direction, const std::string &k
     descriptor.setListIndex(flipDirection(direction), listIndex + ((int)direction*-1));
   }
   operation.finalize(length);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::llen(const std::string &key, size_t &len) {
@@ -721,16 +722,16 @@ rocksdb::Status StateMachine::rpush(const std::string &key, const VecIterator &s
 }
 
 rocksdb::Status StateMachine::listPop(Direction direction, const std::string &key, std::string &item, LogIndex index) {
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
-  WriteOperation operation(tx, key, KeyType::kList);
-  if(!operation.valid()) return wrongKeyType(tx, index);
+  WriteOperation operation(stagingArea, key, KeyType::kList);
+  if(!operation.valid()) return wrongKeyType(stagingArea, index);
 
   // nothing to do, return empty string
   if(operation.keySize() == 0) {
     item = "";
     operation.finalize(0);
-    finalize(tx, index);
+    stagingArea.commit(index);
     return rocksdb::Status::NotFound();
   }
 
@@ -744,7 +745,7 @@ rocksdb::Status StateMachine::listPop(Direction direction, const std::string &ke
   descriptor.setListIndex(direction, victim);
 
   operation.finalize(operation.keySize() - 1);
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::lpop(const std::string &key, std::string &item, LogIndex index) {
@@ -778,7 +779,7 @@ rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
   return db->Get(snapshot.opts(), slocator.toSlice(), &value);
 }
 
-void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, TransactionPtr &tx) {
+void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea) {
   removed = 0;
 
   std::string tmp;
@@ -789,31 +790,31 @@ void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t 
     if(!StringUtils::startswith(key, prefix)) break;
     if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(InternalKeyType::kConfiguration))) continue;
 
-    THROW_ON_ERROR(tx->Delete(key));
+    stagingArea.del(key);
     removed++;
   }
 }
 
 rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index) {
   removed = 0;
-  TransactionPtr tx = startTransaction();
+  StagingArea stagingArea(*this);
 
   for(VecIterator it = start; it != end; it++) {
     DescriptorLocator dlocator(*it);
-    KeyDescriptor keyInfo = lockKeyDescriptor(tx, dlocator);
+    KeyDescriptor keyInfo = lockKeyDescriptor(stagingArea, dlocator);
     if(keyInfo.empty()) continue;
 
     std::string tmp;
 
     if(keyInfo.getKeyType() == KeyType::kString) {
       StringLocator slocator(*it);
-      THROW_ON_ERROR(tx->GetForUpdate(rocksdb::ReadOptions(), slocator.toSlice(), &tmp));
-      THROW_ON_ERROR(tx->Delete(slocator.toSlice()));
+      THROW_ON_ERROR(stagingArea.getForUpdate(slocator.toSlice(), tmp));
+      stagingArea.del(slocator.toSlice());
     }
     else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kList) {
       FieldLocator locator(keyInfo.getKeyType(), *it);
       int64_t count = 0;
-      remove_all_with_prefix(locator.toSlice(), count, tx);
+      remove_all_with_prefix(locator.toSlice(), count, stagingArea);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
     else {
@@ -821,10 +822,10 @@ rocksdb::Status StateMachine::del(const VecIterator &start, const VecIterator &e
     }
 
     removed++;
-    THROW_ON_ERROR(tx->Delete(dlocator.toSlice()));
+    stagingArea.del(dlocator.toSlice());
   }
 
-  return finalize(tx, index);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::exists(const VecIterator &start, const VecIterator &end, int64_t &count) {
@@ -863,9 +864,9 @@ rocksdb::Status StateMachine::keys(const std::string &pattern, std::vector<std::
 
 rocksdb::Status StateMachine::flushall(LogIndex index) {
   int64_t tmp;
-  TransactionPtr tx = startTransaction();
-  remove_all_with_prefix("", tmp, tx);
-  return finalize(tx, index);
+  StagingArea stagingArea(*this);
+  remove_all_with_prefix("", tmp, stagingArea);
+  return stagingArea.commit(index);
 }
 
 rocksdb::Status StateMachine::checkpoint(const std::string &path) {
@@ -891,17 +892,12 @@ StateMachine::TransactionPtr StateMachine::startTransaction() {
 }
 
 rocksdb::Status StateMachine::noop(LogIndex index) {
-  TransactionPtr tx = startTransaction();
-  return finalize(tx, index);
+  StagingArea stagingArea(*this);
+  return stagingArea.commit(index);
 }
 
-rocksdb::Status StateMachine::finalize(TransactionPtr &tx, LogIndex index) {
-  commitTransaction(tx, index);
-  return rocksdb::Status::OK();
-}
-
-rocksdb::Status StateMachine::malformedRequest(TransactionPtr &tx, LogIndex index, std::string message) {
-  commitTransaction(tx, index);
+rocksdb::Status StateMachine::malformedRequest(StagingArea &stagingArea, LogIndex index, std::string message) {
+  stagingArea.commit(index);
   return rocksdb::Status::InvalidArgument(message);
 }
 

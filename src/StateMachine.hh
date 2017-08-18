@@ -35,6 +35,8 @@
 
 namespace quarkdb {
 
+class StagingArea;
+
 class StateMachine {
 public:
   StateMachine(const std::string &filename, bool write_ahead_log = true);
@@ -103,6 +105,8 @@ public:
   std::string statistics();
 
 private:
+  friend class StagingArea;
+
   class Snapshot {
   public:
     Snapshot(rocksdb::DB *db);
@@ -117,15 +121,14 @@ private:
 
   TransactionPtr startTransaction();
   void commitTransaction(TransactionPtr &tx, LogIndex index);
-  rocksdb::Status finalize(TransactionPtr &tx, LogIndex index);
-  rocksdb::Status malformedRequest(TransactionPtr &tx, LogIndex index, std::string message);
+  rocksdb::Status malformedRequest(StagingArea &stagingArea, LogIndex index, std::string message);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
   rocksdb::Status listPop(Direction direction, const std::string &key, std::string &item, LogIndex index);
   rocksdb::Status listPush(Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
 
   class WriteOperation {
   public:
-    WriteOperation(TransactionPtr &tx, const std::string &key, const KeyType &type);
+    WriteOperation(StagingArea &stagingArea, const std::string &key, const KeyType &type);
     ~WriteOperation();
 
     bool valid();
@@ -146,7 +149,7 @@ private:
       return keyinfo;
     }
   private:
-    TransactionPtr &tx;
+    StagingArea &stagingArea;
     const std::string &redisKey;
 
     KeyType expectedType;
@@ -161,13 +164,13 @@ private:
 
   KeyDescriptor getKeyDescriptor(const std::string &redisKey);
   KeyDescriptor getKeyDescriptor(Snapshot &snapshot, const std::string &redisKey);
-  KeyDescriptor lockKeyDescriptor(TransactionPtr &tx, DescriptorLocator &dlocator);
+  KeyDescriptor lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator);
 
-  rocksdb::Status wrongKeyType(TransactionPtr &tx, LogIndex index);
+  rocksdb::Status wrongKeyType(StagingArea &stagingArea, LogIndex index);
 
   void retrieveLastApplied();
   void ensureCompatibleFormat(bool justCreated);
-  void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, TransactionPtr &tx);
+  void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea);
 
   std::atomic<LogIndex> lastApplied;
   rocksdb::TransactionDB* transactionDB = nullptr;
