@@ -41,7 +41,7 @@ public:
   // TODO: remove default implementation once every dispatcher implements this
 
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) {
-    LinkStatus lastStatus;
+    LinkStatus lastStatus = 0;
     for(size_t i = 0; i < batch.requests.size(); i++) {
       lastStatus = this->dispatch(conn, batch.requests[i]);
     }
