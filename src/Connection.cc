@@ -192,7 +192,7 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
     if(currentRequest.getCommandType() == CommandType::WRITE) {
       writeBatch.requests.emplace_back(std::move(currentRequest));
 
-      if(writeBatch.requests.size() >= 100) {
+      if(writeBatch.requests.size() >= 1) {
         processWriteBatch(dispatcher, writeBatch);
       }
     }
