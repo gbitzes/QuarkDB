@@ -35,7 +35,13 @@ namespace quarkdb {
 
 class StagingArea {
 public:
-  StagingArea(StateMachine &sm) : stateMachine(sm), tx(stateMachine.startTransaction()) { }
+  StagingArea(StateMachine &sm) : stateMachine(sm), tx(stateMachine.startTransaction()) {
+    // stateMachine.stagingMutex.lock();
+  }
+
+  ~StagingArea() {
+    // stateMachine.stagingMutex.unlock();
+  }
 
   rocksdb::Status getForUpdate(const rocksdb::Slice &slice, std::string &value) {
     return tx->GetForUpdate(rocksdb::ReadOptions(), slice, &value);

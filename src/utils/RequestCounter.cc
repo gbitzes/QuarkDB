@@ -24,6 +24,7 @@
 #include "../Utils.hh"
 #include "RequestCounter.hh"
 #include "../Commands.hh"
+#include "../WriteBatch.hh"
 using namespace quarkdb;
 
 RequestCounter::RequestCounter(std::chrono::seconds intv)
@@ -38,15 +39,21 @@ void RequestCounter::account(const RedisRequest &req) {
   }
 }
 
+void RequestCounter::account(const WriteBatch &batch) {
+  batches++;
+  writes += batch.requests.size();
+}
+
 void RequestCounter::mainThread(ThreadAssistant &assistant) {
   while(!assistant.terminationRequested()) {
 
     int64_t localReads = reads.exchange(0);
     int64_t localWrites = writes.exchange(0);
+    int64_t localBatches = batches.exchange(0);
 
     if(localReads != 0 || localWrites != 0) {
       paused = false;
-      qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads (" << localReads / interval.count() << " Hz), and " << localWrites << " writes (" << localWrites / interval.count() << " Hz)");
+      qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads (" << localReads / interval.count() << " Hz), and " << localWrites << " writes (total batches: " << localBatches << ", rate: " << localWrites / interval.count() << " Hz)");
     }
     else if(!paused) {
       paused = true;

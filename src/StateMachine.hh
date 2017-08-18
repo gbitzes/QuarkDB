@@ -129,6 +129,8 @@ public:
   std::string statistics();
 
 private:
+  std::mutex stagingMutex;
+
   friend class StagingArea;
 
   class Snapshot {

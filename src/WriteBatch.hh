@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: WriteBatch.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,44 +21,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_SHARD_H__
-#define __QUARKDB_SHARD_H__
+#ifndef __QUARKDB_WRITE_BATCH_H__
+#define __QUARKDB_WRITE_BATCH_H__
 
-#include "raft/RaftTimeouts.hh"
-#include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "utils/InFlightTracker.hh"
-#include "utils/RequestCounter.hh"
+#include "RedisRequest.hh"
 
 namespace quarkdb {
 
-class RaftGroup; class ShardDirectory;
-class Shard : public Dispatcher {
-public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
-  ~Shard();
-
-  RaftGroup* getRaftGroup();
-  void spinup();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
-private:
-  void detach();
-  void attach();
-  void start();
-
-  ShardDirectory *shardDirectory;
-
-  RaftGroup *raftGroup = nullptr;
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-
-  InFlightTracker inFlightTracker;
-  RequestCounter requestCounter;
+struct WriteBatch {
+  std::vector<RedisRequest> requests;
 };
 
 }

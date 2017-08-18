@@ -61,6 +61,7 @@ public:
   QuarkDBNode(const Configuration &config, const RaftTimeouts &t);
   ~QuarkDBNode();
 
+  virtual LinkStatus dispatch(Connection *conn, WriteBatch &req) override final;
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
 
   const Configuration& getConfiguration() {

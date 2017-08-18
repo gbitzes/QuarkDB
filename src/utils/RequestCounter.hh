@@ -30,7 +30,7 @@
 
 namespace quarkdb {
 
-class RedisRequest;
+class RedisRequest; class WriteBatch;
 
 //------------------------------------------------------------------------------
 // Count what types of requests we've been servicing, and reports statistics
@@ -42,10 +42,12 @@ public:
   RequestCounter(std::chrono::seconds interval);
 
   void account(const RedisRequest &req);
+  void account(const WriteBatch &batch);
   void mainThread(ThreadAssistant &assistant);
 private:
   std::atomic<int64_t> reads {0};
   std::atomic<int64_t> writes {0};
+  std::atomic<int64_t> batches {0};
   bool paused = true;
 
   std::chrono::seconds interval;

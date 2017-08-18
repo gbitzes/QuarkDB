@@ -99,7 +99,7 @@ private:
 //------------------------------------------------------------------------------
 // Keeps track of connection-specific state.
 //------------------------------------------------------------------------------
-class Dispatcher; class InFlightTracker;
+class Dispatcher; class InFlightTracker; class WriteBatch;
 
 class Connection {
 public:
@@ -152,6 +152,7 @@ public:
 private:
   BufferedWriter writer;
 
+  void processWriteBatch(Dispatcher *dispatcher, WriteBatch &writeBatch);
   RedisRequest currentRequest;
   RedisParser parser;
   std::shared_ptr<PendingQueue> pendingQueue;

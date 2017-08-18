@@ -163,6 +163,18 @@ std::string RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisReques
 
 }
 
+LinkStatus RedisDispatcher::dispatch(Connection *conn, WriteBatch &batch) {
+  StagingArea stagingArea(store);
+
+  LinkStatus lastStatus;
+  for(size_t i = 0; i < batch.requests.size(); i++) {
+    lastStatus = conn->raw(dispatchWrite(stagingArea, batch.requests[i]));
+  }
+
+  stagingArea.commit(0);
+  return lastStatus;
+}
+
 std::string RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
   if(request.getCommand() == RedisCommand::INVALID) {
     if(startswith(request[0], "JOURNAL_")) {

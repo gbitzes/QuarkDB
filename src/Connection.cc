@@ -168,14 +168,41 @@ LinkStatus Connection::scan(const std::string &marker, const std::vector<std::st
   return pendingQueue->appendResponse(Formatter::scan(marker, vec));
 }
 
+void Connection::processWriteBatch(Dispatcher *dispatcher, WriteBatch &writeBatch) {
+  if(!writeBatch.requests.empty()) {
+    dispatcher->dispatch(this, writeBatch);
+    writeBatch.requests.clear();
+  }
+}
+
 LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTracker &inFlightTracker) {
   FlushGuard guard(this);
+
+  WriteBatch writeBatch;
   while(inFlightTracker.isAcceptingRequests()) {
     LinkStatus status = parser.fetch(currentRequest);
-    if(status == 0) return 1; // slow link
+
+    if(status == 0) {
+      // slow link - process the write batch, if needed
+      processWriteBatch(dispatcher, writeBatch);
+      return 1; // slow link
+    }
     if(status < 0) return status; // error
-    dispatcher->dispatch(this, currentRequest);
+
+    if(currentRequest.getCommandType() == CommandType::WRITE) {
+      writeBatch.requests.emplace_back(std::move(currentRequest));
+
+      if(writeBatch.requests.size() >= 100) {
+        processWriteBatch(dispatcher, writeBatch);
+      }
+    }
+    else {
+      processWriteBatch(dispatcher, writeBatch);
+      dispatcher->dispatch(this, currentRequest);
+    }
   }
+
+  processWriteBatch(dispatcher, writeBatch);
   return 1;
 }
 

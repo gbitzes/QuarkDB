@@ -96,6 +96,12 @@ void Shard::spinup() {
   raftGroup->spinup();
 }
 
+LinkStatus Shard::dispatch(Connection *conn, WriteBatch &batch) {
+  LinkStatus ret = dispatcher->dispatch(conn, batch);
+  requestCounter.account(batch);
+  return ret;
+}
+
 LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::INVALID: {
