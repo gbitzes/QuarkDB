@@ -112,6 +112,7 @@ public:
   //----------------------------------------------------------------------------
   rocksdb::Status configGet(const std::string &key, std::string &value);
   rocksdb::Status configSet(const std::string &key, const std::string &value, LogIndex index = 0);
+  rocksdb::Status configSet(StagingArea &stagingArea, const std::string &key, const std::string &value);
   rocksdb::Status configGetall(std::vector<std::string> &res);
 
   rocksdb::Status noop(LogIndex index);

@@ -37,7 +37,7 @@ public:
   virtual ~Dispatcher() {}
 };
 
-class StateMachine;
+class StateMachine; class StagingArea;
 
 class RedisDispatcher : public Dispatcher {
 public:
@@ -45,6 +45,7 @@ public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   std::string dispatch(RedisRequest &req, LogIndex commit);
 private:
+  std::string dispatchWrite(StagingArea &stagingArea, RedisRequest &req);
   std::string errArgs(RedisRequest &request, LogIndex commit);
 
   StateMachine &store;

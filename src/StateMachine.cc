@@ -498,16 +498,12 @@ rocksdb::Status StateMachine::configGet(const std::string &key, std::string &val
   return db->Get(snapshot.opts(), tkey, &value);
 }
 
-rocksdb::Status StateMachine::configSet(const std::string &key, const std::string &value, LogIndex index) {
+rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::string &key, const std::string &value) {
   // We don't use WriteOperation or key descriptors here,
   // since kConfiguration is special.
 
   std::string tkey = translate_key(InternalKeyType::kConfiguration, key);
-
-  TransactionPtr tx = startTransaction();
-  THROW_ON_ERROR(tx->Put(tkey, value));
-  commitTransaction(tx, index);
-
+  stagingArea.put(tkey, value);
   return rocksdb::Status::OK();
 }
 
@@ -944,4 +940,8 @@ rocksdb::Status StateMachine::lpush(const std::string &key, const VecIterator &s
 
 rocksdb::Status StateMachine::rpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
   CHAIN(index, rpush, key, start, end, length);
+}
+
+rocksdb::Status StateMachine::configSet(const std::string &key, const std::string &value, LogIndex index) {
+  CHAIN(index, configSet, key, value);
 }
