@@ -36,7 +36,8 @@ namespace quarkdb {
 
 enum class Mode {
   standalone = 0,
-  raft = 1
+  raft = 1,
+  bulkload = 2
 };
 
 inline std::string modeToString(const Mode &mode) {
@@ -45,6 +46,9 @@ inline std::string modeToString(const Mode &mode) {
   }
   if(mode == Mode::raft) {
     return "RAFT";
+  }
+  if(mode == Mode::bulkload) {
+    return "BULKLOAD";
   }
   qdb_throw("unknown mode"); // should never happen
 }

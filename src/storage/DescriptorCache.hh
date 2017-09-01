@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: DescriptorCache.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,46 +21,60 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_SHARD_H__
-#define __QUARKDB_SHARD_H__
+#ifndef __QUARKDB_DESCRIPTOR_CACHE_H__
+#define __QUARKDB_DESCRIPTOR_CACHE_H__
 
-#include "raft/RaftTimeouts.hh"
-#include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "utils/InFlightTracker.hh"
-#include "utils/RequestCounter.hh"
+#include <mutex>
 
 namespace quarkdb {
 
-class RaftGroup; class ShardDirectory;
-class Shard : public Dispatcher {
+// This cache is currently only used during a bulk load.
+class DescriptorCache {
 public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
-  ~Shard();
+  struct Item {
+    std::string value;
+    std::mutex mutex;
+  };
 
-  RaftGroup* getRaftGroup();
-  void spinup();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
+  bool get(const rocksdb::Slice &key, std::string &value) {
+    std::lock_guard<std::mutex> lock(mtx);
+    auto it = contents.find(key.ToString());
+    if(it == contents.end()) {
+      return false;
+    }
+
+    value = it->second->value;
+    // it->second->mutex.lock();
+    return true;
+  }
+
+  void put(const rocksdb::Slice &key, const rocksdb::Slice &value) {
+    std::lock_guard<std::mutex> lock(mtx);
+    Item *item = contents[key.ToString()];
+    if(!item) {
+      item = new Item();
+      contents[key.ToString()] = item;
+      item->value = value.ToString();
+    }
+    else {
+      item->value = value.ToString();
+      item->mutex.unlock();
+    }
+  }
+
+  std::map<std::string, Item*>::const_iterator begin() const {
+    return contents.begin();
+  }
+
+  std::map<std::string, Item*>::const_iterator end() const {
+    return contents.end();
+  }
+
 private:
-  void detach();
-  void attach();
-  void start();
-  void stopAcceptingRequests();
-
-  ShardDirectory *shardDirectory;
-
-  RaftGroup *raftGroup = nullptr;
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-
-  InFlightTracker inFlightTracker;
-  RequestCounter requestCounter;
+  std::mutex mtx;
+  std::map<std::string, Item*> contents;
 };
+
 
 }
 

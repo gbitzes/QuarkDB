@@ -103,7 +103,7 @@ class Dispatcher; class InFlightTracker; class WriteBatch;
 
 class Connection {
 public:
-  Connection(Link *link);
+  Connection(Link *link, size_t writeBatchLimit = 1);
   ~Connection();
 
   LinkStatus raw(std::string &&raw);
@@ -156,6 +156,8 @@ private:
   RedisRequest currentRequest;
   RedisParser parser;
   std::shared_ptr<PendingQueue> pendingQueue;
+  size_t writeBatchLimit;
+
   friend class PendingQueue;
 };
 

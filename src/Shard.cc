@@ -48,6 +48,10 @@ void Shard::attach() {
     raftGroup = new RaftGroup(*shardDirectory, myself, timeouts);
     dispatcher = static_cast<Dispatcher*>(raftGroup->dispatcher());
   }
+  else if(mode == Mode::bulkload) {
+    stateMachine = shardDirectory->getStateMachineForBulkload();
+    dispatcher = new RedisDispatcher(*stateMachine);
+  }
   else {
     qdb_throw("cannot determine configuration mode"); // should never happen
   }
@@ -60,12 +64,15 @@ void Shard::start() {
   spinup();
 }
 
+void Shard::stopAcceptingRequests() {
+  inFlightTracker.setAcceptingRequests(false);
+  qdb_event("Spinning until all requests being dispatched (" << inFlightTracker.getInFlight() << ") have been processed.");
+  inFlightTracker.spinUntilNoRequestsInFlight();
+}
+
 void Shard::detach() {
   if(!inFlightTracker.isAcceptingRequests()) return;
-  inFlightTracker.setAcceptingRequests(false);
-
-  qdb_event("Detaching this shard - spinning until all requests being dispatched (" << inFlightTracker.getInFlight() << ") have been processed.");
-  inFlightTracker.spinUntilNoRequestsInFlight();
+  stopAcceptingRequests();
   qdb_info("All requests processed, detaching.");
 
   if(raftGroup) {
@@ -148,6 +155,17 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       }
 
       start();
+      return conn->ok();
+    }
+    case RedisCommand::QUARKDB_BULKLOAD_FINALIZE: {
+      if(req.size() != 1) return conn->errArgs(req[0]);
+      if(mode != Mode::bulkload) {
+        qdb_warn("received command QUARKDB_BULKLOAD_FINALIZE while in mode " << modeToString(mode));
+        return conn->err("not in bulkload mode");
+      }
+
+      stopAcceptingRequests();
+      stateMachine->finalizeBulkload();
       return conn->ok();
     }
     default: {

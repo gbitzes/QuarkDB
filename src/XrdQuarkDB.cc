@@ -87,7 +87,13 @@ int XrdQuarkDB::Process(XrdLink *lp) {
   // TODO log client DN
   if(!link && tlsconfig.active) qdb_info("handling TLS connection. Security is intensifying");
   if(!link) link = new Link(lp, tlsconfig);
-  if(!conn) conn = new Connection(link);
+
+  size_t writeBatchLimit = 1;
+  if(quarkdbNode->getConfiguration().getMode() == Mode::bulkload) {
+    writeBatchLimit = 100;
+  }
+
+  if(!conn) conn = new Connection(link, writeBatchLimit);
 
   return conn->processRequests(quarkdbNode, inFlightTracker);
 }

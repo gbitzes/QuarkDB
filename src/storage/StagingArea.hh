@@ -26,6 +26,7 @@
 
 #include <mutex>
 #include "KeyDescriptor.hh"
+#include "DescriptorCache.hh"
 #include "../utils/SmartBuffer.hh"
 #include "../StateMachine.hh"
 
@@ -35,8 +36,12 @@ namespace quarkdb {
 
 class StagingArea {
 public:
-  StagingArea(StateMachine &sm) : stateMachine(sm), tx(stateMachine.startTransaction()) {
-    // stateMachine.stagingMutex.lock();
+  StagingArea(StateMachine &sm) : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()),
+  tx(stateMachine.startTransaction()) {
+
+    if(bulkLoad) {
+      descriptorCache = &stateMachine.getDescriptorCache();
+    }
   }
 
   ~StagingArea() {
@@ -44,29 +49,69 @@ public:
   }
 
   rocksdb::Status getForUpdate(const rocksdb::Slice &slice, std::string &value) {
+    if(bulkLoad && slice[0] == char(InternalKeyType::kDescriptor)) {
+      if(descriptorCache->get(slice, value)) {
+        return rocksdb::Status::OK();
+      }
+
+      return rocksdb::Status::NotFound();
+    }
+
+    if(bulkLoad) {
+      // assume key doesn't exist
+      return rocksdb::Status::NotFound();
+    }
+
     return tx->GetForUpdate(rocksdb::ReadOptions(), slice, &value);
   }
 
   rocksdb::Status get(const rocksdb::Slice &slice, std::string &value) {
+    if(bulkLoad) {
+      return rocksdb::Status::NotFound();
+    }
+
     return tx->Get(rocksdb::ReadOptions(), slice, &value);
   }
 
   void put(const rocksdb::Slice &slice, const rocksdb::Slice &value) {
+    if(bulkLoad) {
+      if(slice[0] == char(InternalKeyType::kDescriptor)) {
+        descriptorCache->put(slice, value);
+        return;
+      }
+
+      // rocksdb transactions have to build an internal index to implement
+      // repeatable reads on the same tx. In bulkload mode we don't allow reads,
+      // so let's use the much faster write batch.
+      writeBatch.Put(slice, value);
+      return;
+    }
+
     THROW_ON_ERROR(tx->Put(slice, value));
   }
 
   void del(const rocksdb::Slice &slice) {
+    if(bulkLoad) qdb_throw("no deletions allowed during bulk load");
     THROW_ON_ERROR(tx->Delete(slice));
   }
 
   rocksdb::Status commit(LogIndex index) {
+    if(bulkLoad) {
+      qdb_assert(index == 0);
+      stateMachine.commitBatch(writeBatch);
+      return rocksdb::Status::OK();
+    }
+
     stateMachine.commitTransaction(tx, index);
     return rocksdb::Status::OK();
   }
 
 private:
   StateMachine &stateMachine;
+  bool bulkLoad = false;
   StateMachine::TransactionPtr tx;
+  DescriptorCache *descriptorCache = nullptr;
+  rocksdb::WriteBatch writeBatch;
 };
 
 }

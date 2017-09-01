@@ -54,8 +54,8 @@ static rocksdb::Status malformed(const std::string &message) {
   return rocksdb::Status::InvalidArgument(message);
 }
 
-StateMachine::StateMachine(const std::string &f, bool write_ahead_log)
-: filename(f), writeAheadLog(write_ahead_log) {
+StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk_load)
+: filename(f), writeAheadLog(write_ahead_log), bulkLoad(bulk_load) {
 
   if(writeAheadLog) {
     qdb_info("Openning state machine " << quotes(filename) << ".");
@@ -65,6 +65,10 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log)
   }
 
   bool dirExists = directoryExists(filename);
+
+  if(bulkLoad && dirExists) {
+    qdb_throw("bulkload only available for newly initialized state machines; path '" << filename << "' already exists");
+  }
 
   rocksdb::Options options;
   rocksdb::BlockBasedTableOptions table_options;
@@ -81,6 +85,12 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log)
 
   options.create_if_missing = !dirExists;
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+
+  if(bulkLoad) {
+    qdb_warn("Opening state machine in bulkload mode.");
+    writeAheadLog = false;
+    options.PrepareForBulkLoad();
+  }
 
   rocksdb::TransactionDBOptions txopts;
   txopts.transaction_lock_timeout = -1;
@@ -570,7 +580,7 @@ bool StateMachine::WriteOperation::getField(const std::string &field, std::strin
   assertWritable();
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = stagingArea.getForUpdate(locator.toSlice(), out);
+  rocksdb::Status st = stagingArea.get(locator.toSlice(), out);
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
@@ -636,7 +646,7 @@ bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   std::string tmp;
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = stagingArea.getForUpdate(locator.toSlice(), tmp);
+  rocksdb::Status st = stagingArea.get(locator.toSlice(), tmp);
   ASSERT_OK_OR_NOTFOUND(st);
 
   if(st.ok()) stagingArea.del(locator.toSlice());
@@ -772,7 +782,7 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const VecIterator &s
 
     if(keyInfo.getKeyType() == KeyType::kString) {
       StringLocator slocator(*it);
-      THROW_ON_ERROR(stagingArea.getForUpdate(slocator.toSlice(), tmp));
+      THROW_ON_ERROR(stagingArea.get(slocator.toSlice(), tmp));
       stagingArea.del(slocator.toSlice());
     }
     else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kList) {
@@ -857,6 +867,32 @@ StateMachine::TransactionPtr StateMachine::startTransaction() {
 rocksdb::Status StateMachine::noop(LogIndex index) {
   StagingArea stagingArea(*this);
   return stagingArea.commit(index);
+}
+
+void StateMachine::finalizeBulkload() {
+  qdb_event("Finalizing bulkload. Collecting all key descriptors into a write batch...");
+
+  auto it = descriptorCache.begin();
+  rocksdb::WriteBatch descriptors;
+
+  size_t count = 0;
+  while(it != descriptorCache.end()) {
+    count++;
+    descriptors.Put(it->first, it->second->value);
+
+    it++;
+  }
+
+  qdb_event("Collected " << count << " key descriptors. Flushing write batch...");
+  commitBatch(descriptors);
+
+  qdb_event("Key descriptors have been flushed. Issuing manual compaction...");
+  THROW_ON_ERROR(db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr));
+  qdb_event("Compaction has been successful - bulk load is over. Restart quarkdb in standalone mode.");
+}
+
+void StateMachine::commitBatch(rocksdb::WriteBatch &batch) {
+  THROW_ON_ERROR(db->Write(rocksdb::WriteOptions(), &batch));
 }
 
 void StateMachine::commitTransaction(TransactionPtr &tx, LogIndex index) {

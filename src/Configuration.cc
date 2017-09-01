@@ -66,6 +66,9 @@ static bool parseMode(const std::string &buffer, Mode &mode) {
   else if(buffer == "raft") {
     mode = Mode::raft;
   }
+  else if(buffer == "bulkload") {
+    mode = Mode::bulkload;
+  }
   else {
     qdb_log("Unknown mode: " << quotes(buffer));
     return false;

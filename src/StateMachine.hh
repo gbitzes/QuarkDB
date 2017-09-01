@@ -28,6 +28,7 @@
 #include "Utils.hh"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
+#include "storage/DescriptorCache.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -39,7 +40,7 @@ class StagingArea;
 
 class StateMachine {
 public:
-  StateMachine(const std::string &filename, bool write_ahead_log = true);
+  StateMachine(const std::string &filename, bool write_ahead_log = true, bool bulkLoad = false);
   virtual ~StateMachine();
   DISALLOW_COPY_AND_ASSIGN(StateMachine);
   void reset();
@@ -128,7 +129,17 @@ public:
   //----------------------------------------------------------------------------
   std::string statistics();
 
+  bool inBulkLoad() const {
+    return bulkLoad;
+  }
+
+  DescriptorCache& getDescriptorCache() {
+    return descriptorCache;
+  }
+
+  void finalizeBulkload();
 private:
+  DescriptorCache descriptorCache;
   std::mutex stagingMutex;
 
   friend class StagingArea;
@@ -147,6 +158,7 @@ private:
 
   TransactionPtr startTransaction();
   void commitTransaction(TransactionPtr &tx, LogIndex index);
+  void commitBatch(rocksdb::WriteBatch &batch);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
   rocksdb::Status listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
   rocksdb::Status listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
@@ -201,6 +213,7 @@ private:
 
   const std::string filename;
   bool writeAheadLog;
+  bool bulkLoad;
 };
 
 

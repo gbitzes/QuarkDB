@@ -91,6 +91,12 @@ void ShardDirectory::detach() {
   }
 }
 
+StateMachine* ShardDirectory::getStateMachineForBulkload() {
+  qdb_assert(!smptr);
+  smptr = new StateMachine(stateMachinePath(), false, true);
+  return smptr;
+}
+
 StateMachine* ShardDirectory::getStateMachine() {
   if(smptr) return smptr;
 

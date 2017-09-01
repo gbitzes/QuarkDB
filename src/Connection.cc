@@ -108,8 +108,9 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
   return -1;
 }
 
-Connection::Connection(Link *l)
-: writer(l), parser(l), pendingQueue(new PendingQueue(this)) {
+Connection::Connection(Link *l, size_t write_batch_limit)
+: writer(l), parser(l), pendingQueue(new PendingQueue(this)),
+  writeBatchLimit(write_batch_limit) {
 }
 
 Connection::~Connection() {
@@ -192,7 +193,7 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
     if(currentRequest.getCommandType() == CommandType::WRITE) {
       writeBatch.requests.emplace_back(std::move(currentRequest));
 
-      if(writeBatch.requests.size() >= 1) {
+      if(writeBatch.requests.size() >= writeBatchLimit) {
         processWriteBatch(dispatcher, writeBatch);
       }
     }

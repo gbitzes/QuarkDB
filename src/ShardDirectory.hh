@@ -57,6 +57,7 @@ public:
   ShardDirectory(const std::string &path, Configuration config = {});
   ~ShardDirectory();
 
+  StateMachine *getStateMachineForBulkload();
   StateMachine *getStateMachine();
   RaftJournal *getRaftJournal();
 
