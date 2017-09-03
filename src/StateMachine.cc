@@ -34,6 +34,7 @@
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
+#include <thread>
 
 #define RETURN_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) return st2; }
 #define THROW_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) qdb_throw(st2.ToString()); }
@@ -89,6 +90,7 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
   if(bulkLoad) {
     qdb_warn("Opening state machine in bulkload mode.");
     writeAheadLog = false;
+    options.max_background_jobs = std::max(4u, std::thread::hardware_concurrency());
     options.PrepareForBulkLoad();
   }
 
