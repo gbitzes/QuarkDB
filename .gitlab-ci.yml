@@ -14,9 +14,9 @@ cc7:
     paths:
     - "$CI_JOB_NAME"
 
-fedora25:
+fedora:
   stage: build
-  image: gitlab-registry.cern.ch/eos/quarkdb/fedora25-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/fedora-enhanced
   script:
     - packaging/gitlab-build.sh
     - mkdir ${CI_JOB_NAME}
@@ -44,13 +44,13 @@ cc7-test:
     - quarkdb-tests
     - quarkdb-stress-tests
 
-fedora25-test:
+fedora-test:
   stage: test
-  image: gitlab-registry.cern.ch/eos/quarkdb/fedora25-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/fedora-enhanced
   dependencies:
-  - fedora25
+  - fedora
   script:
-    - dnf -y install fedora25/RPMS/*
+    - dnf -y install fedora/RPMS/*
     - quarkdb-tests
     - quarkdb-stress-tests
 
@@ -59,9 +59,9 @@ rpms:
   image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
   dependencies:
   - cc7
-  - fedora25
+  - fedora
   script:
-   - for platform in cc7 fedora25; do sudo -u stci -H packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
+   - for platform in cc7 fedora; do sudo -u stci -H packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
   tags:
     - docker-cc7
 
