@@ -96,7 +96,7 @@ public:
 
   void resetKey(const KeyType &keyType, const std::string &redisKey) {
     qdb_assert(keyType == KeyType::kHash || keyType == KeyType::kSet || keyType == KeyType::kList);
-    keyBuffer.resize(1 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 1);
+    keyBuffer.resize(1 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 2);
 
     keyBuffer[0] = char(keyType);
 
@@ -115,7 +115,8 @@ public:
     }
 
     keyBuffer[targetIndex] = '#';
-    keyPrefixSize = targetIndex + 1;
+    keyBuffer[targetIndex+1] = '#';
+    keyPrefixSize = targetIndex + 2;
   }
 
   void resetField(const std::string &field) {

@@ -615,10 +615,15 @@ TEST(KeyDescriptor, BasicSanity) {
 TEST(FieldLocator, BasicSanity) {
   FieldLocator locator1(KeyType::kHash, "some_key");
   locator1.resetField("my_field");
-  ASSERT_EQ(locator1.toSlice().ToString(), SSTR(char(KeyType::kHash) << "some_key#my_field"));
+  ASSERT_EQ(locator1.toSlice().ToString(), SSTR(char(KeyType::kHash) << "some_key##my_field"));
 
   FieldLocator locator2(KeyType::kSet, "key#with#hashes");
   locator2.resetField("field#with#hashes");
-  ASSERT_EQ(locator2.toSlice().ToString(), SSTR(char(KeyType::kSet) << "key|#with|#hashes#field#with#hashes"));
-  ASSERT_EQ(locator2.getPrefix(), SSTR(char(KeyType::kSet) << "key|#with|#hashes#"));
+  ASSERT_EQ(locator2.toSlice().ToString(), SSTR(char(KeyType::kSet) << "key|#with|#hashes##field#with#hashes"));
+  ASSERT_EQ(locator2.getPrefix(), SSTR(char(KeyType::kSet) << "key|#with|#hashes##"));
+
+  FieldLocator locator3(KeyType::kSet, "evil#key|");
+  locator3.resetField("evil#field");
+  ASSERT_EQ(locator3.toSlice().ToString(), SSTR(char(KeyType::kSet) << "evil|#key|##evil#field"));
+  ASSERT_EQ(locator3.getPrefix(), SSTR(char(KeyType::kSet) << "evil|#key|##"));
 }
