@@ -23,6 +23,7 @@
 
 #include "storage/KeyDescriptor.hh"
 #include "storage/StagingArea.hh"
+#include "storage/ReverseLocator.hh"
 #include "StateMachine.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
@@ -626,4 +627,35 @@ TEST(FieldLocator, BasicSanity) {
   locator3.resetField("evil#field");
   ASSERT_EQ(locator3.toSlice().ToString(), SSTR(char(KeyType::kSet) << "evil|#key|##evil#field"));
   ASSERT_EQ(locator3.getPrefix(), SSTR(char(KeyType::kSet) << "evil|#key|##"));
+}
+
+TEST(ReverseLocator, BasicSanity) {
+  FieldLocator locator1(KeyType::kHash, "some_key");
+  locator1.resetField("some_field");
+
+  ReverseLocator revlocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kHash);
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "some_key");
+  ASSERT_EQ(revlocator.getField().ToString(), "some_field");
+
+  const std::string evilkey("evil#key#with|#hashes#|###");
+  FieldLocator locator2(KeyType::kSet, evilkey);
+  locator2.resetField("field#with#hashes");
+
+  revlocator = ReverseLocator(locator2.toSlice());
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kSet);
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), evilkey);
+  ASSERT_EQ(revlocator.getField().ToString(), "field#with#hashes");
+
+  StringLocator locator3("random_string###|###");
+  revlocator = ReverseLocator(locator3.toSlice());
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kString);
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "random_string###|###");
+  ASSERT_THROW(revlocator.getField(), FatalException);
+
+  revlocator = ReverseLocator("zdfdas");
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kParseError);
+
+  revlocator = ReverseLocator(SSTR(char(KeyType::kHash) << "abc#bcd"));
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kParseError);
 }

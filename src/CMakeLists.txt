@@ -52,6 +52,8 @@ add_library(XrdQuarkDB SHARED
                              storage/DescriptorCache.hh
                              storage/KeyDescriptor.hh
                              storage/KeyLocators.hh
+                             storage/ReverseLocator.hh
+                             storage/StagingArea.hh
 
                              utils/AssistedThread.hh
   utils/DirectoryIterator.cc utils/DirectoryIterator.hh

@@ -164,31 +164,6 @@ LogIndex StateMachine::getLastApplied() {
   return lastApplied;
 }
 
-// given a rocksdb key (might also contain a field),
-// extract the original redis key.
-// Currently not needed
-// static std::string extract_key(std::string &tkey) {
-//   std::string key;
-//   key.reserve(tkey.size());
-//
-//   for(size_t i = 1; i < tkey.size(); i++) {
-//     // escaped hash?
-//     if(i != tkey.size() - 1 && tkey[i] == '|' && tkey[i+1] == '#') {
-//       key.append(1, '#');
-//       i++;
-//       continue;
-//     }
-//     // boundary?
-//     if(tkey[i] == '#') {
-//       break;
-//     }
-//
-//     key.append(1, tkey[i]);
-//   }
-//
-//   return key;
-// }
-
 static std::string translate_key(const InternalKeyType type, const std::string &key) {
   return std::string(1, char(type)) + key;
 }
