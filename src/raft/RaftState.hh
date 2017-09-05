@@ -43,7 +43,7 @@ struct RaftStateSnapshot {
   RaftServer votedFor;
   LogIndex leadershipMarker;
 
-  RaftStateSnapshot() {}
+  RaftStateSnapshot() : term(-1), status(RaftStatus::FOLLOWER), leadershipMarker(-1) {}
   RaftStateSnapshot(RaftTerm trm, RaftStatus st, const RaftServer &ld,
     const RaftServer &vote, LogIndex marker) : term(trm), status(st), leader(ld),
     votedFor(vote), leadershipMarker(marker) {}
