@@ -49,7 +49,6 @@ add_library(XrdQuarkDB SHARED
   raft/RaftTrimmer.cc              raft/RaftTrimmer.hh
   raft/RaftLease.cc                raft/RaftLease.hh
 
-                                   storage/DescriptorCache.hh
                                    storage/KeyDescriptor.hh
   storage/KeyDescriptorBuilder.cc  storage/KeyDescriptorBuilder.hh
                                    storage/KeyLocators.hh

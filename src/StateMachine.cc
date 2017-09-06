@@ -854,25 +854,7 @@ void StateMachine::finalizeBulkload() {
   THROW_ON_ERROR(db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr));
   qdb_event("Manual compaction was successful. Building key descriptors...");
   KeyDescriptorBuilder builder(*this);
-  qdb_event("All done, bulk load is over. Restart quarkdb in standalone mode.");
-
-  // auto it = descriptorCache.begin();
-  // rocksdb::WriteBatch descriptors;
-  //
-  // size_t count = 0;
-  // while(it != descriptorCache.end()) {
-  //   count++;
-  //   descriptors.Put(it->first, it->second->value);
-  //
-  //   it++;
-  // }
-  //
-  // qdb_event("Collected " << count << " key descriptors. Flushing write batch...");
-  // commitBatch(descriptors);
-  //
-  // qdb_event("Key descriptors have been flushed. Issuing manual compaction...");
-  // THROW_ON_ERROR(db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr));
-  // qdb_event("Compaction has been successful - bulk load is over. Restart quarkdb in standalone mode.");
+  qdb_event("All done, bulkload is over. Restart quarkdb in standalone mode.");
 }
 
 StateMachine::IteratorPtr StateMachine::getRawIterator() {

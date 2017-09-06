@@ -26,7 +26,6 @@
 
 #include <mutex>
 #include "KeyDescriptor.hh"
-#include "DescriptorCache.hh"
 #include "../utils/SmartBuffer.hh"
 #include "../StateMachine.hh"
 

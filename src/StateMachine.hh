@@ -28,7 +28,6 @@
 #include "Utils.hh"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
-#include "storage/DescriptorCache.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -133,18 +132,11 @@ public:
     return bulkLoad;
   }
 
-  DescriptorCache& getDescriptorCache() {
-    return descriptorCache;
-  }
-
   void finalizeBulkload();
   IteratorPtr getRawIterator();
   void commitBatch(rocksdb::WriteBatch &batch);
 
 private:
-  DescriptorCache descriptorCache;
-  std::mutex stagingMutex;
-
   friend class StagingArea;
 
   class Snapshot {
