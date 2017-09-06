@@ -880,7 +880,9 @@ StateMachine::IteratorPtr StateMachine::getRawIterator() {
 }
 
 void StateMachine::commitBatch(rocksdb::WriteBatch &batch) {
-  THROW_ON_ERROR(db->Write(rocksdb::WriteOptions(), &batch));
+  rocksdb::WriteOptions opts;
+  opts.disableWAL = !writeAheadLog;
+  THROW_ON_ERROR(db->Write(opts, &batch));
 }
 
 void StateMachine::commitTransaction(TransactionPtr &tx, LogIndex index) {
