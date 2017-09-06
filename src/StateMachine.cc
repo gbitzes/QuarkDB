@@ -93,6 +93,8 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
     writeAheadLog = false;
     options.max_background_jobs = std::max(4u, std::thread::hardware_concurrency());
     options.PrepareForBulkLoad();
+    options.memtable_factory.reset(new rocksdb::VectorRepFactory());
+    options.allow_concurrent_memtable_write = false;
   }
 
   rocksdb::TransactionDBOptions txopts;
