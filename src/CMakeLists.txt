@@ -12,61 +12,62 @@ include_directories(
 add_definitions(${GCOV_CFLAGS})
 add_library(XrdQuarkDB SHARED
   XrdPlugin.cc
-  XrdQuarkDB.cc              XrdQuarkDB.hh
-  Configuration.cc           Configuration.hh
-  Utils.cc                   Utils.hh
-                             Common.hh
-  Link.cc                    Link.hh
-  BufferedReader.cc          BufferedReader.hh
-  BufferedWriter.cc          BufferedWriter.hh
-  RedisParser.cc             RedisParser.hh
-  RedisRequest.cc            RedisRequest.hh
-  StateMachine.cc            StateMachine.hh
-  Commands.cc                Commands.hh
-  Formatter.cc               Formatter.hh
-  Dispatcher.cc              Dispatcher.hh
-  Poller.cc                  Poller.hh
-  Connection.cc              Connection.hh
-  QuarkDBNode.cc             QuarkDBNode.hh
-  Shard.cc                   Shard.hh
-  ShardDirectory.cc          ShardDirectory.hh
+  XrdQuarkDB.cc                    XrdQuarkDB.hh
+  Configuration.cc                 Configuration.hh
+  Utils.cc                         Utils.hh
+                                   Common.hh
+  Link.cc                          Link.hh
+  BufferedReader.cc                BufferedReader.hh
+  BufferedWriter.cc                BufferedWriter.hh
+  RedisParser.cc                   RedisParser.hh
+  RedisRequest.cc                  RedisRequest.hh
+  StateMachine.cc                  StateMachine.hh
+  Commands.cc                      Commands.hh
+  Formatter.cc                     Formatter.hh
+  Dispatcher.cc                    Dispatcher.hh
+  Poller.cc                        Poller.hh
+  Connection.cc                    Connection.hh
+  QuarkDBNode.cc                   QuarkDBNode.hh
+  Shard.cc                         Shard.hh
+  ShardDirectory.cc                ShardDirectory.hh
 
-  raft/RaftBlockedWrites.cc  raft/RaftBlockedWrites.hh
-  raft/RaftConfig.cc         raft/RaftConfig.hh
-  raft/RaftJournal.cc        raft/RaftJournal.hh
-  raft/RaftState.cc          raft/RaftState.hh
-  raft/RaftTalker.cc         raft/RaftTalker.hh
-  raft/RaftUtils.cc          raft/RaftUtils.hh
-  raft/RaftDispatcher.cc     raft/RaftDispatcher.hh
-  raft/RaftReplicator.cc     raft/RaftReplicator.hh
-  raft/RaftResilverer.cc     raft/RaftResilverer.hh
-  raft/RaftTimeouts.cc       raft/RaftTimeouts.hh
-  raft/RaftDirector.cc       raft/RaftDirector.hh
-  raft/RaftCommitTracker.cc  raft/RaftCommitTracker.hh
-  raft/RaftWriteTracker.cc   raft/RaftWriteTracker.hh
-  raft/RaftGroup.cc          raft/RaftGroup.hh
-                             raft/RaftMembers.hh
-  raft/RaftTrimmer.cc        raft/RaftTrimmer.hh
-  raft/RaftLease.cc          raft/RaftLease.hh
+  raft/RaftBlockedWrites.cc        raft/RaftBlockedWrites.hh
+  raft/RaftConfig.cc               raft/RaftConfig.hh
+  raft/RaftJournal.cc              raft/RaftJournal.hh
+  raft/RaftState.cc                raft/RaftState.hh
+  raft/RaftTalker.cc               raft/RaftTalker.hh
+  raft/RaftUtils.cc                raft/RaftUtils.hh
+  raft/RaftDispatcher.cc           raft/RaftDispatcher.hh
+  raft/RaftReplicator.cc           raft/RaftReplicator.hh
+  raft/RaftResilverer.cc           raft/RaftResilverer.hh
+  raft/RaftTimeouts.cc             raft/RaftTimeouts.hh
+  raft/RaftDirector.cc             raft/RaftDirector.hh
+  raft/RaftCommitTracker.cc        raft/RaftCommitTracker.hh
+  raft/RaftWriteTracker.cc         raft/RaftWriteTracker.hh
+  raft/RaftGroup.cc                raft/RaftGroup.hh
+                                   raft/RaftMembers.hh
+  raft/RaftTrimmer.cc              raft/RaftTrimmer.hh
+  raft/RaftLease.cc                raft/RaftLease.hh
 
-                             storage/DescriptorCache.hh
-                             storage/KeyDescriptor.hh
-                             storage/KeyLocators.hh
-                             storage/ReverseLocator.hh
-                             storage/StagingArea.hh
+                                   storage/DescriptorCache.hh
+                                   storage/KeyDescriptor.hh
+  storage/KeyDescriptorBuilder.cc  storage/KeyDescriptorBuilder.hh
+                                   storage/KeyLocators.hh
+                                   storage/ReverseLocator.hh
+                                   storage/StagingArea.hh
 
-                             utils/AssistedThread.hh
-  utils/DirectoryIterator.cc utils/DirectoryIterator.hh
-  utils/FileUtils.cc         utils/FileUtils.hh
-                             utils/IntToBinaryString.hh
-                             utils/ParseUtils.hh
-  utils/RequestCounter.cc    utils/RequestCounter.hh
-  utils/Resilvering.cc       utils/Resilvering.hh
-                             utils/ScopedAdder.hh
-                             utils/StaticBuffer.hh
-                             utils/StringUtils.hh
-                             utils/Uuid.hh
-                             utils/VectorUtils.hh
+                                   utils/AssistedThread.hh
+  utils/DirectoryIterator.cc       utils/DirectoryIterator.hh
+  utils/FileUtils.cc               utils/FileUtils.hh
+                                   utils/IntToBinaryString.hh
+                                   utils/ParseUtils.hh
+  utils/RequestCounter.cc          utils/RequestCounter.hh
+  utils/Resilvering.cc             utils/Resilvering.hh
+                                   utils/ScopedAdder.hh
+                                   utils/StaticBuffer.hh
+                                   utils/StringUtils.hh
+                                   utils/Uuid.hh
+                                   utils/VectorUtils.hh
 
   ${BACKWARD_ENABLE}
 )

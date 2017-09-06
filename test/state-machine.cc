@@ -637,6 +637,7 @@ TEST(ReverseLocator, BasicSanity) {
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kHash);
   ASSERT_EQ(revlocator.getOriginalKey().ToString(), "some_key");
   ASSERT_EQ(revlocator.getField().ToString(), "some_field");
+  ASSERT_EQ(revlocator.getRawPrefix().ToString(), locator1.getPrefix().ToString());
 
   const std::string evilkey("evil#key#with|#hashes#|###");
   FieldLocator locator2(KeyType::kSet, evilkey);
@@ -645,12 +646,14 @@ TEST(ReverseLocator, BasicSanity) {
   revlocator = ReverseLocator(locator2.toSlice());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kSet);
   ASSERT_EQ(revlocator.getOriginalKey().ToString(), evilkey);
+  ASSERT_EQ(revlocator.getRawPrefix().ToString(), locator2.getPrefix().ToString());
   ASSERT_EQ(revlocator.getField().ToString(), "field#with#hashes");
 
   StringLocator locator3("random_string###|###");
   revlocator = ReverseLocator(locator3.toSlice());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kString);
   ASSERT_EQ(revlocator.getOriginalKey().ToString(), "random_string###|###");
+  ASSERT_THROW(revlocator.getRawPrefix(), FatalException);
   ASSERT_THROW(revlocator.getField(), FatalException);
 
   revlocator = ReverseLocator("zdfdas");

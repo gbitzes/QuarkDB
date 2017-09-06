@@ -27,6 +27,7 @@
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
 #include "storage/StagingArea.hh"
+#include "storage/KeyDescriptorBuilder.hh"
 #include "utils/IntToBinaryString.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
@@ -847,25 +848,35 @@ rocksdb::Status StateMachine::noop(LogIndex index) {
 }
 
 void StateMachine::finalizeBulkload() {
-  qdb_event("Finalizing bulkload. Collecting all key descriptors into a write batch...");
-
-  auto it = descriptorCache.begin();
-  rocksdb::WriteBatch descriptors;
-
-  size_t count = 0;
-  while(it != descriptorCache.end()) {
-    count++;
-    descriptors.Put(it->first, it->second->value);
-
-    it++;
-  }
-
-  qdb_event("Collected " << count << " key descriptors. Flushing write batch...");
-  commitBatch(descriptors);
-
-  qdb_event("Key descriptors have been flushed. Issuing manual compaction...");
+  qdb_event("Finalizing bulkload, issuing manual compaction...");
   THROW_ON_ERROR(db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr));
-  qdb_event("Compaction has been successful - bulk load is over. Restart quarkdb in standalone mode.");
+  qdb_event("Manual compaction was successful. Building key descriptors...");
+  KeyDescriptorBuilder builder(*this);
+  qdb_event("All done, bulk load is over. Restart quarkdb in standalone mode.");
+
+  // auto it = descriptorCache.begin();
+  // rocksdb::WriteBatch descriptors;
+  //
+  // size_t count = 0;
+  // while(it != descriptorCache.end()) {
+  //   count++;
+  //   descriptors.Put(it->first, it->second->value);
+  //
+  //   it++;
+  // }
+  //
+  // qdb_event("Collected " << count << " key descriptors. Flushing write batch...");
+  // commitBatch(descriptors);
+  //
+  // qdb_event("Key descriptors have been flushed. Issuing manual compaction...");
+  // THROW_ON_ERROR(db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr));
+  // qdb_event("Compaction has been successful - bulk load is over. Restart quarkdb in standalone mode.");
+}
+
+StateMachine::IteratorPtr StateMachine::getRawIterator() {
+  rocksdb::ReadOptions readOpts;
+  readOpts.total_order_seek = true;
+  return IteratorPtr(db->NewIterator(readOpts));
 }
 
 void StateMachine::commitBatch(rocksdb::WriteBatch &batch) {

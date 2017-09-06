@@ -36,29 +36,17 @@ namespace quarkdb {
 
 class StagingArea {
 public:
-  StagingArea(StateMachine &sm) : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()),
-  tx(stateMachine.startTransaction()) {
+  StagingArea(StateMachine &sm) : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()) {
 
-    if(bulkLoad) {
-      descriptorCache = &stateMachine.getDescriptorCache();
+    if(!bulkLoad) {
+      tx = stateMachine.startTransaction();
     }
   }
 
-  ~StagingArea() {
-    // stateMachine.stagingMutex.unlock();
-  }
+  ~StagingArea() { }
 
   rocksdb::Status getForUpdate(const rocksdb::Slice &slice, std::string &value) {
-    if(bulkLoad && slice[0] == char(InternalKeyType::kDescriptor)) {
-      if(descriptorCache->get(slice, value)) {
-        return rocksdb::Status::OK();
-      }
-
-      return rocksdb::Status::NotFound();
-    }
-
     if(bulkLoad) {
-      // assume key doesn't exist
       return rocksdb::Status::NotFound();
     }
 
@@ -76,7 +64,7 @@ public:
   void put(const rocksdb::Slice &slice, const rocksdb::Slice &value) {
     if(bulkLoad) {
       if(slice[0] == char(InternalKeyType::kDescriptor)) {
-        descriptorCache->put(slice, value);
+        // Ignore key descriptors, we'll build them all at the end
         return;
       }
 
@@ -110,7 +98,6 @@ private:
   StateMachine &stateMachine;
   bool bulkLoad = false;
   StateMachine::TransactionPtr tx;
-  DescriptorCache *descriptorCache = nullptr;
   rocksdb::WriteBatch writeBatch;
 };
 

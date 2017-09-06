@@ -138,6 +138,9 @@ public:
   }
 
   void finalizeBulkload();
+  IteratorPtr getRawIterator();
+  void commitBatch(rocksdb::WriteBatch &batch);
+
 private:
   DescriptorCache descriptorCache;
   std::mutex stagingMutex;
@@ -158,7 +161,6 @@ private:
 
   TransactionPtr startTransaction();
   void commitTransaction(TransactionPtr &tx, LogIndex index);
-  void commitBatch(rocksdb::WriteBatch &batch);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
   rocksdb::Status listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
   rocksdb::Status listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);

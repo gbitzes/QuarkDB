@@ -60,6 +60,8 @@ inline size_t extractKey(const rocksdb::Slice &dkey, std::string &key) {
 // being accessed.
 class ReverseLocator {
 public:
+  ReverseLocator() {}
+
   ReverseLocator(const rocksdb::Slice sl) : slice(sl) {
     keyType = parseKeyType(sl.data()[0]);
     if(keyType == KeyType::kParseError || keyType == KeyType::kString) {
@@ -108,10 +110,15 @@ public:
     return rocksdb::Slice(slice.data()+fieldStart, slice.size()-fieldStart);
   }
 
+  rocksdb::Slice getRawPrefix() {
+    qdb_assert(keyType != KeyType::kParseError && keyType != KeyType::kString);
+    return rocksdb::Slice(slice.data(), fieldStart);
+  }
+
 private:
   rocksdb::Slice slice;
 
-  KeyType keyType;
+  KeyType keyType = KeyType::kParseError;
   std::string unescapedKey;
   size_t fieldStart;
 };

@@ -67,6 +67,7 @@ add_executable(quarkdb-bench-malloc
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-stress-tests
   stress/background-flusher.cc
+  stress/bulkload.cc
   stress/main.cc
   stress/replication.cc
   stress/resilvering.cc
