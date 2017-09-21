@@ -23,17 +23,17 @@ popd
 ## Misc packages, needed for the publishing step.
 ##------------------------------------------------------------------------------
 
-yum install -y sssd-client sudo createrepo # http-parser http-parser-devel npm
+yum install -y sssd-client sudo createrepo http-parser http-parser-devel npm
 
 ##------------------------------------------------------------------------------
 ## Install gitbook, needed for publishing docs.
 ##------------------------------------------------------------------------------
 
-# pushd ~/
-# npm install -g gitbook-cli
-# npm install gitbook
-# popd
-# gitbook build # Gitbook will install more stuff during its first execution
+pushd ~/
+npm install -g gitbook-cli
+npm install gitbook
+popd
+gitbook build # Gitbook will install more stuff during its first execution
 
 ##------------------------------------------------------------------------------
 ## Install rocksdb
