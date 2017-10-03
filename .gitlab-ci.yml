@@ -64,6 +64,7 @@ rpms:
    - for platform in cc7 fedora; do sudo -u stci -H packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
   tags:
     - docker-cc7
+  retry: 2
 
 docs:
   stage: publish
@@ -78,6 +79,7 @@ docs:
     - sudo -u stci -H packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
   tags:
     - docker-cc7
+  retry: 2
 
 coverage:
   stage: publish
@@ -93,3 +95,4 @@ coverage:
    - sudo -u stci -H packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
   tags:
    - docker-cc7
+  retry: 2
