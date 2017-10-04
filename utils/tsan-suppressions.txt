@@ -7,3 +7,6 @@
 race:rocksdb
 race:RaftJournal::set_int_or_die
 race:RaftJournal::setCurrentTerm
+race:RaftJournal::appendNoLock
+race:StateMachine::configGet
+race:RaftReplicaTracker::buildPayload
