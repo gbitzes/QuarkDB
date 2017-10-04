@@ -423,7 +423,7 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   ASSERT_LE(leaderID, 1);
 
   // First, disable automatic resilvering..
-  EncodedConfigChange configChange = raftconfig(leaderID)->setResilveringEnabled(true);
+  EncodedConfigChange configChange = raftconfig(leaderID)->setResilveringEnabled(false);
   ASSERT_TRUE(configChange.error.empty());
   ASSERT_REPLY(tunnel(leaderID)->execute(configChange.request), "OK");
 
