@@ -51,6 +51,7 @@ fedora-test:
   - fedora
   script:
     - dnf -y install fedora/RPMS/*
+    - export TSAN_OPTIONS="suppressions=utils/tsan-suppressions.txt
     - quarkdb-tests
     - quarkdb-stress-tests
 

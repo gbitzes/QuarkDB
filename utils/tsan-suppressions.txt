@@ -1,0 +1,9 @@
+# It appears tsan generates false positives with rocksdb's
+# lockless memtable.. Ignore hits in rocksdb, and certain
+# functions where we write into it. (as it appears certain
+# things get inlined, and tsan can't determine it's rocksdb
+# code)
+
+race:rocksdb
+race:RaftJournal::set_int_or_die
+race:RaftJournal::setCurrentTerm
