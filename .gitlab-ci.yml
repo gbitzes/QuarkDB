@@ -49,6 +49,7 @@ fedora-test:
   image: gitlab-registry.cern.ch/eos/quarkdb/fedora-enhanced
   dependencies:
   - fedora
+  allow_failure: true
   script:
     - dnf -y install fedora/RPMS/*
     - export TSAN_OPTIONS="suppressions=utils/tsan-suppressions.txt"
