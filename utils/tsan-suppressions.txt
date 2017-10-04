@@ -10,3 +10,4 @@ race:RaftJournal::setCurrentTerm
 race:RaftJournal::appendNoLock
 race:StateMachine::configGet
 race:RaftReplicaTracker::buildPayload
+race:RaftWriteTracker::applySingleCommit
