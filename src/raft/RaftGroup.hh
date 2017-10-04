@@ -66,6 +66,7 @@ public:
   void spinup();
   void spindown();
 private:
+  std::recursive_mutex mtx;
 
   // Ownership managed external to this class.
   ShardDirectory &shardDirectory;
