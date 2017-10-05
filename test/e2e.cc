@@ -151,7 +151,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   std::string checkpointPath = SSTR(commonState.testdir << "/checkpoint");
 
   // Before taking a checkpoint, ensure node #0 is caught up
-  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == journal(leaderID)->getCommitIndex());
+  RETRY_ASSERT_TRUE(stateMachine(0)->getLastApplied() == stateMachine(leaderID)->getLastApplied());
 
   ASSERT_TRUE(dispatcher()->checkpoint(checkpointPath, err));
   ASSERT_FALSE(dispatcher()->checkpoint(checkpointPath, err)); // exists already
