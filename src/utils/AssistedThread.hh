@@ -37,6 +37,10 @@ class ThreadAssistant {
 public:
   ThreadAssistant(bool flag) : stopFlag(flag) {}
 
+  void reset() {
+    stopFlag = false;
+  }
+
   void requestTermination() {
     std::lock_guard<std::mutex> lock(mtx);
     stopFlag = true;
@@ -74,22 +78,17 @@ public:
   AssistedThread(Args&&... args) : assistant(false), joined(false), th(std::forward<Args>(args)..., std::ref(assistant)) {
   }
 
-  // Only allow assignment to rvalues
+  // No assignment Only allow assignment to rvalues
   AssistedThread& operator=(const AssistedThread&) = delete;
+  AssistedThread& operator=(AssistedThread&& src) = delete;
 
-  AssistedThread& operator=(AssistedThread&& src) noexcept {
+  template<typename... Args>
+  void reset(Args&&... args) {
     join();
 
-    // Move source thread to this one
-    assistant.stopFlag = src.assistant.stopFlag.load();
-    joined = src.joined.load();
-    th = std::move(src.th);
-
-    // Make sure source thread remains in a valid state
-    src.joined = true;
-    src.assistant.stopFlag = true;
-
-    return *this;
+    assistant.reset();
+    joined = false;
+    th = std::thread(std::forward<Args>(args)..., std::ref(assistant));
   }
 
   virtual ~AssistedThread() {

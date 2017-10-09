@@ -78,7 +78,7 @@ RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const
 
   if(trimmer) trimmer->resilveringInitiated();
   setStatus(ResilveringState::INPROGRESS, "");
-  mainThread = AssistedThread(&RaftResilverer::main, this);
+  mainThread.reset(&RaftResilverer::main, this);
 }
 
 RaftResilverer::~RaftResilverer() {
