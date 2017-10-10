@@ -33,6 +33,7 @@ BuildRequires: zlib-static
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
 
+Requires: jemalloc
 Requires: xrootd
 
 %description
