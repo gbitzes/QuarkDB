@@ -34,7 +34,7 @@ BuildRequires: zlib-devel
 BuildRequires: openssl-devel
 
 Requires: jemalloc
-Requires: jemalloc-devel
+BuildRequires: jemalloc-devel
 Requires: xrootd
 
 %description
