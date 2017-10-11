@@ -23,6 +23,7 @@
 
 #include "raft/RaftJournal.hh"
 #include "qclient/BackgroundFlusher.hh"
+#include "qclient/RocksDBPersistency.hh"
 #include "../test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
@@ -100,4 +101,80 @@ TEST_F(Background_Flusher, failover) {
   for(size_t i = 0; i <= nentries; i++) {
     ASSERT_TRUE(checkValueConsensus(SSTR("key-" << i), SSTR("value-" << i), follower1, follower2));
   }
+}
+
+TEST_F(Background_Flusher, persistency) {
+  // start our cluster as usual
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+  int follower = (leaderID + 1) % 3;
+
+  qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true, false);
+  qclient::Notifier dummyNotifier;
+
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
+  std::unique_ptr<qclient::BackgroundFlusher> flusher(
+    new qclient::BackgroundFlusher(qcl, dummyNotifier, 5000, 100, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"))
+  );
+
+  // queue entries
+  const int nentries = 10000;
+  for(size_t i = 0; i <= nentries; i++) {
+    flusher->pushRequest({"set", SSTR("key-" << i), SSTR("value-" << i)});
+  }
+
+  ASSERT_GT(flusher->size(), 0u);
+
+  // stop the flusher, recover contents from persistency layer
+  flusher.reset();
+  flusher.reset(new qclient::BackgroundFlusher(qcl, dummyNotifier, 5000, 100, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")));
+  ASSERT_GT(flusher->size(), 0u);
+
+  RETRY_ASSERT_TRUE(flusher->size() == 0u);
+  RETRY_ASSERT_TRUE(stateMachine(follower)->getLastApplied() == stateMachine(leaderID)->getLastApplied());
+  for(size_t i = 0; i <= nentries; i++) {
+    ASSERT_TRUE(checkValueConsensus(SSTR("key-" << i), SSTR("value-" << i), leaderID, follower));
+  }
+}
+
+TEST(RocksDBPersistency, basic_sanity) {
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
+  std::unique_ptr<qclient::RocksDBPersistency> persistency(new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"));
+  ASSERT_EQ(persistency->getStartingIndex(), 0);
+  ASSERT_EQ(persistency->getEndingIndex(), 0);
+
+  persistency->record(0, {"test", "asdf", "1234"});
+  ASSERT_EQ(persistency->getStartingIndex(), 0);
+  ASSERT_EQ(persistency->getEndingIndex(), 1);
+
+  persistency->record(1, {"item1", "item2", "item3"} );
+  persistency->record(2, {"entry2"});
+
+  std::vector<std::string> vec;
+  ASSERT_TRUE(persistency->retrieve(2, vec));
+  ASSERT_EQ(vec, make_vec("entry2"));
+
+  ASSERT_EQ(persistency->getStartingIndex(), 0);
+  ASSERT_EQ(persistency->getEndingIndex(), 3);
+
+  persistency.reset();
+  persistency.reset(new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"));
+
+  ASSERT_EQ(persistency->getStartingIndex(), 0);
+  ASSERT_EQ(persistency->getEndingIndex(), 3);
+
+  persistency->pop();
+  ASSERT_TRUE(persistency->retrieve(1, vec));
+  ASSERT_EQ(vec, make_vec("item1", "item2", "item3"));
+
+  ASSERT_EQ(persistency->getStartingIndex(), 1);
+  ASSERT_EQ(persistency->getEndingIndex(), 3);
+
+  persistency.reset();
+  persistency.reset(new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"));
+
+  ASSERT_EQ(persistency->getStartingIndex(), 1);
+  ASSERT_EQ(persistency->getEndingIndex(), 3);
 }
