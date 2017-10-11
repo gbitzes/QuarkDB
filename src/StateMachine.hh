@@ -32,6 +32,7 @@
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction_db.h>
 #include <rocksdb/utilities/transaction.h>
+#include <condition_variable>
 
 namespace quarkdb {
 
@@ -135,6 +136,7 @@ public:
   void finalizeBulkload();
   IteratorPtr getRawIterator();
   void commitBatch(rocksdb::WriteBatch &batch);
+  bool waitUntilTargetLastApplied(LogIndex targetLastApplied, std::chrono::milliseconds duration);
 
 private:
   friend class StagingArea;
@@ -202,6 +204,9 @@ private:
   void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea);
 
   std::atomic<LogIndex> lastApplied;
+  std::condition_variable lastAppliedCV;
+  std::mutex lastAppliedMtx;
+
   rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;
 

@@ -205,9 +205,19 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
   // to prevent a linearizability violation.
   if(req.getCommandType() == CommandType::READ) {
     if(stateMachine.getLastApplied() < snapshot.leadershipMarker) {
-      // TODO: block until the state machine catches up?
-      return conn->err("unavailable");
-    }
+
+      // Stall client request until state machine is caught-up, or we lose leadership
+      while(!stateMachine.waitUntilTargetLastApplied(snapshot.leadershipMarker, std::chrono::milliseconds(500))) {
+        if(snapshot.term != state.getCurrentTerm()) {
+          // Ouch, we're no longer a leader.. start from scratch
+          return this->service(conn, req);
+        }
+      }
+
+      // If we've made it this far, the state machine should be all caught-up
+      // by now. Proceed to service this request.
+      qdb_assert(snapshot.leadershipMarker <= stateMachine.getLastApplied());
+  }
 
     return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
@@ -328,7 +338,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   if(!contains(state.getNodes(), req.candidate)) {
     RaftStateSnapshot snapshot = state.getSnapshot();
     if(!snapshot.leader.empty()) {
-      qdb_critical("Non-voting " << req.candidate.toString() << " attempted to disrupt the cluster by starting an election for term " << req.term << ". Ignoring its request.");
+      qdb_critical("Non-voting " << req.candidate.toString() << " attempted to disrupt the cluster by starting an election for term " << req.term << ". Ignoring its request - shut down that node!");
       return {snapshot.term, RaftVote::VETO};
     }
     qdb_warn("Non-voting " << req.candidate.toString() << " is requesting a vote, even though it is not a voting member of the cluster as far I know. Will still process its request, since I have no leader.");

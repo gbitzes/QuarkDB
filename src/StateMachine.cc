@@ -869,7 +869,20 @@ void StateMachine::commitBatch(rocksdb::WriteBatch &batch) {
   THROW_ON_ERROR(db->Write(opts, &batch));
 }
 
+bool StateMachine::waitUntilTargetLastApplied(LogIndex targetLastApplied, std::chrono::milliseconds duration) {
+  std::unique_lock<std::mutex> lock(lastAppliedMtx);
+
+  if(targetLastApplied <= lastApplied) {
+    return true;
+  }
+
+  lastAppliedCV.wait_for(lock, duration);
+  return (targetLastApplied <= lastApplied);
+}
+
 void StateMachine::commitTransaction(TransactionPtr &tx, LogIndex index) {
+  std::lock_guard<std::mutex> lock(lastAppliedMtx);
+
   if(index <= 0 && lastApplied > 0) qdb_throw("provided invalid index for version-tracked database: " << index << ", current last applied: " << lastApplied);
 
   if(index > 0) {
@@ -879,8 +892,10 @@ void StateMachine::commitTransaction(TransactionPtr &tx, LogIndex index) {
 
   rocksdb::Status st = tx->Commit();
   if(index > 0 && st.ok()) lastApplied = index;
-
   if(!st.ok()) qdb_throw("unable to commit transaction with index " << index << ": " << st.ToString());
+
+  // Notify that last applied has changed
+  lastAppliedCV.notify_all();
 }
 
 // Simple API for writes - chain to pipelined API using a single operation per batch
