@@ -11,3 +11,4 @@ race:RaftJournal::appendNoLock
 race:StateMachine::configGet
 race:RaftReplicaTracker::buildPayload
 race:RaftWriteTracker::applySingleCommit
+race:RaftJournal::fetch
