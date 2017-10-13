@@ -37,6 +37,7 @@ struct cmdMapInit {
     redis_cmd_map["get"] = {RedisCommand::GET, CommandType::READ};
     redis_cmd_map["exists"] = {RedisCommand::EXISTS, CommandType::READ};
     redis_cmd_map["keys"] =  {RedisCommand::KEYS, CommandType::READ};
+    redis_cmd_map["scan"] =  {RedisCommand::SCAN, CommandType::READ};
     redis_cmd_map["hget"] = {RedisCommand::HGET, CommandType::READ};
     redis_cmd_map["hexists"] = {RedisCommand::HEXISTS, CommandType::READ};
     redis_cmd_map["hkeys"] = {RedisCommand::HKEYS, CommandType::READ};

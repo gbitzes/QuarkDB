@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "storage/StagingArea.hh"
+#include "utils/CommandParsing.hh"
 #include "StateMachine.hh"
 #include "Dispatcher.hh"
 #include "Utils.hh"
@@ -227,6 +228,23 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(ret);
     }
+    case RedisCommand::SCAN: {
+      if(request.size() < 2) return errArgs(request, commit);
+
+      ScanCommandArguments args = parseScanCommand(request.begin()+1, request.end());
+      if(!args.error.empty()) {
+        return Formatter::err(args.error);
+      }
+
+      std::string newcursor;
+      std::vector<std::string> vec;
+      rocksdb::Status st = store.scan(args.cursor, args.match, args.count, newcursor, vec);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      if(newcursor == "") newcursor = "0";
+      else newcursor = "next:" + newcursor;
+      return Formatter::scan(newcursor, vec);
+    }
     case RedisCommand::HGET: {
       if(request.size() != 3) return errArgs(request, commit);
 
@@ -271,29 +289,21 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
       return Formatter::vector(values);
     }
     case RedisCommand::HSCAN: {
-      if(request.size() != 3 && request.size() != 5) return errArgs(request, commit);
-      std::string cursor;
-      int64_t count = 100;
+      if(request.size() < 3) return errArgs(request, commit);
 
-      if(request[2] == "0") {
-        cursor = "";
-      }
-      else if(startswith(request[2], "next:")) {
-        cursor = std::string(request[2].begin() + 5, request[2].end());
-      }
-      else {
-        return Formatter::err("invalid cursor");
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      if(!args.error.empty()) {
+        return Formatter::err(args.error);
       }
 
-      if(request.size() == 5) {
-        if(!caseInsensitiveEquals(request[3], "count")) return Formatter::err("syntax error");
-        if(startswith(request[4], "-") || request[4] == "0") return Formatter::err("syntax error");
-        if(!my_strtoll(request[4], count)) return Formatter::err("value is not an integer or out of range");
+      // No support for MATCH here, maybe add later
+      if(!args.match.empty()) {
+        return Formatter::err("syntax error");
       }
 
       std::string newcursor;
       std::vector<std::string> vec;
-      rocksdb::Status st = store.hscan(request[1], cursor, count, newcursor, vec);
+      rocksdb::Status st = store.hscan(request[1], args.cursor, args.count, newcursor, vec);
       if(!st.ok()) return Formatter::fromStatus(st);
 
       if(newcursor == "") newcursor = "0";

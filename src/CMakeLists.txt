@@ -57,6 +57,7 @@ add_library(XrdQuarkDB SHARED
                                    storage/StagingArea.hh
 
                                    utils/AssistedThread.hh
+                                   utils/CommandParsing.hh
   utils/DirectoryIterator.cc       utils/DirectoryIterator.hh
   utils/FileUtils.cc               utils/FileUtils.hh
                                    utils/IntToBinaryString.hh

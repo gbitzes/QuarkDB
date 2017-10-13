@@ -29,6 +29,7 @@
 #include "utils/FileUtils.hh"
 #include "utils/Resilvering.hh"
 #include "utils/SmartBuffer.hh"
+#include "utils/CommandParsing.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -223,4 +224,64 @@ TEST(StringUtils, isPrefix) {
   ASSERT_FALSE(StringUtils::isPrefix("1234adfasAAA", target));
   ASSERT_FALSE(StringUtils::isPrefix("ldgfkahgfkadgfaksgfkajg", target));
   ASSERT_TRUE(StringUtils::isPrefix("1234adfas", target));
+}
+
+TEST(ScanParsing, BasicSanity) {
+  RedisRequest req { "0" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_TRUE(args.error.empty());
+  ASSERT_EQ(args.cursor, "");
+}
+
+TEST(ScanParsing, ValidCursor) {
+  RedisRequest req { "next:someItem" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_TRUE(args.error.empty());
+  ASSERT_EQ(args.cursor, "someItem");
+}
+
+TEST(ScanParsing, NegativeCount) {
+  RedisRequest req { "next:someItem", "COunT", "-10" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_EQ(args.error, "syntax error");
+}
+
+TEST(ScanParsing, NonIntegerCount) {
+  RedisRequest req { "next:someItem", "COunT", "adfas" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_EQ(args.error, "value is not an integer or out of range");
+}
+
+TEST(ScanParsing, ValidCount) {
+  RedisRequest req { "next:someItem", "COunT", "1337" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_TRUE(args.error.empty());
+  ASSERT_EQ(args.cursor, "someItem");
+  ASSERT_EQ(args.count, 1337);
+}
+
+TEST(ScanParsing, WithMatch) {
+  RedisRequest req { "next:someItem", "COUNT", "1337", "MATCH", "asdf" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_TRUE(args.error.empty());
+  ASSERT_EQ(args.cursor, "someItem");
+  ASSERT_EQ(args.count, 1337);
+  ASSERT_EQ(args.match, "asdf");
+}
+
+TEST(ScanParsing, MultipleMatches) {
+  // Behaves just like official redis - with duplicate arguments, the last one
+  // takes effect.
+  RedisRequest req { "next:someItem", "COUNT", "1337", "MATCH", "asdf", "MATCH", "1234" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_TRUE(args.error.empty());
+  ASSERT_EQ(args.cursor, "someItem");
+  ASSERT_EQ(args.count, 1337);
+  ASSERT_EQ(args.match, "1234");
+}
+
+TEST(ScanParsing, EmptySubcommand) {
+  RedisRequest req { "next:someItem", "COUNT", "1337", "MATCH", "asdf", "MATCH", "1234", "MATCH" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
+  ASSERT_EQ(args.error, "syntax error");
 }

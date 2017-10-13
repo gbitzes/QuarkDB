@@ -41,6 +41,7 @@ enum class RedisCommand {
   EXISTS,
   DEL,
   KEYS,
+  SCAN,
 
   HGET,
   HSET,

@@ -209,6 +209,22 @@ TEST_F(Raft_e2e, hscan) {
   ASSERT_REPLY(reply, std::make_pair("0", make_vec()));
 }
 
+TEST_F(Raft_e2e, scan) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getServerID(state(0)->getSnapshot().leader);
+
+  for(size_t i = 1; i < 10; i++) {
+    ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("f" << i), SSTR("v" << i)), "OK");
+  }
+
+  redisReplyPtr reply = tunnel(leaderID)->exec("scan", "0", "MATCH", "f[1-2]").get();
+  ASSERT_REPLY(reply, std::make_pair("0", make_vec("f1", "f2")));
+
+  reply = tunnel(leaderID)->exec("scan", "0", "MATCH", "f*", "COUNT", "3").get();
+  ASSERT_REPLY(reply, std::make_pair("next:f4", make_vec("f1", "f2", "f3")));
+}
+
 TEST_F(Raft_e2e, test_many_redis_commands) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
