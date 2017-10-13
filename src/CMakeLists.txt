@@ -52,6 +52,7 @@ add_library(XrdQuarkDB SHARED
                                    storage/KeyDescriptor.hh
   storage/KeyDescriptorBuilder.cc  storage/KeyDescriptorBuilder.hh
                                    storage/KeyLocators.hh
+                                   storage/PatternMatching.hh
                                    storage/ReverseLocator.hh
                                    storage/StagingArea.hh
 

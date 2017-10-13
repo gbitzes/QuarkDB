@@ -28,6 +28,7 @@
 #include "storage/KeyLocators.hh"
 #include "storage/StagingArea.hh"
 #include "storage/KeyDescriptorBuilder.hh"
+#include "storage/PatternMatching.hh"
 #include "utils/IntToBinaryString.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
@@ -813,6 +814,53 @@ rocksdb::Status StateMachine::keys(const std::string &pattern, std::vector<std::
     }
   }
 
+  return rocksdb::Status::OK();
+}
+
+rocksdb::Status StateMachine::scan(const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results) {
+  results.clear();
+
+  // Any hits *must* start with patternPrefix. This will allow us in many
+  // circumstances to eliminate checking large parts of the keyspace, without
+  // having to call stringmatchlen.
+  // Best-case pattern is "sometext*", where there are no wasted iterations.
+  std::string patternPrefix = extractPatternPrefix(pattern);
+
+  DescriptorLocator locator;
+  if(cursor.empty()) {
+    locator.reset(patternPrefix);
+  }
+  else {
+    locator.reset(cursor);
+  }
+
+  size_t iterations = 0;
+
+  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
+    iterations++;
+
+    std::string rkey = iter->key().ToString();
+
+    // Check if we should terminate the search
+    if(rkey.size() == 0 || rkey[0] != char(InternalKeyType::kDescriptor)) break;
+    if(!StringUtils::isPrefix(patternPrefix, rkey.c_str()+1, rkey.size()-1)) {
+      // Take a shortcut and break scanning early,
+      // since no more matches can possibly exist.
+      break;
+    }
+
+    if(iterations > count) {
+      newcursor = rkey.substr(1);
+      return rocksdb::Status::OK();
+    }
+
+    if(stringmatchlen(pattern.c_str(), pattern.length(), rkey.c_str()+1, rkey.length()-1, 0)) {
+      results.push_back(rkey.substr(1));
+    }
+  }
+
+  newcursor.clear();
   return rocksdb::Status::OK();
 }
 

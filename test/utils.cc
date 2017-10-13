@@ -213,3 +213,14 @@ TEST(StringUtils, CountOccurences) {
   ASSERT_EQ(StringUtils::countOccurences("adfasabc", '#'), 0u);
   ASSERT_EQ(StringUtils::countOccurences("#adfa#sabc#", '#'), 3u);
 }
+
+TEST(StringUtils, isPrefix) {
+  std::string target = "1234adfas";
+  ASSERT_TRUE(StringUtils::isPrefix("1234", target));
+  ASSERT_TRUE(StringUtils::isPrefix("1", target));
+  ASSERT_TRUE(StringUtils::isPrefix("", target));
+  ASSERT_FALSE(StringUtils::isPrefix("2", target));
+  ASSERT_FALSE(StringUtils::isPrefix("1234adfasAAA", target));
+  ASSERT_FALSE(StringUtils::isPrefix("ldgfkahgfkadgfaksgfkajg", target));
+  ASSERT_TRUE(StringUtils::isPrefix("1234adfas", target));
+}

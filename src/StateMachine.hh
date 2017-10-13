@@ -99,6 +99,7 @@ public:
   rocksdb::Status del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status exists(const VecIterator &start, const VecIterator &end, int64_t &count);
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
+  rocksdb::Status scan(const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results);
   rocksdb::Status flushall(LogIndex index = 0);
   rocksdb::Status lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
   rocksdb::Status rpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);

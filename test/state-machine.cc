@@ -24,6 +24,7 @@
 #include "storage/KeyDescriptor.hh"
 #include "storage/StagingArea.hh"
 #include "storage/ReverseLocator.hh"
+#include "storage/PatternMatching.hh"
 #include "StateMachine.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
@@ -552,6 +553,76 @@ TEST_F(State_Machine, BatchedWrites) {
   ASSERT_EQ(val, "value");
 }
 
+TEST_F(State_Machine, scan) {
+  ASSERT_OK(stateMachine()->set("key1", "1"));
+  ASSERT_OK(stateMachine()->set("key2", "2"));
+  ASSERT_OK(stateMachine()->set("key3", "3"));
+  ASSERT_OK(stateMachine()->set("key4", "4"));
+  ASSERT_OK(stateMachine()->set("key5", "4"));
+  ASSERT_OK(stateMachine()->set("key6", "4"));
+  ASSERT_OK(stateMachine()->set("otherkey1", "5"));
+  ASSERT_OK(stateMachine()->set("otherkey2", "6"));
+  ASSERT_OK(stateMachine()->set("otherkey3", "7"));
+  ASSERT_OK(stateMachine()->set("otherkey4", "8"));
+
+  std::string newcursor;
+  std::vector<std::string> keys;
+  ASSERT_OK(stateMachine()->scan("", "key*", 2, newcursor, keys));
+  ASSERT_EQ(keys, make_vec("key1", "key2"));
+  ASSERT_EQ(newcursor, "key3");
+
+  ASSERT_OK(stateMachine()->scan(newcursor, "key*", 2, newcursor, keys));
+  ASSERT_EQ(keys, make_vec("key3", "key4"));
+  ASSERT_EQ(newcursor, "key5");
+
+  ASSERT_OK(stateMachine()->scan(newcursor, "key*", 2, newcursor, keys));
+  ASSERT_EQ(keys, make_vec("key5", "key6"));
+  ASSERT_EQ(newcursor, "");
+
+  ASSERT_OK(stateMachine()->scan("", "*key1", 2, newcursor, keys));
+  ASSERT_EQ(keys, make_vec("key1"));
+  ASSERT_EQ(newcursor, "key3");
+
+  ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
+  ASSERT_TRUE(keys.empty());
+  ASSERT_EQ(newcursor, "key5");
+
+  ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
+  ASSERT_TRUE(keys.empty());
+  ASSERT_EQ(newcursor, "otherkey1");
+
+  ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
+  ASSERT_EQ(keys, make_vec("otherkey1"));
+  ASSERT_EQ(newcursor, "otherkey3");
+
+  ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
+  ASSERT_TRUE(keys.empty());
+  ASSERT_EQ(newcursor, "");
+
+  ASSERT_OK(stateMachine()->set("aba", "6"));
+  ASSERT_OK(stateMachine()->set("abb", "7"));
+  ASSERT_OK(stateMachine()->set("abc", "8"));
+  ASSERT_OK(stateMachine()->set("abcd", "8"));
+
+  ASSERT_OK(stateMachine()->scan("", "ab?", 3, newcursor, keys));
+  ASSERT_EQ(keys, make_vec("aba", "abb", "abc"));
+  ASSERT_EQ(newcursor, "abcd");
+
+  ASSERT_OK(stateMachine()->scan(newcursor, "ab?", 3, newcursor, keys));
+  ASSERT_TRUE(keys.empty());
+  ASSERT_EQ(newcursor, "");
+
+  // Using a non-sense cursor
+  ASSERT_OK(stateMachine()->scan("zz", "ab?", 100, newcursor, keys));
+  ASSERT_TRUE(keys.empty());
+  ASSERT_EQ(newcursor, "");
+
+  // Match only a single key
+  ASSERT_OK(stateMachine()->scan("", "abc", 100, newcursor, keys));
+  ASSERT_EQ(keys, make_vec("abc"));
+  ASSERT_EQ(newcursor, "");
+}
+
 static std::string sliceToString(const rocksdb::Slice &slice) {
   return std::string(slice.data(), slice.size());
 }
@@ -661,4 +732,12 @@ TEST(ReverseLocator, BasicSanity) {
 
   revlocator = ReverseLocator(SSTR(char(KeyType::kHash) << "abc#bcd"));
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kParseError);
+}
+
+TEST(PatternMatching, BasicSanity) {
+  ASSERT_EQ(extractPatternPrefix("abc*"), "abc");
+  ASSERT_EQ(extractPatternPrefix("abc"), "abc");
+  ASSERT_EQ(extractPatternPrefix("ab?abc"), "ab");
+  ASSERT_EQ(extractPatternPrefix("1234[a-z]*134"), "1234");
+  ASSERT_EQ(extractPatternPrefix("?134"), "");
 }

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: StringUtils.hh
+// File: PatternMatching.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,48 +21,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_UTILS_STRING_UTILS_H__
-#define __QUARKDB_UTILS_STRING_UTILS_H__
+#ifndef __QUARKDB_PATTERN_MATCHING_H__
+#define __QUARKDB_PATTERN_MATCHING_H__
 
-#include <rocksdb/slice.h>
-#include <string>
+namespace quarkdb {
 
-namespace quarkdb { namespace StringUtils {
+// Given a redis pattern, extract the maximum prefix which doesn't contain
+// special glob-style characters. The rationale behind this is that we can
+// efficiently rule out all keys inside RocksDB which don't start with this
+// prefix.
 
-inline size_t countOccurences(const std::string &key, char c) {
-  size_t ret = 0;
-  for(size_t i = 0; i < key.size(); i++) {
-    if(key[i] == c) {
-      ret++;
+inline std::string extractPatternPrefix(const std::string &pattern) {
+  for(size_t i = 0; i < pattern.size(); i++) {
+    char c = pattern[i];
+
+    if(c == '?' || c == '*' || c == '[' || c == ']' || c == '\\') {
+      return std::string(pattern.begin(), pattern.begin()+i);
     }
   }
 
-  return ret;
+  // The entire thing doesn't contain special characters.
+  // Kinda weird, as it can only match a single key, but possible
+  return pattern;
 }
 
-inline bool startswith(const std::string &str, const rocksdb::Slice &prefix) {
-  if(prefix.size() > str.size()) return false;
-
-  for(size_t i = 0; i < prefix.size(); i++) {
-    if(str[i] != prefix[i]) return false;
-  }
-  return true;
 }
-
-inline bool isPrefix(const std::string &prefix, const char *buff, size_t n) {
-  if(n < prefix.size()) return false;
-
-  for(size_t i = 0; i < prefix.size(); i++) {
-    if(buff[i] != prefix[i]) return false;
-  }
-
-  return true;
-}
-
-inline bool isPrefix(const std::string &prefix, const std::string &target) {
-  return isPrefix(prefix, target.c_str(), target.size());
-}
-
-} }
 
 #endif
