@@ -835,6 +835,7 @@ rocksdb::Status StateMachine::scan(const std::string &cursor, const std::string 
   }
 
   size_t iterations = 0;
+  bool emptyPattern = (pattern.empty() || pattern == "*");
 
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
@@ -855,7 +856,7 @@ rocksdb::Status StateMachine::scan(const std::string &cursor, const std::string 
       return rocksdb::Status::OK();
     }
 
-    if(stringmatchlen(pattern.c_str(), pattern.length(), rkey.c_str()+1, rkey.length()-1, 0)) {
+    if(emptyPattern || stringmatchlen(pattern.c_str(), pattern.length(), rkey.c_str()+1, rkey.length()-1, 0)) {
       results.push_back(rkey.substr(1));
     }
   }

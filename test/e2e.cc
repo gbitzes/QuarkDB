@@ -34,6 +34,7 @@
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
 #include "test-reply-macros.hh"
+#include "qclient/QScanner.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -223,6 +224,28 @@ TEST_F(Raft_e2e, scan) {
 
   reply = tunnel(leaderID)->exec("scan", "0", "MATCH", "f*", "COUNT", "3").get();
   ASSERT_REPLY(reply, std::make_pair("next:f4", make_vec("f1", "f2", "f3")));
+
+  // without MATCH
+  reply = tunnel(leaderID)->exec("scan", "0", "COUNT", "3").get();
+  ASSERT_REPLY(reply, std::make_pair("next:f4", make_vec("f1", "f2", "f3")));
+
+  // with "*" MATCH pattern
+  reply = tunnel(leaderID)->exec("scan", "0", "COUNT", "3", "MATCH", "*").get();
+  ASSERT_REPLY(reply, std::make_pair("next:f4", make_vec("f1", "f2", "f3")));
+
+  QScanner scanner(*tunnel(leaderID), "f*", 3);
+
+  std::vector<std::string> ret;
+  ASSERT_TRUE(scanner.next(ret));
+  ASSERT_EQ(ret, make_vec("f1", "f2", "f3"));
+
+  ASSERT_TRUE(scanner.next(ret));
+  ASSERT_EQ(ret, make_vec("f4", "f5", "f6"));
+
+  ASSERT_TRUE(scanner.next(ret));
+  ASSERT_EQ(ret, make_vec("f7", "f8", "f9"));
+
+  ASSERT_FALSE(scanner.next(ret));
 }
 
 TEST_F(Raft_e2e, test_many_redis_commands) {
