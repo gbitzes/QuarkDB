@@ -6,7 +6,7 @@ macro(buildRocksDB)
     PREFIX "${CMAKE_BINARY_DIR}/deps/rocksdb"
     CONFIGURE_COMMAND ""
     BUILD_IN_SOURCE 1
-    BUILD_COMMAND bash -c "export PORTABLE=1 && export DISABLE_JEMALLOC=1 && export OPT='-fPIC -DNDEBUG -O3' && make static_lib"
+    BUILD_COMMAND bash -c "export PORTABLE=1 && export DISABLE_JEMALLOC=1 && export OPT='-fPIC -DNDEBUG -O3' && export USE_RTTI=1 && make static_lib"
     INSTALL_COMMAND ""
   )
 
