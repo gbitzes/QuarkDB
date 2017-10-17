@@ -108,9 +108,13 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
   db = transactionDB->GetBaseDB();
   ensureCompatibleFormat(!dirExists);
   retrieveLastApplied();
+
+  consistencyScanner.reset(new ConsistencyScanner(*this));
 }
 
 StateMachine::~StateMachine() {
+  consistencyScanner.reset();
+
   if(transactionDB) {
     qdb_info("Closing state machine " << quotes(filename));
     delete transactionDB;
@@ -916,6 +920,20 @@ void StateMachine::commitBatch(rocksdb::WriteBatch &batch) {
   rocksdb::WriteOptions opts;
   opts.disableWAL = !writeAheadLog;
   THROW_ON_ERROR(db->Write(opts, &batch));
+}
+
+rocksdb::Status StateMachine::verifyChecksum() {
+  qdb_info("Initiating a full checksum scan of the state machine.");
+  rocksdb::Status status = db->VerifyChecksum();
+
+  if(status.ok()) {
+    qdb_info("State machine checksum scan successful!");
+  }
+  else {
+    qdb_critical("State machine corruption, checksum verification failed: " << status.ToString());
+  }
+
+  return status;
 }
 
 bool StateMachine::waitUntilTargetLastApplied(LogIndex targetLastApplied, std::chrono::milliseconds duration) {

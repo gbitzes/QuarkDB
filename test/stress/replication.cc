@@ -218,6 +218,9 @@ TEST_F(Replication, linearizability_during_failover) {
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
 
+  // activate full consistency scan every second, across every node
+  ASSERT_REPLY(tunnel(leaderID)->exec("config_set", ConsistencyScanner::kConfigurationKey, "1"), "OK");
+
   std::vector<std::future<redisReplyPtr>> futures;
 
   // Issue a bunch of writes, all towards the same key

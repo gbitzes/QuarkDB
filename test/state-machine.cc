@@ -306,6 +306,24 @@ TEST_F(State_Machine, basic_sanity) {
   ASSERT_EQ(size, 2u);
 
   ASSERT_NOTFOUND(stateMachine()->hexists("myhash", "val"));
+  ASSERT_OK(stateMachine()->verifyChecksum());
+}
+
+TEST_F(State_Machine, consistency_check) {
+  for(size_t i = 1; i < 10; i++) {
+    bool created;
+    ASSERT_OK(stateMachine()->hset("hash", SSTR("f" << i), SSTR("v" << i), created));
+    ASSERT_TRUE(created);
+  }
+
+  ASSERT_OK(stateMachine()->verifyChecksum());
+  ASSERT_EQ(ConsistencyScanner::obtainScanPeriod(*stateMachine()), ConsistencyScanner::kDefaultPeriod);
+  ASSERT_OK(stateMachine()->configSet(ConsistencyScanner::kConfigurationKey, "1"));
+  ASSERT_EQ(ConsistencyScanner::obtainScanPeriod(*stateMachine()), std::chrono::seconds(1));
+  ASSERT_OK(stateMachine()->configSet(ConsistencyScanner::kConfigurationKey, "asdf"));
+  ASSERT_EQ(ConsistencyScanner::obtainScanPeriod(*stateMachine()), ConsistencyScanner::kDefaultPeriod);
+  ASSERT_OK(stateMachine()->configSet(ConsistencyScanner::kConfigurationKey, std::to_string(60 * 60 * 24)));
+  ASSERT_EQ(ConsistencyScanner::obtainScanPeriod(*stateMachine()), std::chrono::hours(24));
 }
 
 TEST_F(State_Machine, hscan) {

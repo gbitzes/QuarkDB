@@ -28,6 +28,7 @@
 #include "Utils.hh"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
+#include "storage/ConsistencyScanner.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction_db.h>
@@ -138,6 +139,7 @@ public:
   IteratorPtr getRawIterator();
   void commitBatch(rocksdb::WriteBatch &batch);
   bool waitUntilTargetLastApplied(LogIndex targetLastApplied, std::chrono::milliseconds duration);
+  rocksdb::Status verifyChecksum();
 
 private:
   friend class StagingArea;
@@ -210,6 +212,8 @@ private:
 
   rocksdb::TransactionDB* transactionDB = nullptr;
   rocksdb::DB* db = nullptr;
+
+  std::unique_ptr<ConsistencyScanner> consistencyScanner;
 
   const std::string filename;
   bool writeAheadLog;

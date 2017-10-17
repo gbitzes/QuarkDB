@@ -59,6 +59,14 @@ public:
     notifier.wait_for(lock, duration);
   }
 
+  template<typename T>
+  void wait_until(T duration) {
+    std::unique_lock<std::mutex> lock(mtx);
+
+    if(stopFlag) return;
+    notifier.wait_until(lock, duration);
+  }
+
 private:
   friend class AssistedThread;
 
