@@ -40,12 +40,17 @@ if(NOT PACKAGEONLY)
   find_package(uuid REQUIRED)
 endif()
 
-if( (NOT PACKAGEONLY) OR (BUILD_ROCKSDB))
+if( (NOT BUILD_ROCKSDB) AND (NOT PACKAGEONLY) )
+  # determine if we need to build rocksdb
   find_package(RocksDB)
-  if(NOT ROCKSDB_FOUND)
-    include(buildRocksDB)
-    buildRocksDB()
+  if( (NOT ROCKSDB_FOUND) )
+    set(BUILD_ROCKSDB ON)
   endif()
+endif()
+
+if(BUILD_ROCKSDB)
+  include(buildRocksDB)
+  buildRocksDB()
 endif()
 
 #-------------------------------------------------------------------------------
