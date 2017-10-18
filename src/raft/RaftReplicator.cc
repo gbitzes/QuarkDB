@@ -141,7 +141,7 @@ void RaftReplicaTracker::triggerResilvering() {
   }
 
   // Start the resilverer
-  resilverer = new RaftResilverer(shardDirectory, target, journal.getClusterID(), &trimmer);
+  resilverer = new RaftResilverer(shardDirectory, target, journal.getClusterID(), timeouts, &trimmer);
 }
 
 // Go through the pending queue, checking if any responses from the target have
@@ -242,7 +242,7 @@ ReplicaStatus RaftReplicaTracker::getStatus() {
 }
 
 void RaftReplicaTracker::main() {
-  RaftTalker talker(target, journal.getClusterID());
+  RaftTalker talker(target, journal.getClusterID(), timeouts);
   LogIndex nextIndex = journal.getLogSize();
 
   RaftMatchIndexTracker &matchIndex = commitTracker.getHandler(target);

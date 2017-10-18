@@ -49,7 +49,7 @@ class ShardDirectory; class RaftTrimmer;
 
 class RaftResilverer {
 public:
-  RaftResilverer(ShardDirectory &directory, const RaftServer &target, const RaftClusterID &clusterID, RaftTrimmer *trimmer = nullptr);
+  RaftResilverer(ShardDirectory &directory, const RaftServer &target, const RaftClusterID &clusterID, const RaftTimeouts &timeouts, RaftTrimmer *trimmer = nullptr);
   ~RaftResilverer();
 
   ResilveringStatus getStatus();

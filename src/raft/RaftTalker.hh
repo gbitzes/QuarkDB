@@ -32,11 +32,12 @@
 namespace quarkdb {
 using namespace qclient;
 
+class RaftTimeouts;
 using ResilveringEventID = std::string;
 
 class RaftTalker {
 public:
-  RaftTalker(const RaftServer &server, const RaftClusterID &clusterID);
+  RaftTalker(const RaftServer &server, const RaftClusterID &clusterID, const RaftTimeouts &timeouts);
   RaftTalker(const RaftServer &server);
   std::future<redisReplyPtr> appendEntries(RaftTerm term, RaftServer leader, LogIndex prevIndex,
                                            RaftTerm prevTerm, LogIndex commit,

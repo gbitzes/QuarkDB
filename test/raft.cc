@@ -29,6 +29,7 @@
 #include "raft/RaftBlockedWrites.hh"
 #include "raft/RaftMembers.hh"
 #include "raft/RaftJournal.hh"
+#include "raft/RaftLease.hh"
 #include "Poller.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
@@ -317,12 +318,29 @@ TEST_F(Raft_Dispatcher, add_entries) {
   ASSERT_THROW(dispatcher()->appendEntries(std::move(req)), FatalException);
 }
 
+TEST_F(Raft_Dispatcher, incompatible_timeouts) {
+  // try to talk to a raft server while providing the wrong timeouts
+
+  poller(0);
+  RaftTimeouts timeouts(std::chrono::milliseconds(1), std::chrono::milliseconds(2),
+    std::chrono::milliseconds(3));
+  RaftTalker talker(myself(0), clusterID(), timeouts);
+
+  RaftVoteRequest votereq;
+  votereq.term = 1337;
+  votereq.candidate = {"its_me_ur_leader", 1234};
+  votereq.lastIndex = 35000000;
+  votereq.lastTerm = 1000;
+
+  ASSERT_REPLY(talker.requestVote(votereq).get(), "ERR not authorized to issue raft commands");
+}
+
 TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
   // try to talk to a raft server while providing the wrong
   // cluster id, verify it sends us to hell
 
   poller(0);
-  RaftTalker talker(myself(0), "random_cluster_id");
+  RaftTalker talker(myself(0), "random_cluster_id", testconfig.raftTimeouts);
 
   RaftVoteRequest votereq;
   votereq.term = 1337;
@@ -493,24 +511,53 @@ TEST(RaftTimeouts, basic_sanity) {
   }
 }
 
+TEST(RaftTimeouts, serialization) {
+  RaftTimeouts timeouts(std::chrono::milliseconds(133),
+    std::chrono::milliseconds(166),
+    std::chrono::milliseconds(30)
+  );
+
+  ASSERT_EQ(timeouts.toString(), "133:166:30");
+
+  RaftTimeouts deserialized(std::chrono::milliseconds(1),
+    std::chrono::milliseconds(2),
+    std::chrono::milliseconds(3)
+  );
+
+  ASSERT_EQ(deserialized.toString(), "1:2:3");
+  ASSERT_TRUE(RaftTimeouts::fromString(deserialized, timeouts.toString()));
+  ASSERT_EQ(timeouts, deserialized);
+  ASSERT_EQ(timeouts.toString(), deserialized.toString());
+
+  std::string description = "1337:1338:1339";
+  ASSERT_TRUE(RaftTimeouts::fromString(deserialized, description));
+  ASSERT_EQ(deserialized.toString(), description);
+
+  ASSERT_FALSE(RaftTimeouts::fromString(deserialized, "adfas"));
+  ASSERT_FALSE(RaftTimeouts::fromString(deserialized, "1234:dfa:134"));
+  ASSERT_FALSE(RaftTimeouts::fromString(deserialized, "pquf:13:134"));
+  ASSERT_FALSE(RaftTimeouts::fromString(deserialized, "11:13:kajshf"));
+  ASSERT_FALSE(RaftTimeouts::fromString(deserialized, "1234:1234:134:1341"));
+}
+
 TEST_F(Raft_Election, basic_sanity) {
   ASSERT_TRUE(state()->observed(2, {}));
 
   // term mismatch, can't perform election
   RaftVoteRequest votereq;
   votereq.term = 1;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
 
   // we have a leader already, can't do election
   ASSERT_TRUE(state()->observed(2, myself(1)));
   votereq.term = 2;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
 
   // votereq.candidate must be empty
   votereq.candidate = myself(1);
   votereq.term = 3;
   ASSERT_TRUE(state()->observed(3, {}));
-  ASSERT_THROW(RaftElection::perform(votereq, *state(), *lease()), FatalException);
+  ASSERT_THROW(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts), FatalException);
 }
 
 TEST_F(Raft_Election, leader_cannot_call_election) {
@@ -520,7 +567,7 @@ TEST_F(Raft_Election, leader_cannot_call_election) {
 
   RaftVoteRequest votereq;
   votereq.term = 2;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
 }
 
 TEST_F(Raft_Election, observer_cannot_call_election) {
@@ -535,7 +582,7 @@ TEST_F(Raft_Election, observer_cannot_call_election) {
   RaftVoteRequest votereq;
   votereq.term = 1;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease()));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
 }
 
 TEST_F(Raft_Election, complete_simple_election) {
@@ -550,7 +597,7 @@ TEST_F(Raft_Election, complete_simple_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0)));
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
 
   RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0.term, 2);
@@ -573,7 +620,7 @@ TEST_F(Raft_Election, unsuccessful_election_not_enough_votes) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0)));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
 }
 
 TEST_F(Raft_Election, split_votes_successful_election) {
@@ -595,7 +642,7 @@ TEST_F(Raft_Election, split_votes_successful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0)));
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
 
   RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0.term, 2);
@@ -621,7 +668,7 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0)));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
 
   RaftStateSnapshot snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0.term, 2);

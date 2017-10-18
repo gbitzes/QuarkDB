@@ -28,6 +28,7 @@
 #include <random>
 #include <mutex>
 #include "../Utils.hh"
+#include "../utils/ParseUtils.hh"
 
 namespace quarkdb {
 using std::chrono::milliseconds;
@@ -40,13 +41,23 @@ public:
   milliseconds getLow() const;
   milliseconds getHigh() const;
   milliseconds getRandom() const;
-
   milliseconds getHeartbeatInterval() const;
+
+  std::string toString() const;
+  static bool fromString(RaftTimeouts &ret, const std::string &str);
+
+  bool operator==(const RaftTimeouts &rhs) const {
+    return getLow() == rhs.getLow()   &&
+           getHigh() == rhs.getHigh() &&
+           getHeartbeatInterval() == rhs.getHeartbeatInterval();
+  }
+
 private:
   milliseconds timeoutLow;
   milliseconds timeoutHigh;
   milliseconds heartbeatInterval;
 
+  static RaftTimeouts fromString(const std::string &str);
   static std::random_device rd;
   static std::mt19937 gen;
   static std::mutex genMutex;

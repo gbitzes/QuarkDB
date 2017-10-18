@@ -23,12 +23,13 @@
 
 #include "../utils/IntToBinaryString.hh"
 #include "RaftTalker.hh"
+#include "RaftTimeouts.hh"
 #include "../Version.hh"
 
 using namespace quarkdb;
 
-RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID_)
-: server(server_), clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID}) {
+RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID_, const RaftTimeouts &timeouts)
+: server(server_), clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()}) {
 
 }
 

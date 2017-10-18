@@ -33,9 +33,11 @@ using namespace quarkdb;
 
 TEST(RaftTalker, T1) {
   std::string clusterID = "b50da34e-ac15-4c02-b5a7-296454e5f779";
+  RaftTimeouts timeouts(std::chrono::milliseconds(1), std::chrono::milliseconds(2),
+    std::chrono::milliseconds(3));
   RaftServer node = {"localhost", 12344};
   RaftServer myself = {"its_me_ur_leader", 1337};
-  RaftTalker talker(node, clusterID);
+  RaftTalker talker(node, clusterID, timeouts);
 
   SocketListener listener(12344);
   int s2 = listener.accept();
@@ -50,7 +52,7 @@ TEST(RaftTalker, T1) {
   while( (rc = parser.fetch(req)) == 0) ;
   ASSERT_EQ(rc, 1);
 
-  RedisRequest tmp = {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID};
+  RedisRequest tmp = {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()};
   ASSERT_EQ(req, tmp);
 
   // send an append entries message over the talker

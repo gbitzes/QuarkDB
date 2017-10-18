@@ -85,10 +85,16 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
     }
     case RedisCommand::RAFT_HANDSHAKE: {
       conn->raftAuthorization = false;
-      if(req.size() != 3) return conn->errArgs(req[0]);
+      if(req.size() != 4) return conn->errArgs(req[0]);
+
       if(req[2] != journal.getClusterID()) {
         qdb_critical("received handshake with wrong cluster id: " << req[2] << " (mine is " << journal.getClusterID() << ")");
         return conn->err("wrong cluster id");
+      }
+
+      if(req[3] != raftClock.getTimeouts().toString()) {
+        qdb_critical("received handshake with different raft timeouts (" << req[3] << ") than mine (" << raftClock.getTimeouts().toString() << ")");
+        return conn->err("incompatible raft timeouts");
       }
 
       conn->raftAuthorization = true;

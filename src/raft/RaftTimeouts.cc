@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "RaftTimeouts.hh"
+#include "../Utils.hh"
 #include <random>
 
 using namespace quarkdb;
@@ -61,6 +62,40 @@ milliseconds RaftTimeouts::getRandom() const {
 
 milliseconds RaftTimeouts::getHeartbeatInterval() const {
   return heartbeatInterval;
+}
+
+std::string RaftTimeouts::toString() const {
+  return SSTR(getLow().count() << ":" << getHigh().count() << ":" << getHeartbeatInterval().count());
+}
+
+static bool parseError(const std::string &str) {
+  qdb_critical("Unable to parse raft timeouts: " << str);
+  return false;
+}
+
+bool RaftTimeouts::fromString(RaftTimeouts &ret, const std::string &str) {
+  std::vector<std::string> parts = split(str, ":");
+
+  if(parts.size() != 3) {
+    return parseError(str);
+  }
+
+  int64_t low, high, heartbeat;
+
+  if(!my_strtoll(parts[0], low)) {
+    return parseError(str);
+  }
+
+  if(!my_strtoll(parts[1], high)) {
+    return parseError(str);
+  }
+
+  if(!my_strtoll(parts[2], heartbeat)) {
+    return parseError(str);
+  }
+
+  ret = RaftTimeouts(milliseconds(low), milliseconds(high), milliseconds(heartbeat));
+  return true;
 }
 
 RaftClock::RaftClock(const RaftTimeouts t)

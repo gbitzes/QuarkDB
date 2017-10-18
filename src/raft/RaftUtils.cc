@@ -60,7 +60,7 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
   std::vector<std::future<redisReplyPtr>> futures;
   for(const RaftServer &node : state.getNodes()) {
     if(node != state.getMyself()) {
-      talkers.push_back(new RaftTalker(node, state.getClusterID()));
+      talkers.push_back(new RaftTalker(node, state.getClusterID(), timeouts));
       futures.push_back(talkers.back()->requestVote(votereq));
     }
   }

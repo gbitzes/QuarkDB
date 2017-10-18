@@ -71,8 +71,8 @@ private:
   std::string error;
 };
 
-RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftClusterID &cid, RaftTrimmer *trim)
-: shardDirectory(dir), target(trg), clusterID(cid), trimmer(trim), talker(target, clusterID) {
+RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftClusterID &cid, const RaftTimeouts &timeouts, RaftTrimmer *trim)
+: shardDirectory(dir), target(trg), clusterID(cid), trimmer(trim), talker(target, clusterID, timeouts) {
 
   resilveringID = generateUuid();
 

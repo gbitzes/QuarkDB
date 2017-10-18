@@ -47,7 +47,7 @@ public:
 
 class RaftElection {
 public:
-  static bool perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftTimeouts timeouts = defaultTimeouts);
+  static bool perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftTimeouts timeouts);
 };
 
 }
