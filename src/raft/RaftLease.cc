@@ -29,8 +29,9 @@ using namespace quarkdb;
 void RaftLastContact::heartbeat(const std::chrono::steady_clock::time_point &timepoint) {
   std::lock_guard<std::mutex> lock(mtx);
 
-  if(timepoint < lastCommunication) qdb_throw("attempted to push back lastCommunication for " << srv.toString());
-  lastCommunication = timepoint;
+  if(lastCommunication < timepoint) {
+    lastCommunication = timepoint;
+  }
 }
 
 std::chrono::steady_clock::time_point RaftLastContact::get() {

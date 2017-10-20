@@ -63,6 +63,16 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->vector(ret);
     }
+    case RedisCommand::RAFT_HEARTBEAT: {
+      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
+      RaftHeartbeatRequest dest;
+      if(!RaftParser::heartbeat(std::move(req), dest)) {
+        return conn->err("malformed request");
+      }
+
+      RaftHeartbeatResponse resp = heartbeat(std::move(dest));
+      return conn->vector(resp.toVector());
+    }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftAppendEntriesRequest dest;
@@ -242,26 +252,76 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
   return 1;
 }
 
-RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest &&req) {
-  std::lock_guard<std::mutex> lock(raftCommand);
+RaftHeartbeatResponse RaftDispatcher::heartbeat(const RaftHeartbeatRequest &req) {
+  RaftStateSnapshot snapshot;
+  return heartbeat(req, snapshot);
+}
+
+RaftHeartbeatResponse RaftDispatcher::heartbeat(const RaftHeartbeatRequest &req, RaftStateSnapshot &snapshot) {
+
+  //----------------------------------------------------------------------------
+  // This RPC is a custom extension to raft - coupling appendEntries to
+  // heartbeats creates certain issues: We can't aggressively pipeline the
+  // replicated entries, for example, out of caution of losing the lease,
+  // or the follower timing out, since pipelining will affect latencies of
+  // acknowledgement reception.
+  //
+  // Having a separate RPC which is sent strictly every heartbeat interval in
+  // addition to appendEntries should alleviate this, and make the cluster
+  // far more robust against spurious timeouts in the presence of pipelined,
+  // gigantic in size appendEntries messages.
+  //
+  // We don't lock raftCommand here - this is intentional! We only access
+  // thread-safe objects, thus preventing the possibility of an appendEntries
+  // storm blocking the heartbeats.
+  //----------------------------------------------------------------------------
+
   if(req.leader == state.getMyself()) {
-    qdb_throw("received appendEntries from myself");
+    qdb_throw("received heartbeat from myself");
   }
 
   state.observed(req.term, req.leader);
-  RaftStateSnapshot snapshot = state.getSnapshot();
+  snapshot = state.getSnapshot();
 
-  if(state.inShutdown()) return {snapshot.term, journal.getLogSize(), false, "in shutdown"};
-  if(req.term < snapshot.term) {
-    return {snapshot.term, journal.getLogSize(), false, "My raft term is newer"};
+  if(state.inShutdown()) {
+    return {snapshot.term, false, "in shutdown"};
   }
 
-  if(req.term == snapshot.term && req.leader != snapshot.leader) {
+  if(req.term < snapshot.term) {
+    return {snapshot.term, false, "My raft term is newer"};
+  }
+
+  qdb_assert(req.term == snapshot.term);
+
+  if(req.leader != snapshot.leader) {
     qdb_throw("Received append entries from " << req.leader.toString() << ", while I believe leader for term " << snapshot.term << " is " << snapshot.leader.toString());
   }
 
-  writeTracker.flushQueues(SSTR("MOVED 0 " << snapshot.leader.toString()));
   raftClock.heartbeat();
+  return {snapshot.term, true, ""};
+}
+
+RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest &&req) {
+  std::lock_guard<std::mutex> lock(raftCommand);
+
+  //----------------------------------------------------------------------------
+  // An appendEntries RPC also serves as a heartbeat. We need to preserve the
+  // state snapshot taken inside heartbeat.
+  //----------------------------------------------------------------------------
+
+  RaftStateSnapshot snapshot;
+  RaftHeartbeatResponse heartbeatResponse = heartbeat({req.term, req.leader}, snapshot);
+
+  if(!heartbeatResponse.nodeRecognizedAsLeader) {
+    return {heartbeatResponse.term, journal.getLogSize(), false, heartbeatResponse.err};
+  }
+
+  //----------------------------------------------------------------------------
+  // The contacting node is recognized as leader, proceed with the
+  // requested journal modifications, if any.
+  //----------------------------------------------------------------------------
+
+  writeTracker.flushQueues(SSTR("MOVED 0 " << snapshot.leader.toString()));
 
   if(!journal.matchEntries(req.prevIndex, req.prevTerm)) {
     return {snapshot.term, journal.getLogSize(), false, "Log entry mismatch"};

@@ -183,6 +183,42 @@ bool RaftParser::appendEntriesResponse(const redisReplyPtr &source, RaftAppendEn
   return true;
 }
 
+bool RaftParser::heartbeat(const RedisRequest &source, RaftHeartbeatRequest &dest) {
+  //----------------------------------------------------------------------------
+  // We assume source[0] is correct, ie "raft_heartbeat"
+  //----------------------------------------------------------------------------
+
+  if(source.size() != 3) return false;
+
+  if(!my_strtoll(source[1], dest.term)) return false;
+  if(!parseServer(source[2], dest.leader)) return false;
+
+  return true;
+}
+
+bool RaftParser::heartbeatResponse(const qclient::redisReplyPtr &source, RaftHeartbeatResponse &dest) {
+  if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements != 3) {
+    return false;
+  }
+
+  for(size_t i = 0; i < source->elements; i++) {
+    if(source->element[i]->type != REDIS_REPLY_STRING) {
+      return false;
+    }
+  }
+
+  std::string tmp(source->element[0]->str, source->element[0]->len);
+  if(!my_strtoll(tmp, dest.term)) return false;
+
+  tmp = std::string(source->element[1]->str, source->element[1]->len);
+  if(tmp == "0") dest.nodeRecognizedAsLeader = false;
+  else if(tmp == "1") dest.nodeRecognizedAsLeader = true;
+  else return false;
+
+  dest.err = std::string(source->element[2]->str, source->element[2]->len);
+  return true;
+}
+
 bool RaftParser::voteRequest(RedisRequest &source, RaftVoteRequest &dest) {
   //----------------------------------------------------------------------------
   // We assume source[0] is correct, ie "raft_request_vote"

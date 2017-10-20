@@ -29,6 +29,7 @@
 #include <queue>
 #include "RaftTalker.hh"
 #include "RaftState.hh"
+#include "../utils/AssistedThread.hh"
 
 namespace quarkdb {
 
@@ -62,6 +63,7 @@ private:
     int64_t payloadSize;
   };
 
+  void sendHeartbeats(ThreadAssistant &assistant);
   void main();
   LogIndex streamUpdates(RaftTalker &talker, LogIndex nextIndex);
   bool checkPendingQueue(std::queue<PendingResponse> &inflight);
@@ -96,7 +98,9 @@ private:
 
   std::atomic<bool> running {false};
   std::atomic<bool> shutdown {false};
+
   std::thread thread;
+  AssistedThread heartbeatThread;
 
   RaftResilverer *resilverer = nullptr;
 };

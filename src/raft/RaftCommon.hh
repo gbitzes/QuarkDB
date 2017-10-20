@@ -104,6 +104,28 @@ inline std::ostream& operator<<(std::ostream& out, const RaftEntry& entry) {
   return out;
 }
 
+struct RaftHeartbeatRequest {
+  RaftTerm term;
+  RaftServer leader;
+};
+
+// The response to the node which sent us a heartbeat: our current term,
+// whether we recognize the heartbeat-sender as leader, and if not, the reason
+// why.
+struct RaftHeartbeatResponse {
+  RaftTerm term;
+  bool nodeRecognizedAsLeader;
+  std::string err;
+
+  std::vector<std::string> toVector() {
+    std::vector<std::string> ret;
+    ret.push_back(std::to_string(term));
+    ret.push_back(std::to_string(nodeRecognizedAsLeader));
+    ret.push_back(err);
+    return ret;
+  }
+};
+
 struct RaftAppendEntriesRequest {
   RaftTerm term;
   RaftServer leader;

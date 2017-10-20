@@ -72,6 +72,7 @@ RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStat
 
   running = true;
   thread = std::thread(&RaftReplicaTracker::main, this);
+  heartbeatThread.reset(&RaftReplicaTracker::sendHeartbeats, this);
 }
 
 RaftReplicaTracker::~RaftReplicaTracker() {
@@ -119,6 +120,23 @@ static bool retrieve_response(std::future<redisReplyPtr> &fut, RaftAppendEntries
 
   if(!RaftParser::appendEntriesResponse(rep, resp)) {
     qdb_critical("cannot parse response from append entries");
+    return false;
+  }
+
+  return true;
+}
+
+static bool retrieve_heartbeat_reply(std::future<redisReplyPtr> &fut, RaftHeartbeatResponse &resp) {
+  std::future_status status = fut.wait_for(std::chrono::milliseconds(500));
+  if(status != std::future_status::ready) {
+    return false;
+  }
+
+  redisReplyPtr rep = fut.get();
+  if(rep == nullptr) return false;
+
+  if(!RaftParser::heartbeatResponse(rep, resp)) {
+    qdb_critical("cannot parse response from heartbeat");
     return false;
   }
 
@@ -239,6 +257,27 @@ void RaftReplicaTracker::updateStatus(bool online, LogIndex nextIndex) {
 
 ReplicaStatus RaftReplicaTracker::getStatus() {
   return { target, statusOnline, statusNextIndex };
+}
+
+void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
+  RaftTalker talker(target, journal.getClusterID(), timeouts);
+
+  while(!assistant.terminationRequested() && shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+    std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
+    std::future<redisReplyPtr> fut = talker.heartbeat(snapshot.term, state.getMyself());
+    RaftHeartbeatResponse resp;
+
+    if(!retrieve_heartbeat_reply(fut, resp)) {
+      goto nextRound;
+    }
+
+    state.observed(resp.term, {});
+    if(snapshot.term < resp.term || !resp.nodeRecognizedAsLeader) continue;
+    lastContact.heartbeat(contact);
+
+nextRound:
+    state.wait(timeouts.getHeartbeatInterval());
+  }
 }
 
 void RaftReplicaTracker::main() {

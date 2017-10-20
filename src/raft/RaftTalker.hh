@@ -51,6 +51,7 @@ public:
   std::future<redisReplyPtr> resilveringFinish(const ResilveringEventID &id);
   std::future<redisReplyPtr> resilveringCancel(const ResilveringEventID &id, const std::string &reason);
 
+  std::future<redisReplyPtr> heartbeat(RaftTerm term, const RaftServer &leader);
   RaftServer getServer() { return server; }
 private:
   RaftServer server;

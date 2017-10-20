@@ -37,7 +37,7 @@ namespace quarkdb {
 // Forward declarations
 //------------------------------------------------------------------------------
 class RaftJournal; class RaftState; class RaftClock; class RaftWriteTracker;
-class RaftReplicator;
+class RaftReplicator; class RaftStateSnapshot;
 
 
 class RaftDispatcher : public Dispatcher {
@@ -51,9 +51,11 @@ public:
   bool fetch(LogIndex index, RaftEntry &entry);
   bool checkpoint(const std::string &path, std::string &err);
 
+  RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req);
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
   RaftVoteResponse requestVote(RaftVoteRequest &req);
 private:
+  RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req, RaftStateSnapshot &snapshot);
   LinkStatus service(Connection *conn, RedisRequest &req);
 
   //----------------------------------------------------------------------------

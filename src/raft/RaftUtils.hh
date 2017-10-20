@@ -40,6 +40,8 @@ class RaftParser {
 public:
   static bool appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &dest);
   static bool appendEntriesResponse(const qclient::redisReplyPtr &source, RaftAppendEntriesResponse &dest);
+  static bool heartbeat(const RedisRequest &source, RaftHeartbeatRequest &dest);
+  static bool heartbeatResponse(const qclient::redisReplyPtr &source, RaftHeartbeatResponse &dest);
   static bool voteRequest(RedisRequest &source, RaftVoteRequest &dest);
   static bool voteResponse(const qclient::redisReplyPtr &source, RaftVoteResponse &dest);
   static bool fetchResponse(const qclient::redisReplyPtr &source, RaftEntry &entry);

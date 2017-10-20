@@ -37,6 +37,16 @@ RaftTalker::RaftTalker(const RaftServer &server_)
 : server(server_), tunnel(server.hostname, server.port) {
 }
 
+std::future<redisReplyPtr> RaftTalker::heartbeat(RaftTerm term, const RaftServer &leader) {
+  RedisRequest payload;
+
+  payload.emplace_back("RAFT_HEARTBEAT");
+  payload.emplace_back(std::to_string(term));
+  payload.emplace_back(leader.toString());
+
+  return tunnel.execute(payload);
+}
+
 std::future<redisReplyPtr> RaftTalker::appendEntries(
   RaftTerm term, RaftServer leader, LogIndex prevIndex,
   RaftTerm prevTerm, LogIndex commit,
