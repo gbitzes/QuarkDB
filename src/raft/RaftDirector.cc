@@ -61,7 +61,6 @@ void RaftDirector::main() {
 }
 
 void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
-  qdb_info("Starting replicator for term " << snapshot.term);
   if(snapshot.leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
 
   replicator.activate(snapshot);

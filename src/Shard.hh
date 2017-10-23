@@ -60,6 +60,8 @@ private:
 
   InFlightTracker inFlightTracker;
   RequestCounter requestCounter;
+
+  std::mutex raftGroupMtx;
 };
 
 }
