@@ -3,6 +3,9 @@ stages:
 - test
 - publish
 
+before_script:
+  - export GTEST_COLOR="1"
+
 cc7:
   stage: build
   image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
