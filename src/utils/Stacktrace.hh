@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: init.cc
+// File: Stacktrace.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,15 +21,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include <gtest/gtest.h>
-#include "../config/test-config.hh"
-#include "Utils.hh"
-using namespace quarkdb;
+#ifndef __QUARKDB_UTILS_STACKTRACE_H__
+#define __QUARKDB_UTILS_STACKTRACE_H__
 
-int main(int argc, char **argv) {
-  printf("Running main() from stress/main.cc\n");
-  testconfig.raftTimeouts.setStatic(defaultTimeouts);
-  testing::InitGoogleTest(&argc, argv);
-  setStacktraceOnError(false);
-  return RUN_ALL_TESTS();
+#define BACKWARD_HAS_DW 1
+
+#include <backward.hpp>
+
+namespace quarkdb {
+
+inline std::string getStacktrace() {
+  std::ostringstream ss;
+
+  backward::StackTrace st; st.load_here(32);
+  backward::Printer p;
+	p.object = true;
+	p.color_mode = backward::ColorMode::always;
+	p.address = true;
+	p.print(st, ss);
+
+	return ss.str();
 }
+
+}
+
+#endif

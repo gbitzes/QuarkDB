@@ -1,4 +1,11 @@
 #-------------------------------------------------------------------------------
+# Set-up include paths
+#-------------------------------------------------------------------------------
+include_directories(
+  ${BACKWARD_INCLUDE_DIRS}
+)
+
+#-------------------------------------------------------------------------------
 # Set-up gtest
 #-------------------------------------------------------------------------------
 set(GTEST "${CMAKE_SOURCE_DIR}/deps/googletest/googletest")
@@ -29,6 +36,7 @@ add_executable(quarkdb-tests
   e2e.cc
   formatter.cc
   link.cc
+  main.cc
   poller.cc
   raft-journal.cc
   raft-lease.cc
@@ -86,7 +94,7 @@ include_directories(
 #-------------------------------------------------------------------------------
 target_link_libraries(quarkdb-tests
   XrdQuarkDB
-  gtest_main
+  gtest
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${GCOV_LIBS}
@@ -94,7 +102,7 @@ target_link_libraries(quarkdb-tests
 
 target_link_libraries(quarkdb-bench
   XrdQuarkDB
-  gtest_main
+  gtest
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${GCOV_LIBS}
@@ -102,7 +110,7 @@ target_link_libraries(quarkdb-bench
 
 target_link_libraries(quarkdb-bench-malloc
   XrdQuarkDB
-  gtest_main
+  gtest
   dl
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
@@ -111,7 +119,7 @@ target_link_libraries(quarkdb-bench-malloc
 
 target_link_libraries(quarkdb-stress-tests
   XrdQuarkDB
-  gtest_main
+  gtest
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${GCOV_LIBS}

@@ -22,12 +22,26 @@
  ************************************************************************/
 
 #include <climits>
+#include "utils/Stacktrace.hh"
 #include "Utils.hh"
 #include <memory.h>
 #include <math.h>
 #include <sys/stat.h>
 
 namespace quarkdb {
+
+bool stacktraceOnError = true;
+void setStacktraceOnError(bool val) {
+  stacktraceOnError = val;
+}
+
+std::string errorStacktrace() {
+  if(stacktraceOnError) {
+    return SSTR(" ----- " << getStacktrace());
+  }
+
+  return "";
+}
 
 std::mutex logMutex;
 

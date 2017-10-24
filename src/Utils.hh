@@ -36,6 +36,17 @@
 
 namespace quarkdb {
 
+
+// Controls whether stacktraces are printed on serious errors
+// (critical, and exceptions)
+// True by default when running a real instance, but false during tests,
+// as many error conditions are simulated there, and we'd make the output
+// unreadable.
+void setStacktraceOnError(bool val);
+
+// Returns a stacktrace if 'stacktrace-on-error' is enabled, empty otherwise.
+std::string errorStacktrace();
+
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;   \
   void operator=(const TypeName&) = delete
@@ -54,7 +65,7 @@ extern std::mutex logMutex;
 // temporary solution for now
 #define qdb_log(message) ___log(message)
 #define qdb_event(message) ___log("EVENT: " << message)
-#define qdb_critical(message) ___log("CRITICAL: " << message)
+#define qdb_critical(message) ___log("CRITICAL: " << message << errorStacktrace())
 
 #define qdb_warn(message) ___log("WARNING: " << message)
 #define qdb_error(message) ___log("ERROR: " << message)
@@ -62,8 +73,8 @@ extern std::mutex logMutex;
 #define qdb_debug(message) if(false) { ___log(message); }
 
 // a serious error has occured signifying a bug in the program logic
-#define qdb_throw(message) throw FatalException(SSTR(message))
-#define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition))
+#define qdb_throw(message) throw FatalException(SSTR(message << errorStacktrace()))
+#define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition << errorStacktrace()))
 
 bool my_strtoll(const std::string &str, int64_t &ret);
 bool my_strtod(const std::string &str, double &ret);
