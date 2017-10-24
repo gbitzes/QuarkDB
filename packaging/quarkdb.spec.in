@@ -33,6 +33,9 @@ BuildRequires: zlib-static
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
 
+BuildRequires: elfutils-devel
+Requires: elfutils-devel
+
 Requires: jemalloc
 BuildRequires: jemalloc-devel
 Requires: xrootd
