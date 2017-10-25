@@ -111,26 +111,12 @@ endif()
 # Packaging and source rpm
 #-------------------------------------------------------------------------------
 
-set(CPACK_SOURCE_GENERATOR "TGZ")
-set(CPACK_PACKAGE_NAME "${CMAKE_PROJECT_NAME}")
-set(CPACK_PACKAGE_VERSION "${VERSION_FULL}")
-set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${CPACK_PACKAGE_VERSION}")
 set(QUARKDB_ARCHIVE "${CPACK_SOURCE_PACKAGE_FILE_NAME}.tar.gz")
-
-set(CPACK_SOURCE_IGNORE_FILES
-"/build/;/.git/;${CPACK_SOURCE_IGNORE_FILES};")
-
-include(CPack)
-add_custom_target(
-  configure_specfile
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/genversion.py --template packaging/quarkdb.spec.in --out packaging/quarkdb.spec
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
 
 add_custom_target(
   dist
-  COMMAND ${CMAKE_MAKE_PROGRAM} package_source
-  DEPENDS configure_specfile
+  COMMAND ./packaging/make-dist.sh
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
 set (RPM_DEFINE --define "_source_filedigest_algorithm md5" --define "_binary_filedigest_algorithm md5")

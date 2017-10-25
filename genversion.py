@@ -13,13 +13,19 @@ def getFile(filename):
 
     return content
 
+def applyTemplateString(templateContent, replacements):
+    newContent = templateContent
+    for replacement in replacements:
+        newContent = newContent.replace(replacement[0], replacement[1])
+
+    return newContent
+
+
 def applyTemplate(template, target, replacements):
     templateContent = getFile(template)
     oldContent = getFile(target)
 
-    newContent = templateContent
-    for replacement in replacements:
-        newContent = newContent.replace(replacement[0], replacement[1])
+    newContent = applyTemplateString(templateContent, replacements)
 
     if oldContent == newContent:
         return False
@@ -33,6 +39,7 @@ def main():
                                      description="Configure files that contain version numbers.\n")
     parser.add_argument('--template', type=str, default="src/Version.hh.in", help="The template file.")
     parser.add_argument('--out', type=str, default="src/Version.hh", help="The file to output.")
+    parser.add_argument('--template-string', type=str, help="The template string.")
     args = parser.parse_args()
 
     try:
@@ -66,12 +73,6 @@ def main():
         build = ""
         version_full = versions[0] + "." + versions[1] + "." + versions[2]
 
-    rocksdb_cache = ""
-    try:
-        rocksdb_cache = sh("ci/rocksdb-cmake.sh")
-    except:
-        pass
-
     replacements = [
       ["@GIT_SHA1@", commit_hash],
       ["@GIT_DESCRIBE@", git_describe],
@@ -81,9 +82,12 @@ def main():
       ["@VERSION_MINOR@", versions[1]],
       ["@VERSION_PATCH@", versions[2]],
       ["@VERSION_BUILD@", build],
-      ["@VERSION_FULL@", version_full],
-      ["@ROCKSDB_CACHED_BUILD@", rocksdb_cache]
+      ["@VERSION_FULL@", version_full]
     ]
+
+    if args.template_string:
+        print(applyTemplateString(args.template_string, replacements))
+        return
 
     if applyTemplate(args.template, args.out, replacements):
         print("{0} updated. ({1})".format(args.out, version_full))
