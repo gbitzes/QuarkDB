@@ -21,26 +21,25 @@ add_custom_command(
 )
 
 #-------------------------------------------------------------------------------
-# Extract values from Version.hh for cpack
+# Look for the rocksdb cache, which is used to greatly reduce compilation
+# time of QuarkDB.
+# To populate the cache, run as root:
+# - ./ci/install-rocksdb.sh
+#
+# The cache needs to be repopulated each time the rocksdb submodule changes
+# to a different release.
 #-------------------------------------------------------------------------------
+option(BUILD_ROCKSDB "Build rocksdb, even if it exists system-wide or in the cache" OFF)
 
-include(ExtractVersionInfo)
-ExtractVersionInfo()
+execute_process(
+  COMMAND ./ci/canonical-rocksdb-path.sh
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+  OUTPUT_VARIABLE CANONICAL_ROCKSDB_PATH
+)
 
-#-------------------------------------------------------------------------------
-# Search for dependencies
-#-------------------------------------------------------------------------------
+set(ROCKSDB_ROOT_DIR ${CANONICAL_ROCKSDB_PATH} CACHE STRING "RocksDB cache dir")
 
-option(PACKAGEONLY "Build without dependencies" OFF)
-option(BUILD_ROCKSDB "Build rocksdb, even if PACKAGEONLY was specified" OFF)
-
-if(NOT PACKAGEONLY)
-  find_package(hiredis REQUIRED)
-  find_package(XRootD REQUIRED)
-  find_package(uuid REQUIRED)
-endif()
-
-if( (NOT BUILD_ROCKSDB) AND (NOT PACKAGEONLY) )
+if( (NOT BUILD_ROCKSDB) )
   # determine if we need to build rocksdb
   find_package(RocksDB)
   if( (NOT ROCKSDB_FOUND) )
@@ -51,6 +50,18 @@ endif()
 if(BUILD_ROCKSDB)
   include(buildRocksDB)
   buildRocksDB()
+endif()
+
+#-------------------------------------------------------------------------------
+# Search for dependencies
+#-------------------------------------------------------------------------------
+
+option(PACKAGEONLY "Build without dependencies" OFF)
+
+if(NOT PACKAGEONLY)
+  find_package(hiredis REQUIRED)
+  find_package(XRootD REQUIRED)
+  find_package(uuid REQUIRED)
 endif()
 
 #-------------------------------------------------------------------------------
