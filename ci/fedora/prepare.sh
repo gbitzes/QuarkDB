@@ -16,7 +16,8 @@ dnf install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum
 yum-builddep -y build/SRPMS/*
 
 ##------------------------------------------------------------------------------
-## Install rocksdb
+## Install rocksdb, both with and without tsan
 ##------------------------------------------------------------------------------
 
 ci/install-rocksdb.sh
+CXXFLAGS='-fsanitize=thread' ci/install-rocksdb.sh

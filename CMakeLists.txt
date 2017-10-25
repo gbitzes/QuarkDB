@@ -21,10 +21,12 @@ add_custom_command(
 )
 
 #-------------------------------------------------------------------------------
-# Look for the rocksdb cache, which is used to greatly reduce compilation
+# Look inside the rocksdb cache, which is used to greatly reduce compilation
 # time of QuarkDB.
-# To populate the cache, run as root:
-# - ./ci/install-rocksdb.sh
+#
+# To populate the /rocksdb cache, run:
+# - sudo ./ci/install-rocksdb.sh
+# - sudo CXXFLAGS='-fsanitize=thread' ./ci/install-rocksdb.sh
 #
 # The cache needs to be repopulated each time the rocksdb submodule changes
 # to a different release.

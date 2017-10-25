@@ -11,9 +11,5 @@ printf "Version: ${VERSION_FULL}\n"
 TARBALL="quarkdb-${VERSION_FULL}.tar.gz"
 BUILD_DIR=$PWD/build
 
-RPM_DEFINE="--define \"_source_filedigest_algorithm md5\" --define \"_binary_filedigest_algorithm md5\""
-
 pushd build
 rpmbuild --define "_source_filedigest_algorithm md5" --define "_binary_filedigest_algorithm md5" -ts ${TARBALL} --define "_topdir ${BUILD_DIR}" --with server
-
-

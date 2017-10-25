@@ -33,4 +33,3 @@ make BuildRocksDB
 # Copy necessary files.
 cp deps/rocksdb/src/BuildRocksDB/librocksdb.a $ROCKSDB_PATH/
 cp -r deps/rocksdb/src/BuildRocksDB/include $ROCKSDB_PATH/
-
