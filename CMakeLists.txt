@@ -111,17 +111,14 @@ endif()
 # Packaging and source rpm
 #-------------------------------------------------------------------------------
 
-set(QUARKDB_ARCHIVE "${CPACK_SOURCE_PACKAGE_FILE_NAME}.tar.gz")
-
 add_custom_target(
   dist
   COMMAND ./packaging/make-dist.sh
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
-set (RPM_DEFINE --define "_source_filedigest_algorithm md5" --define "_binary_filedigest_algorithm md5")
 add_custom_target(
   srpm
-  COMMAND rpmbuild ${RPM_DEFINE} -ts ${QUARKDB_ARCHIVE} --define "_topdir ${CMAKE_BINARY_DIR}" --with server
-  DEPENDS dist
+  COMMAND ./packaging/make-srpm.sh
+  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
