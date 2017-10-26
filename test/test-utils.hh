@@ -187,6 +187,27 @@ public:
     return true;
   }
 
+  // Check whether the given nodes have reached full consensus - this means:
+  // - State consensus
+  // - All journals are the same size, with all entries committed
+  // - All state machines have already applied all entries in the journal
+  template<typename... Args>
+  bool checkFullConsensus(const Args... args) {
+    if(!checkStateConsensus(args...)) return false;
+    std::vector<int> arguments = { args... };
+
+    LogIndex targetEntry = journal(arguments[0])->getLogSize() - 1;
+
+    // Ensure all journals and state machines are at 'targetEntry'
+    for(size_t i = 0; i < arguments.size(); i++) {
+      if(journal(arguments[i])->getLogSize()-1 != targetEntry) return false;
+      if(journal(arguments[i])->getCommitIndex() != targetEntry) return false;
+      if(stateMachine(arguments[i])->getLastApplied() != targetEntry) return false;
+    }
+
+    return true;
+  }
+
   template<typename... Args>
   bool checkJournalConsensus(LogIndex index, const RedisRequest &request, const Args... args) {
     std::vector<int> arguments = { args... };

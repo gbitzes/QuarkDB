@@ -526,6 +526,7 @@ TEST_F(Raft_e2e, membership_updates) {
 
   // throw a node out of the cluster
   int victim = (leaderID+1) % 3;
+  RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(victim).toString()), "OK");
   RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == 3);
 
