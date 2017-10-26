@@ -45,7 +45,7 @@ namespace quarkdb {
 void setStacktraceOnError(bool val);
 
 // Returns a stacktrace if 'stacktrace-on-error' is enabled, empty otherwise.
-std::string errorStacktrace();
+std::string errorStacktrace(bool crash);
 
 #define DISALLOW_COPY_AND_ASSIGN(TypeName) \
   TypeName(const TypeName&) = delete;   \
@@ -65,7 +65,7 @@ extern std::mutex logMutex;
 // temporary solution for now
 #define qdb_log(message) ___log(message)
 #define qdb_event(message) ___log("EVENT: " << message)
-#define qdb_critical(message) ___log("CRITICAL: " << message << quarkdb::errorStacktrace())
+#define qdb_critical(message) ___log("CRITICAL: " << message << quarkdb::errorStacktrace(false))
 
 #define qdb_warn(message) ___log("WARNING: " << message)
 #define qdb_error(message) ___log("ERROR: " << message)
@@ -73,8 +73,8 @@ extern std::mutex logMutex;
 #define qdb_debug(message) if(false) { ___log(message); }
 
 // a serious error has occured signifying a bug in the program logic
-#define qdb_throw(message) throw FatalException(SSTR(message << quarkdb::errorStacktrace()))
-#define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition << quarkdb::errorStacktrace()))
+#define qdb_throw(message) throw FatalException(SSTR(message << quarkdb::errorStacktrace(true)))
+#define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition << quarkdb::errorStacktrace(true)))
 
 bool my_strtoll(const std::string &str, int64_t &ret);
 bool my_strtod(const std::string &str, double &ret);

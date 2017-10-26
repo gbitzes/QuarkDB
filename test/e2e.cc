@@ -296,6 +296,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("sismember", "myhash", "b"));
   futures.emplace_back(tunnel(leaderID)->exec("scard", "myhash"));
   futures.emplace_back(tunnel(leaderID)->exec("scard", "does-not-exist"));
+  futures.emplace_back(tunnel(leaderID)->exec("raft_invalid_command"));
 
   size_t count = 0;
   ASSERT_REPLY(futures[count++], 1);
@@ -320,6 +321,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[count++], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
   ASSERT_REPLY(futures[count++], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
   ASSERT_REPLY(futures[count++], 0);
+  ASSERT_REPLY(futures[count++], "ERR internal dispatching error");
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("set", "mystring", "asdf"));

@@ -81,9 +81,9 @@ struct cmdMapInit {
     redis_cmd_map["raft_remove_member"] = {RedisCommand::RAFT_REMOVE_MEMBER, CommandType::RAFT};
     redis_cmd_map["raft_promote_observer"] = {RedisCommand::RAFT_PROMOTE_OBSERVER, CommandType::RAFT};
     redis_cmd_map["raft_heartbeat"] = {RedisCommand::RAFT_HEARTBEAT, CommandType::RAFT};
+    redis_cmd_map["raft_invalid_command"] = {RedisCommand::RAFT_INVALID_COMMAND, CommandType::RAFT};
 
     redis_cmd_map["quarkdb_info"] = {RedisCommand::QUARKDB_INFO, CommandType::QUARKDB};
-    redis_cmd_map["quarkdb_stats"] = {RedisCommand::QUARKDB_STATS, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_detach"] = {RedisCommand::QUARKDB_DETACH, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_attach"] = {RedisCommand::QUARKDB_ATTACH, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_start_resilvering"] = {RedisCommand::QUARKDB_START_RESILVERING, CommandType::QUARKDB};
@@ -91,6 +91,7 @@ struct cmdMapInit {
     redis_cmd_map["quarkdb_resilvering_copy_file"] = {RedisCommand::QUARKDB_RESILVERING_COPY_FILE, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_cancel_resilvering"] = {RedisCommand::QUARKDB_CANCEL_RESILVERING, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_bulkload_finalize"] = {RedisCommand::QUARKDB_BULKLOAD_FINALIZE, CommandType::QUARKDB};
+    redis_cmd_map["quarkdb_invalid_command"] = {RedisCommand::QUARKDB_INVALID_COMMAND, CommandType::QUARKDB};
 
   }
 } cmd_map_init;

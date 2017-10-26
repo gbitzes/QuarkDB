@@ -233,9 +233,15 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
       // If we've made it this far, the state machine should be all caught-up
       // by now. Proceed to service this request.
       qdb_assert(snapshot.leadershipMarker <= stateMachine.getLastApplied());
-  }
+    }
 
     return conn->addPendingRequest(&redisDispatcher, std::move(req));
+  }
+
+  // At this point, the received command *must* be a write - verify!
+  if(req.getCommandType() != CommandType::WRITE) {
+    qdb_critical("RaftDispatcher: unable to dispatch non-write command: " << req[0]);
+    return conn->err("internal dispatching error");
   }
 
   // send request to the write tracker

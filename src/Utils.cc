@@ -35,12 +35,18 @@ void setStacktraceOnError(bool val) {
   stacktraceOnError = val;
 }
 
-std::string errorStacktrace() {
-  if(stacktraceOnError) {
-    return SSTR(" ----- " << getStacktrace());
+std::string errorStacktrace(bool crash) {
+  if(!stacktraceOnError) {
+    return "";
   }
 
-  return "";
+  std::string suffixMessage;
+
+  if(!crash) {
+    suffixMessage = " ----- The above stacktrace does NOT signify a crash! It's used to show the location of a serious error.";
+  }
+
+  return SSTR(" ----- " << getStacktrace() << suffixMessage);
 }
 
 std::mutex logMutex;
