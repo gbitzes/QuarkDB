@@ -78,6 +78,8 @@ fedora-tsan-test:
     - export QDB_TEST_TIMEOUT="default"
     - quarkdb-tests
     - quarkdb-stress-tests
+  tags:
+    - docker-fc25
 
 rpms:
   stage: publish
