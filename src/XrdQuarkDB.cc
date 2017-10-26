@@ -62,7 +62,7 @@ void XrdQuarkDB::shutdownMonitor() {
   delete quarkdbNode;
 
   qdb_event("SHUTTING DOWN");
-  std::exit(0);
+  std::quick_exit(0);
 }
 
 //------------------------------------------------------------------------------

@@ -33,7 +33,7 @@ namespace quarkdb {
 class EventFD {
 public:
   EventFD() {
-    fd = eventfd(0, EFD_NONBLOCK);
+    fd = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
   }
 
   ~EventFD() {
@@ -59,7 +59,7 @@ public:
   void notify(int64_t val = 1) {
     int rc = write(fd, &val, sizeof(val));
     if(rc != sizeof(val)) {
-      qdb_throw("could not notify eventfd, write rc: " << rc);
+      qdb_throw("could not notify eventfd, write rc: " << rc << ", errno: " << errno);
     }
   }
 
