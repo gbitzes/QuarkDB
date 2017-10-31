@@ -527,8 +527,9 @@ TEST_F(Raft_e2e, membership_updates) {
   // throw a node out of the cluster
   int victim = (leaderID+1) % 3;
   RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
+  int index = journal(leaderID)->getLogSize() - 1;
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(victim).toString()), "OK");
-  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == 3);
+  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == index + 1);
 
   // verify the cluster has not been disrupted
   ASSERT_EQ(state(leaderID)->getSnapshot().leader, myself(leaderID));
@@ -536,9 +537,9 @@ TEST_F(Raft_e2e, membership_updates) {
   // add it back as an observer, verify consensus
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_ADD_OBSERVER", myself(victim).toString()), "OK");
 
-  RETRY_ASSERT_TRUE(dispatcher(0)->info().commitIndex == 4);
-  RETRY_ASSERT_TRUE(dispatcher(1)->info().commitIndex == 4);
-  RETRY_ASSERT_TRUE(dispatcher(2)->info().commitIndex == 4);
+  RETRY_ASSERT_TRUE(dispatcher(0)->info().commitIndex == index + 2);
+  RETRY_ASSERT_TRUE(dispatcher(1)->info().commitIndex == index + 2);
+  RETRY_ASSERT_TRUE(dispatcher(2)->info().commitIndex == index + 2);
 
   ASSERT_EQ(state(victim)->getSnapshot().status, RaftStatus::FOLLOWER);
 
@@ -554,7 +555,7 @@ TEST_F(Raft_e2e, membership_updates) {
   // add back as a full voting member
   leaderID = getServerID(state(0)->getSnapshot().leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(victim).toString()), "OK");
-  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == 5);
+  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == index + 3);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 }
 

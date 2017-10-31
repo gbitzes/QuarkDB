@@ -706,15 +706,19 @@ TEST_F(Raft_Director, achieve_natural_election) {
     }
   }
 
+  LogIndex startingReqIndex = journal(leaderID)->getLogSize();
+
   // let's push a bunch of entries to the leader, and verify they get committed
   for(size_t i = 0; i < testreqs.size(); i++) {
-    ASSERT_TRUE(journal(leaderID)->append(i+2, RaftEntry(snapshots[0].term, testreqs[i])));
+    ASSERT_TRUE(journal(leaderID)->append(startingReqIndex+i, RaftEntry(snapshots[0].term, testreqs[i])));
   }
 
+  LogIndex expectedIndex = startingReqIndex + testreqs.size() - 1;
+
   RETRY_ASSERT_TRUE(
-    journal(0)->getCommitIndex() == (int64_t) testreqs.size()+1 &&
-    journal(1)->getCommitIndex() == (int64_t) testreqs.size()+1 &&
-    journal(2)->getCommitIndex() == (int64_t) testreqs.size()+1
+    journal(0)->getCommitIndex() == expectedIndex &&
+    journal(1)->getCommitIndex() == expectedIndex &&
+    journal(2)->getCommitIndex() == expectedIndex
   );
 
   // verify entries one by one, for all three journals
@@ -722,7 +726,7 @@ TEST_F(Raft_Director, achieve_natural_election) {
     for(size_t j = 0; j < 3; j++) {
       RaftEntry entry;
 
-      ASSERT_TRUE(journal(j)->fetch(i+2, entry).ok());
+      ASSERT_TRUE(journal(j)->fetch(startingReqIndex+i, entry).ok());
       ASSERT_EQ(entry.request, testreqs[i]);
       ASSERT_EQ(entry.term, snapshots[0].term);
     }
