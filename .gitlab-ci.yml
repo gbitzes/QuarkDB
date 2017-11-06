@@ -138,3 +138,5 @@ cc7-koji:
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
     - koji build --wait quarkdb7 ./build/SRPMS/*.src.rpm
+  only:
+    - tags
