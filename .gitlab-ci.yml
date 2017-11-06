@@ -127,7 +127,7 @@ coverage:
    - docker-cc7
   retry: 2
 
-koji-cc7:
+cc7-koji:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
@@ -137,4 +137,4 @@ koji-cc7:
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
-    - koji build quarkdb7 ./build/SRPMS/*.src.rpm
+    - koji build --wait quarkdb7 ./build/SRPMS/*.src.rpm
