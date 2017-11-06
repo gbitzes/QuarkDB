@@ -1,4 +1,5 @@
 stages:
+- koji
 - build
 - test
 - publish
@@ -125,3 +126,14 @@ coverage:
   tags:
    - docker-cc7
   retry: 2
+
+koji-cc7:
+  stage: koji
+  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
+  script:
+    - yum install -y koji kinit
+    - mkdir ~/.koji
+    - cp ci/koji/config ~/.koji
+    - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
+    - packaging/make-srpm.sh
+    - koji build quarkdb7 ./build/SRPMS/*.src.rpm
