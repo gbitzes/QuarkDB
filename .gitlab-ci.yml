@@ -131,7 +131,7 @@ koji-cc7:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
-    - yum install -y koji kinit
+    - yum install -y koji --disablerepo=extras
     - mkdir ~/.koji
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
