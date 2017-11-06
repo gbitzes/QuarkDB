@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 set -e
 
+
 #-------------------------------------------------------------------------------
 # Generate a release tarball - run this from the root of the git repository.
 #-------------------------------------------------------------------------------
 
+git submodule update --recursive --init
 mkdir -p build
 ./genversion.py
 ./genversion.py --template packaging/quarkdb.spec.in --out packaging/quarkdb.spec
