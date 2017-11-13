@@ -44,6 +44,7 @@ add_executable(quarkdb-tests
   raft-state.cc
   raft-talker.cc
   raft.cc
+  recovery.cc
   redis-parser.cc
   state-machine.cc
   ${COMMON_TEST_SOURCES}
