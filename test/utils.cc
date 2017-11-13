@@ -131,7 +131,7 @@ TEST(Utils, replication_status) {
   ASSERT_EQ(status.replicasUpToDate(30000), 1u);
 
   ASSERT_EQ(status.getReplicaStatus(RaftServer("localhost", 123)).target, RaftServer("localhost", 123));
-#pragma clang diagnostic ignored "-Wunused-value"
+#pragma GCC diagnostic ignored "-Wunused-value"
   ASSERT_THROW(status.getReplicaStatus(RaftServer("localhost", 456)).target, FatalException);
 }
 
