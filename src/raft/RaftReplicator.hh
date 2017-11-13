@@ -47,7 +47,7 @@ class RaftCommitTracker; class RaftMatchIndexTracker; class RaftLastContact;
 
 class RaftReplicaTracker {
 public:
-  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
+  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicaTracker();
 
   ReplicaStatus getStatus();
@@ -84,7 +84,6 @@ private:
   ReplicaStatus currentStatus;
 
   RaftJournal &journal;
-  StateMachine &stateMachine;
   RaftState &state;
   RaftLease &lease;
   RaftCommitTracker &commitTracker;
@@ -113,7 +112,7 @@ private:
 
 class RaftReplicator {
 public:
-  RaftReplicator(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
+  RaftReplicator(RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicator();
 
   void activate(RaftStateSnapshot &snapshot);
@@ -126,7 +125,6 @@ private:
 
   RaftStateSnapshot snapshot;
   RaftJournal &journal;
-  StateMachine &stateMachine;
   RaftState &state;
   RaftLease &lease;
   RaftCommitTracker &commitTracker;

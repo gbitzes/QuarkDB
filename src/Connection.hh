@@ -99,7 +99,7 @@ private:
 //------------------------------------------------------------------------------
 // Keeps track of connection-specific state.
 //------------------------------------------------------------------------------
-class Dispatcher; class InFlightTracker; class WriteBatch;
+class Dispatcher; class InFlightTracker; struct WriteBatch;
 
 class Connection {
 public:
@@ -147,7 +147,6 @@ public:
     ~FlushGuard() { if(conn) { conn->flush(); } }
   private:
     Connection *conn;
-    BufferedWriter *writer;
   };
 private:
   BufferedWriter writer;

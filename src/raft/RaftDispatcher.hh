@@ -37,7 +37,7 @@ namespace quarkdb {
 // Forward declarations
 //------------------------------------------------------------------------------
 class RaftJournal; class RaftState; class RaftClock; class RaftWriteTracker;
-class RaftReplicator; class RaftStateSnapshot;
+class RaftReplicator; struct RaftStateSnapshot;
 
 
 class RaftDispatcher : public Dispatcher {

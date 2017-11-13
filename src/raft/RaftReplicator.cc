@@ -39,8 +39,8 @@
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
-: journal(journal_), stateMachine(sm), state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t) {
+RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
+: journal(journal_), state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t) {
 
 }
 
@@ -48,8 +48,8 @@ RaftReplicator::~RaftReplicator() {
   deactivate();
 }
 
-RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshot &snapshot_, RaftJournal &journal_, StateMachine &sm, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
-: target(target_), snapshot(snapshot_), journal(journal_), stateMachine(sm),
+RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshot &snapshot_, RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
+: target(target_), snapshot(snapshot_), journal(journal_),
   state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t),
   matchIndex(commitTracker.getHandler(target)),
   lastContact(lease.getHandler(target))  {
@@ -484,7 +484,7 @@ void RaftReplicator::setTargets(const std::vector<RaftServer> &newTargets) {
   // add targets?
   for(size_t i = 0; i < newTargets.size(); i++) {
     if(targets.find(newTargets[i]) == targets.end()) {
-      targets[newTargets[i]] = new RaftReplicaTracker(newTargets[i], snapshot, journal, stateMachine, state, lease, commitTracker, trimmer, shardDirectory, config, timeouts);
+      targets[newTargets[i]] = new RaftReplicaTracker(newTargets[i], snapshot, journal, state, lease, commitTracker, trimmer, shardDirectory, config, timeouts);
     }
   }
 

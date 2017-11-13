@@ -50,11 +50,11 @@ TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));
   ASSERT_TRUE(state()->becomeCandidate(2));
   ASSERT_TRUE(state()->ascend(2));
-  ASSERT_THROW(RaftReplicaTracker(myself(), state()->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(myself(), state()->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
 }
 
 TEST_F(Raft_Replicator, only_leader_can_launch_replicator) {
-  ASSERT_THROW(RaftReplicaTracker(nodes()[1], state()->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(nodes()[1], state()->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
 }
 
 TEST_F(Raft_Replicator, verify_sane_snapshot_term) {
@@ -65,11 +65,11 @@ TEST_F(Raft_Replicator, verify_sane_snapshot_term) {
   // trying to replicate for a term in the future
   RaftStateSnapshot snapshot = state()->getSnapshot();
   snapshot.term = 3;
-  ASSERT_THROW(RaftReplicaTracker(nodes()[1], snapshot, *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(nodes()[1], snapshot, *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
 
   // stale term - this can naturally happen, so it is not an exception
   ASSERT_TRUE(state()->observed(4, {}));
-  RaftReplicaTracker tracker(nodes()[1], snapshot, *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(nodes()[1], snapshot, *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
   ASSERT_FALSE(tracker.isRunning());
 }
 
@@ -88,7 +88,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
   poller(1);
 
   // launch!
-  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
   ASSERT_TRUE(tracker.isRunning());
 
   // populate #0's journal
@@ -123,7 +123,7 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   poller(1);
 
   // launch
-  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
   ASSERT_TRUE(tracker.isRunning());
 
   // verify everything's sane
@@ -157,7 +157,7 @@ TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
   poller(1);
 
   // launch!
-  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
   ASSERT_TRUE(tracker.isRunning());
 
   // verify #1 recognized #0 as leader and that replication was successful

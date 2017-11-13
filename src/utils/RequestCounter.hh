@@ -30,7 +30,7 @@
 
 namespace quarkdb {
 
-class RedisRequest; class WriteBatch;
+class RedisRequest; struct WriteBatch;
 
 //------------------------------------------------------------------------------
 // Count what types of requests we've been servicing, and reports statistics

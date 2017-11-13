@@ -50,9 +50,8 @@ private:
 
   std::thread mainThread;
 
-  struct sockaddr_in local, remote;
+  struct sockaddr_in remote;
   int s;
-  size_t len;
 };
 
 }

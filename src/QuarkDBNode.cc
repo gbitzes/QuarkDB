@@ -70,7 +70,7 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
       if(req.size() != 2) return conn->errArgs(req[0]);
       if(caseInsensitiveEquals(req[1], "segfault")) {
         qdb_critical("Performing harakiri on client request: SEGV");
-        *( (int*) nullptr) = 5;
+        *( (int*) 42 ) = 5;
       }
 
       if(caseInsensitiveEquals(req[1], "kill")) {

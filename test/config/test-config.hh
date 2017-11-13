@@ -29,7 +29,7 @@
 
 namespace quarkdb {
 
-class TestConfig;
+struct TestConfig;
 
 // A configuration option which can be given a global default, a local default
 // through setStatic, but also overriden during runtime through environment
@@ -66,7 +66,7 @@ private:
     value = val;
   }
 
-  friend class TestConfig;
+  friend struct TestConfig;
 };
 
 struct TestConfig {

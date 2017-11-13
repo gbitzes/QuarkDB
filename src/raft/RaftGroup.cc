@@ -163,7 +163,7 @@ RaftCommitTracker* RaftGroup::commitTracker() {
 RaftWriteTracker* RaftGroup::writeTracker() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(wtptr == nullptr) {
-    wtptr = new RaftWriteTracker(*journal(), *state(), *stateMachine());
+    wtptr = new RaftWriteTracker(*journal(), *stateMachine());
   }
   return wtptr;
 }
@@ -187,7 +187,7 @@ RaftConfig* RaftGroup::config() {
 RaftReplicator* RaftGroup::replicator() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *trimmer(), shardDirectory, *config(), timeouts);
+    replicatorptr = new RaftReplicator(*journal(), *state(), *lease(), *commitTracker(), *trimmer(), shardDirectory, *config(), timeouts);
   }
   return replicatorptr;
 }
