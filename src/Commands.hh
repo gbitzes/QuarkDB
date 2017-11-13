@@ -86,6 +86,7 @@ enum class RedisCommand {
   RAFT_PROMOTE_OBSERVER,
   RAFT_HEARTBEAT,
   RAFT_INVALID_COMMAND,                     // used in tests
+  ACTIVATE_STALE_READS,
 
   QUARKDB_INFO,
   QUARKDB_DETACH,

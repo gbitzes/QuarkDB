@@ -120,6 +120,7 @@ public:
   LinkStatus vector(const std::vector<std::string> &vec);
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
 
+  bool raftStaleReads = false;
   bool raftAuthorization = false;
   LinkStatus processRequests(Dispatcher *dispatcher, const InFlightTracker &tracker);
   void setResponseBuffering(bool value);

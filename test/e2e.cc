@@ -644,3 +644,22 @@ TEST_F(Raft_e2e, leader_steps_down_after_follower_loss) {
   RETRY_ASSERT_TRUE(term < state(leaderID)->getCurrentTerm());
   ASSERT_TRUE(state(leaderID)->getSnapshot().leader.empty());
 }
+
+TEST_F(Raft_e2e, stale_reads) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+  int follower = (getLeaderID() + 1) % 3;
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("set", "abc", "1234"), "OK");
+  ASSERT_REPLY(tunnel(follower)->exec("get", "abc"), SSTR("MOVED 0 " << myself(leaderID).toString()));
+
+  ASSERT_REPLY(tunnel(follower)->exec("activate-state-reads"), "OK");
+
+  redisReplyPtr reply = tunnel(follower)->exec("get", "abc").get();
+  qdb_info("Race-y read: " << std::string(reply->str, reply->len));
+
+  RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
+  ASSERT_REPLY(tunnel(follower)->exec("get", "abc"), "1234");
+}

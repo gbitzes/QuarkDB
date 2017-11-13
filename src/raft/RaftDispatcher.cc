@@ -190,6 +190,10 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       replicator.reconfigure();
       return conn->ok();
     }
+    case RedisCommand::ACTIVATE_STALE_READS: {
+      conn->raftStaleReads = true;
+      return conn->ok();
+    }
     default: {
       return this->service(conn, req);
     }
@@ -202,12 +206,20 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
     return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
 
-  // if not leader, redirect
+  // if not leader, redirect... except if this is a read,
+  // and stale reads are active!
   RaftStateSnapshot snapshot = state.getSnapshot();
   if(snapshot.status != RaftStatus::LEADER) {
     if(snapshot.leader.empty()) {
       return conn->err("unavailable");
     }
+
+    if(conn->raftStaleReads && req.getCommandType() == CommandType::READ) {
+      // Forward directly to the state machine.
+      return redisDispatcher.dispatch(conn, req);
+    }
+
+    // Redirect.
     return conn->moved(0, snapshot.leader);
   }
 
