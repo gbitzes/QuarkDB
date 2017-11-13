@@ -137,12 +137,12 @@ void StateMachine::ensureCompatibleFormat(bool justCreated) {
   const std::string currentFormat("0");
 
   std::string format;
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), "__format", &format);
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), KeyConstants::kStateMachine_Format, &format);
 
   if(justCreated) {
     if(!st.IsNotFound()) qdb_throw("Error when reading __format, which should not exist: " << st.ToString());
 
-    st = db->Put(rocksdb::WriteOptions(), "__format", currentFormat);
+    st = db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_Format, currentFormat);
     if(!st.ok()) qdb_throw("error when setting format: " << st.ToString());
   }
   else {
@@ -153,14 +153,14 @@ void StateMachine::ensureCompatibleFormat(bool justCreated) {
 
 void StateMachine::retrieveLastApplied() {
   std::string tmp;
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), "__last-applied", &tmp);
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), KeyConstants::kStateMachine_LastApplied, &tmp);
 
   if(st.ok()) {
     lastApplied = binaryStringToInt(tmp.c_str());
   }
   else if(st.IsNotFound()) {
     lastApplied = 0;
-    st = db->Put(rocksdb::WriteOptions(), "__last-applied", intToBinaryString(lastApplied));
+    st = db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_LastApplied, intToBinaryString(lastApplied));
     if(!st.ok()) qdb_throw("error when setting lastApplied: " << st.ToString());
   }
   else {
@@ -954,7 +954,7 @@ void StateMachine::commitTransaction(TransactionPtr &tx, LogIndex index) {
 
   if(index > 0) {
     if(index != lastApplied+1) qdb_throw("attempted to perform illegal lastApplied update: " << lastApplied << " ==> " << index);
-    THROW_ON_ERROR(tx->Put("__last-applied", intToBinaryString(index)));
+    THROW_ON_ERROR(tx->Put(KeyConstants::kStateMachine_LastApplied, intToBinaryString(index)));
   }
 
   rocksdb::Status st = tx->Commit();

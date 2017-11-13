@@ -24,6 +24,7 @@
 #include <algorithm>
 #include "RaftJournal.hh"
 #include "RaftMembers.hh"
+#include "../storage/KeyConstants.hh"
 #include "../Common.hh"
 #include "../Utils.hh"
 #include "../utils/IntToBinaryString.hh"
@@ -67,16 +68,16 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
     db->Delete(rocksdb::WriteOptions(), iter->key().ToString());
   }
 
-  this->set_int_or_die("RAFT_CURRENT_TERM", 0);
-  this->set_int_or_die("RAFT_LOG_SIZE", 1);
-  this->set_int_or_die("RAFT_LOG_START", 0);
-  this->set_or_die("RAFT_CLUSTER_ID", newClusterID);
-  this->set_or_die("RAFT_VOTED_FOR", "");
-  this->set_int_or_die("RAFT_COMMIT_INDEX", 0);
+  this->set_int_or_die(KeyConstants::kJournal_CurrentTerm, 0);
+  this->set_int_or_die(KeyConstants::kJournal_LogSize, 1);
+  this->set_int_or_die(KeyConstants::kJournal_LogStart, 0);
+  this->set_or_die(KeyConstants::kJournal_ClusterID, newClusterID);
+  this->set_or_die(KeyConstants::kJournal_VotedFor, "");
+  this->set_int_or_die(KeyConstants::kJournal_CommitIndex, 0);
 
   RaftMembers newMembers(newNodes, {});
-  this->set_or_die("RAFT_MEMBERS", newMembers.toString());
-  this->set_int_or_die("RAFT_MEMBERSHIP_EPOCH", 0);
+  this->set_or_die(KeyConstants::kJournal_Members, newMembers.toString());
+  this->set_int_or_die(KeyConstants::kJournal_MembershipEpoch, 0);
 
   RaftEntry entry(0, "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), newClusterID);
   this->set_or_die(encodeEntryKey(0), entry.serialize());
@@ -85,19 +86,19 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
 }
 
 void RaftJournal::initialize() {
-  currentTerm = this->get_int_or_die("RAFT_CURRENT_TERM");
-  logSize = this->get_int_or_die("RAFT_LOG_SIZE");
-  logStart = this->get_int_or_die("RAFT_LOG_START");
-  clusterID = this->get_or_die("RAFT_CLUSTER_ID");
-  commitIndex = this->get_int_or_die("RAFT_COMMIT_INDEX");
-  std::string vote = this->get_or_die("RAFT_VOTED_FOR");
+  currentTerm = this->get_int_or_die(KeyConstants::kJournal_CurrentTerm);
+  logSize = this->get_int_or_die(KeyConstants::kJournal_LogSize);
+  logStart = this->get_int_or_die(KeyConstants::kJournal_LogStart);
+  clusterID = this->get_or_die(KeyConstants::kJournal_ClusterID);
+  commitIndex = this->get_int_or_die(KeyConstants::kJournal_CommitIndex);
+  std::string vote = this->get_or_die(KeyConstants::kJournal_VotedFor);
   this->fetch_or_die(logSize-1, termOfLastEntry);
 
-  membershipEpoch = this->get_int_or_die("RAFT_MEMBERSHIP_EPOCH");
-  members = RaftMembers(this->get_or_die("RAFT_MEMBERS"));
+  membershipEpoch = this->get_int_or_die(KeyConstants::kJournal_MembershipEpoch);
+  members = RaftMembers(this->get_or_die(KeyConstants::kJournal_Members));
 
   if(!vote.empty() && !parseServer(vote, votedFor)) {
-    qdb_throw("journal corruption, cannot parse RAFT_VOTED_FOR: " << vote);
+    qdb_throw("journal corruption, cannot parse " << KeyConstants::kJournal_VotedFor << ": " << vote);
   }
 }
 
@@ -159,8 +160,8 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   //----------------------------------------------------------------------------
 
   rocksdb::WriteBatch batch;
-  THROW_ON_ERROR(batch.Put("RAFT_CURRENT_TERM", intToBinaryString(term)));
-  THROW_ON_ERROR(batch.Put("RAFT_VOTED_FOR", vote.toString()));
+  THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_CurrentTerm, intToBinaryString(term)));
+  THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_VotedFor, vote.toString()));
   commitBatch(batch);
 
   currentTerm = term;
@@ -180,7 +181,7 @@ bool RaftJournal::setCommitIndex(LogIndex newIndex) {
   }
 
   if(commitIndex < newIndex) {
-    this->set_int_or_die("RAFT_COMMIT_INDEX", newIndex);
+    this->set_int_or_die(KeyConstants::kJournal_CommitIndex, newIndex);
     commitIndex = newIndex;
     commitNotifier.notify_all();
   }
@@ -201,7 +202,7 @@ void RaftJournal::commitBatch(rocksdb::WriteBatch &batch, LogIndex index) {
   }
 
   if(index >= 0 && index != logSize) {
-    THROW_ON_ERROR(batch.Put("RAFT_LOG_SIZE", intToBinaryString(index)));
+    THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_LogSize, intToBinaryString(index)));
   }
 
   rocksdb::Status st = db->Write(rocksdb::WriteOptions(), &batch);
@@ -279,11 +280,11 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
     //--------------------------------------------------------------------------
 
     if(entry.request[2] == clusterID) {
-      THROW_ON_ERROR(batch.Put("RAFT_MEMBERS", entry.request[1]));
-      THROW_ON_ERROR(batch.Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(index)));
+      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_Members, entry.request[1]));
+      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_MembershipEpoch, intToBinaryString(index)));
 
-      THROW_ON_ERROR(batch.Put("RAFT_PREVIOUS_MEMBERS", members.toString()));
-      THROW_ON_ERROR(batch.Put("RAFT_PREVIOUS_MEMBERSHIP_EPOCH", intToBinaryString(membershipEpoch)));
+      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_PreviousMembers, members.toString()));
+      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_PreviousMembershipEpoch, intToBinaryString(membershipEpoch)));
 
       qdb_event("Transitioning into a new membership epoch: " << membershipEpoch << " => " << index
       << ". Old members: " << members.toString() << ", new members: " << entry.request[1]);
@@ -334,7 +335,7 @@ void RaftJournal::trimUntil(LogIndex newLogStart) {
     THROW_ON_ERROR(batch.Delete(encodeEntryKey(i)));
   }
 
-  THROW_ON_ERROR(batch.Put("RAFT_LOG_START", intToBinaryString(newLogStart)));
+  THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_LogStart, intToBinaryString(newLogStart)));
   commitBatch(batch);
   logStart = newLogStart;
 }
@@ -385,11 +386,11 @@ bool RaftJournal::removeEntries(LogIndex from) {
   if(from <= membershipEpoch) {
     std::lock_guard<std::mutex> lock2(membersMutex);
 
-    LogIndex previousMembershipEpoch = this->get_int_or_die("RAFT_PREVIOUS_MEMBERSHIP_EPOCH");
-    std::string previousMembers = this->get_or_die("RAFT_PREVIOUS_MEMBERS");
+    LogIndex previousMembershipEpoch = this->get_int_or_die(KeyConstants::kJournal_PreviousMembershipEpoch);
+    std::string previousMembers = this->get_or_die(KeyConstants::kJournal_PreviousMembers);
 
-    THROW_ON_ERROR(batch.Put("RAFT_MEMBERSHIP_EPOCH", intToBinaryString(previousMembershipEpoch)));
-    THROW_ON_ERROR(batch.Put("RAFT_MEMBERS", previousMembers));
+    THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_MembershipEpoch, intToBinaryString(previousMembershipEpoch)));
+    THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_Members, previousMembers));
 
     qdb_critical("Rolling back an uncommitted membership epoch. Transitioning from " <<
     membershipEpoch << " => " << previousMembershipEpoch << ". Old members: " << members.toString() <<

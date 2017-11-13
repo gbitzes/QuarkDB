@@ -29,6 +29,7 @@
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
 #include "storage/ConsistencyScanner.hh"
+#include "storage/KeyConstants.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/optimistic_transaction_db.h>
 #include <rocksdb/utilities/transaction_db.h>

@@ -50,6 +50,7 @@ add_library(XrdQuarkDB SHARED
   raft/RaftLease.cc                raft/RaftLease.hh
 
   storage/ConsistencyScanner.cc    storage/ConsistencyScanner.hh
+  storage/KeyConstants.cc          storage/KeyConstants.hh
                                    storage/KeyDescriptor.hh
   storage/KeyDescriptorBuilder.cc  storage/KeyDescriptorBuilder.hh
                                    storage/KeyLocators.hh
