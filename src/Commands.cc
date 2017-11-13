@@ -82,7 +82,7 @@ struct cmdMapInit {
     redis_cmd_map["raft_promote_observer"] = {RedisCommand::RAFT_PROMOTE_OBSERVER, CommandType::RAFT};
     redis_cmd_map["raft_heartbeat"] = {RedisCommand::RAFT_HEARTBEAT, CommandType::RAFT};
     redis_cmd_map["raft_invalid_command"] = {RedisCommand::RAFT_INVALID_COMMAND, CommandType::RAFT};
-    redis_cmd_map["activate-state-reads"] = {RedisCommand::ACTIVATE_STALE_READS, CommandType::RAFT};
+    redis_cmd_map["activate-stale-reads"] = {RedisCommand::ACTIVATE_STALE_READS, CommandType::RAFT};
 
     redis_cmd_map["quarkdb_info"] = {RedisCommand::QUARKDB_INFO, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_detach"] = {RedisCommand::QUARKDB_DETACH, CommandType::QUARKDB};

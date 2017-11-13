@@ -655,7 +655,7 @@ TEST_F(Raft_e2e, stale_reads) {
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "abc", "1234"), "OK");
   ASSERT_REPLY(tunnel(follower)->exec("get", "abc"), SSTR("MOVED 0 " << myself(leaderID).toString()));
 
-  ASSERT_REPLY(tunnel(follower)->exec("activate-state-reads"), "OK");
+  ASSERT_REPLY(tunnel(follower)->exec("activate-stale-reads"), "OK");
 
   redisReplyPtr reply = tunnel(follower)->exec("get", "abc").get();
   qdb_info("Race-y read: " << std::string(reply->str, reply->len));
