@@ -171,6 +171,11 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       return conn->ok();
     }
     default: {
+      if(req.getCommandType() == CommandType::QUARKDB) {
+        qdb_critical("Unable to dispatch command '" << req[0] << "' of type QUARKDB");
+        return conn->err(SSTR("internal dispatching error"));
+      }
+
       InFlightRegistration registration(inFlightTracker);
       if(!registration.ok()) {
         return conn->err("unavailable");

@@ -91,11 +91,6 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
       return conn->vector(this->info().toVector());
     }
     default: {
-      if(req.getCommandType() == CommandType::QUARKDB) {
-        qdb_critical("Unable to dispatch command '" << req[0] << "' of type QUARKDB");
-        return conn->err(SSTR("internal dispatching error"));
-      }
-
       return shard->dispatch(conn, req);
     }
   }
