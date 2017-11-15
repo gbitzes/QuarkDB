@@ -49,7 +49,9 @@ add_library(XrdQuarkDB SHARED
   raft/RaftTrimmer.cc              raft/RaftTrimmer.hh
   raft/RaftLease.cc                raft/RaftLease.hh
 
+  recovery/RecoveryDispatcher.cc   recovery/RecoveryDispatcher.hh
   recovery/RecoveryEditor.cc       recovery/RecoveryEditor.hh
+  recovery/RecoveryRunner.cc       recovery/RecoveryRunner.hh
 
   storage/ConsistencyScanner.cc    storage/ConsistencyScanner.hh
   storage/KeyConstants.cc          storage/KeyConstants.hh

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RecoveryEditor.hh
+// File: RecoveryDispatcher.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,33 +21,38 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RECOVERY_EDITOR_H__
-#define __QUARKDB_RECOVERY_EDITOR_H__
+#include "RecoveryDispatcher.hh"
+#include "../Formatter.hh"
+using namespace quarkdb;
 
-#include <vector>
-#include <rocksdb/db.h>
-
-namespace quarkdb {
-
-//------------------------------------------------------------------------------
-// A class to allow raw access to rocksdb.
-//------------------------------------------------------------------------------
-
-class RecoveryEditor {
-public:
-  RecoveryEditor(const std::string &path);
-  ~RecoveryEditor();
-
-  std::vector<std::string> retrieveMagicValues();
-  rocksdb::Status get(const std::string &key, std::string &value);
-  rocksdb::Status set(const std::string &key, const std::string &value);
-  rocksdb::Status del(const std::string &key);
-
-private:
-  std::string path;
-  std::unique_ptr<rocksdb::DB> db;
-};
-
+RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {
 }
 
-#endif
+LinkStatus RecoveryDispatcher::dispatch(Connection *conn, RedisRequest &req) {
+  return conn->raw(dispatch(req));
+}
+
+std::string RecoveryDispatcher::dispatch(RedisRequest &request) {
+  switch(request.getCommand()) {
+    case RedisCommand::GET: {
+      if(request.size() != 2) return Formatter::errArgs(request[0]);
+
+      std::string value;
+      rocksdb::Status st = editor.get(request[1], value);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::string(value);
+    }
+    case RedisCommand::SET: {
+      if(request.size() != 3) return Formatter::errArgs(request[0]);
+      return Formatter::fromStatus(editor.set(request[1], request[2]));
+    }
+    case RedisCommand::DEL: {
+      if(request.size() != 2) return Formatter::errArgs(request[0]);
+      return Formatter::fromStatus(editor.del(request[1]));
+    }
+    default: {
+      std::string msg = SSTR("unable to dispatch command " << quotes(request[0]) << " - remember we're running in recovery mode, not all operations are available");
+      return Formatter::err(msg);
+    }
+  }
+}

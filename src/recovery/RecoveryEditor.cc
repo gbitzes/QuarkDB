@@ -34,19 +34,20 @@ using namespace quarkdb;
 
 RecoveryEditor::RecoveryEditor(const std::string &path_) : path(path_) {
   qdb_event("RECOVERY EDITOR: Opening rocksdb database at " << quotes(path));
+  rocksdb::DB *tmpdb;
 
   rocksdb::Options options;
   options.create_if_missing = false;
-  rocksdb::Status status = rocksdb::DB::Open(options, path, &db);
+  rocksdb::Status status = rocksdb::DB::Open(options, path, &tmpdb);
 
   if(!status.ok()) qdb_throw("Cannot open " << quotes(path) << ":" << status.ToString());
+  db.reset(tmpdb);
 }
 
 RecoveryEditor::~RecoveryEditor() {
   if(db) {
     qdb_event("RECOVERY EDITOR: Closing rocksdb database at " << quotes(path));
-    delete db;
-    db = nullptr;
+    db.reset();
   }
 }
 
@@ -71,4 +72,25 @@ std::vector<std::string> RecoveryEditor::retrieveMagicValues() {
 
 rocksdb::Status RecoveryEditor::get(const std::string &key, std::string &value) {
   return db->Get(rocksdb::ReadOptions(), key, &value);
+}
+
+rocksdb::Status RecoveryEditor::set(const std::string &key, const std::string &value) {
+  return db->Put(rocksdb::WriteOptions(), key, value);
+}
+
+rocksdb::Status RecoveryEditor::del(const std::string &key) {
+  std::string tmp;
+
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), key, &tmp);
+
+  if(st.IsNotFound()) {
+    rocksdb::Status st2 = db->Delete(rocksdb::WriteOptions(), key);
+    return rocksdb::Status::InvalidArgument("key not found, but I inserted a tombstone anyway. Deletion status: " + st2.ToString());
+  }
+
+  if(!st.ok()) {
+    return st;
+  }
+
+  return db->Delete(rocksdb::WriteOptions(), key);
 }

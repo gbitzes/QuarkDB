@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RecoveryEditor.hh
+// File: RecoveryRunner.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,31 +21,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RECOVERY_EDITOR_H__
-#define __QUARKDB_RECOVERY_EDITOR_H__
+#ifndef __QUARKDB_RECOVERY_RUNNER_H__
+#define __QUARKDB_RECOVERY_RUNNER_H__
+
+#include "RecoveryRunner.hh"
+#include "RecoveryDispatcher.hh"
+#include "../Poller.hh"
 
 #include <vector>
 #include <rocksdb/db.h>
 
 namespace quarkdb {
 
-//------------------------------------------------------------------------------
-// A class to allow raw access to rocksdb.
-//------------------------------------------------------------------------------
-
-class RecoveryEditor {
+class RecoveryRunner {
 public:
-  RecoveryEditor(const std::string &path);
-  ~RecoveryEditor();
-
-  std::vector<std::string> retrieveMagicValues();
-  rocksdb::Status get(const std::string &key, std::string &value);
-  rocksdb::Status set(const std::string &key, const std::string &value);
-  rocksdb::Status del(const std::string &key);
+  RecoveryRunner(const std::string &path, int port);
 
 private:
-  std::string path;
-  std::unique_ptr<rocksdb::DB> db;
+  RecoveryEditor editor;
+  RecoveryDispatcher dispatcher;
+  Poller poller;
 };
 
 }
