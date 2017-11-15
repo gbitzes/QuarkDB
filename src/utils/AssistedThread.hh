@@ -110,8 +110,16 @@ public:
 
   void join() {
     if(joined) return;
-
     stop();
+
+    blockUntilThreadJoins();
+  }
+
+  // Different meaning than join, which explicitly asks the thread to
+  // terminate. Here, we simply wait until the thread exits on its own.
+  void blockUntilThreadJoins() {
+    if(joined) return;
+
     th.join();
     joined = true;
   }

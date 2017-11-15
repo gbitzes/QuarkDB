@@ -99,6 +99,31 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
     ASSERT_REPLY(qcl.exec("del", "does-not-exist"), "ERR Invalid argument: key not found, but I inserted a tombstone anyway. Deletion status: OK");
     ASSERT_REPLY(qcl.exec("get", SSTR("E" << intToBinaryString(2))), RaftEntry(4, "set", "abc", "cdf").serialize());
     ASSERT_REPLY(qcl.exec("del", SSTR("E" << intToBinaryString(2))), "OK");
+
+    std::vector<std::string> rep = {
+      "RAFT_CURRENT_TERM",
+      intToBinaryString(4),
+      "RAFT_LOG_SIZE",
+      intToBinaryString(2),
+      "RAFT_LOG_START",
+      intToBinaryString(0),
+      "RAFT_CLUSTER_ID",
+      "different-cluster-id",
+      "RAFT_VOTED_FOR",
+      "",
+      "RAFT_COMMIT_INDEX",
+      intToBinaryString(0),
+      "RAFT_MEMBERS",
+      "localhost:1234,asdf:2345,aaa:999|",
+      "RAFT_MEMBERSHIP_EPOCH",
+      intToBinaryString(0),
+      "RAFT_PREVIOUS_MEMBERS: NotFound: ",
+      "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ",
+      "__format: NotFound: ",
+      "__last-applied: NotFound: "
+    };
+
+    ASSERT_REPLY(qcl.exec("recovery-info"), rep);
   }
 
   RaftJournal journal("/tmp/quarkdb-recovery-test");

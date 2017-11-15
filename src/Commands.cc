@@ -93,6 +93,7 @@ struct cmdMapInit {
     redis_cmd_map["quarkdb_cancel_resilvering"] = {RedisCommand::QUARKDB_CANCEL_RESILVERING, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_bulkload_finalize"] = {RedisCommand::QUARKDB_BULKLOAD_FINALIZE, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_invalid_command"] = {RedisCommand::QUARKDB_INVALID_COMMAND, CommandType::QUARKDB};
+    redis_cmd_map["recovery-info"] = {RedisCommand::RECOVERY_INFO, CommandType::QUARKDB};
 
   }
 } cmd_map_init;

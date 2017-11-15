@@ -10,6 +10,9 @@ target_link_libraries(quarkdb-scrub XrdQuarkDB)
 add_executable(quarkdb-create quarkdb-create.cc)
 target_link_libraries(quarkdb-create XrdQuarkDB)
 
+add_executable(quarkdb-recovery quarkdb-recovery.cc)
+target_link_libraries(quarkdb-recovery XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT} )
+
 include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src   # need access to the private headers
@@ -19,6 +22,6 @@ include_directories(
 )
 
 install(
-  TARGETS quarkdb-journal quarkdb-scrub quarkdb-create
+  TARGETS quarkdb-journal quarkdb-scrub quarkdb-create quarkdb-recovery
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )

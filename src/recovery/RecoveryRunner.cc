@@ -26,5 +26,18 @@ using namespace quarkdb;
 
 RecoveryRunner::RecoveryRunner(const std::string &path, int port)
 : editor(path), dispatcher(editor), poller(port, &dispatcher)  {
+  qdb_event("RECOVERY MODE is now active: Issue requests to port " << port << " through redis-cli.");
+  qdb_info("\nUseful commands: \n"
+  "  GET, SET, DEL:\n"
+  "    Note that these are very different beasts than the traditional GET, SET, DEL offered by QuarkDB.\n"
+  "    These hit directly the rocksdb keys, without a KeyDescriptor or anything else in the middle. \n\n"
+  "    This makes it possible to change low-level details (ie commit-index, last-applied, format, nodes),\n"
+  "    but you better know what you're doing.\n\n"
+  "  RECOVERY-INFO:\n"
+  "    Displays values for all important internal values, as defined in storage/KeyConstants.hh.\n"
+  "    Journals and state machines have different subsets of these! It's completely normal (and expected)\n"
+  "    that a state machine does not have contain kJournal_*, for example.\n"
+  );
 
+  qdb_info("Issue requests to port " << port << " through redis-cli.");
 }

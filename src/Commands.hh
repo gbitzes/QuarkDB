@@ -96,7 +96,8 @@ enum class RedisCommand {
   QUARKDB_RESILVERING_COPY_FILE,
   QUARKDB_CANCEL_RESILVERING,
   QUARKDB_BULKLOAD_FINALIZE,
-  QUARKDB_INVALID_COMMAND                   // used in tests
+  QUARKDB_INVALID_COMMAND,                  // used in tests
+  RECOVERY_INFO
 };
 
 enum class CommandType {

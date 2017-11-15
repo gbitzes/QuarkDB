@@ -50,8 +50,13 @@ std::string RecoveryDispatcher::dispatch(RedisRequest &request) {
       if(request.size() != 2) return Formatter::errArgs(request[0]);
       return Formatter::fromStatus(editor.del(request[1]));
     }
+    case RedisCommand::RECOVERY_INFO: {
+      if(request.size() != 1) return Formatter::errArgs(request[0]);
+      return Formatter::vector(editor.retrieveMagicValues());
+    }
     default: {
       std::string msg = SSTR("unable to dispatch command " << quotes(request[0]) << " - remember we're running in recovery mode, not all operations are available");
+      qdb_warn(msg);
       return Formatter::err(msg);
     }
   }
