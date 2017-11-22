@@ -105,25 +105,32 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
   return true;
 }
 
-static bool is_ready(std::future<redisReplyPtr> &fut) {
-  return fut.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
-}
+enum class AppendEntriesReception {
+  kOk = 0,
+  kNotArrivedYet = 1,
+  kError = 2
+};
 
-static bool retrieve_response(std::future<redisReplyPtr> &fut, RaftAppendEntriesResponse &resp) {
-  std::future_status status = fut.wait_for(std::chrono::milliseconds(500));
+static AppendEntriesReception retrieve_response(
+  std::future<redisReplyPtr> &fut,
+  RaftAppendEntriesResponse &resp,
+  const std::chrono::milliseconds &timeout
+) {
+
+  std::future_status status = fut.wait_for(timeout);
   if(status != std::future_status::ready) {
-    return false;
+    return AppendEntriesReception::kNotArrivedYet;
   }
 
   redisReplyPtr rep = fut.get();
-  if(rep == nullptr) return false;
+  if(rep == nullptr) return AppendEntriesReception::kError;
 
   if(!RaftParser::appendEntriesResponse(rep, resp)) {
     qdb_critical("cannot parse response from append entries");
-    return false;
+    return AppendEntriesReception::kError;
   }
 
-  return true;
+  return AppendEntriesReception::kOk;
 }
 
 static bool retrieve_heartbeat_reply(std::future<redisReplyPtr> &fut, RaftHeartbeatResponse &resp) {
@@ -162,50 +169,98 @@ void RaftReplicaTracker::triggerResilvering() {
   resilverer = new RaftResilverer(shardDirectory, target, journal.getClusterID(), timeouts, &trimmer);
 }
 
-// Go through the pending queue, checking if any responses from the target have
-// arrived.
-bool RaftReplicaTracker::checkPendingQueue(std::queue<PendingResponse> &inflight) {
-  const int64_t pipelineLength = 10;
-  while(true) {
-    if(inflight.size() == 0) return true;
-    if(!is_ready(inflight.front().fut) && inflight.size() <= pipelineLength) return true;
+void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
+  std::unique_lock<std::mutex> lock(inFlightMtx);
 
-    PendingResponse item = std::move(inflight.front());
-    inflight.pop();
+  while(!assistant.terminationRequested()) {
+    if(inFlight.size() == 0) {
+      // Empty queue, sleep
+      inFlightCV.wait_for(lock, timeouts.getHeartbeatInterval());
+      continue;
+    }
 
-    RaftAppendEntriesResponse resp;
-    if(!retrieve_response(item.fut, resp)) return false;
-    state.observed(resp.term, {});
+    // Fetch top item
+    PendingResponse item = std::move(inFlight.front());
+    inFlight.pop();
+    lock.unlock();
 
-    if(!resp.outcome) return false;
-    if(resp.term != snapshot.term) return false;
+    RaftAppendEntriesResponse response;
 
+    size_t attempts = 0;
+    while(attempts < 10) {
+
+      if(assistant.terminationRequested()) {
+        streamingUpdates = false;
+        return;
+      }
+
+      AppendEntriesReception reception = retrieve_response(
+        item.fut,
+        response,
+        std::chrono::milliseconds(500)
+      );
+
+      if(reception == AppendEntriesReception::kOk) {
+        // Exit inner loop to verify acknowledgement
+        break;
+      }
+
+      if(reception == AppendEntriesReception::kError) {
+        // Stop streaming, we need to stabilize the target
+        streamingUpdates = false;
+        return;
+      }
+    }
+
+    // If we're here, an acknowledgement to AppendEntries has been received.
+    // Verify it makes sense.
+
+    state.observed(response.term, {});
+
+    if(!response.outcome) {
+      streamingUpdates = false;
+      return;
+    }
+
+    if(response.term != snapshot.term) {
+      streamingUpdates = false;
+      return;
+    }
+
+    if(response.logSize != item.pushedFrom + item.payloadSize) {
+      qdb_warn("Mismatch in expected logSize when streaming updates: response.logsize: " << response.logSize <<
+        ", pushedFrom: " << item.pushedFrom << ", payloadSize: " << item.payloadSize);
+
+       streamingUpdates = false;
+       return;
+    }
+
+    // All clear, acknowledgement is OK, carry on.
     lastContact.heartbeat(item.sent);
-    matchIndex.update(resp.logSize-1);
+    matchIndex.update(response.logSize-1);
 
-    if(resp.logSize != item.pushedFrom + item.payloadSize) return false;
+    lock.lock();
   }
-  return true;
+
+  streamingUpdates = false;
 }
 
 LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNextIndex) {
-
   // If we're here, it means our target is very stable, so we should be able to
   // continuously stream updates without waiting for the replies.
   //
   // As soon as an error is discovered we return, and let the parent function
   // deal with it to stabilize the target once more.
 
-  const int64_t payloadLimit = 200;
+  streamingUpdates = true;
+  AssistedThread ackmonitor(&RaftReplicaTracker::monitorAckReception, this);
+
+  const int64_t payloadLimit = 512;
   LogIndex nextIndex = firstNextIndex;
 
-  std::queue<PendingResponse> inflight;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
-    // Check for pending responses
-    if(!checkPendingQueue(inflight)) {
-      // Instruct the parent to continue from that point on. No guarantees that
-      // this is actually the current logsize of the target, but the parent will
-      // figure it out if not.
+    if(!streamingUpdates) {
+      // Something went wrong while streaming, return to parent to stabilize
       return nextIndex;
     }
 
@@ -225,12 +280,18 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
     }
 
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
-    inflight.emplace(
-      talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries),
+    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
+
+    std::unique_lock<std::mutex> lock(inFlightMtx);
+    inFlight.emplace(
+      std::move(fut),
       contact,
       nextIndex,
       payloadSize
     );
+
+    inFlightCV.notify_one();
+    lock.unlock();
 
     // Assume a positive response from the target, and keep pushing
     // if there are more entries.
@@ -290,16 +351,25 @@ void RaftReplicaTracker::main() {
   bool online = false;
   int64_t payloadLimit = 1;
 
+  bool warnStreamingHiccup = false;
   bool needResilvering = false;
   while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+
+    if(warnStreamingHiccup) {
+      qdb_warn("Hiccup during streaming replication of " << target.toString() << ", switching back to conservative replication.");
+      warnStreamingHiccup = false;
+    }
+
     // Target looks pretty stable, start continuous stream
-    // if(online && payloadLimit >= 8) {
-    //   nextIndex = streamUpdates(talker, nextIndex);
-    //   // Something happened when streaming updates, switch back to conservative
-    //   // mode and wait for each response
-    //   payloadLimit = 1;
-    //   continue;
-    // }
+    if(online && payloadLimit >= 8) {
+      qdb_info("Target " << target.toString() << " appears stable, initiating streaming replication.");
+      nextIndex = streamUpdates(talker, nextIndex);
+      warnStreamingHiccup = true;
+      // Something happened when streaming updates, switch back to conservative
+      // mode and wait for each response
+      payloadLimit = 1;
+      continue;
+    }
 
     if(nextIndex <= 0) qdb_throw("nextIndex has invalid value: " << nextIndex);
     if(nextIndex <= journal.getLogStart()) nextIndex = journal.getLogSize();
@@ -324,7 +394,7 @@ void RaftReplicaTracker::main() {
     RaftAppendEntriesResponse resp;
 
     // Check: Is the target even online?
-    if(!retrieve_response(fut, resp)) {
+    if(retrieve_response(fut, resp, std::chrono::milliseconds(500)) != AppendEntriesReception::kOk) {
       if(online) {
         payloadLimit = 1;
         qdb_event("Replication target " << target.toString() << " went offline.");

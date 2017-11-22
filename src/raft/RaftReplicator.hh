@@ -54,7 +54,7 @@ public:
   bool isRunning() { return running; }
 private:
   struct PendingResponse {
-    PendingResponse(std::future<redisReplyPtr> f, std::chrono::steady_clock::time_point s, LogIndex pushed, int64_t payload)
+    PendingResponse(std::future<redisReplyPtr> &&f, std::chrono::steady_clock::time_point s, LogIndex pushed, int64_t payload)
     : fut(std::move(f)), sent(s), pushedFrom(pushed), payloadSize(payload) {}
 
     std::future<redisReplyPtr> fut;
@@ -65,8 +65,14 @@ private:
 
   void sendHeartbeats(ThreadAssistant &assistant);
   void main();
+
+  void monitorAckReception(ThreadAssistant &assistant);
+  std::mutex inFlightMtx;
+  std::condition_variable inFlightCV;
+  std::queue<PendingResponse> inFlight;
+  std::atomic<bool> streamingUpdates;
+
   LogIndex streamUpdates(RaftTalker &talker, LogIndex nextIndex);
-  bool checkPendingQueue(std::queue<PendingResponse> &inflight);
 
   void triggerResilvering();
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftEntry> &entries, int64_t &payloadSize);
