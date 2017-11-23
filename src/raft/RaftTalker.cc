@@ -50,7 +50,7 @@ std::future<redisReplyPtr> RaftTalker::heartbeat(RaftTerm term, const RaftServer
 std::future<redisReplyPtr> RaftTalker::appendEntries(
   RaftTerm term, RaftServer leader, LogIndex prevIndex,
   RaftTerm prevTerm, LogIndex commit,
-  const std::vector<RaftEntry> &entries) {
+  const std::vector<RaftSerializedEntry> &entries) {
 
   if(term < prevTerm) {
     qdb_throw(SSTR("term < prevTerm.. " << prevTerm << "," << term));
@@ -72,15 +72,7 @@ std::future<redisReplyPtr> RaftTalker::appendEntries(
   payload.emplace_back(buffer, 5*sizeof(int64_t));
 
   for(size_t i = 0; i < entries.size(); i++) {
-    if(term < entries[i].term) {
-      qdb_throw(SSTR("term < entries[i].term  .. i = " << i << ", term = " << term << ", entries[i].term = " << entries[i].term));
-    }
-
-    if(i > 0 && entries[i].term < entries[i-1].term) {
-      qdb_throw(SSTR("entry terms went down .. i = " << i << ", entries[i].term = " << entries[i].term << ", entries[i-1].term == " << entries[i-1].term));
-    }
-
-    payload.emplace_back(entries[i].serialize());
+    payload.push_back(entries[i]);
   }
 
   return tunnel.execute(payload);

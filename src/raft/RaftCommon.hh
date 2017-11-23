@@ -50,6 +50,8 @@ inline int64_t fetch_int_from_string(const char *pos) {
   return result;
 }
 
+using RaftSerializedEntry = std::string;
+
 struct RaftEntry {
   RaftTerm term;
   RedisRequest request;
@@ -62,7 +64,7 @@ struct RaftEntry {
   template<typename... Args>
   RaftEntry(RaftTerm term_, Args&&... args) : term(term_), request{args...} {}
 
-  std::string serialize() const {
+  RaftSerializedEntry serialize() const {
     std::ostringstream ss;
     append_int_to_string(term, ss);
 
@@ -74,7 +76,7 @@ struct RaftEntry {
     return ss.str();
   }
 
-  static void deserialize(RaftEntry &entry, const std::string &data) {
+  static void deserialize(RaftEntry &entry, const RaftSerializedEntry &data) {
     entry.request.clear();
     entry.term = fetch_int_from_string(data.c_str());
 

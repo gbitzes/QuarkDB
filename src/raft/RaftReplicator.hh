@@ -75,7 +75,7 @@ private:
   LogIndex streamUpdates(RaftTalker &talker, LogIndex nextIndex);
 
   void triggerResilvering();
-  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftEntry> &entries, int64_t &payloadSize);
+  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftSerializedEntry> &entries, int64_t &payloadSize);
 
   RaftServer target;
   RaftStateSnapshot snapshot;

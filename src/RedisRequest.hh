@@ -75,6 +75,11 @@ public:
     contents.clear();
   }
 
+  void push_back(const std::string &str) {
+    contents.emplace_back(str);
+    if(contents.size() == 1) parseCommand();
+  }
+
   void emplace_back(std::string &&src) {
     contents.emplace_back(std::move(src));
     if(contents.size() == 1) parseCommand();

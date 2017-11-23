@@ -350,8 +350,7 @@ TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
 
   ASSERT_REPLY(talker.requestVote(votereq).get(), "ERR not authorized to issue raft commands");
 
-  std::vector<RaftEntry> entries;
-
+  std::vector<std::string> entries;
   redisReplyPtr reply = talker.appendEntries(13737, myself(1), 3000, 100, 500, entries).get();
   ASSERT_REPLY(reply, "ERR not authorized to issue raft commands");
 }

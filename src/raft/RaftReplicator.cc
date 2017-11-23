@@ -91,7 +91,7 @@ RaftReplicaTracker::~RaftReplicaTracker() {
 }
 
 bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
-  std::vector<RaftEntry> &entries, int64_t &payloadSize) {
+  std::vector<std::string> &entries, int64_t &payloadSize) {
 
   payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
   entries.resize(payloadSize);
@@ -271,7 +271,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
       continue;
     }
 
-    std::vector<RaftEntry> entries;
+    std::vector<RaftSerializedEntry> entries;
 
     int64_t payloadSize = 0;
     if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {
@@ -381,7 +381,7 @@ void RaftReplicaTracker::main() {
       continue;
     }
 
-    std::vector<RaftEntry> entries;
+    std::vector<std::string> entries;
 
     int64_t payloadSize = 0;
     if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {

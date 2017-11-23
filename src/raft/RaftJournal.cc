@@ -469,6 +469,10 @@ rocksdb::Status RaftJournal::fetch(LogIndex index, RaftTerm &term) {
   return st;
 }
 
+rocksdb::Status RaftJournal::fetch(LogIndex index, RaftSerializedEntry &data) {
+  return db->Get(rocksdb::ReadOptions(), encodeEntryKey(index), &data);
+}
+
 void RaftJournal::fetch_or_die(LogIndex index, RaftEntry &entry) {
   rocksdb::Status st = fetch(index, entry);
   if(!st.ok()) {

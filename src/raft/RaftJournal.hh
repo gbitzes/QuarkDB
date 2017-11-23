@@ -66,6 +66,8 @@ public:
   bool append(LogIndex index, const RaftEntry &entry);
   rocksdb::Status fetch(LogIndex index, RaftEntry &entry);
   rocksdb::Status fetch(LogIndex index, RaftTerm &term);
+  rocksdb::Status fetch(LogIndex index, RaftSerializedEntry &data);
+
   void fetch_or_die(LogIndex index, RaftEntry &entry);
   void fetch_or_die(LogIndex index, RaftTerm &term);
 
