@@ -94,13 +94,35 @@ Poller::~Poller() {
 void Poller::worker(int fd, Dispatcher *dispatcher) {
   qclient::TlsConfig tlsconfig;
 
+  // Set up 1 second timeout on recv
+  struct timeval tv;
+  tv.tv_sec = 1;  /* 1 second timeout */
+  tv.tv_usec = 0;
+  qdb_assert(setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv,sizeof(struct timeval)) == 0);
+
   // peek first byte to determine if TLS is active
   char buffer[2];
 
   int ret = 0;
-  while(ret == 0) {
+  while(true) {
+    if(!inFlightTracker.isAcceptingRequests()) {
+      close(fd);
+      return;
+    }
+
     ret = recv(fd, buffer, 1, MSG_PEEK);
+
+    if(ret == 1) break;
+
+    if(ret == -1 && (errno == EWOULDBLOCK || errno == EAGAIN)) {
+      continue;
+    }
+
+    // Some error occurred, shut down connection.
+    close(fd);
+    return;
   }
+
   if(ret != 1) qdb_throw("unexpected result from recv: " << ret);
 
   tlsconfig.active = (buffer[0] != '*');

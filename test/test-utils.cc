@@ -286,8 +286,8 @@ void TestNode::killTunnel() {
 }
 
 void TestNode::spinup() {
+  shard()->spinup();
   poller();
-  group()->spinup();
 }
 
 void TestNode::spindown() {
@@ -295,7 +295,7 @@ void TestNode::spindown() {
     delete pollerptr;
     pollerptr = nullptr;
   }
-  group()->spindown();
+  shard()->spindown();
 }
 
 }

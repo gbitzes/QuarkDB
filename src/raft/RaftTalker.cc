@@ -28,8 +28,31 @@
 
 using namespace quarkdb;
 
-RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID_, const RaftTimeouts &timeouts)
-: server(server_), clusterID(clusterID_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()}) {
+RaftHandshake::RaftHandshake(const RaftClusterID &clusterID_, const RaftTimeouts &timeouts_)
+  : clusterID(clusterID_), timeouts(timeouts_) { }
+
+std::vector<std::string> RaftHandshake::provideHandshake() {
+  return {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()};
+}
+
+bool RaftHandshake::validateResponse(const redisReplyPtr &reply) {
+  if(!reply) {
+    return false;
+  }
+
+  if(reply->type != REDIS_REPLY_STATUS) {
+    return false;
+  }
+
+  if(std::string(reply->str, reply->len) != "OK") {
+    return false;
+  }
+
+  return true;
+}
+
+RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID, const RaftTimeouts &timeouts)
+: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(clusterID, timeouts)) ) {
 
 }
 

@@ -364,6 +364,7 @@ void RaftReplicaTracker::main() {
     if(online && payloadLimit >= 8) {
       qdb_info("Target " << target.toString() << " appears stable, initiating streaming replication.");
       nextIndex = streamUpdates(talker, nextIndex);
+      inFlight = {}; // clear queue
       warnStreamingHiccup = true;
       // Something happened when streaming updates, switch back to conservative
       // mode and wait for each response

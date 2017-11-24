@@ -332,7 +332,7 @@ TEST_F(Raft_Dispatcher, incompatible_timeouts) {
   votereq.lastIndex = 35000000;
   votereq.lastTerm = 1000;
 
-  ASSERT_REPLY(talker.requestVote(votereq).get(), "ERR not authorized to issue raft commands");
+  ASSERT_FALSE(talker.requestVote(votereq).get());
 }
 
 TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
@@ -348,11 +348,11 @@ TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
   votereq.lastIndex = 35000000;
   votereq.lastTerm = 1000;
 
-  ASSERT_REPLY(talker.requestVote(votereq).get(), "ERR not authorized to issue raft commands");
+  ASSERT_FALSE(talker.requestVote(votereq).get());
 
   std::vector<std::string> entries;
   redisReplyPtr reply = talker.appendEntries(13737, myself(1), 3000, 100, 500, entries).get();
-  ASSERT_REPLY(reply, "ERR not authorized to issue raft commands");
+  ASSERT_FALSE(reply);
 }
 
 TEST_F(Raft_Voting, throws_with_requestvote_to_myself) {

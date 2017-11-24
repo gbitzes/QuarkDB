@@ -34,6 +34,7 @@ LinkStatus PendingQueue::flushPending(const std::string &msg) {
     pending.pop();
   }
   if(conn) conn->writer.flush();
+  lastIndex = -1;
   return 1;
 }
 

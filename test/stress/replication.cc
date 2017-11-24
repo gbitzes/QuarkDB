@@ -263,6 +263,46 @@ TEST_F(Replication, linearizability_during_transition) {
 
   qdb_info("After " << responses << " reads, linearizability was violated " << violations << " times.");
   ASSERT_EQ(violations, 0);
+
+  RETRY_ASSERT_TRUE(checkFullConsensus(node1, node2));
+  ASSERT_TRUE(crossCheckJournals(node1, node2));
+}
+
+TEST_F(Replication, several_transitions) {
+  // Start load generation..
+  AssistedThread t1(generateLoad, tunnel(0), "node0");
+  AssistedThread t2(generateLoad, tunnel(1), "node1");
+  AssistedThread t3(generateLoad, tunnel(2), "node2");
+
+  // start the cluster
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  // Transition the leader several times, while the
+  // load generators are hammering all nodes at the
+  // same time. :)
+
+  for(size_t iteration = 0; iteration < 5; iteration++) {
+    std::this_thread::sleep_for(testconfig.raftTimeouts->getHigh() * 5);
+
+    int leaderID = getLeaderID();
+    int follower1 = (getLeaderID() + 1) % 3;
+    int follower2 =  (getLeaderID() + 2) % 3;
+
+    RaftTerm oldTerm = state(leaderID)->getCurrentTerm();
+    spindown(leaderID);
+
+    RETRY_ASSERT_TRUE(oldTerm < state(follower1)->getCurrentTerm());
+    RETRY_ASSERT_TRUE(oldTerm < state(follower2)->getCurrentTerm());
+    RETRY_ASSERT_TRUE(checkStateConsensus(follower1, follower2));
+    spinup(leaderID);
+  }
+
+  t1.stop(); t2.stop(); t3.stop();
+  t1.join(); t2.join(); t3.join();
+
+  RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
+  ASSERT_TRUE(crossCheckJournals(0, 1, 2));
 }
 
 TEST_F(Membership, prevent_promotion_of_outdated_observer) {

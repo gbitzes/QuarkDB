@@ -27,13 +27,25 @@
 #include "../Common.hh"
 #include <qclient/QClient.hh>
 #include "RaftCommon.hh"
+#include "RaftTimeouts.hh"
 #include <mutex>
 
 namespace quarkdb {
 using namespace qclient;
 
-class RaftTimeouts;
 using ResilveringEventID = std::string;
+
+class RaftHandshake : public qclient::Handshake {
+public:
+  virtual ~RaftHandshake() override {}
+  RaftHandshake(const RaftClusterID &clusterID_, const RaftTimeouts &timeouts_);
+  virtual std::vector<std::string> provideHandshake() override;
+  virtual bool validateResponse(const redisReplyPtr &reply) override;
+
+private:
+  RaftClusterID clusterID;
+  RaftTimeouts timeouts;
+};
 
 class RaftTalker {
 public:
@@ -55,7 +67,6 @@ public:
   RaftServer getServer() { return server; }
 private:
   RaftServer server;
-  const RaftClusterID clusterID;
   TlsConfig tlsconfig;
   QClient tunnel;
 };

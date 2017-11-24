@@ -102,9 +102,19 @@ RaftGroup* Shard::getRaftGroup() {
 
 void Shard::spinup() {
   raftGroup->spinup();
+  dispatcher = static_cast<Dispatcher*>(raftGroup->dispatcher());
+}
+
+void Shard::spindown() {
+  raftGroup->spindown();
 }
 
 LinkStatus Shard::dispatch(Connection *conn, WriteBatch &batch) {
+  InFlightRegistration registration(inFlightTracker);
+  if(!registration.ok()) {
+    return conn->err("unavailable");
+  }
+
   LinkStatus ret = dispatcher->dispatch(conn, batch);
   requestCounter.account(batch);
   return ret;

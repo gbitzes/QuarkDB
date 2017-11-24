@@ -209,7 +209,38 @@ public:
   }
 
   template<typename... Args>
-  bool checkJournalConsensus(LogIndex index, const RedisRequest &request, const Args... args) {
+  bool crossCheckJournals(const Args... args) {
+    // Check journal contents, validate they're equal across all nodes.
+    // If one journal was trimmed further than some other, we only check the
+    // entries which exist across all journals.
+
+    std::vector<int> arguments = { args... };
+
+    LogIndex endingPoint = journal(arguments[0])->getLogSize();
+    LogIndex startingPoint = journal(arguments[0])->getLogStart();
+
+    for(size_t i = 0; i < arguments.size(); i++) {
+      startingPoint = std::max(startingPoint, journal(arguments[i])->getLogStart());
+    }
+
+    qdb_info("Cross-checking journals from entry #" << startingPoint << " to #" << endingPoint - 1);
+
+    for(LogIndex index = startingPoint; index < endingPoint; index++) {
+      RaftEntry entry;
+      rocksdb::Status st = journal(arguments[0])->fetch(index, entry);
+      if(!st.ok()) return false;
+
+      if(!validateSingleEntry(index, entry.term, entry.request, args...)) {
+        return false;
+      }
+    }
+
+    qdb_info("Journal cross-checking successful!");
+    return true;
+  }
+
+  template<typename... Args>
+  bool validateSingleEntry(LogIndex index, RaftTerm term, const RedisRequest &request, const Args... args) {
     std::vector<int> arguments = { args... };
 
     for(size_t i = 0; i < arguments.size(); i++) {
@@ -219,6 +250,10 @@ public:
       if(!st.ok()) return false;
 
       if(entry.request != request) {
+        return false;
+      }
+
+      if(term >= 0 && entry.term != term) {
         return false;
       }
     }

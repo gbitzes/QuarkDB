@@ -87,8 +87,19 @@ TEST(Tunnel, T1) {
 }
 
 TEST(QClient, T2) {
+  class SimpleHandshake : public qclient::Handshake {
+  public:
+    std::vector<std::string> provideHandshake() override {
+      return {"RAFT_HANDSHAKE", "some-cluster-id"};
+    }
+
+    bool validateResponse(const redisReplyPtr &reply) override {
+      return true;
+    }
+  };
+
   // with handshake
-  QClient tunnel("localhost", 1234, false, false, qclient::TlsConfig(), {"RAFT_HANDSHAKE", "some-cluster-id"});
+  QClient tunnel("localhost", 1234, false, false, qclient::TlsConfig(), std::unique_ptr<Handshake>(new SimpleHandshake()));
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);

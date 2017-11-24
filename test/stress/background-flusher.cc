@@ -62,7 +62,8 @@ TEST_F(Background_Flusher, basic_sanity) {
 
   for(LogIndex index = lastEntry; index >= firstEntry; index--) {
     int64_t value = index - firstEntry;
-    ASSERT_TRUE(checkJournalConsensus(index, make_req("set", "key", SSTR("value-" << value)), 0, 1, 2));
+    // -1: We don't care about the entry term.
+    ASSERT_TRUE(validateSingleEntry(index, -1, make_req("set", "key", SSTR("value-" << value)), 0, 1, 2));
   }
 }
 

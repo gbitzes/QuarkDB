@@ -40,6 +40,7 @@ public:
 
   RaftGroup* getRaftGroup();
   void spinup();
+  void spindown();
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
 private:
