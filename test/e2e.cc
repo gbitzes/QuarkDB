@@ -561,7 +561,7 @@ TEST_F(Raft_e2e, membership_updates) {
 
 TEST_F(Raft_e2e, reject_dangerous_membership_update) {
   spinup(0); spinup(1);
-  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  RETRY_ASSERT_TRUE(checkFullConsensus(0, 1));
   int leaderID = getLeaderID();
 
   // make sure dangerous node removal is prevented
