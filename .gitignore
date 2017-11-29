@@ -1,3 +1,4 @@
 src/Version.hh
 packaging/quarkdb.spec
 _book/
+.vscode

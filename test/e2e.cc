@@ -77,10 +77,10 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   std::vector<std::future<redisReplyPtr>> futures;
 
   // send off many requests, pipeline them
-  futures.emplace_back(tunnel(leaderID)->execute({"get", "asdf"}));
-  futures.emplace_back(tunnel(leaderID)->execute({"ping"}));
-  futures.emplace_back(tunnel(leaderID)->execute({"set", "asdf", "1234"}));
-  futures.emplace_back(tunnel(leaderID)->execute({"get", "asdf"}));
+  futures.emplace_back(tunnel(leaderID)->exec("get", "asdf"));
+  futures.emplace_back(tunnel(leaderID)->exec("ping"));
+  futures.emplace_back(tunnel(leaderID)->exec("set", "asdf", "1234"));
+  futures.emplace_back(tunnel(leaderID)->exec("get", "asdf"));
   futures.emplace_back(tunnel(leaderID)->exec("raft_fetch", SSTR(lastEntry+1) ));
 
   ASSERT_REPLY(futures[0], "");
@@ -94,8 +94,8 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   ASSERT_EQ(entry.request, make_req("set", "asdf", "1234"));
 
   futures.clear();
-  futures.emplace_back(tunnel(leaderID)->execute({"set", "asdf", "3456"}));
-  futures.emplace_back(tunnel(leaderID)->execute({"get", "asdf"}));
+  futures.emplace_back(tunnel(leaderID)->exec("set", "asdf", "3456"));
+  futures.emplace_back(tunnel(leaderID)->exec("get", "asdf"));
 
   ASSERT_REPLY(futures[0], "OK");
   ASSERT_REPLY(futures[1], "3456");

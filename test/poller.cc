@@ -41,24 +41,24 @@ TEST_F(tPoller, T1) {
   // start first connection
   QClient tunnel(myself().hostname, myself().port);
 
-  redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
+  redisReplyPtr reply = tunnel.exec("set", "abc", "1234").get();
   ASSERT_REPLY(reply, "OK");
 
-  reply = tunnel.execute({"get", "abc"}).get();
+  reply = tunnel.exec("get", "abc").get();
   ASSERT_REPLY(reply, "1234");
 
   // start second connection, ensure the poller can handle them concurrently
   QClient tunnel2(myself().hostname, myself().port);
 
-  reply = tunnel2.execute({"get", "abc"}).get();
+  reply = tunnel2.exec("get", "abc").get();
   ASSERT_REPLY(reply, "1234");
 
-  reply = tunnel2.execute({"set", "qwert", "asdf"}).get();
+  reply = tunnel2.exec("set", "qwert", "asdf").get();
   ASSERT_REPLY(reply, "OK");
 
   // now try a third
   QClient tunnel3(myself().hostname, myself().port);
-  reply = tunnel3.execute({"get", "qwert"}).get();
+  reply = tunnel3.exec("get", "qwert").get();
   ASSERT_REPLY(reply, "asdf");
 }
 
@@ -72,7 +72,7 @@ TEST_F(tPoller, test_reconnect) {
 
     bool success = false;
     for(size_t i = 0; i < 30; i++) {
-      redisReplyPtr reply = tunnel.execute({"set", "abc", "1234"}).get();
+      redisReplyPtr reply = tunnel.exec("set", "abc", "1234").get();
       if(reply != nullptr) {
         ASSERT_REPLY(reply, "OK");
         success = true;
