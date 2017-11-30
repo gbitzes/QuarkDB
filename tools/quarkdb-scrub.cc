@@ -158,8 +158,8 @@ int main(int argc, char** argv) {
   std::vector<option::Option> opts = parse_args(argc-1, argv+1);
 
   LogIndex start, end;
-  my_strtoll(opts[Opt::START].arg, start);
-  my_strtoll(opts[Opt::END].arg, end);
+  quarkdb::my_strtoll(opts[Opt::START].arg, start);
+  quarkdb::my_strtoll(opts[Opt::END].arg, end);
 
   std::vector<RaftServer> nodes;
   parseServers(opts[Opt::NODES].arg, nodes);
@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
 
   int64_t pipelineLength = PIPELINE_LENGTH;
   if(opts[Opt::PIPELINE]) {
-    my_strtoll(opts[Opt::PIPELINE].arg, pipelineLength);
+    quarkdb::my_strtoll(opts[Opt::PIPELINE].arg, pipelineLength);
   }
 
   std::queue<ReplyRound> pendingReplies;
