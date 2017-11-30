@@ -52,7 +52,7 @@ bool RaftHandshake::validateResponse(const redisReplyPtr &reply) {
 }
 
 RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID, const RaftTimeouts &timeouts)
-: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, false, tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(clusterID, timeouts)) ) {
+: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, qclient::RetryStrategy(), tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(clusterID, timeouts)) ) {
 
 }
 

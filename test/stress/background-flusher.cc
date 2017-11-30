@@ -43,7 +43,7 @@ TEST_F(Background_Flusher, basic_sanity) {
   int leaderID = getLeaderID();
   int follower = (leaderID + 1) % 3;
 
-  qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true, false);
+  qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true);
 
   qclient::Notifier dummyNotifier;
   qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100);
@@ -81,7 +81,7 @@ TEST_F(Background_Flusher, with_transition) {
   members.push_back(myself(1).hostname, myself(1).port);
   members.push_back(myself(2).hostname, myself(2).port);
 
-  qclient::QClient qcl(members, true, false);
+  qclient::QClient qcl(members, true);
 
   qclient::Notifier dummyNotifier;
   qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100);
@@ -112,7 +112,7 @@ TEST_F(Background_Flusher, persistency) {
   int leaderID = getLeaderID();
   int follower = (leaderID + 1) % 3;
 
-  qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true, false);
+  qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true);
   qclient::Notifier dummyNotifier;
 
   ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);

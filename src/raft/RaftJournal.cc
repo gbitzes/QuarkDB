@@ -172,7 +172,7 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
 bool RaftJournal::setCommitIndex(LogIndex newIndex) {
   std::lock_guard<std::mutex> lock(commitIndexMutex);
   if(newIndex < commitIndex) {
-    qdb_warning("attempted to set commit index in the past, from " << commitIndex << " ==> " << newIndex);
+    qdb_warn("attempted to set commit index in the past, from " << commitIndex << " ==> " << newIndex);
     return false;
   }
 

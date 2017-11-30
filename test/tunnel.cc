@@ -99,7 +99,7 @@ TEST(QClient, T2) {
   };
 
   // with handshake
-  QClient tunnel("localhost", 1234, false, false, qclient::TlsConfig(), std::unique_ptr<Handshake>(new SimpleHandshake()));
+  QClient tunnel("localhost", 1234, false, qclient::RetryStrategy(), qclient::TlsConfig(), std::unique_ptr<Handshake>(new SimpleHandshake()));
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
