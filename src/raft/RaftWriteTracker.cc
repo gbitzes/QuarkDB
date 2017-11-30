@@ -25,6 +25,7 @@
 #include "RaftWriteTracker.hh"
 #include "RaftJournal.hh"
 #include "RaftState.hh"
+#include "../Formatter.hh"
 #include "../StateMachine.hh"
 #include "../Utils.hh"
 using namespace quarkdb;
@@ -40,7 +41,7 @@ RaftWriteTracker::~RaftWriteTracker() {
     journal.notifyWaitingThreads();
   }
   commitApplier.join();
-  flushQueues("unavailable");
+  flushQueues(Formatter::err("unavailable"));
 }
 
 void RaftWriteTracker::applySingleCommit(LogIndex index) {

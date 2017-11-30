@@ -28,6 +28,7 @@
 #include "RaftState.hh"
 #include "RaftReplicator.hh"
 #include "../StateMachine.hh"
+#include "../Formatter.hh"
 
 #include <random>
 #include <sys/stat.h>
@@ -339,7 +340,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
   // requested journal modifications, if any.
   //----------------------------------------------------------------------------
 
-  writeTracker.flushQueues(SSTR("MOVED 0 " << snapshot.leader.toString()));
+  writeTracker.flushQueues(Formatter::moved(0, snapshot.leader));
 
   if(!journal.matchEntries(req.prevIndex, req.prevTerm)) {
     return {snapshot.term, journal.getLogSize(), false, "Log entry mismatch"};

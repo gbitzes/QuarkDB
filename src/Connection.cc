@@ -30,7 +30,7 @@ using namespace quarkdb;
 LinkStatus PendingQueue::flushPending(const std::string &msg) {
   std::lock_guard<std::mutex> lock(mtx);
   while(!pending.empty()) {
-    if(conn) conn->writer.send(Formatter::err(msg));
+    if(conn) conn->writer.send(std::string(msg));
     pending.pop();
   }
   if(conn) conn->writer.flush();
