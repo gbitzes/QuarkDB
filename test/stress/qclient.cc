@@ -71,13 +71,13 @@ TEST_F(QClientTests, hide_transient_failures) {
     replies.emplace_back(qcl.exec("SET", SSTR("key-" << i), SSTR("val-" << i)));
 
     if(i % 1024 == 0) {
-      std::this_thread::sleep_for(std::chrono::seconds(2));
       // huehueue
       int leaderID = getLeaderID();
       if(leaderID >= 0) {
         spindown(leaderID);
         spinup(leaderID);
       }
+      std::this_thread::sleep_for(std::chrono::seconds(2));
     }
   }
 
@@ -109,6 +109,45 @@ TEST_F(QClientTests, nullptr_only_after_timeout) {
   spindown(0); spindown(1); spindown(2);
 
   // ensure qclient responses don't hang
+  std::chrono::steady_clock::time_point t0 = std::chrono::steady_clock::now();
   std::future<redisReplyPtr> reply = qcl.exec("HGET", "aaaaa", "bbbbb");
   ASSERT_EQ(reply.get(), nullptr);
+  std::chrono::steady_clock::time_point t1 = std::chrono::steady_clock::now();
+
+  reply = qcl.exec("HGET", "aaaaa", "bbbbb");
+  ASSERT_EQ(reply.get(), nullptr);
+  std::chrono::steady_clock::time_point t2 = std::chrono::steady_clock::now();
+
+  reply = qcl.exec("HGET", "aaaaa", "bbbbb");
+  ASSERT_EQ(reply.get(), nullptr);
+  std::chrono::steady_clock::time_point t3 = std::chrono::steady_clock::now();
+
+  std::cerr << "t1 - t0: " << std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count() << " ms" << std::endl;
+  std::cerr << "t2 - t1: " << std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count() << " ms" << std::endl;
+  std::cerr << "t3 - t2: " << std::chrono::duration_cast<std::chrono::milliseconds>(t3 - t2).count() << " ms" << std::endl;
+
+  // Ensure qclient can recover after the timeout, when the cluster is back online.
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  // After a long unavailability, qclient opts to fail fast - thus we have to
+  // try a few times manually.
+
+  bool success = false;
+  for(size_t i = 0; i < 10; i++) {
+    redisReplyPtr reply = qcl.exec("HGET", "aaaaa", "bbbbb").get();
+
+    // Verify that after qclient comes back online, _all_ consequent responses
+    // are valid, and not just
+    if(reply) success = true;
+
+    ASSERT_TRUE(reply == nullptr || success);
+    if(!reply) {
+      ASSERT_FALSE(success);
+      continue;
+    }
+
+    ASSERT_REPLY(reply, "cccc");
+  }
+  ASSERT_TRUE(success);
 }
