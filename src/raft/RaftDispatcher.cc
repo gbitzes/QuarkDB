@@ -99,12 +99,12 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       if(req.size() != 4) return conn->errArgs(req[0]);
 
       if(req[2] != journal.getClusterID()) {
-        qdb_critical("received handshake with wrong cluster id: " << req[2] << " (mine is " << journal.getClusterID() << ")");
+        qdb_misconfig("received handshake with wrong cluster id: " << req[2] << " (mine is " << journal.getClusterID() << ")");
         return conn->err("wrong cluster id");
       }
 
       if(req[3] != raftClock.getTimeouts().toString()) {
-        qdb_critical("received handshake with different raft timeouts (" << req[3] << ") than mine (" << raftClock.getTimeouts().toString() << ")");
+        qdb_misconfig("received handshake with different raft timeouts (" << req[3] << ") than mine (" << raftClock.getTimeouts().toString() << ")");
         return conn->err("incompatible raft timeouts");
       }
 
@@ -423,7 +423,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   if(!contains(state.getNodes(), req.candidate)) {
     RaftStateSnapshot snapshot = state.getSnapshot();
     if(!snapshot.leader.empty()) {
-      qdb_critical("Non-voting " << req.candidate.toString() << " attempted to disrupt the cluster by starting an election for term " << req.term << ". Ignoring its request - shut down that node!");
+      qdb_misconfig("Non-voting " << req.candidate.toString() << " attempted to disrupt the cluster by starting an election for term " << req.term << ". Ignoring its request - shut down that node!");
       return {snapshot.term, RaftVote::VETO};
     }
     qdb_warn("Non-voting " << req.candidate.toString() << " is requesting a vote, even though it is not a voting member of the cluster as far I know. Will still process its request, since I have no leader.");
