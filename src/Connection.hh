@@ -27,6 +27,7 @@
 #include "Link.hh"
 #include "RedisParser.hh"
 #include "BufferedWriter.hh"
+#include "Formatter.hh"
 #include <queue>
 
 #define OUTPUT_BUFFER_SIZE (16*1024)
@@ -59,8 +60,8 @@ public:
     conn = nullptr;
   }
 
-  LinkStatus flushPending(const std::string &msg);
-  LinkStatus appendResponse(std::string &&raw);
+  LinkStatus flushPending(const RedisEncodedResponse &msg);
+  LinkStatus appendResponse(RedisEncodedResponse &&raw);
   LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
 private:
@@ -88,7 +89,7 @@ private:
 
   struct PendingRequest {
     RedisRequest req;
-    std::string rawResp; // if not empty, we're just storing a raw, pre-formatted response
+    RedisEncodedResponse rawResp; // if not empty, we're just storing a raw, pre-formatted response
     LogIndex index = -1; // the corresponding entry in the raft journal - only relevant for write requests
   };
 
@@ -100,13 +101,14 @@ private:
 // Keeps track of connection-specific state.
 //------------------------------------------------------------------------------
 class Dispatcher; class InFlightTracker; struct WriteBatch;
+class RedisEncodedResponse;
 
 class Connection {
 public:
   Connection(Link *link, size_t writeBatchLimit = 1);
   ~Connection();
 
-  LinkStatus raw(std::string &&raw);
+  LinkStatus raw(RedisEncodedResponse &&encoded);
   LinkStatus moved(int64_t shardId, const RaftServer &location);
   LinkStatus err(const std::string &msg);
   LinkStatus errArgs(const std::string &cmd);
@@ -130,7 +132,7 @@ public:
     return pendingQueue->addPendingRequest(dispatcher, std::move(req), index);
   }
 
-  LinkStatus flushPending(const std::string &msg) {
+  LinkStatus flushPending(const RedisEncodedResponse &msg) {
     return pendingQueue->flushPending(msg);
   }
 

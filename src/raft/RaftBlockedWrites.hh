@@ -32,12 +32,13 @@
 namespace quarkdb {
 
 class PendingQueue;
+class RedisEncodedResponse;
 class RaftBlockedWrites {
 public:
   RaftBlockedWrites() {}
   ~RaftBlockedWrites() {}
 
-  void flush(const std::string &msg);
+  void flush(const RedisEncodedResponse &resp);
   void insert(LogIndex index, const std::shared_ptr<PendingQueue> &item);
   std::shared_ptr<PendingQueue> popIndex(LogIndex index);
   size_t size();

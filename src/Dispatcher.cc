@@ -37,12 +37,12 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   return conn->raw(dispatch(req, 0));
 }
 
-std::string RedisDispatcher::errArgs(RedisRequest &request, LogIndex commit) {
+RedisEncodedResponse RedisDispatcher::errArgs(RedisRequest &request, LogIndex commit) {
   if(commit > 0) store.noop(commit);
   return Formatter::errArgs(request[0]);
 }
 
-std::string RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisRequest &request) {
+RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisRequest &request) {
   qdb_assert(request.getCommandType() == CommandType::WRITE);
 
   switch(request.getCommand()) {
@@ -176,7 +176,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, WriteBatch &batch) {
   return lastStatus;
 }
 
-std::string RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
+RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
   if(request.getCommand() == RedisCommand::INVALID) {
     if(startswith(request[0], "JOURNAL_")) {
       store.noop(commit);
@@ -193,7 +193,7 @@ std::string RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
   // Handle writes in a separate function, use batch write API
   if(request.getCommandType() == CommandType::WRITE) {
     StagingArea stagingArea(store);
-    std::string response = dispatchWrite(stagingArea, request);
+    RedisEncodedResponse response = dispatchWrite(stagingArea, request);
     stagingArea.commit(commit);
     return response;
   }

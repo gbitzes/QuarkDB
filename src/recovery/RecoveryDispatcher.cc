@@ -32,7 +32,7 @@ LinkStatus RecoveryDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   return conn->raw(dispatch(req));
 }
 
-std::string RecoveryDispatcher::dispatch(RedisRequest &request) {
+RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
   switch(request.getCommand()) {
     case RedisCommand::GET: {
       if(request.size() != 2) return Formatter::errArgs(request[0]);

@@ -27,10 +27,10 @@
 #include "utils/InFlightTracker.hh"
 using namespace quarkdb;
 
-LinkStatus PendingQueue::flushPending(const std::string &msg) {
+LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
   std::lock_guard<std::mutex> lock(mtx);
   while(!pending.empty()) {
-    if(conn) conn->writer.send(std::string(msg));
+    if(conn) conn->writer.send(std::string(msg.val));
     pending.pop();
   }
   if(conn) conn->writer.flush();
@@ -38,11 +38,11 @@ LinkStatus PendingQueue::flushPending(const std::string &msg) {
   return 1;
 }
 
-LinkStatus PendingQueue::appendResponse(std::string &&raw) {
+LinkStatus PendingQueue::appendResponse(RedisEncodedResponse &&raw) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(!conn) qdb_throw("attempted to append a raw response to a pendingQueue while being detached from a Connection. Contents: '" << raw << "'");
+  if(!conn) qdb_throw("attempted to append a raw response to a pendingQueue while being detached from a Connection. Contents: '" << raw.val << "'");
 
-  if(pending.empty()) return conn->writer.send(std::move(raw));
+  if(pending.empty()) return conn->writer.send(std::move(raw.val));
 
   // we're being blocked by a write, must queue
   PendingRequest req;
@@ -55,7 +55,7 @@ LinkStatus PendingQueue::addPendingRequest(RedisDispatcher *dispatcher, RedisReq
   std::lock_guard<std::mutex> lock(mtx);
   if(!conn) qdb_throw("attempted to append a pending request to a pendingQueue while being detached from a Connection, command " << req[0] << ", log index: " << index);
 
-  if(pending.empty() && index < 0) return conn->writer.send(dispatcher->dispatch(req, 0));
+  if(pending.empty() && index < 0) return conn->writer.send(dispatcher->dispatch(req, 0).val);
 
   if(index > 0) {
     if(index <= lastIndex) {
@@ -85,7 +85,7 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
     }
 
     if(!req.rawResp.empty()) {
-      if(conn) conn->writer.send(std::move(req.rawResp));
+      if(conn) conn->writer.send(std::move(req.rawResp.val));
     }
     else {
       if(req.index > 0) {
@@ -96,8 +96,8 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
 
       // we must dispatch the request even if the connection has died, since
       // writes increase lastApplied of the state machine
-      std::string response = dispatcher->dispatch(req.req, req.index);
-      if(conn) conn->writer.send(std::move(response));
+      RedisEncodedResponse response = dispatcher->dispatch(req.req, req.index);
+      if(conn) conn->writer.send(std::move(response.val));
     }
 
     pending.pop();
@@ -118,8 +118,8 @@ Connection::~Connection() {
   pendingQueue->detachConnection();
 }
 
-LinkStatus Connection::raw(std::string &&raw) {
-  return pendingQueue->appendResponse(std::move(raw));
+LinkStatus Connection::raw(RedisEncodedResponse &&encoded) {
+  return pendingQueue->appendResponse(std::move(encoded));
 }
 
 LinkStatus Connection::moved(int64_t shardId, const RaftServer &location) {

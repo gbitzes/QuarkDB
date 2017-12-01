@@ -42,10 +42,10 @@ void RaftBlockedWrites::insert(LogIndex index, const std::shared_ptr<PendingQueu
   tracker[index] = item;
 }
 
-void RaftBlockedWrites::flush(const std::string &msg) {
+void RaftBlockedWrites::flush(const RedisEncodedResponse &resp) {
   std::lock_guard<std::mutex> lock(mtx);
   for(auto it = tracker.begin(); it != tracker.end(); it++) {
-    it->second->flushPending(msg);
+    it->second->flushPending(resp);
   }
   tracker.clear();
 }

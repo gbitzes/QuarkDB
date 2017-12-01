@@ -87,9 +87,9 @@ void RaftWriteTracker::applyCommits() {
   commitApplierActive = false;
 }
 
-void RaftWriteTracker::flushQueues(const std::string &msg) {
+void RaftWriteTracker::flushQueues(const RedisEncodedResponse &response) {
   std::lock_guard<std::mutex> lock(mtx);
-  blockedWrites.flush(msg);
+  blockedWrites.flush(response);
 }
 
 bool RaftWriteTracker::append(LogIndex index, RaftEntry &&entry, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher) {

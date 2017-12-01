@@ -26,6 +26,7 @@
 
 #include "../Dispatcher.hh"
 #include "RecoveryEditor.hh"
+#include "../Formatter.hh"
 
 namespace quarkdb {
 
@@ -33,7 +34,7 @@ class RecoveryDispatcher : public Dispatcher {
 public:
   RecoveryDispatcher(RecoveryEditor &editor);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  std::string dispatch(RedisRequest &request);
+  RedisEncodedResponse dispatch(RedisRequest &request);
 
 private:
   RecoveryEditor &editor;

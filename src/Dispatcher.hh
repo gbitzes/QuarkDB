@@ -58,10 +58,10 @@ public:
   RedisDispatcher(StateMachine &rocksdb);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
-  std::string dispatch(RedisRequest &req, LogIndex commit);
+  RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
 private:
-  std::string dispatchWrite(StagingArea &stagingArea, RedisRequest &req);
-  std::string errArgs(RedisRequest &request, LogIndex commit);
+  RedisEncodedResponse dispatchWrite(StagingArea &stagingArea, RedisRequest &req);
+  RedisEncodedResponse errArgs(RedisRequest &request, LogIndex commit);
 
   StateMachine &store;
 };

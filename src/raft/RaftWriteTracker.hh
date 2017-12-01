@@ -34,6 +34,7 @@ namespace quarkdb {
 // Forward declarations
 //------------------------------------------------------------------------------
 class RaftJournal; class StateMachine;
+class RedisEncodedResponse;
 
 //----------------------------------------------------------------------------
 // We track the state of pending writes, and apply them to the state machine
@@ -45,7 +46,7 @@ public:
   ~RaftWriteTracker();
 
   bool append(LogIndex index, RaftEntry &&entry, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher);
-  void flushQueues(const std::string &msg);
+  void flushQueues(const RedisEncodedResponse &response);
   size_t size() { return blockedWrites.size(); }
 private:
   std::mutex mtx;

@@ -30,20 +30,31 @@
 
 namespace quarkdb {
 
+// Phantom type: std::string with a special meaning. Unless explicitly asked
+// with obj.val, this will generate compiler errors when you try to use like
+// plain string.
+class RedisEncodedResponse {
+public:
+  explicit RedisEncodedResponse(std::string &&src) : val(std::move(src)) {}
+  RedisEncodedResponse() {}
+  bool empty() const { return val.empty(); }
+  std::string val;
+};
+
 class Formatter {
 public:
-  static std::string moved(int64_t shardId, const RaftServer &srv);
-  static std::string err(const std::string &msg);
-  static std::string errArgs(const std::string &cmd);
-  static std::string pong();
-  static std::string string(const std::string &str);
-  static std::string fromStatus(const rocksdb::Status &status);
-  static std::string status(const std::string &str);
-  static std::string ok();
-  static std::string null();
-  static std::string integer(int64_t number);
-  static std::string vector(const std::vector<std::string> &vec);
-  static std::string scan(const std::string &marker, const std::vector<std::string> &vec);
+  static RedisEncodedResponse moved(int64_t shardId, const RaftServer &srv);
+  static RedisEncodedResponse err(const std::string &msg);
+  static RedisEncodedResponse errArgs(const std::string &cmd);
+  static RedisEncodedResponse pong();
+  static RedisEncodedResponse string(const std::string &str);
+  static RedisEncodedResponse fromStatus(const rocksdb::Status &status);
+  static RedisEncodedResponse status(const std::string &str);
+  static RedisEncodedResponse ok();
+  static RedisEncodedResponse null();
+  static RedisEncodedResponse integer(int64_t number);
+  static RedisEncodedResponse vector(const std::vector<std::string> &vec);
+  static RedisEncodedResponse scan(const std::string &marker, const std::vector<std::string> &vec);
 };
 
 }

@@ -24,58 +24,58 @@
 #include "Formatter.hh"
 using namespace quarkdb;
 
-std::string Formatter::moved(int64_t shardId, const RaftServer &location) {
-  return SSTR("-MOVED " << shardId << " " << location.toString() << "\r\n");
+RedisEncodedResponse Formatter::moved(int64_t shardId, const RaftServer &location) {
+  return RedisEncodedResponse(SSTR("-MOVED " << shardId << " " << location.toString() << "\r\n"));
 }
 
-std::string Formatter::err(const std::string &err) {
-  return SSTR("-ERR " << err << "\r\n");
+RedisEncodedResponse Formatter::err(const std::string &err) {
+  return RedisEncodedResponse(SSTR("-ERR " << err << "\r\n"));
 }
 
-std::string Formatter::errArgs(const std::string &cmd) {
-  return SSTR("-ERR wrong number of arguments for '" << cmd << "' command\r\n");
+RedisEncodedResponse Formatter::errArgs(const std::string &cmd) {
+  return RedisEncodedResponse(SSTR("-ERR wrong number of arguments for '" << cmd << "' command\r\n"));
 }
 
-std::string Formatter::pong() {
-  return SSTR("+PONG\r\n");
+RedisEncodedResponse Formatter::pong() {
+  return RedisEncodedResponse(SSTR("+PONG\r\n"));
 }
 
-std::string Formatter::string(const std::string &str) {
-  return SSTR("$" << str.length() << "\r\n" << str << "\r\n");
+RedisEncodedResponse Formatter::string(const std::string &str) {
+  return RedisEncodedResponse(SSTR("$" << str.length() << "\r\n" << str << "\r\n"));
 }
 
-std::string Formatter::status(const std::string &str) {
-  return SSTR("+" << str << "\r\n");
+RedisEncodedResponse Formatter::status(const std::string &str) {
+  return RedisEncodedResponse(SSTR("+" << str << "\r\n"));
 }
 
-std::string Formatter::ok() {
-  return "+OK\r\n";
+RedisEncodedResponse Formatter::ok() {
+  return RedisEncodedResponse("+OK\r\n");
 }
 
-std::string Formatter::null() {
-  return "$-1\r\n";
+RedisEncodedResponse Formatter::null() {
+  return RedisEncodedResponse("$-1\r\n");
 }
 
-std::string Formatter::integer(int64_t number) {
-  return SSTR(":" << number << "\r\n");
+RedisEncodedResponse Formatter::integer(int64_t number) {
+  return RedisEncodedResponse(SSTR(":" << number << "\r\n"));
 }
 
-std::string Formatter::fromStatus(const rocksdb::Status &status) {
+RedisEncodedResponse Formatter::fromStatus(const rocksdb::Status &status) {
   if(status.ok()) return Formatter::ok();
   return Formatter::err(status.ToString());
 }
 
-std::string Formatter::vector(const std::vector<std::string> &vec) {
+RedisEncodedResponse Formatter::vector(const std::vector<std::string> &vec) {
   std::stringstream ss;
   ss << "*" << vec.size() << "\r\n";
   for(std::vector<std::string>::const_iterator it = vec.begin(); it != vec.end(); it++) {
     ss << "$" << it->length() << "\r\n";
     ss << *it << "\r\n";
   }
-  return ss.str();
+  return RedisEncodedResponse(ss.str());
 }
 
-std::string Formatter::scan(const std::string &marker, const std::vector<std::string> &vec) {
+RedisEncodedResponse Formatter::scan(const std::string &marker, const std::vector<std::string> &vec) {
   std::stringstream ss;
   ss << "*2\r\n";
   ss << "$" << marker.length() << "\r\n";
@@ -86,5 +86,5 @@ std::string Formatter::scan(const std::string &marker, const std::vector<std::st
     ss << "$" << it->length() << "\r\n";
     ss << *it << "\r\n";
   }
-  return ss.str();
+  return RedisEncodedResponse(ss.str());
 }
