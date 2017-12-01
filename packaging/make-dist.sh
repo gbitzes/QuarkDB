@@ -8,7 +8,7 @@ set -e
 
 git submodule update --recursive --init
 mkdir -p build
-./genversion.py
+./genversion.py --template src/Version.hh.in --out src/Version.hh
 ./genversion.py --template packaging/quarkdb.spec.in --out packaging/quarkdb.spec
 
 #-------------------------------------------------------------------------------

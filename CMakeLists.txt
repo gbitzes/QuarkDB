@@ -16,7 +16,7 @@ include(GNUInstallDirs)
 add_custom_target(GenerateVersionInfo ALL DEPENDS Version)
 add_custom_command(
   OUTPUT Version
-  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/genversion.py
+  COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/genversion.py --template src/Version.hh.in --out src/Version.hh
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
 
