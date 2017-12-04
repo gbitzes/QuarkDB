@@ -96,11 +96,16 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
   payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
   entries.resize(payloadSize);
 
+  RaftJournal::Iterator iterator = journal.getIterator(nextIndex);
+
   for(int64_t i = nextIndex; i < nextIndex+payloadSize; i++) {
-    if(!journal.fetch(i, entries[i-nextIndex]).ok()) {
-      qdb_critical("could not fetch entry with term " << i << " .. aborting building payload");
+    if(!iterator.valid()) {
+      qdb_critical("could not fetch entry with index " << i << " .. aborting building payload");
       return false;
     }
+
+    iterator.current(entries[i-nextIndex]);
+    iterator.next();
   }
   return true;
 }

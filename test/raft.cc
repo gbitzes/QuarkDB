@@ -45,6 +45,7 @@ class Raft_Dispatcher : public TestCluster3NodesFixture {};
 class Raft_Election : public TestCluster3NodesFixture {};
 class Raft_Director : public TestCluster3NodesFixture {};
 class Raft_CommitTracker : public TestCluster3NodesFixture {};
+class Raft_JournalIterator : public TestCluster3NodesFixture {};
 
 TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));
@@ -933,4 +934,34 @@ TEST(Raft_BlockedWrites, basic_sanity) {
   ASSERT_EQ(blockedWrites.popIndex(5), q1);
   ASSERT_EQ(blockedWrites.popIndex(4), q4);
   ASSERT_EQ(blockedWrites.size(), 0u);
+}
+
+TEST_F(Raft_JournalIterator, basic_sanity) {
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    RaftEntry tempEntry;
+    tempEntry.term = 0;
+    tempEntry.request = testreqs[i];
+
+    ASSERT_TRUE(journal(0)->append(i+1, tempEntry)) << i;
+  }
+
+  RaftJournal::Iterator it = journal(0)->getIterator(1);
+  ASSERT_TRUE(it.valid());
+
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    ASSERT_TRUE(it.valid());
+
+    std::string tmp;
+    it.current(tmp);
+
+    RaftEntry entry;
+    RaftEntry::deserialize(entry, tmp);
+
+    ASSERT_EQ(entry.term, 0);
+    ASSERT_EQ(entry.request, testreqs[i]);
+
+    it.next();
+  }
+
+  ASSERT_FALSE(it.valid());
 }

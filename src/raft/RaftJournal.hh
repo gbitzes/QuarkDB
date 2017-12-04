@@ -88,6 +88,21 @@ public:
   bool removeMember(RaftTerm term, const RaftServer &member, std::string &err);
 
   bool appendLeadershipMarker(LogIndex index, RaftTerm term, const RaftServer &leader);
+
+  class Iterator {
+  public:
+    Iterator(std::unique_ptr<rocksdb::Iterator> iter, LogIndex startingPoint);
+    bool valid();
+    void next();
+    void current(RaftSerializedEntry &entry);
+  private:
+    void validate();
+    LogIndex currentIndex;
+    std::unique_ptr<rocksdb::Iterator> iter;
+  };
+
+  Iterator getIterator(LogIndex startingPoint);
+
 private:
   void openDB(const std::string &path);
 

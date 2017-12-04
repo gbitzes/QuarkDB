@@ -523,3 +523,53 @@ rocksdb::Status RaftJournal::checkpoint(const std::string &path) {
 
   return st;
 }
+
+//------------------------------------------------------------------------------
+// Iterator
+//------------------------------------------------------------------------------
+RaftJournal::Iterator RaftJournal::getIterator(LogIndex startingPoint) {
+  rocksdb::ReadOptions readOpts;
+  readOpts.total_order_seek = true;
+
+  std::unique_ptr<rocksdb::Iterator> it;
+  it.reset(db->NewIterator(readOpts));
+
+  return RaftJournal::Iterator(std::move(it), startingPoint);
+}
+
+RaftJournal::Iterator::Iterator(std::unique_ptr<rocksdb::Iterator> it, LogIndex startingPoint) {
+  iter = std::move(it);
+  currentIndex = startingPoint;
+  iter->Seek(encodeEntryKey(currentIndex));
+  validate();
+}
+
+void RaftJournal::Iterator::validate() {
+  qdb_assert(this->valid());
+
+  if(iter->key()[0] != 'E') {
+    iter.reset();
+    return;
+  }
+
+  qdb_assert(iter->key() == encodeEntryKey(currentIndex));
+}
+
+bool RaftJournal::Iterator::valid() {
+  return iter && iter->Valid();
+}
+
+void RaftJournal::Iterator::next() {
+  qdb_assert(this->valid());
+
+  iter->Next();
+  if(iter->Valid()) {
+    currentIndex++;
+    validate();
+  }
+}
+
+void RaftJournal::Iterator::current(RaftSerializedEntry &entry) {
+  qdb_assert(this->valid());
+  entry = iter->value().ToString();
+}
