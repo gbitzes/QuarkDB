@@ -54,6 +54,7 @@ TEST_F(Background_Flusher, basic_sanity) {
   }
 
   RETRY_ASSERT_TRUE(flusher.size() == 0u);
+  RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
   ASSERT_TRUE(checkValueConsensus("key", SSTR("value-" << nentries), 0, 1, 2));
 
   // verify that every single request has been recorded
@@ -99,6 +100,7 @@ TEST_F(Background_Flusher, with_transition) {
   }
 
   RETRY_ASSERT_TRUE(flusher.size() == 0u);
+  RETRY_ASSERT_TRUE(checkFullConsensus(follower1, follower2));
   for(size_t i = 0; i <= nentries; i++) {
     ASSERT_TRUE(checkValueConsensus(SSTR("key-" << i), SSTR("value-" << i), follower1, follower2));
   }
