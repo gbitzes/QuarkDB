@@ -89,7 +89,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   ASSERT_REPLY(futures[3], "1234");
 
   RaftEntry entry;
-  ASSERT_TRUE(RaftParser::fetchResponse(futures[4].get(), entry));
+  ASSERT_TRUE(RaftParser::fetchResponse(futures[4].get().get(), entry));
   ASSERT_EQ(entry.term, state(0)->getCurrentTerm());
   ASSERT_EQ(entry.request, make_req("set", "asdf", "1234"));
 
@@ -298,6 +298,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("scard", "does-not-exist"));
   futures.emplace_back(tunnel(leaderID)->exec("raft_invalid_command"));
   futures.emplace_back(tunnel(leaderID)->exec("quarkdb_invalid_command"));
+  futures.emplace_back(tunnel(leaderID)->exec("raft_fetch_last", "7"));
 
   size_t count = 0;
   ASSERT_REPLY(futures[count++], 1);
@@ -324,6 +325,17 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[count++], 0);
   ASSERT_REPLY(futures[count++], "ERR internal dispatching error");
   ASSERT_REPLY(futures[count++], "ERR internal dispatching error");
+
+  redisReplyPtr entries = futures[count++].get();
+  std::vector<RaftEntry> lastEntries;
+
+  ASSERT_TRUE(RaftParser::fetchLastResponse(entries, lastEntries));
+  for(size_t i = 1; i <= 7; i++) {
+    RaftEntry comparison;
+    LogIndex index = journal(leaderID)->getLogSize() - i;
+    ASSERT_OK(journal(leaderID)->fetch(index, comparison));
+    ASSERT_EQ(lastEntries[7 - i], comparison);
+  }
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("set", "mystring", "asdf"));

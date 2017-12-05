@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "raft/RaftCommon.hh"
 #include "Formatter.hh"
 using namespace quarkdb;
 
@@ -86,5 +87,30 @@ RedisEncodedResponse Formatter::scan(const std::string &marker, const std::vecto
     ss << "$" << it->length() << "\r\n";
     ss << *it << "\r\n";
   }
+  return RedisEncodedResponse(ss.str());
+}
+
+RedisEncodedResponse Formatter::raftEntry(const RaftEntry &entry) {
+  // Very inefficient with copying, but this function is only to help
+  // debugging, so we don't really mind.
+
+  std::vector<std::string> vec;
+  vec.emplace_back(std::to_string(entry.term));
+
+  for(size_t i = 0; i < entry.request.size(); i++) {
+    vec.emplace_back(entry.request[i]);
+  }
+
+  return Formatter::vector(vec);
+}
+
+RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entries) {
+  std::stringstream ss;
+  ss << "*" << entries.size() << "\r\n";
+
+  for(size_t i = 0; i < entries.size(); i++) {
+    ss << Formatter::raftEntry(entries[i]).val;
+  }
+
   return RedisEncodedResponse(ss.str());
 }

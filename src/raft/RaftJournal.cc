@@ -473,6 +473,17 @@ rocksdb::Status RaftJournal::fetch(LogIndex index, RaftSerializedEntry &data) {
   return db->Get(rocksdb::ReadOptions(), encodeEntryKey(index), &data);
 }
 
+void RaftJournal::fetch_last(int last, std::vector<RaftEntry> &entries) {
+  LogIndex startIndex = logSize - last;
+  if(startIndex < 0) startIndex = 0;
+
+  for(LogIndex index = startIndex; index < startIndex + last; index++) {
+    RaftEntry entry;
+    fetch(index, entry);
+    entries.emplace_back(entry);
+  }
+}
+
 void RaftJournal::fetch_or_die(LogIndex index, RaftEntry &entry) {
   rocksdb::Status st = fetch(index, entry);
   if(!st.ok()) {

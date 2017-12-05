@@ -264,7 +264,7 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
   return true;
 }
 
-bool RaftParser::fetchResponse(const redisReplyPtr &source, RaftEntry &entry) {
+bool RaftParser::fetchResponse(redisReply *source, RaftEntry &entry) {
   if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements < 2) {
     return false;
   }
@@ -281,6 +281,23 @@ bool RaftParser::fetchResponse(const redisReplyPtr &source, RaftEntry &entry) {
   entry.request.clear();
   for(size_t i = 1; i < source->elements; i++) {
     entry.request.emplace_back(source->element[i]->str, source->element[i]->len);
+  }
+
+  return true;
+}
+
+bool RaftParser::fetchLastResponse(const qclient::redisReplyPtr &source, std::vector<RaftEntry> &entries) {
+  if(source == nullptr || source->type != REDIS_REPLY_ARRAY) {
+    return false;
+  }
+
+  entries.clear();
+  entries.resize(source->elements);
+
+  for(size_t i = 0; i < source->elements; i++) {
+    if(!fetchResponse(source->element[i], entries[i])) {
+      return false;
+    }
   }
 
   return true;

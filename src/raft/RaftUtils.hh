@@ -44,7 +44,8 @@ public:
   static bool heartbeatResponse(const qclient::redisReplyPtr &source, RaftHeartbeatResponse &dest);
   static bool voteRequest(RedisRequest &source, RaftVoteRequest &dest);
   static bool voteResponse(const qclient::redisReplyPtr &source, RaftVoteResponse &dest);
-  static bool fetchResponse(const qclient::redisReplyPtr &source, RaftEntry &entry);
+  static bool fetchResponse(redisReply *source, RaftEntry &entry);
+  static bool fetchLastResponse(const qclient::redisReplyPtr &source, std::vector<RaftEntry> &entries);
 };
 
 class RaftElection {

@@ -45,6 +45,18 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       // safe, read-only request, does not need authorization
       return conn->vector(this->info().toVector());
     }
+    case RedisCommand::RAFT_FETCH_LAST: {
+      // safe, read-only request, does not need authorization
+      if(req.size() != 2) return conn->errArgs(req[0]);
+
+      int64_t nentries;
+      if(!my_strtoll(req[1], nentries) || nentries <= 0) return conn->err(SSTR("could not parse " << req[1]));
+
+      std::vector<RaftEntry> entries;
+      journal.fetch_last(nentries, entries);
+
+      return conn->raw(Formatter::raftEntries(entries));
+    }
     case RedisCommand::RAFT_FETCH: {
       // safe, read-only request, does not need authorization
       if(req.size() != 2) return conn->errArgs(req[0]);
@@ -56,13 +68,10 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       std::vector<std::string> ret;
 
       if(this->fetch(index, entry)) {
-        ret.emplace_back(std::to_string(entry.term));
-        for(size_t i = 0; i < entry.request.size(); i++) {
-          ret.emplace_back(entry.request[i]);
-        }
+        return conn->raw(Formatter::raftEntry(entry));
       }
 
-      return conn->vector(ret);
+      return conn->null();
     }
     case RedisCommand::RAFT_HEARTBEAT: {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");

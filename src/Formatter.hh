@@ -41,6 +41,8 @@ public:
   std::string val;
 };
 
+class RaftEntry;
+
 class Formatter {
 public:
   static RedisEncodedResponse moved(int64_t shardId, const RaftServer &srv);
@@ -55,6 +57,8 @@ public:
   static RedisEncodedResponse integer(int64_t number);
   static RedisEncodedResponse vector(const std::vector<std::string> &vec);
   static RedisEncodedResponse scan(const std::string &marker, const std::vector<std::string> &vec);
+  static RedisEncodedResponse raftEntry(const RaftEntry &entry);
+  static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries);
 };
 
 }
