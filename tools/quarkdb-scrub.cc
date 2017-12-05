@@ -119,7 +119,7 @@ void processReplies(ReplyRound &replyRound, bool verbose) {
     RaftEntry entry;
     redisReplyPtr reply = replyRound.replies[i].get();
 
-    if(!RaftParser::fetchResponse(reply, entry)) qdb_critical("Reply for fetch entry #" << replyRound.index << " could not be parsed.");
+    if(!RaftParser::fetchResponse(reply.get(), entry)) qdb_critical("Reply for fetch entry #" << replyRound.index << " could not be parsed.");
     entries.emplace_back(std::move(entry));
   }
 
