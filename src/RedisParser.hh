@@ -43,6 +43,21 @@ public:
   //----------------------------------------------------------------------------
 
   LinkStatus fetch(RedisRequest &req);
+
+  //----------------------------------------------------------------------------
+  // Purge any and all incoming data.
+  // Useful for connections which are in a special state, such as "MONITOR".
+  //
+  // After calling purge() even once, any calls to fetch() have completely
+  // undefined behaviour - we simply can't salvage the connection for reading.
+  //
+  // Why even have such a function ? To avoid the poller (in this case meaning
+  // Poller.hh or xrootd scheduler) from waking up constantly and eating up
+  // CPU time if the user accidentally sends data from redis-cli.
+  // This will consume any input and calm down the poller.
+  //----------------------------------------------------------------------------
+  LinkStatus purge();
+
 private:
   BufferedReader reader;
 

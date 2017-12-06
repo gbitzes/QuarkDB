@@ -29,6 +29,22 @@ using namespace quarkdb;
 RedisParser::RedisParser(Link *l) : reader(l) {
 }
 
+int RedisParser::purge() {
+  request_size = 0;
+  current_element = 0;
+  element_size = 0;
+
+  current_integer.clear();
+  current_request.clear();
+
+  std::string buff;
+  buff.resize(1024);
+  while(true) {
+    int rlen = reader.consume(1023, buff);
+    if(rlen <= 0) return rlen;
+  }
+}
+
 int RedisParser::fetch(RedisRequest &req) {
   if(request_size == 0) {
     req.clear();

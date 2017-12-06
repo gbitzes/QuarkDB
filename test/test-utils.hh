@@ -54,15 +54,17 @@ class RaftDispatcher; class RaftLease; class RaftDirector;
 class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
 
 #define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
+  bool ok = false; \
   size_t nretries = 0; \
   while(nretries++ < retry) { \
     std::this_thread::sleep_for(std::chrono::milliseconds(waitInterval)); \
     if((cond)) { \
       qdb_info("Condition '" << #cond << "' is true after " << nretries << " attempts"); \
+      ok = true; \
       break; \
     } \
   } \
-  ASSERT_TRUE(cond) << " - failure after " << nretries << " retries "; \
+  if(!ok) { ASSERT_TRUE(cond) << " - failure after " << nretries << " retries "; } \
 }
 
 #define NUMBER_OF_RETRIES ( (size_t) testconfig.raftTimeouts->getLow().count() * 10)

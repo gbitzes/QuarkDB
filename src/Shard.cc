@@ -115,13 +115,23 @@ LinkStatus Shard::dispatch(Connection *conn, WriteBatch &batch) {
     return conn->err("unavailable");
   }
 
+  for(size_t i = 0; i < batch.requests.size(); i++) {
+    commandMonitor.broadcast(batch.requests[i]);
+  }
+
   LinkStatus ret = dispatcher->dispatch(conn, batch);
   requestCounter.account(batch);
   return ret;
 }
 
 LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
+  commandMonitor.broadcast(req);
+
   switch(req.getCommand()) {
+    case RedisCommand::MONITOR: {
+      commandMonitor.addRegistration(conn);
+      return conn->ok();
+    }
     case RedisCommand::INVALID: {
       return conn->err(SSTR("unknown command " << quotes(req[0])));
     }

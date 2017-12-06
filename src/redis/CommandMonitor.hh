@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: CommandMonitor.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,52 +21,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_SHARD_H__
-#define __QUARKDB_SHARD_H__
+#ifndef __QUARKDB_COMMAND_MONITOR_H__
+#define __QUARKDB_COMMAND_MONITOR_H__
 
-#include "raft/RaftTimeouts.hh"
-#include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "redis/CommandMonitor.hh"
-#include "utils/InFlightTracker.hh"
-#include "utils/RequestCounter.hh"
+#include <list>
+#include "../Connection.hh"
 
 namespace quarkdb {
 
-class RaftGroup; class ShardDirectory;
-class Shard : public Dispatcher {
+class CommandMonitor {
 public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
-  ~Shard();
+  CommandMonitor();
 
-  RaftGroup* getRaftGroup();
-  void spinup();
-  void spindown();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
-  size_t monitors() { return commandMonitor.size(); }
+  void broadcast(const RedisRequest &received);
+  void addRegistration(Connection *c);
+  size_t size();
 
 private:
-  void detach();
-  void attach();
-  void start();
-  void stopAcceptingRequests();
+  std::atomic<int64_t> active {false};
+  std::mutex mtx;
 
-  CommandMonitor commandMonitor;
-  ShardDirectory *shardDirectory;
-
-  RaftGroup *raftGroup = nullptr;
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-
-  InFlightTracker inFlightTracker;
-  RequestCounter requestCounter;
-
-  std::mutex raftGroupMtx;
+  std::list<std::shared_ptr<PendingQueue>> monitors;
 };
 
 }

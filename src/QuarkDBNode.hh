@@ -43,6 +43,7 @@ struct QuarkDBInfo {
   std::string baseDir;
   std::string version;
   std::string rocksdbVersion;
+  size_t monitors;
 
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
@@ -50,6 +51,7 @@ struct QuarkDBInfo {
     ret.emplace_back(SSTR("BASE-DIRECTORY " << baseDir));
     ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
     ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
+    ret.emplace_back(SSTR("MONITORS " << monitors));
     return ret;
   }
 };

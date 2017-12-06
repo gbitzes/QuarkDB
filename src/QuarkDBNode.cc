@@ -97,5 +97,5 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 QuarkDBInfo QuarkDBNode::info() {
-  return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH) };
+  return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH), shard->monitors() };
 }

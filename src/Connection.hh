@@ -64,7 +64,9 @@ public:
   LinkStatus appendResponse(RedisEncodedResponse &&raw);
   LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
+  bool appendIfAttached(RedisEncodedResponse &&raw);
 private:
+  LinkStatus appendResponseNoLock(RedisEncodedResponse &&raw);
   Connection *conn;
   std::mutex mtx;
 
@@ -121,6 +123,13 @@ public:
   LinkStatus integer(int64_t number);
   LinkStatus vector(const std::vector<std::string> &vec);
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
+
+  bool monitor = false;
+  void setMonitor() {
+    // There's no function setting monitor back to false. This is intentional,
+    // there's no going back after issuing 'MONITOR'.
+    monitor = true;
+  }
 
   bool raftStaleReads = false;
   bool raftAuthorization = false;

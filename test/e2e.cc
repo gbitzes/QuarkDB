@@ -35,6 +35,7 @@
 #include <gtest/gtest.h>
 #include "test-reply-macros.hh"
 #include "qclient/QScanner.hh"
+#include "qclient/ConnectionInitiator.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -674,4 +675,35 @@ TEST_F(Raft_e2e, stale_reads) {
 
   RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
   ASSERT_REPLY(tunnel(follower)->exec("get", "abc"), "1234");
+}
+
+TEST_F(Raft_e2e, monitor) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  // We can't use QClient for this, it can't handle the output of MONITOR
+  qclient::ConnectionInitiator initiator("localhost", myself(leaderID).port);
+  ASSERT_TRUE(initiator.ok());
+
+  Link link(initiator.getFd());
+  BufferedReader reader(&link);
+
+  ASSERT_EQ(link.Send("*1\r\n$7\r\nMONITOR\r\n"), 17);
+  ASSERT_EQ(link.Send("random string"), 13);
+
+  std::string response;
+  RETRY_ASSERT_TRUE(reader.consume(5, response));
+  ASSERT_EQ(response, "+OK\r\n");
+
+  tunnel(leaderID)->exec("set", "abc", "aaaa");
+  response.clear();
+  RETRY_ASSERT_TRUE(reader.consume(21, response));
+  ASSERT_EQ(response, "+\"set\" \"abc\" \"aaaa\"\r\n");
+
+  tunnel(leaderID)->exec("get", "abc");
+  response.clear();
+  RETRY_ASSERT_TRUE(reader.consume(14, response));
+  ASSERT_EQ(response, "+\"get\" \"abc\"\r\n");
 }

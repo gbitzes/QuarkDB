@@ -27,6 +27,7 @@
 #include "Commands.hh"
 #include <string>
 #include <vector>
+#include <sstream>
 
 namespace quarkdb {
 
@@ -115,6 +116,15 @@ public:
   }
 
   void parseCommand();
+
+  std::string toString() const {
+    std::stringstream ss;
+    for(auto it = begin(); it != end(); it++) {
+      if(it != begin()) ss << " ";
+      ss << "\"" << *it << "\"";
+    }
+    return ss.str();
+  }
 
 private:
   std::vector<std::string> contents;

@@ -130,7 +130,7 @@ void XrdQuarkDB::Reset() {
 }
 
 void XrdQuarkDB::Recycle(XrdLink *lp,int consec,const char *reason) {
-
+  Reset();
 }
 
 int XrdQuarkDB::Stats(char *buff, int blen, int do_sync) {

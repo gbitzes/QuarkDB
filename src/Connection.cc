@@ -38,8 +38,16 @@ LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
   return 1;
 }
 
-LinkStatus PendingQueue::appendResponse(RedisEncodedResponse &&raw) {
+bool PendingQueue::appendIfAttached(RedisEncodedResponse &&raw) {
   std::lock_guard<std::mutex> lock(mtx);
+
+  if(!conn) return false;
+  Connection::FlushGuard guard(conn);
+  appendResponseNoLock(std::move(raw));
+  return true;
+}
+
+LinkStatus PendingQueue::appendResponseNoLock(RedisEncodedResponse &&raw) {
   if(!conn) qdb_throw("attempted to append a raw response to a pendingQueue while being detached from a Connection. Contents: '" << raw.val << "'");
 
   if(pending.empty()) return conn->writer.send(std::move(raw.val));
@@ -49,6 +57,11 @@ LinkStatus PendingQueue::appendResponse(RedisEncodedResponse &&raw) {
   req.rawResp = std::move(raw);
   pending.push(std::move(req));
   return 1;
+}
+
+LinkStatus PendingQueue::appendResponse(RedisEncodedResponse &&raw) {
+  std::lock_guard<std::mutex> lock(mtx);
+  return appendResponseNoLock(std::move(raw));
 }
 
 LinkStatus PendingQueue::addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index) {
@@ -182,14 +195,25 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
 
   WriteBatch writeBatch;
   while(inFlightTracker.isAcceptingRequests()) {
+    if(monitor) {
+      // This connection is in "MONITOR" mode, we don't accept any more commands.
+      // Do nothing for all received data.
+
+      LinkStatus status = parser.purge();
+      if(status == 0) return 1; // slow link
+      if(status < 0) return status; // link error
+      qdb_throw("should never reach here");
+    }
+
     LinkStatus status = parser.fetch(currentRequest);
+
+    if(status < 0) return status; // link error
 
     if(status == 0) {
       // slow link - process the write batch, if needed
       processWriteBatch(dispatcher, writeBatch);
       return 1; // slow link
     }
-    if(status < 0) return status; // error
 
     if(currentRequest.getCommandType() == CommandType::WRITE) {
       writeBatch.requests.emplace_back(std::move(currentRequest));

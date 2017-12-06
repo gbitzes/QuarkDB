@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: CommandMonitor.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,54 +21,43 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_SHARD_H__
-#define __QUARKDB_SHARD_H__
+#include "CommandMonitor.hh"
+#include "../Formatter.hh"
+using namespace quarkdb;
 
-#include "raft/RaftTimeouts.hh"
-#include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "redis/CommandMonitor.hh"
-#include "utils/InFlightTracker.hh"
-#include "utils/RequestCounter.hh"
-
-namespace quarkdb {
-
-class RaftGroup; class ShardDirectory;
-class Shard : public Dispatcher {
-public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
-  ~Shard();
-
-  RaftGroup* getRaftGroup();
-  void spinup();
-  void spindown();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
-  size_t monitors() { return commandMonitor.size(); }
-
-private:
-  void detach();
-  void attach();
-  void start();
-  void stopAcceptingRequests();
-
-  CommandMonitor commandMonitor;
-  ShardDirectory *shardDirectory;
-
-  RaftGroup *raftGroup = nullptr;
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-
-  InFlightTracker inFlightTracker;
-  RequestCounter requestCounter;
-
-  std::mutex raftGroupMtx;
-};
+CommandMonitor::CommandMonitor() {
 
 }
 
-#endif
+void CommandMonitor::broadcast(const RedisRequest &received) {
+  if(!active) return;
+
+  std::lock_guard<std::mutex> lock(mtx);
+  auto it = monitors.begin();
+
+  while(it != monitors.end()) {
+    bool stillAlive = (*it)->appendIfAttached(Formatter::status(received.toString()));
+
+    if(!stillAlive) {
+      it = monitors.erase(it);
+    }
+    else {
+      it++;
+    }
+  }
+
+  if(monitors.size() == 0) active = false;
+}
+
+void CommandMonitor::addRegistration(Connection *c) {
+  std::lock_guard<std::mutex> lock(mtx);
+
+  monitors.push_back(c->getQueue());
+  c->setMonitor();
+  active = true;
+}
+
+size_t CommandMonitor::size() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return monitors.size();
+}
