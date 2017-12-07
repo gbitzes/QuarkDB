@@ -97,3 +97,20 @@ TEST(BulkLoad, BasicSanity) {
     ASSERT_EQ(len, 3u);
   }
 }
+
+TEST(BulkLoad, PanicWhenOpeningUnfinalizedStateMachine) {
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-bulkload-test"), 0);
+
+  {
+  StateMachine stateMachine("/tmp/quarkdb-bulkload-test", false, true);
+
+  for(size_t i = 0; i < 100; i++) {
+    bool created;
+    ASSERT_OK(stateMachine.hset("some-key", SSTR("field-" << i), "value", created));
+    ASSERT_TRUE(created);
+  }
+
+  }
+
+  ASSERT_THROW(StateMachine("/tmp/quarkdb-bulkload-test"), FatalException);
+}

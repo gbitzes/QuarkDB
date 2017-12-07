@@ -205,6 +205,7 @@ private:
 
   void retrieveLastApplied();
   void ensureCompatibleFormat(bool justCreated);
+  void ensureBulkloadSanity(bool justCreated);
   void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea);
 
   std::atomic<LogIndex> lastApplied;

@@ -107,6 +107,7 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
 
   db = transactionDB->GetBaseDB();
   ensureCompatibleFormat(!dirExists);
+  ensureBulkloadSanity(!dirExists);
   retrieveLastApplied();
 
   consistencyScanner.reset(new ConsistencyScanner(*this));
@@ -130,7 +131,29 @@ void StateMachine::reset() {
   }
 
   ensureCompatibleFormat(true);
+  ensureBulkloadSanity(true);
   retrieveLastApplied();
+}
+
+void StateMachine::ensureBulkloadSanity(bool justCreated) {
+  std::string inBulkload;
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), KeyConstants::kStateMachine_InBulkload, &inBulkload);
+
+  if(justCreated) {
+    if(!st.IsNotFound()) qdb_throw("Error when reading __in-bulkload, which should not exist: " << st.ToString());
+    THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_InBulkload, boolToString(bulkLoad)));
+  }
+  else {
+    if(st.IsNotFound()) {
+      // Compatibility: When opening old state machines, set expected __in-bulkload key.
+      // TODO: Remove once PPS machines have been updated..
+      THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_InBulkload, boolToString(false)));
+      st = db->Get(rocksdb::ReadOptions(), KeyConstants::kStateMachine_InBulkload, &inBulkload);
+    }
+
+    if(!st.ok()) qdb_throw("Error when reading __in-bulkload: " << st.ToString());
+    if(inBulkload != boolToString(false)) qdb_throw("Bulkload mode was NOT finalized! DB is corrupted - you either did not call finalizeBulkload, or you copied live SST files without shutting down the bulkload QDB process first." << st.ToString());
+  }
 }
 
 void StateMachine::ensureCompatibleFormat(bool justCreated) {
@@ -907,6 +930,7 @@ void StateMachine::finalizeBulkload() {
   THROW_ON_ERROR(db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr));
   qdb_event("Manual compaction was successful. Building key descriptors...");
   KeyDescriptorBuilder builder(*this);
+  THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_InBulkload, boolToString(false)));
   qdb_event("All done, bulkload is over. Restart quarkdb in standalone mode.");
 }
 
