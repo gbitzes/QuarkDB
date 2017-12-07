@@ -94,6 +94,19 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(ret);
     }
+    case RedisCommand::HINCRBYMULTI: {
+      if(request.size() < 4 || ( ((request.size()-1) % 3)) != 0) return Formatter::errArgs(request[0]);
+      size_t index = 1;
+      int64_t ret = 0;
+      while(index < request.size()) {
+        int64_t tmpret = 0;
+        store.hincrby(stagingArea, request[index], request[index+1], request[index+2], tmpret);
+        ret += tmpret;
+
+        index += 3;
+      }
+      return Formatter::integer(ret);
+    }
     case RedisCommand::HINCRBYFLOAT: {
       if(request.size() != 4) return Formatter::errArgs(request[0]);
       double ret = 0;

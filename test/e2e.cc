@@ -707,3 +707,21 @@ TEST_F(Raft_e2e, monitor) {
   RETRY_ASSERT_TRUE(reader.consume(14, response));
   ASSERT_EQ(response, "+\"get\" \"abc\"\r\n");
 }
+
+TEST_F(Raft_e2e, hincrbymulti) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hincrbymulti", "h1", "h2", "3", "h2", "h3", "4"), 7);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h1", "h2"), "3");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h2", "h3"), "4");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hincrbymulti", "h1", "h2", "-5", "h2", "h3", "20", "h4", "h8"), "ERR wrong number of arguments for 'hincrbymulti' command");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hincrbymulti", "h1", "h2", "-5", "h2", "h3", "20", "h4", "h8", "13"), 35);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h1", "h2"), "-2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h2", "h3"), "24");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h4", "h8"), "13");
+}

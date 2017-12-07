@@ -51,6 +51,7 @@ enum class RedisCommand {
   HKEYS,
   HGETALL,
   HINCRBY,
+  HINCRBYMULTI,
   HDEL,
   HLEN,
   HVALS,
