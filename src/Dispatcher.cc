@@ -196,6 +196,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
       return Formatter::ok();
     }
 
+    qdb_assert(commit == 0);
     return Formatter::err(SSTR("unknown command " << quotes(request[0])));
   }
 
