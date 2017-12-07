@@ -34,6 +34,7 @@ RedisEncodedResponse Formatter::err(const std::string &err) {
 }
 
 RedisEncodedResponse Formatter::errArgs(const std::string &cmd) {
+  qdb_warn("Received malformed " << quotes(cmd) << " command - wrong number of arguments");
   return RedisEncodedResponse(SSTR("-ERR wrong number of arguments for '" << cmd << "' command\r\n"));
 }
 

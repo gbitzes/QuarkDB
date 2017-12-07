@@ -133,6 +133,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       return conn->ok();
     }
     case RedisCommand::INVALID: {
+      qdb_warn("Received unrecognized command: " << quotes(req[0]));
       return conn->err(SSTR("unknown command " << quotes(req[0])));
     }
     case RedisCommand::QUARKDB_START_RESILVERING: {
