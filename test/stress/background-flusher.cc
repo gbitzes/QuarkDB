@@ -46,7 +46,10 @@ TEST_F(Background_Flusher, basic_sanity) {
   qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true);
 
   qclient::Notifier dummyNotifier;
-  qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100);
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
+  qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100,
+    new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
+  );
 
   const int nentries = 10000;
   for(size_t i = 0; i <= nentries; i++) {
@@ -85,7 +88,10 @@ TEST_F(Background_Flusher, with_transition) {
   qclient::QClient qcl(members, true);
 
   qclient::Notifier dummyNotifier;
-  qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100);
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
+  qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100,
+    new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
+  );
 
   const int nentries = 10000;
   for(size_t i = 0; i <= nentries/2; i++) {
