@@ -266,19 +266,19 @@ public:
   template<typename... Args>
   bool checkStateConsensus(const Args... args) {
     std::vector<int> arguments = { args... };
-    std::vector<RaftStateSnapshot> snapshots;
+    std::vector<RaftStateSnapshotPtr> snapshots;
 
     for(size_t i = 0; i < arguments.size(); i++) {
       snapshots.emplace_back(state(arguments[i])->getSnapshot());
     }
 
     for(size_t i = 1; i < snapshots.size(); i++) {
-      if(snapshots[i].leader.empty() || snapshots[i-1].leader.empty()) return false;
-      if(snapshots[i].term != snapshots[i-1].term) return false;
-      if(snapshots[i].leader != snapshots[i-1].leader) return false;
+      if(snapshots[i]->leader.empty() || snapshots[i-1]->leader.empty()) return false;
+      if(snapshots[i]->term != snapshots[i-1]->term) return false;
+      if(snapshots[i]->leader != snapshots[i-1]->leader) return false;
     }
 
-    qdb_info("Achieved state consensus for term " << snapshots[0].term << " with leader " << snapshots[0].leader.toString());
+    qdb_info("Achieved state consensus for term " << snapshots[0]->term << " with leader " << snapshots[0]->leader.toString());
     return true;
   }
 

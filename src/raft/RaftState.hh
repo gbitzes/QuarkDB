@@ -48,11 +48,17 @@ struct RaftStateSnapshot {
     const RaftServer &vote, LogIndex marker) : term(trm), status(st), leader(ld),
     votedFor(vote), leadershipMarker(marker) {}
 
-  bool operator==(const RaftStateSnapshot& rhs) const {
+  bool equals(const RaftStateSnapshot &rhs) const {
     return term == rhs.term && status == rhs.status && leader == rhs.leader &&
            votedFor == rhs.votedFor && leadershipMarker == rhs.leadershipMarker;
   }
+
+  bool equals(const std::shared_ptr<const RaftStateSnapshot> &rhs) const {
+    return equals(*rhs.get());
+  }
 };
+
+using RaftStateSnapshotPtr = std::shared_ptr<const RaftStateSnapshot>;
 
 //------------------------------------------------------------------------------
 // This class describes the current, authoritative state of raft, and must be
@@ -76,7 +82,7 @@ public:
   void wait_until(const std::chrono::steady_clock::time_point &t);
 
   RaftTerm getCurrentTerm();
-  RaftStateSnapshot getSnapshot();
+  RaftStateSnapshotPtr getSnapshot();
   RaftServer getMyself();
   std::vector<RaftServer> getNodes();
   RaftClusterID getClusterID();
@@ -95,6 +101,17 @@ private:
   LogIndex leadershipMarker;
   const RaftServer myself;
 
+  //------------------------------------------------------------------------------
+  // A shared pointer to the current state snapshot.
+  //
+  // Do not even _think_ of modifying the underlying object. :) The pointer
+  // has to be updated atomically with a new object - from a single point in
+  // time and onwards, getSnapshot() starts returning a pointer to the new
+  // object, but old snapshots remain unchanged and valid.
+  //------------------------------------------------------------------------------
+  std::shared_ptr<const RaftStateSnapshot> currentSnapshot;
+
+  void updateSnapshot();
   void updateJournal();
   void declareEvent(RaftTerm observedTerm, const RaftServer &observedLeader);
   void updateStatus(RaftStatus newstatus);

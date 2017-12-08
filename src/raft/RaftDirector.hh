@@ -44,8 +44,8 @@ public:
   DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
   void main();
-  void actAsFollower(RaftStateSnapshot &snapshot);
-  void actAsLeader(RaftStateSnapshot &snapshot);
+  void actAsFollower(RaftStateSnapshotPtr &snapshot);
+  void actAsLeader(RaftStateSnapshotPtr &snapshot);
   void runForLeader();
   void applyCommits();
 

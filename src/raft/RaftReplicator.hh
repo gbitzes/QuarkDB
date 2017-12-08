@@ -47,7 +47,7 @@ class RaftCommitTracker; class RaftMatchIndexTracker; class RaftLastContact;
 
 class RaftReplicaTracker {
 public:
-  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshot &snapshot, RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
+  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshotPtr &snapshot, RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicaTracker();
 
   ReplicaStatus getStatus();
@@ -78,7 +78,7 @@ private:
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftSerializedEntry> &entries, int64_t &payloadSize);
 
   RaftServer target;
-  RaftStateSnapshot snapshot;
+  RaftStateSnapshotPtr snapshot;
 
   void updateStatus(bool online, LogIndex nextIndex);
 
@@ -121,7 +121,7 @@ public:
   RaftReplicator(RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
   ~RaftReplicator();
 
-  void activate(RaftStateSnapshot &snapshot);
+  void activate(RaftStateSnapshotPtr &snapshot);
   void deactivate();
 
   ReplicationStatus getStatus();
@@ -129,7 +129,7 @@ public:
 private:
   void setTargets(const std::vector<RaftServer> &targets);
 
-  RaftStateSnapshot snapshot;
+  RaftStateSnapshotPtr snapshot;
   RaftJournal &journal;
   RaftState &state;
   RaftLease &lease;

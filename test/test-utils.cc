@@ -220,14 +220,14 @@ std::vector<RaftServer> TestCluster::retrieveLeaders() {
   std::vector<RaftServer> ret;
   for(size_t i = 0; i < initialNodes.size(); i++) {
     if(testnodes.count(i) > 0) {
-      ret.push_back(state(i)->getSnapshot().leader);
+      ret.push_back(state(i)->getSnapshot()->leader);
     }
   }
   return ret;
 }
 
 int TestCluster::getLeaderID() {
-  return getServerID(state(0)->getSnapshot().leader);
+  return getServerID(state(0)->getSnapshot()->leader);
 }
 
 TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)

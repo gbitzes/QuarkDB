@@ -118,7 +118,7 @@ TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes)
   // node #0 must win
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-  ASSERT_EQ(state(0)->getSnapshot().status, RaftStatus::LEADER);
+  ASSERT_EQ(state(0)->getSnapshot()->status, RaftStatus::LEADER);
 }
 
 TEST_F(Replication, connection_shuts_down_before_all_replies_arrive) {

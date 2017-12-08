@@ -62,7 +62,7 @@ TEST_F(Raft_State, T1) {
   ASSERT_EQ(myself, state.getMyself());
 
   RaftStateSnapshot snapshot = {1, RaftStatus::FOLLOWER, {}, {}, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   ASSERT_FALSE(state.observed(0, {"server1", 1234}));
   ASSERT_TRUE(state.observed(1, {"server1", 1234}));
@@ -84,23 +84,23 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(state.becomeCandidate(3));
 
   snapshot = {3, RaftStatus::CANDIDATE, {}, myself, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   // drop out from candidacy, make sure I can't try again in the same term
   ASSERT_TRUE(state.dropOut(3));
   snapshot = {3, RaftStatus::FOLLOWER, {}, myself, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
   ASSERT_FALSE(state.becomeCandidate(3));
 
   // observed new term, no longer a candidate
   ASSERT_TRUE(state.observed(4, {}));
   snapshot = {4, RaftStatus::FOLLOWER, {}, {}, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   ASSERT_TRUE(state.observed(4, nodes[0]));
   snapshot.leader = nodes[0];
   snapshot.votedFor = RaftState::BLOCKED_VOTE;
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   ASSERT_FALSE(state.becomeCandidate(4)); // already recognized a leader
   ASSERT_FALSE(state.becomeCandidate(3));
@@ -111,13 +111,13 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(state.ascend(5));
 
   snapshot = {5, RaftStatus::LEADER, myself, myself, 1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
   ASSERT_FALSE(state.dropOut(5));
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   ASSERT_TRUE(state.observed(6, nodes[0]));
   snapshot = {6, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   ASSERT_FALSE(state.inShutdown());
   state.shutdown();
@@ -130,7 +130,7 @@ TEST_F(Raft_State, T1) {
 
   RaftState state(journal, myself);
   RaftStateSnapshot snapshot = {6, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   // let's erase ourselves from the cluster..
   nodes.erase(nodes.begin()+1);
@@ -140,15 +140,15 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(journal.setCommitIndex(2));
 
   snapshot = {6, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   ASSERT_TRUE(state.observed(6, nodes[0]));
   snapshot = {6, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   ASSERT_TRUE(state.observed(7, {}));
   snapshot = {7, RaftStatus::FOLLOWER, {}, {}, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   // cannot become candidate, not part of the cluster
   ASSERT_FALSE(state.becomeCandidate(7));
@@ -170,7 +170,7 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(state.observed(7, nodes[0]));
 
   snapshot = {7, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
   // push two changes to the log
   // mark the first as applied, the other as committed
@@ -185,14 +185,14 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(journal.removeMember(7, nodes[2], err));
   nodes.erase(nodes.begin()+2);
   snapshot = {7, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 }
 {
   RaftJournal journal(dbpath);
 
   RaftState state(journal, myself);
   RaftStateSnapshot snapshot = {7, RaftStatus::FOLLOWER, {}, RaftState::BLOCKED_VOTE, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
   ASSERT_EQ(journal.getCurrentTerm(), 7);
   ASSERT_EQ(journal.getVotedFor(), RaftState::BLOCKED_VOTE);
 
@@ -214,7 +214,7 @@ TEST_F(Raft_State, T1) {
   ASSERT_TRUE(state.ascend(8));
 
   snapshot = {8, RaftStatus::LEADER, myself, myself, 10};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
 }
 {
@@ -222,7 +222,7 @@ TEST_F(Raft_State, T1) {
 
   RaftState state(journal, myself);
   RaftStateSnapshot snapshot = {8, RaftStatus::FOLLOWER, {}, myself, -1};
-  ASSERT_EQ(state.getSnapshot(), snapshot);
+  ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 }
 
 }

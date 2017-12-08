@@ -21,15 +21,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include <stdlib.h>
+#include <algorithm>
+
 #include "XrdVersion.hh"
 #include "XrdQuarkDB.hh"
 #include "XrdOuc/XrdOucEnv.hh"
 #include "raft/RaftDispatcher.hh"
 #include "utils/ScopedAdder.hh"
 #include "QuarkDBNode.hh"
-
-#include <stdlib.h>
-#include <algorithm>
 
 using namespace quarkdb;
 

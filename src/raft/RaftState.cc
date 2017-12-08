@@ -35,6 +35,7 @@ RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
   term = journal.getCurrentTerm();
   votedFor = journal.getVotedFor();
   leadershipMarker = -1;
+  updateSnapshot();
 }
 
 //------------------------------------------------------------------------------
@@ -56,9 +57,9 @@ RaftTerm RaftState::getCurrentTerm() {
 // The state could have changed in-between, leading to horrible bugs.
 //------------------------------------------------------------------------------
 
-RaftStateSnapshot RaftState::getSnapshot() {
+RaftStateSnapshotPtr RaftState::getSnapshot() {
   std::lock_guard<std::mutex> lock(update);
-  return {term, status, leader, votedFor, leadershipMarker};
+  return currentSnapshot;
 }
 
 RaftServer RaftState::getMyself() {
@@ -106,6 +107,7 @@ bool RaftState::dropOut(RaftTerm forTerm) {
   }
 
   updateStatus(RaftStatus::FOLLOWER);
+  updateSnapshot();
   return true;
 }
 
@@ -141,6 +143,7 @@ bool RaftState::becomeCandidate(RaftTerm forTerm) {
   votedFor = myself;
   this->updateJournal();
   updateStatus(RaftStatus::CANDIDATE);
+  updateSnapshot();
   return true;
 }
 
@@ -184,6 +187,7 @@ bool RaftState::ascend(RaftTerm forTerm) {
   leader = myself;
   leadershipMarker = localIndex;
   updateStatus(RaftStatus::LEADER);
+  updateSnapshot();
   qdb_event("Ascending as leader for term " << forTerm << ". Long may I reign.");
   return true;
 }
@@ -225,6 +229,7 @@ bool RaftState::grantVote(RaftTerm forTerm, const RaftServer &vote) {
   qdb_event("Granting vote for term " << forTerm << " to " << vote.toString());
   votedFor = vote;
   this->updateJournal();
+  updateSnapshot();
   return true;
 }
 
@@ -235,6 +240,7 @@ bool RaftState::inShutdown() {
 void RaftState::shutdown() {
   std::unique_lock<std::mutex> lock(update);
   updateStatus(RaftStatus::SHUTDOWN);
+  updateSnapshot();
   notifier.notify_all();
 }
 
@@ -293,7 +299,8 @@ bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader
       votedFor = BLOCKED_VOTE;
     }
 
-    this->updateJournal();
+    updateJournal();
+    updateSnapshot();
     return true;
   }
   else if(observedTerm == term && leader.empty()) {
@@ -308,6 +315,7 @@ bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader
       this->updateJournal();
     }
 
+    updateSnapshot();
     return true;
   }
   else if(observedTerm == term && !leader.empty() && leader != observedLeader && !observedLeader.empty()) {
@@ -315,6 +323,13 @@ bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader
   }
 
   return false;
+}
+
+//------------------------------------------------------------------------------
+// Update state snapshot
+//------------------------------------------------------------------------------
+void RaftState::updateSnapshot() {
+  currentSnapshot = std::make_shared<RaftStateSnapshot>(term, status, leader, votedFor, leadershipMarker);
 }
 
 //------------------------------------------------------------------------------

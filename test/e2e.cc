@@ -70,7 +70,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
-  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
   ASSERT_GE(leaderID, 0);
   ASSERT_LE(leaderID, 2);
 
@@ -186,7 +186,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 TEST_F(Raft_e2e, hscan) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
 
   for(size_t i = 1; i < 10; i++) {
     ASSERT_REPLY(tunnel(leaderID)->exec("hset", "hash", SSTR("f" << i), SSTR("v" << i)), 1);
@@ -214,7 +214,7 @@ TEST_F(Raft_e2e, hscan) {
 TEST_F(Raft_e2e, scan) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
 
   for(size_t i = 1; i < 10; i++) {
     ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("f" << i), SSTR("v" << i)), "OK");
@@ -252,7 +252,7 @@ TEST_F(Raft_e2e, scan) {
 TEST_F(Raft_e2e, test_many_redis_commands) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
 
   std::vector<std::future<redisReplyPtr>> futures;
   futures.emplace_back(tunnel(leaderID)->exec("SADD", "myset", "a", "b", "c"));
@@ -476,7 +476,7 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
 
-  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
   int firstSlaveID = (leaderID+1)%2;
   ASSERT_GE(leaderID, 0);
   ASSERT_LE(leaderID, 1);
@@ -534,7 +534,7 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
 TEST_F(Raft_e2e, membership_updates) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "pi", "3.141516"), "OK");
 
   // throw a node out of the cluster
@@ -545,7 +545,7 @@ TEST_F(Raft_e2e, membership_updates) {
   RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == index + 1);
 
   // verify the cluster has not been disrupted
-  ASSERT_EQ(state(leaderID)->getSnapshot().leader, myself(leaderID));
+  ASSERT_EQ(state(leaderID)->getSnapshot()->leader, myself(leaderID));
 
   // add it back as an observer, verify consensus
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_ADD_OBSERVER", myself(victim).toString()), "OK");
@@ -554,19 +554,19 @@ TEST_F(Raft_e2e, membership_updates) {
   RETRY_ASSERT_TRUE(dispatcher(1)->info().commitIndex == index + 2);
   RETRY_ASSERT_TRUE(dispatcher(2)->info().commitIndex == index + 2);
 
-  ASSERT_EQ(state(victim)->getSnapshot().status, RaftStatus::FOLLOWER);
+  ASSERT_EQ(state(victim)->getSnapshot()->status, RaftStatus::FOLLOWER);
 
-  ASSERT_EQ(state(0)->getSnapshot().leader, state(1)->getSnapshot().leader);
-  ASSERT_EQ(state(1)->getSnapshot().leader, state(2)->getSnapshot().leader);
+  ASSERT_EQ(state(0)->getSnapshot()->leader, state(1)->getSnapshot()->leader);
+  ASSERT_EQ(state(1)->getSnapshot()->leader, state(2)->getSnapshot()->leader);
 
   ASSERT_EQ(journal(0)->getLogSize(), journal(1)->getLogSize());
   ASSERT_EQ(journal(1)->getLogSize(), journal(2)->getLogSize());
 
   // cannot be a leader, it's an observer
-  ASSERT_NE(state(0)->getSnapshot().leader, myself(victim));
+  ASSERT_NE(state(0)->getSnapshot()->leader, myself(victim));
 
   // add back as a full voting member
-  leaderID = getServerID(state(0)->getSnapshot().leader);
+  leaderID = getServerID(state(0)->getSnapshot()->leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(victim).toString()), "OK");
   RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == index + 3);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
@@ -608,7 +608,7 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2, 3));
 
   // throw node #4 out of the cluster
-  int leaderID = getServerID(state(0)->getSnapshot().leader);
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(4).toString()), "OK");
 
   // wait until membership update has been committed
@@ -620,10 +620,10 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   // .. and now spinup node #4 :> Ensure it doesn't disrupt the current leader
   spinup(4);
   std::this_thread::sleep_for(raftclock()->getTimeouts().getHigh()*2);
-  ASSERT_EQ(leaderID, getServerID(state(0)->getSnapshot().leader));
+  ASSERT_EQ(leaderID, getServerID(state(0)->getSnapshot()->leader));
 
   // verify the cluster has not been disrupted
-  ASSERT_EQ(state(leaderID)->getSnapshot().leader, myself(leaderID));
+  ASSERT_EQ(state(leaderID)->getSnapshot()->leader, myself(leaderID));
 
   // remove one more node
   int victim = (leaderID+1) % 5;
@@ -633,7 +633,7 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   std::this_thread::sleep_for(raftclock()->getTimeouts().getHigh()*2);
 
   // verify the cluster has not been disrupted
-  ASSERT_EQ(state(leaderID)->getSnapshot().leader, myself(leaderID));
+  ASSERT_EQ(state(leaderID)->getSnapshot()->leader, myself(leaderID));
 
   // issue a bunch of writes and reads
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "123", "abc"), "OK");
@@ -655,7 +655,7 @@ TEST_F(Raft_e2e, leader_steps_down_after_follower_loss) {
   spindown(followerID);
 
   RETRY_ASSERT_TRUE(term < state(leaderID)->getCurrentTerm());
-  ASSERT_TRUE(state(leaderID)->getSnapshot().leader.empty());
+  ASSERT_TRUE(state(leaderID)->getSnapshot()->leader.empty());
 }
 
 TEST_F(Raft_e2e, stale_reads) {

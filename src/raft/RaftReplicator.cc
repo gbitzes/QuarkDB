@@ -48,7 +48,7 @@ RaftReplicator::~RaftReplicator() {
   deactivate();
 }
 
-RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshot &snapshot_, RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
+RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshotPtr &snapshot_, RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
 : target(target_), snapshot(snapshot_), journal(journal_),
   state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t),
   matchIndex(commitTracker.getHandler(target)),
@@ -57,16 +57,16 @@ RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStat
     qdb_throw("attempted to run replication on myself");
   }
 
-  RaftStateSnapshot current = state.getSnapshot();
-  if(snapshot.term > current.term) {
+  RaftStateSnapshotPtr current = state.getSnapshot();
+  if(snapshot->term > current->term) {
     qdb_throw("bug, a state snapshot has a larger term than the current state");
   }
 
-  if(snapshot.term < current.term) {
+  if(snapshot->term < current->term) {
     return;
   }
 
-  if(current.status != RaftStatus::LEADER && current.status != RaftStatus::SHUTDOWN) {
+  if(current->status != RaftStatus::LEADER && current->status != RaftStatus::SHUTDOWN) {
     qdb_throw("bug, attempted to initiate replication for a term in which I'm not a leader");
   }
 
@@ -227,7 +227,7 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
       return;
     }
 
-    if(response.term != snapshot.term) {
+    if(response.term != snapshot->term) {
       streamingUpdates = false;
       return;
     }
@@ -263,7 +263,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
   const int64_t payloadLimit = 512;
   LogIndex nextIndex = firstNextIndex;
 
-  while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+  while(shutdown == 0 && snapshot->term == state.getCurrentTerm() && !state.inShutdown()) {
     if(!streamingUpdates) {
       // Something went wrong while streaming, return to parent to stabilize
       return nextIndex;
@@ -285,7 +285,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
     }
 
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
-    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
+    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot->term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
 
     std::unique_lock<std::mutex> lock(inFlightMtx);
     inFlight.emplace(
@@ -328,9 +328,9 @@ ReplicaStatus RaftReplicaTracker::getStatus() {
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
   RaftTalker talker(target, journal.getClusterID(), timeouts);
 
-  while(!assistant.terminationRequested() && shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+  while(!assistant.terminationRequested() && shutdown == 0 && snapshot->term == state.getCurrentTerm() && !state.inShutdown()) {
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
-    std::future<redisReplyPtr> fut = talker.heartbeat(snapshot.term, state.getMyself());
+    std::future<redisReplyPtr> fut = talker.heartbeat(snapshot->term, state.getMyself());
     RaftHeartbeatResponse resp;
 
     if(!retrieve_heartbeat_reply(fut, resp)) {
@@ -338,7 +338,7 @@ void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
     }
 
     state.observed(resp.term, {});
-    if(snapshot.term < resp.term || !resp.nodeRecognizedAsLeader) continue;
+    if(snapshot->term < resp.term || !resp.nodeRecognizedAsLeader) continue;
     lastContact.heartbeat(contact);
 
 nextRound:
@@ -358,7 +358,7 @@ void RaftReplicaTracker::main() {
 
   bool warnStreamingHiccup = false;
   bool needResilvering = false;
-  while(shutdown == 0 && snapshot.term == state.getCurrentTerm() && !state.inShutdown()) {
+  while(shutdown == 0 && snapshot->term == state.getCurrentTerm() && !state.inShutdown()) {
 
     if(warnStreamingHiccup) {
       qdb_warn("Hiccup during streaming replication of " << target.toString() << ", switching back to conservative replication.");
@@ -396,7 +396,7 @@ void RaftReplicaTracker::main() {
     }
 
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
-    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot.term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
+    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot->term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
     RaftAppendEntriesResponse resp;
 
     // Check: Is the target even online?
@@ -417,7 +417,7 @@ void RaftReplicaTracker::main() {
     }
 
     state.observed(resp.term, {});
-    if(snapshot.term < resp.term) continue;
+    if(snapshot->term < resp.term) continue;
     lastContact.heartbeat(contact);
 
     // Check: Does the target need resilvering?
@@ -456,7 +456,7 @@ void RaftReplicaTracker::main() {
 
     // All checks have passed
     if(nextIndex+payloadSize != resp.logSize) {
-      qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize << ", resp.term: " << resp.term << ", my term: " << snapshot.term << ", journal size: " << journal.getLogSize());
+      qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize << ", resp.term: " << resp.term << ", my term: " << snapshot->term << ", journal size: " << journal.getLogSize());
     }
 
     matchIndex.update(resp.logSize-1);
@@ -481,9 +481,9 @@ nextRound:
   running = false;
 }
 
-void RaftReplicator::activate(RaftStateSnapshot &snapshot_) {
+void RaftReplicator::activate(RaftStateSnapshotPtr &snapshot_) {
   std::lock_guard<std::recursive_mutex> lock(mtx);
-  qdb_event("Activating replicator for term " << snapshot_.term);
+  qdb_event("Activating replicator for term " << snapshot_->term);
 
   qdb_assert(targets.empty());
   snapshot = snapshot_;

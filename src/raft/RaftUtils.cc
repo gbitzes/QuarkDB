@@ -35,20 +35,20 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
   }
 
   votereq.candidate = state.getMyself();
-  RaftStateSnapshot snapshot = state.getSnapshot();
+  RaftStateSnapshotPtr snapshot = state.getSnapshot();
 
-  if(votereq.term != snapshot.term) {
-    qdb_warn("Aborting election, received stale term: " << votereq.term << " vs " << snapshot.term);
+  if(votereq.term != snapshot->term) {
+    qdb_warn("Aborting election, received stale term: " << votereq.term << " vs " << snapshot->term);
     return false;
   }
 
-  if(!snapshot.leader.empty()) {
-    qdb_warn("Aborting election, we already have a recognized leader already for term " << snapshot.term << " which is " << snapshot.leader.toString());
+  if(!snapshot->leader.empty()) {
+    qdb_warn("Aborting election, we already have a recognized leader already for term " << snapshot->term << " which is " << snapshot->leader.toString());
     return false;
   }
 
-  if(snapshot.status != RaftStatus::CANDIDATE) {
-    qdb_warn("Aborting election, I am not a candidate for " << snapshot.term << ", but in status " << statusToString(snapshot.status));
+  if(snapshot->status != RaftStatus::CANDIDATE) {
+    qdb_warn("Aborting election, I am not a candidate for " << snapshot->term << ", but in status " << statusToString(snapshot->status));
     return false;
   }
 

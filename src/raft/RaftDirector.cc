@@ -42,15 +42,15 @@ void RaftDirector::main() {
   raftClock.heartbeat();
   while(true) {
     raftClock.refreshRandomTimeout();
-    RaftStateSnapshot snapshot = state.getSnapshot();
+    RaftStateSnapshotPtr snapshot = state.getSnapshot();
 
-    if(snapshot.status == RaftStatus::SHUTDOWN) {
+    if(snapshot->status == RaftStatus::SHUTDOWN) {
       return;
     }
-    else if(snapshot.status == RaftStatus::FOLLOWER) {
+    else if(snapshot->status == RaftStatus::FOLLOWER) {
       actAsFollower(snapshot);
     }
-    else if(snapshot.status == RaftStatus::LEADER) {
+    else if(snapshot->status == RaftStatus::LEADER) {
       actAsLeader(snapshot);
       raftClock.heartbeat();
     }
@@ -60,17 +60,17 @@ void RaftDirector::main() {
   }
 }
 
-void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
-  if(snapshot.leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
+void RaftDirector::actAsLeader(RaftStateSnapshotPtr &snapshot) {
+  if(snapshot->leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
 
   replicator.activate(snapshot);
-  while(snapshot.term == state.getCurrentTerm() &&
-        state.getSnapshot().status == RaftStatus::LEADER) {
+  while(snapshot->term == state.getCurrentTerm() &&
+        state.getSnapshot()->status == RaftStatus::LEADER) {
 
     std::chrono::steady_clock::time_point deadline = lease.getDeadline();
     if(deadline < std::chrono::steady_clock::now()) {
       qdb_event("My leader lease has expired, I no longer control a quorum, stepping down.");
-      state.observed(snapshot.term+1, {});
+      state.observed(snapshot->term+1, {});
       writeTracker.flushQueues(Formatter::err("unavailable"));
       break;
     }
@@ -83,32 +83,32 @@ void RaftDirector::actAsLeader(RaftStateSnapshot &snapshot) {
 void RaftDirector::runForLeader() {
   // don't reuse the snapshot from the main loop,
   // it could have changed in-between
-  RaftStateSnapshot snapshot = state.getSnapshot();
+  RaftStateSnapshotPtr snapshot = state.getSnapshot();
 
   // advance the term by one, become a candidate.
-  if(!state.observed(snapshot.term+1, {})) return;
-  if(!state.becomeCandidate(snapshot.term+1)) return;
+  if(!state.observed(snapshot->term+1, {})) return;
+  if(!state.becomeCandidate(snapshot->term+1)) return;
 
   // prepare vote request
   RaftVoteRequest votereq;
-  votereq.term = snapshot.term+1;
+  votereq.term = snapshot->term+1;
   votereq.lastIndex = journal.getLogSize()-1;
   if(!journal.fetch(votereq.lastIndex, votereq.lastTerm).ok()) {
     qdb_critical("Unable to fetch journal entry " << votereq.lastIndex << " when running for leader");
-    state.dropOut(snapshot.term+1);
+    state.dropOut(snapshot->term+1);
     return;
   }
 
   if(!RaftElection::perform(votereq, state, lease, raftClock.getTimeouts())) {
-    state.dropOut(snapshot.term+1);
+    state.dropOut(snapshot->term+1);
   }
 }
 
-void RaftDirector::actAsFollower(RaftStateSnapshot &snapshot) {
+void RaftDirector::actAsFollower(RaftStateSnapshotPtr &snapshot) {
   milliseconds randomTimeout = raftClock.getRandomTimeout();
   while(true) {
-    RaftStateSnapshot now = state.getSnapshot();
-    if(snapshot.term != now.term || snapshot.status != now.status) return;
+    RaftStateSnapshotPtr now = state.getSnapshot();
+    if(snapshot->term != now->term || snapshot->status != now->status) return;
 
     state.wait(randomTimeout);
     if(raftClock.timeout()) {
