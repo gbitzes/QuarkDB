@@ -34,7 +34,7 @@ using namespace quarkdb;
 
 class OkResponseVerifier {
 public:
-  OkResponseVerifier(std::future<redisReplyPtr> &&fut, size_t timeout = 3) {
+  OkResponseVerifier(std::future<redisReplyPtr> &&fut, size_t timeout = 15) {
     std::future_status status = fut.wait_for(std::chrono::seconds(timeout));
     if(status != std::future_status::ready) {
       error = SSTR("Timeout after " << timeout << " seconds");
