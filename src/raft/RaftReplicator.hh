@@ -107,7 +107,7 @@ private:
   std::thread thread;
   AssistedThread heartbeatThread;
 
-  RaftResilverer *resilverer = nullptr;
+  std::unique_ptr<RaftResilverer> resilverer;
 };
 
 

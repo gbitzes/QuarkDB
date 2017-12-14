@@ -83,11 +83,6 @@ RaftReplicaTracker::~RaftReplicaTracker() {
   if(thread.joinable()) {
     thread.join();
   }
-
-  if(resilverer) {
-    delete resilverer;
-    resilverer = nullptr;
-  }
 }
 
 bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
@@ -163,15 +158,14 @@ void RaftReplicaTracker::triggerResilvering() {
 
   if(resilverer && resilverer->getStatus().state == ResilveringState::FAILED) {
     qdb_critical("Resilvering attempt for " << target.toString() << " failed: " << resilverer->getStatus().err);
-    delete resilverer;
-    resilverer = nullptr;
+    resilverer.reset();
 
     // Try again during the next round
     return;
   }
 
   // Start the resilverer
-  resilverer = new RaftResilverer(shardDirectory, target, journal.getClusterID(), timeouts, &trimmer);
+  resilverer.reset(new RaftResilverer(shardDirectory, target, journal.getClusterID(), timeouts, &trimmer));
 }
 
 void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
@@ -368,6 +362,7 @@ void RaftReplicaTracker::main() {
     // Target looks pretty stable, start continuous stream
     if(online && payloadLimit >= 8) {
       qdb_info("Target " << target.toString() << " appears stable, initiating streaming replication.");
+      resilverer.reset();
       nextIndex = streamUpdates(talker, nextIndex);
       inFlight = {}; // clear queue
       warnStreamingHiccup = true;
@@ -438,6 +433,7 @@ void RaftReplicaTracker::main() {
     }
 
     needResilvering = false;
+    resilverer.reset();
 
     // Check: Is my current view of the target's journal correct? (nextIndex)
     if(!resp.outcome) {
