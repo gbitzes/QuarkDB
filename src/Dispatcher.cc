@@ -346,12 +346,26 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
       return Formatter::integer(count);
     }
     case RedisCommand::SSCAN: {
-      if(request.size() != 3) return errArgs(request, commit);
-      if(request[2] != "0") return Formatter::err("invalid cursor");
-      std::vector<std::string> members;
-      rocksdb::Status st = store.smembers(request[1], members);
+      if(request.size() < 3) return errArgs(request, commit);
+
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      if(!args.error.empty()) {
+        return Formatter::err(args.error);
+      }
+
+      // No support for MATCH here, maybe add later
+      if(!args.match.empty()) {
+        return Formatter::err("syntax error");
+      }
+
+      std::string newcursor;
+      std::vector<std::string> vec;
+      rocksdb::Status st = store.sscan(request[1], args.cursor, args.count, newcursor, vec);
       if(!st.ok()) return Formatter::fromStatus(st);
-      return Formatter::scan("0", members);
+
+      if(newcursor == "") newcursor = "0";
+      else newcursor = "next:" + newcursor;
+      return Formatter::scan(newcursor, vec);
     }
     case RedisCommand::LLEN: {
       if(request.size() != 2) return errArgs(request, commit);

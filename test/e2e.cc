@@ -725,3 +725,30 @@ TEST_F(Raft_e2e, hincrbymulti) {
   ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h2", "h3"), "24");
   ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h4", "h8"), "13");
 }
+
+TEST_F(Raft_e2e, sscan) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  redisReplyPtr reply = tunnel(leaderID)->exec("sscan", "myset", "0", "asdf", "123").get();
+  ASSERT_ERR(reply, "ERR syntax error");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("sadd", "myset", "a", "b", "c", "d", "e", "f", "g"), 7);
+
+  reply = tunnel(leaderID)->exec("sscan", "myset", "0", "COUNT", "3").get();
+  ASSERT_REPLY(reply, std::make_pair("next:d", make_vec("a", "b", "c")));
+
+  reply = tunnel(leaderID)->exec("sscan", "myset", "next:d", "COUNT", "2").get();
+  ASSERT_REPLY(reply, std::make_pair("next:f", make_vec("d", "e")));
+
+  reply = tunnel(leaderID)->exec("sscan", "myset", "next:f", "COUNT", "2").get();
+  ASSERT_REPLY(reply, std::make_pair("0", make_vec("f", "g")));
+
+  reply = tunnel(leaderID)->exec("sscan", "myset", "next:zz").get();
+  ASSERT_REPLY(reply, std::make_pair("0", make_vec()));
+
+  reply = tunnel(leaderID)->exec("sscan", "not-existing", "next:zz").get();
+  ASSERT_REPLY(reply, std::make_pair("0", make_vec()));
+}

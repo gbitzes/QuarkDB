@@ -429,6 +429,32 @@ rocksdb::Status StateMachine::hscan(const std::string &key, const std::string &c
   return rocksdb::Status::OK();
 }
 
+rocksdb::Status StateMachine::sscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
+  Snapshot snapshot(db);
+  if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
+
+  FieldLocator locator(KeyType::kSet, key, cursor);
+  res.clear();
+
+  newCursor = "";
+  IteratorPtr iter(db->NewIterator(snapshot.opts()));
+  for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
+    std::string tmp = iter->key().ToString();
+
+    if(!StringUtils::startswith(tmp, locator.getPrefix())) break;
+
+    std::string fieldname = std::string(tmp.begin()+locator.getPrefixSize(), tmp.end());
+    if(res.size() >= count) {
+      newCursor = fieldname;
+      break;
+    }
+
+    res.push_back(fieldname);
+  }
+
+  return rocksdb::Status::OK();
+}
+
 rocksdb::Status StateMachine::hvals(const std::string &key, std::vector<std::string> &vals) {
   Snapshot snapshot(db);
   if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();

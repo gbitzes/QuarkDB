@@ -96,6 +96,7 @@ public:
   rocksdb::Status srem(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status smembers(const std::string &key, std::vector<std::string> &members);
   rocksdb::Status scard(const std::string &key, size_t &count);
+  rocksdb::Status sscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
   rocksdb::Status set(const std::string& key, const std::string& value, LogIndex index = 0);
   rocksdb::Status get(const std::string &key, std::string &value);
   rocksdb::Status del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
