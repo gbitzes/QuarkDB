@@ -35,6 +35,7 @@
 #include <gtest/gtest.h>
 #include "test-reply-macros.hh"
 #include "qclient/QScanner.hh"
+#include "qclient/QSet.hh"
 #include "qclient/ConnectionInitiator.hh"
 
 using namespace quarkdb;
@@ -751,4 +752,16 @@ TEST_F(Raft_e2e, sscan) {
 
   reply = tunnel(leaderID)->exec("sscan", "not-existing", "next:zz").get();
   ASSERT_REPLY(reply, std::make_pair("0", make_vec()));
+
+  QSet qset(*tunnel(leaderID), "myset");
+  auto pair = qset.sscan("0", 2);
+
+  ASSERT_EQ(pair.first, "next:c");
+  ASSERT_EQ(pair.second, make_vec("a", "b"));
+
+  QSet qset2(*tunnel(leaderID), "not-existing");
+  pair = qset2.sscan("0", 2);
+
+  ASSERT_EQ(pair.first, "0");
+  ASSERT_EQ(pair.second, make_vec());
 }
