@@ -698,10 +698,10 @@ TEST_F(Raft_e2e, monitor) {
   RETRY_ASSERT_TRUE(reader.consume(5, response));
   ASSERT_EQ(response, "+OK\r\n");
 
-  tunnel(leaderID)->exec("set", "abc", "aaaa");
+  tunnel(leaderID)->exec("set", "abc", "aaaa" "\xab" "bbb");
   response.clear();
-  RETRY_ASSERT_TRUE(reader.consume(21, response));
-  ASSERT_EQ(response, "+\"set\" \"abc\" \"aaaa\"\r\n");
+  RETRY_ASSERT_TRUE(reader.consume(28, response));
+  ASSERT_EQ(response, "+\"set\" \"abc\" \"aaaa\\xABbbb\"\r\n");
 
   tunnel(leaderID)->exec("get", "abc");
   response.clear();

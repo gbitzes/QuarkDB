@@ -36,7 +36,7 @@ void CommandMonitor::broadcast(const RedisRequest &received) {
   auto it = monitors.begin();
 
   while(it != monitors.end()) {
-    bool stillAlive = (*it)->appendIfAttached(Formatter::status(received.toString()));
+    bool stillAlive = (*it)->appendIfAttached(Formatter::status(received.toPrintableString()));
 
     if(!stillAlive) {
       it = monitors.erase(it);

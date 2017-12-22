@@ -227,6 +227,21 @@ TEST(StringUtils, isPrefix) {
   ASSERT_TRUE(StringUtils::isPrefix("1234adfas", target));
 }
 
+TEST(StringUtils, EscapeNonPrintable) {
+  ASSERT_TRUE(StringUtils::isPrintable("abc"));
+  ASSERT_FALSE(StringUtils::isPrintable("abc\r\n"));
+
+  ASSERT_EQ(StringUtils::escapeNonPrintable("abc" "\xab" "abc"), "abc" "\\xAB" "abc");
+  ASSERT_EQ(StringUtils::escapeNonPrintable("abc"), "abc");
+
+  std::string binstr = "abc123";
+  binstr.push_back('\0');
+  binstr.push_back(0xff);
+  binstr += "aaa";
+
+  ASSERT_EQ(StringUtils::escapeNonPrintable(binstr), "abc123\\x00\\xFFaaa");
+}
+
 TEST(ScanParsing, BasicSanity) {
   RedisRequest req { "0" };
   ScanCommandArguments args = parseScanCommand(req.begin(), req.end());

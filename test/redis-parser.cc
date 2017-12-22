@@ -86,7 +86,7 @@ TEST_F(Redis_Parser, T1) {
 TEST_F(Redis_Parser, T2) {
   std::string str("*2\r\n$3\r\nget\r\n$3\r\nabc\r\n");
   RedisRequest valid = {"get", "abc"};
-  ASSERT_EQ(valid.toString(), "\"get\" \"abc\"");
+  ASSERT_EQ(valid.toPrintableString(), "\"get\" \"abc\"");
   simulateMany(str, valid, 10);
 
   str = "*3\r\n$3\r\nset\r\n$4\r\nabcd\r\n$5\r\n12345\r\n";

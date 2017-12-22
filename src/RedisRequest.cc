@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "RedisRequest.hh"
+#include "utils/StringUtils.hh"
 using namespace quarkdb;
 
 void RedisRequest::parseCommand() {
@@ -39,4 +40,19 @@ void RedisRequest::parseCommand() {
 
   command = it->second.first;
   commandType = it->second.second;
+}
+
+std::string RedisRequest::toPrintableString() const {
+  std::stringstream ss;
+  for(auto it = begin(); it != end(); it++) {
+    if(it != begin()) ss << " ";
+
+    if(StringUtils::isPrintable(*it)) {
+      ss << "\"" << *it << "\"";
+    }
+    else {
+      ss << "\"" << StringUtils::escapeNonPrintable(*it) << "\"";
+    }
+  }
+  return ss.str();
 }

@@ -63,6 +63,34 @@ inline bool isPrefix(const std::string &prefix, const std::string &target) {
   return isPrefix(prefix, target.c_str(), target.size());
 }
 
+inline bool isPrintable(const std::string &str) {
+  for(size_t i = 0; i < str.size(); i++) {
+    if(!isprint(str[i])) {
+      return false;
+    }
+  }
+  return true;
+}
+
+inline std::string escapeNonPrintable(const std::string &str) {
+  std::stringstream ss;
+
+  for(size_t i = 0; i < str.size(); i++) {
+    if(isprint(str[i])) {
+      ss << str[i];
+    }
+    else if(str[i] == '\0') {
+      ss << "\\x00";
+    }
+    else {
+      char buff[16];
+      snprintf(buff, 16, "\\x%02X", (unsigned char) str[i]);
+      ss << buff;
+    }
+  }
+  return ss.str();
+}
+
 } }
 
 #endif

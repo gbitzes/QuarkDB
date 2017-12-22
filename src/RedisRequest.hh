@@ -116,16 +116,7 @@ public:
   }
 
   void parseCommand();
-
-  std::string toString() const {
-    std::stringstream ss;
-    for(auto it = begin(); it != end(); it++) {
-      if(it != begin()) ss << " ";
-      ss << "\"" << *it << "\"";
-    }
-    return ss.str();
-  }
-
+  std::string toPrintableString() const;
 private:
   std::vector<std::string> contents;
   RedisCommand command = RedisCommand::INVALID;
