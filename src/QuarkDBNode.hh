@@ -24,6 +24,8 @@
 #ifndef __QUARKDB_NODE_H__
 #define __QUARKDB_NODE_H__
 
+#include <chrono>
+
 #include "Dispatcher.hh"
 #include "Configuration.hh"
 #include "RedisParser.hh"
@@ -44,6 +46,7 @@ struct QuarkDBInfo {
   std::string version;
   std::string rocksdbVersion;
   size_t monitors;
+  int64_t uptime;
 
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
@@ -52,6 +55,7 @@ struct QuarkDBInfo {
     ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
     ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
     ret.emplace_back(SSTR("MONITORS " << monitors));
+    ret.emplace_back(SSTR("UPTIME " << uptime));
     return ret;
   }
 };
@@ -78,6 +82,7 @@ private:
 
   std::atomic<bool> shutdown {false};
   const RaftTimeouts timeouts;
+  std::chrono::steady_clock::time_point startTime;
 };
 
 }
