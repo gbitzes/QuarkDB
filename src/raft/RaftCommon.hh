@@ -302,6 +302,7 @@ struct RaftInfo {
   LogIndex commitIndex;
   LogIndex lastApplied;
   size_t blockedWrites;
+  int64_t lastStateChange;
   ReplicationStatus replicationStatus;
 
   std::vector<std::string> toVector() {
@@ -314,6 +315,7 @@ struct RaftInfo {
     ret.push_back(SSTR("COMMIT-INDEX " << commitIndex));
     ret.push_back(SSTR("LAST-APPLIED " << lastApplied));
     ret.push_back(SSTR("BLOCKED-WRITES " << blockedWrites));
+    ret.push_back(SSTR("LAST-STATE-CHANGE " << lastStateChange));
 
     ret.push_back("----------");
     ret.push_back(SSTR("MYSELF " << myself.toString()));

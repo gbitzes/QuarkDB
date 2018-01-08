@@ -43,13 +43,20 @@ struct RaftStateSnapshot {
   RaftServer leader;
   RaftServer votedFor;
   LogIndex leadershipMarker;
+  std::chrono::steady_clock::time_point timeCreated;
 
-  RaftStateSnapshot() : term(-1), status(RaftStatus::FOLLOWER), leadershipMarker(-1) {}
+  RaftStateSnapshot() : term(-1), status(RaftStatus::FOLLOWER), leadershipMarker(-1) {
+    timeCreated = std::chrono::steady_clock::now();
+  }
+
   RaftStateSnapshot(RaftTerm trm, RaftStatus st, const RaftServer &ld,
     const RaftServer &vote, LogIndex marker) : term(trm), status(st), leader(ld),
-    votedFor(vote), leadershipMarker(marker) {}
+    votedFor(vote), leadershipMarker(marker) {
+    timeCreated = std::chrono::steady_clock::now();
+  }
 
   bool equals(const RaftStateSnapshot &rhs) const {
+    // We don't check timeCreated, this is on purpose.
     return term == rhs.term && status == rhs.status && leader == rhs.leader &&
            votedFor == rhs.votedFor && leadershipMarker == rhs.leadershipMarker;
   }

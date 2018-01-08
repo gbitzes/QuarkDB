@@ -536,7 +536,10 @@ RaftInfo RaftDispatcher::info() {
   ReplicationStatus replicationStatus = replicator.getStatus();
 
   return {journal.getClusterID(), state.getMyself(), snapshot->leader, membership.epoch, membership.nodes, membership.observers, snapshot->term, journal.getLogStart(),
-          journal.getLogSize(), snapshot->status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size(), replicationStatus };
+          journal.getLogSize(), snapshot->status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size(),
+          std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - snapshot->timeCreated).count(),
+          replicationStatus
+        };
 }
 
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {
