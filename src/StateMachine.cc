@@ -86,6 +86,18 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
   options.level0_slowdown_writes_trigger = 50;
   options.level0_stop_writes_trigger = 75;
 
+  // rocksdb replays the MANIFEST file upon startup to detect possible DB
+  // corruption. This file grows by the number of SST files updated per run,
+  // and is reset after each run.
+  // If the DB runs for too long, accumulating too many updates, the next
+  // restart will potentially take several minutes.
+  // This option limits the max size of MANIFEST to 2MB, taking care to
+  // automatically roll-over when necessary, which should alleviate the above.
+
+  if(!bulkLoad) {
+    options.max_manifest_file_size = 2 * 1024 * 1024;
+  }
+
   options.create_if_missing = !dirExists;
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
 
