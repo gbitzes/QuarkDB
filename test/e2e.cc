@@ -759,6 +759,10 @@ TEST_F(Raft_e2e, sscan) {
   ASSERT_EQ(pair.first, "next:c");
   ASSERT_EQ(pair.second, make_vec("a", "b"));
 
+  pair = qset.sscan(pair.first, 2);
+  ASSERT_EQ(pair.first, "next:e");
+  ASSERT_EQ(pair.second, make_vec("c", "d"));
+
   QSet qset2(*tunnel(leaderID), "not-existing");
   pair = qset2.sscan("0", 2);
 
