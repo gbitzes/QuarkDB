@@ -117,7 +117,7 @@ struct caseInsensitiveComparator {
     bool operator() (const std::string& lhs, const std::string& rhs) const {
         for(size_t i = 0; i < std::min(lhs.size(), rhs.size()); i++) {
           if(tolower(lhs[i]) != tolower(rhs[i])) {
-            return tolower(lhs[i] < tolower(rhs[i]));
+            return tolower(lhs[i]) < tolower(rhs[i]);
           }
         }
         return lhs.size() < rhs.size();
