@@ -10,6 +10,21 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(GNUInstallDirs)
 
 #-------------------------------------------------------------------------------
+# Activate include-what-you-use
+#-------------------------------------------------------------------------------
+option(ENABLE_IWYU "Enable include-what-you-use tool" OFF)
+
+if(ENABLE_IWYU)
+  find_program(IWYU_PATH NAMES include-what-you-use iwyu)
+  if(NOT IWYU_PATH)
+    message(FATAL_ERROR "Could not find include-what-you-use")
+  endif()
+
+  set(CMAKE_CXX_INCLUDE_WHAT_YOU_USE ${IWYU_PATH})
+  set(CMAKE_C_INCLUDE_WHAT_YOU_USE ${IWYU_PATH})
+endif()
+
+#-------------------------------------------------------------------------------
 # Regenerate Version.hh
 #-------------------------------------------------------------------------------
 
