@@ -75,6 +75,7 @@ add_library(XrdQuarkDB SHARED
                                    utils/ScopedAdder.hh
                                    utils/StaticBuffer.hh
                                    utils/StringUtils.hh
+  utils/TimeFormatting.cc          utils/TimeFormatting.hh
                                    utils/Uuid.hh
                                    utils/VectorUtils.hh
 

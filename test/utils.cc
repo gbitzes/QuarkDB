@@ -30,6 +30,7 @@
 #include "utils/Resilvering.hh"
 #include "utils/SmartBuffer.hh"
 #include "utils/CommandParsing.hh"
+#include "utils/TimeFormatting.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -300,4 +301,26 @@ TEST(ScanParsing, EmptySubcommand) {
   RedisRequest req { "next:someItem", "COUNT", "1337", "MATCH", "asdf", "MATCH", "1234", "MATCH" };
   ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
   ASSERT_EQ(args.error, "syntax error");
+}
+
+TEST(TimeFormatting, BasicSanity) {
+  using namespace std::chrono;
+
+  auto dur = Years(1) + Months(5) + Days(3) + hours(23) + minutes(45) + seconds(7);
+  ASSERT_EQ(formatTime(dur), "1 years, 5 months, 3 days, 23 hours, 45 minutes, 7 seconds");
+
+  dur = Years(2) + Days(6) + hours(20) + minutes(59) + seconds(32);
+  ASSERT_EQ(formatTime(dur), "2 years, 6 days, 20 hours, 59 minutes, 32 seconds");
+
+  dur = seconds(61);
+  ASSERT_EQ(formatTime(dur), "1 minutes, 1 seconds");
+
+  dur = seconds(60);
+  ASSERT_EQ(formatTime(dur), "1 minutes, 0 seconds");
+
+  dur = Years(2) + Days(6) + hours(25) + minutes(59) + seconds(32);
+  ASSERT_EQ(formatTime(dur), "2 years, 7 days, 1 hours, 59 minutes, 32 seconds");
+
+  dur = seconds(11299);
+  ASSERT_EQ(formatTime(dur), "3 hours, 8 minutes, 19 seconds");
 }

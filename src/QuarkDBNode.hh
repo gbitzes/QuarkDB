@@ -31,6 +31,7 @@
 #include "RedisParser.hh"
 #include "StateMachine.hh"
 #include "Dispatcher.hh"
+#include "utils/TimeFormatting.hh"
 #include "ShardDirectory.hh"
 #include "raft/RaftJournal.hh"
 #include "raft/RaftState.hh"
@@ -55,7 +56,7 @@ struct QuarkDBInfo {
     ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
     ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
     ret.emplace_back(SSTR("MONITORS " << monitors));
-    ret.emplace_back(SSTR("UPTIME " << uptime));
+    ret.emplace_back(SSTR("UPTIME " << uptime << " (" << formatTime(std::chrono::seconds(uptime)) << ")"));
     return ret;
   }
 };
