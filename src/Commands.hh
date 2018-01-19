@@ -113,11 +113,26 @@ enum class CommandType {
   QUARKDB
 };
 
-struct caseInsensitiveComparator {
+#define QDB_ALWAYS_INLINE __attribute__((always_inline))
+
+struct CommandComparator {
+
+    QDB_ALWAYS_INLINE
+    char normalize(char c) const {
+      char ret = tolower(c);
+      if(ret == '-') {
+        ret = '_';
+      }
+      return ret;
+    }
+
     bool operator() (const std::string& lhs, const std::string& rhs) const {
         for(size_t i = 0; i < std::min(lhs.size(), rhs.size()); i++) {
-          if(tolower(lhs[i]) != tolower(rhs[i])) {
-            return tolower(lhs[i]) < tolower(rhs[i]);
+          char left = normalize(lhs[i]);
+          char right = normalize(rhs[i]);
+
+          if(left != right) {
+            return left < right;
           }
         }
         return lhs.size() < rhs.size();
@@ -126,7 +141,7 @@ struct caseInsensitiveComparator {
 
 extern std::map<std::string,
                 std::pair<RedisCommand, CommandType>,
-                caseInsensitiveComparator>
+                CommandComparator>
                 redis_cmd_map;
 }
 

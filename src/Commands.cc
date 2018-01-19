@@ -26,7 +26,7 @@ using namespace quarkdb;
 
 std::map<std::string,
          std::pair<RedisCommand, CommandType>,
-         caseInsensitiveComparator>
+         CommandComparator>
          quarkdb::redis_cmd_map;
 
 struct cmdMapInit {
@@ -85,7 +85,7 @@ struct cmdMapInit {
     redis_cmd_map["raft_heartbeat"] = {RedisCommand::RAFT_HEARTBEAT, CommandType::RAFT};
     redis_cmd_map["raft_invalid_command"] = {RedisCommand::RAFT_INVALID_COMMAND, CommandType::RAFT};
     redis_cmd_map["raft_fetch_last"] = {RedisCommand::RAFT_FETCH_LAST, CommandType::RAFT};
-    redis_cmd_map["activate-stale-reads"] = {RedisCommand::ACTIVATE_STALE_READS, CommandType::RAFT};
+    redis_cmd_map["activate_stale_reads"] = {RedisCommand::ACTIVATE_STALE_READS, CommandType::RAFT};
 
     redis_cmd_map["quarkdb_info"] = {RedisCommand::QUARKDB_INFO, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_detach"] = {RedisCommand::QUARKDB_DETACH, CommandType::QUARKDB};
@@ -96,7 +96,7 @@ struct cmdMapInit {
     redis_cmd_map["quarkdb_cancel_resilvering"] = {RedisCommand::QUARKDB_CANCEL_RESILVERING, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_bulkload_finalize"] = {RedisCommand::QUARKDB_BULKLOAD_FINALIZE, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_invalid_command"] = {RedisCommand::QUARKDB_INVALID_COMMAND, CommandType::QUARKDB};
-    redis_cmd_map["recovery-info"] = {RedisCommand::RECOVERY_INFO, CommandType::QUARKDB};
+    redis_cmd_map["recovery_info"] = {RedisCommand::RECOVERY_INFO, CommandType::QUARKDB};
 
   }
 } cmd_map_init;
