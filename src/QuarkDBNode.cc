@@ -42,7 +42,7 @@ QuarkDBNode::~QuarkDBNode() {
 QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t)
 : configuration(config), timeouts(t) {
 
-  startTime = std::chrono::steady_clock::now();
+  bootStart = std::chrono::steady_clock::now();
   shardDirectory = new ShardDirectory(configuration.getDatabase(), configuration);
 
   if(configuration.getMode() == Mode::raft) {
@@ -53,6 +53,8 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t)
   else {
     shard = new Shard(shardDirectory, {}, configuration.getMode(), timeouts);
   }
+
+  bootEnd = std::chrono::steady_clock::now();
 }
 
 LinkStatus QuarkDBNode::dispatch(Connection *conn, WriteBatch &batch) {
@@ -98,5 +100,5 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 QuarkDBInfo QuarkDBNode::info() {
-  return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH), shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - startTime).count() };
+  return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH), shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(bootEnd - bootStart).count(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - bootEnd).count() };
 }

@@ -47,6 +47,7 @@ struct QuarkDBInfo {
   std::string version;
   std::string rocksdbVersion;
   size_t monitors;
+  int64_t bootTime;
   int64_t uptime;
 
   std::vector<std::string> toVector() {
@@ -56,6 +57,7 @@ struct QuarkDBInfo {
     ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
     ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
     ret.emplace_back(SSTR("MONITORS " << monitors));
+    ret.emplace_back(SSTR("BOOT-TIME " << bootTime << " (" << formatTime(std::chrono::seconds(bootTime)) << ")"));
     ret.emplace_back(SSTR("UPTIME " << uptime << " (" << formatTime(std::chrono::seconds(uptime)) << ")"));
     return ret;
   }
@@ -83,7 +85,9 @@ private:
 
   std::atomic<bool> shutdown {false};
   const RaftTimeouts timeouts;
-  std::chrono::steady_clock::time_point startTime;
+
+  std::chrono::steady_clock::time_point bootStart;
+  std::chrono::steady_clock::time_point bootEnd;
 };
 
 }
