@@ -21,11 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "test-utils.hh"
 #include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-
+#include "test-utils.hh"
+#include "test-reply-macros.hh"
 
 using namespace quarkdb;
 using namespace qclient;
@@ -93,9 +93,11 @@ TEST(QClient, T2) {
       return {"RAFT_HANDSHAKE", "some-cluster-id"};
     }
 
-    bool validateResponse(const redisReplyPtr &reply) override {
-      return true;
+    Status validateResponse(const redisReplyPtr &reply) override {
+      return Status::VALID_COMPLETE;
     }
+
+    virtual void restart() override { }
   };
 
   // with handshake
@@ -117,4 +119,81 @@ TEST(QClient, T2) {
   assert_receive(s2, "*3\r\n$3\r\nset\r\n$3\r\nabc\r\n$3\r\n123\r\n");
   socket_send(s2, "+OK\r\n");
   close(s2);
+}
+
+TEST(QClient, T3) {
+  class PingHandshake : public qclient::Handshake {
+  public:
+    std::vector<std::string> provideHandshake() override {
+      if(count >= 10) {
+        qdb_throw("invalid count: " << count);
+      }
+
+      return {"PING", std::to_string(count) };
+    }
+
+    Status validateResponse(const redisReplyPtr &reply) override {
+      if(!reply) return Status::INVALID;
+
+      if(reply->type != REDIS_REPLY_STATUS) return Status::INVALID;
+      if(std::string(reply->str, reply->len) != SSTR(count)) {
+        return Status::INVALID;
+      }
+
+      qdb_info("Validated ping handshake response #" << count);
+
+      count++;
+      if(count == 10) {
+        return Status::VALID_COMPLETE;
+      }
+
+      return Status::VALID_INCOMPLETE;
+    }
+
+    virtual void restart() override {
+      count = 0;
+    }
+  private:
+    int count = 0;
+  };
+
+  // with handshake
+  qclient::RetryStrategy strategy = {true, std::chrono::seconds(60) };
+  QClient tunnel("localhost", 1234, false, strategy, qclient::TlsConfig(), std::unique_ptr<Handshake>(new PingHandshake()));
+
+
+  for(size_t attempts = 0; attempts < 2; attempts++) {
+    SocketListener listener(1234);
+    int s2 = listener.accept();
+    ASSERT_GT(s2, 0);
+
+    Link link(s2);
+    RedisParser parser(&link);
+
+
+    RedisRequest req1 { "set", "abc", "123" };
+    std::future<redisReplyPtr> fut1 = tunnel.execute(req1);
+
+    RedisRequest req2 { "set", "aaa", "bbb" };
+    std::future<redisReplyPtr> fut2 = tunnel.execute(req2);
+
+    RedisRequest incoming;
+    for(size_t i = 0; i < 10; i++) {
+      RETRY_ASSERT_TRUE(parser.fetch(incoming) == 1);
+      ASSERT_EQ(incoming, make_req("PING", std::to_string(i)));
+      link.Send(SSTR("+" << i << "\r\n"));
+    }
+
+    RETRY_ASSERT_TRUE(parser.fetch(incoming) == 1);
+    ASSERT_EQ(incoming, req1);
+    link.Send("+OK\r\n");
+    ASSERT_REPLY(fut1, "OK");
+
+    RETRY_ASSERT_TRUE(parser.fetch(incoming) == 1);
+    ASSERT_EQ(incoming, req2);
+    link.Send("+ZZZ\r\n");
+    ASSERT_REPLY(fut2, "ZZZ");
+
+    link.Close();
+  }
 }

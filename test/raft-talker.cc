@@ -54,6 +54,7 @@ TEST(RaftTalker, T1) {
 
   RedisRequest tmp = {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()};
   ASSERT_EQ(req, tmp);
+  link.Send("+OK\r\n");
 
   // send an append entries message over the talker
   std::vector<RaftSerializedEntry> entries;

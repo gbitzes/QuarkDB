@@ -28,28 +28,39 @@
 
 using namespace quarkdb;
 
-RaftHandshake::RaftHandshake(const RaftClusterID &clusterID_, const RaftTimeouts &timeouts_)
+class RaftHandshake : public qclient::Handshake {
+public:
+  virtual ~RaftHandshake() override {}
+
+  RaftHandshake(const RaftClusterID &clusterID_, const RaftTimeouts &timeouts_)
   : clusterID(clusterID_), timeouts(timeouts_) { }
 
-std::vector<std::string> RaftHandshake::provideHandshake() {
-  return {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()};
-}
-
-bool RaftHandshake::validateResponse(const redisReplyPtr &reply) {
-  if(!reply) {
-    return false;
+  virtual std::vector<std::string> provideHandshake() override {
+    return {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()};
   }
 
-  if(reply->type != REDIS_REPLY_STATUS) {
-    return false;
+  virtual Status validateResponse(const redisReplyPtr &reply) override {
+    if(!reply) {
+      return Status::INVALID;
+    }
+
+    if(reply->type != REDIS_REPLY_STATUS) {
+      return Status::INVALID;
+    }
+
+    if(std::string(reply->str, reply->len) != "OK") {
+      return Status::INVALID;
+    }
+
+    return Status::VALID_COMPLETE;
   }
 
-  if(std::string(reply->str, reply->len) != "OK") {
-    return false;
-  }
+  virtual void restart() override { }
+private:
+  RaftClusterID clusterID;
+  RaftTimeouts timeouts;
+};
 
-  return true;
-}
 
 RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID, const RaftTimeouts &timeouts)
 : server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, qclient::RetryStrategy(), tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(clusterID, timeouts)) ) {
