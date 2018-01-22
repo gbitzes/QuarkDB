@@ -31,6 +31,7 @@
 #include "utils/SmartBuffer.hh"
 #include "utils/CommandParsing.hh"
 #include "utils/TimeFormatting.hh"
+#include "utils/Random.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -243,6 +244,12 @@ TEST(StringUtils, EscapeNonPrintable) {
   ASSERT_EQ(StringUtils::escapeNonPrintable(binstr), "abc123\\x00\\xFFaaa");
 }
 
+TEST(StringUtils, Base16Encode) {
+  ASSERT_EQ(StringUtils::base16Encode("some-text"), "736f6d652d74657874");
+  ASSERT_EQ(StringUtils::base16Encode("asdgflhsdfkljh!#$@@$@^SDFA^_^===== ಠ_ಠ"), "61736467666c687364666b6c6a68212324404024405e534446415e5f5e3d3d3d3d3d20e0b2a05fe0b2a0");
+  ASSERT_EQ(StringUtils::base16Encode("@!!#$SDFGJSFXBV>?<adsf';l1093 (╯°□°）╯︵ ┻━┻) "), "4021212324534446474a53465842563e3f3c61647366273b6c313039332028e295afc2b0e296a1c2b0efbc89e295afefb8b520e294bbe29481e294bb2920");
+}
+
 TEST(ScanParsing, BasicSanity) {
   RedisRequest req { "0" };
   ScanCommandArguments args = parseScanCommand(req.begin(), req.end());
@@ -323,4 +330,17 @@ TEST(TimeFormatting, BasicSanity) {
 
   dur = seconds(11299);
   ASSERT_EQ(formatTime(dur), "3 hours, 8 minutes, 19 seconds");
+}
+
+TEST(Random, BasicSanity) {
+  std::string rnd = generateSecureRandomBytes(5);
+  ASSERT_EQ(rnd.size(), 5u);
+  qdb_info(StringUtils::base16Encode(rnd));
+
+  rnd = generateSecureRandomBytes(15);
+  ASSERT_EQ(rnd.size(), 15u);
+  qdb_info(StringUtils::base16Encode(rnd));
+
+  std::string rnd2 = generateSecureRandomBytes(15);
+  ASSERT_NE(rnd, rnd2);
 }

@@ -70,11 +70,12 @@ add_library(XrdQuarkDB SHARED
   utils/FileUtils.cc               utils/FileUtils.hh
                                    utils/IntToBinaryString.hh
                                    utils/ParseUtils.hh
+  utils/Random.cc                  utils/Random.hh
   utils/RequestCounter.cc          utils/RequestCounter.hh
   utils/Resilvering.cc             utils/Resilvering.hh
                                    utils/ScopedAdder.hh
                                    utils/StaticBuffer.hh
-                                   utils/StringUtils.hh
+  utils/StringUtils.cc             utils/StringUtils.hh
   utils/TimeFormatting.cc          utils/TimeFormatting.hh
                                    utils/Uuid.hh
                                    utils/VectorUtils.hh

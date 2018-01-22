@@ -91,6 +91,8 @@ inline std::string escapeNonPrintable(const std::string &str) {
   return ss.str();
 }
 
+std::string base16Encode(const std::string &source);
+
 } }
 
 #endif
