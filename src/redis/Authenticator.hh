@@ -39,14 +39,13 @@ public:
   };
 
   Authenticator(const std::string &secret);
-  std::string generateChallenge(const std::chrono::system_clock::time_point &timestamp, const std::string &randomBytes);
-  std::string generateChallenge();
+  std::string generateChallenge(const std::string &opponentRandomBytes, const std::chrono::system_clock::time_point &timestamp, const std::string &myRandomBytes);
+  std::string generateChallenge(const std::string &opponentRandomBytes);
   ValidationStatus validateSignature(const std::string &signature);
   void resetDeadline();
   ~Authenticator() {}
 
   static std::string generateSignature(const std::string &stringToSign, const std::string &key);
-
   ValidationStatus validateSignatureNoDeadline(const std::string &stringToSign);
 
 private:

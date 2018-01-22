@@ -355,10 +355,12 @@ TEST(Authenticator, BasicSanity) {
   Authenticator auth(secret);
 
   std::chrono::system_clock::time_point point(std::chrono::minutes(1333) + std::chrono::milliseconds(333));
-  std::string randomBytes("1234567890adjgffdkadhfklhfaldhj1");
+  std::string randomBytes("adsfadhfjaldfkjhaldfkjhadflajyqoowortuiwretweortuihlkjghslfgkjhm");
+  std::string randomBytes2("adfashflkhjlhjarwqeruityoiy4u5209578osdhklgfjhsfgkljshfgyuwrtoih");
 
-  std::string challenge = auth.generateChallenge(point, randomBytes);
-  ASSERT_EQ(challenge, "79980333---3132333435363738393061646a676666646b616468666b6c6866616c64686a31");
+  std::string challenge = auth.generateChallenge(randomBytes2, point, randomBytes);
+  ASSERT_EQ(challenge, "adfashflkhjlhjarwqeruityoiy4u5209578osdhklgfjhsfgkljshfgyuwrtoih---79980333---adsfadhfjaldfkjhaldfkjhadflajyqoowortuiwretweortuihlkjghslfgkjhm");
+  ASSERT_THROW(auth.generateChallenge(randomBytes, point, randomBytes), FatalException);
 
   ASSERT_EQ(
     StringUtils::base16Encode(Authenticator::generateSignature("super-secret-message", secret)),
@@ -371,23 +373,23 @@ TEST(Authenticator, BasicSanity) {
   );
 
   // Non-sense signature
-  challenge = auth.generateChallenge();
+  challenge = auth.generateChallenge(generateSecureRandomBytes(64));
   ASSERT_EQ(Authenticator::ValidationStatus::kInvalidSignature, auth.validateSignature("aaaaaa"));
   ASSERT_EQ(Authenticator::ValidationStatus::kDeadlinePassed, auth.validateSignature("aaaaaa"));
 
   // Simulate a timeout
-  challenge = auth.generateChallenge();
+  challenge = auth.generateChallenge(generateSecureRandomBytes(64));
   std::string sig1 = Authenticator::generateSignature(challenge, secret);
   auth.resetDeadline();
   ASSERT_EQ(Authenticator::ValidationStatus::kDeadlinePassed, auth.validateSignature(sig1));
 
   // Sign correctly
-  challenge = auth.generateChallenge();
+  challenge = auth.generateChallenge(generateSecureRandomBytes(64));
   std::string sig2 = Authenticator::generateSignature(challenge, secret);
   ASSERT_EQ(Authenticator::ValidationStatus::kOk, auth.validateSignature(sig2));
 
   // Sign using the wrong key
-  challenge = auth.generateChallenge();
+  challenge = auth.generateChallenge(generateSecureRandomBytes(64));
   std::string sig3 = Authenticator::generateSignature(challenge, "hunter2");
   ASSERT_EQ(Authenticator::ValidationStatus::kInvalidSignature, auth.validateSignature(sig3));
 

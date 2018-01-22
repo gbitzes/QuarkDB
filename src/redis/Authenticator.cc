@@ -38,7 +38,9 @@ Authenticator::Authenticator(const std::string &secret) : secretKey(secret) {
   }
 }
 
-std::string Authenticator::generateChallenge(const std::chrono::system_clock::time_point &timestamp, const std::string &randomBytes) {
+std::string Authenticator::generateChallenge(const std::string &opponentRandomBytes, const std::chrono::system_clock::time_point &timestamp, const std::string &myRandomBytes) {
+  qdb_assert(opponentRandomBytes != myRandomBytes);
+
   // Calculate the deadline - responses will not be accepted after this much time
   // has elapsed.
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
@@ -49,22 +51,23 @@ std::string Authenticator::generateChallenge(const std::chrono::system_clock::ti
     std::chrono::duration_cast<std::chrono::milliseconds>(timestamp.time_since_epoch()).count()
   );
 
-  // Append the random bytes after converting to base16
-  qdb_assert(randomBytes.size() == 32);
-
-  challengeString = SSTR(strTimePoint << "---" << StringUtils::base16Encode(randomBytes));
+  qdb_assert(opponentRandomBytes.size() == 64);
+  qdb_assert(myRandomBytes.size() == 64);
+  challengeString = SSTR(opponentRandomBytes << "---" << strTimePoint << "---" << myRandomBytes);
   return challengeString;
 }
 
-std::string Authenticator::generateChallenge() {
+std::string Authenticator::generateChallenge(const std::string &opponentRandomBytes) {
+  qdb_assert(opponentRandomBytes.size() == 64);
 
   // Calculate a timepoint based on system_clock to make the challenge more difficult.
   // We don't use steady_clock, as that leaks information (machine uptime) to
   // unauthorized users. (not really important, but let's be paranoid)
 
   return generateChallenge(
+    opponentRandomBytes,
     std::chrono::system_clock::now(),
-    generateSecureRandomBytes(32)
+    generateSecureRandomBytes(64)
   );
 }
 
