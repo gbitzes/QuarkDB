@@ -21,7 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "RedisRequest.hh"
 #include "raft/RaftCommon.hh"
+#include "Common.hh"
 #include "Formatter.hh"
 using namespace quarkdb;
 

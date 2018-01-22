@@ -25,8 +25,10 @@
 #define __QUARKDB_RAFT_COMMON_H__
 
 #include <string.h>
+#include "../RedisRequest.hh"
 #include "../utils/TimeFormatting.hh"
 #include "../Common.hh"
+#include "../utils/Macros.hh"
 #include "../Utils.hh"
 
 namespace quarkdb {

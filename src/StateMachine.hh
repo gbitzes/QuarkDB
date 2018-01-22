@@ -25,7 +25,7 @@
 #define __QUARKDB_ROCKSDB_H__
 
 #include "Common.hh"
-#include "Utils.hh"
+#include "utils/Macros.hh"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
 #include "storage/ConsistencyScanner.hh"

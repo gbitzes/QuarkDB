@@ -30,7 +30,7 @@
 #include <XrdOuc/XrdOucStream.hh>
 
 #include "Common.hh"
-#include "Utils.hh"
+#include "utils/Macros.hh"
 
 namespace quarkdb {
 

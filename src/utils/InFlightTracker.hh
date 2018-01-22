@@ -25,7 +25,7 @@
 #define __QUARKDB_IN_FLIGHT_TRACKER_H__
 
 #include <atomic>
-#include "../Utils.hh"
+#include "Macros.hh"
 
 namespace quarkdb {
 

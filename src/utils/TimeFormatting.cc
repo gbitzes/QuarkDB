@@ -22,7 +22,7 @@
  ************************************************************************/
 
 #include <sstream>
-#include "../Utils.hh"
+#include "Macros.hh"
 #include "TimeFormatting.hh"
 
 namespace quarkdb {

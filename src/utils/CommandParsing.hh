@@ -27,6 +27,7 @@
 #include <dirent.h>
 #include <string>
 #include "StringUtils.hh"
+#include "../RedisRequest.hh"
 
 namespace quarkdb {
 

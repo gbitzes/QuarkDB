@@ -28,6 +28,7 @@
 
 #include "XrdOuc/XrdOucEnv.hh"
 #include "Configuration.hh"
+#include "utils/Macros.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;

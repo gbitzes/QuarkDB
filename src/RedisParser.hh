@@ -26,7 +26,7 @@
 
 #include "BufferedReader.hh"
 #include "Common.hh"
-#include "Utils.hh"
+#include "RedisRequest.hh"
 
 namespace quarkdb {
 

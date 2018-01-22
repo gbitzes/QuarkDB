@@ -27,7 +27,6 @@
 #include <sstream>
 #include <thread>
 #include <atomic>
-#include "Utils.hh"
 #include "Dispatcher.hh"
 #include "EventFD.hh"
 #include <netinet/in.h>

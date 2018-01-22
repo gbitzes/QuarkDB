@@ -25,7 +25,6 @@
 #define __QUARKDB_REQUEST_COUNTER_H__
 
 #include <atomic>
-#include "../Utils.hh"
 #include "AssistedThread.hh"
 
 namespace quarkdb {
@@ -52,7 +51,6 @@ private:
 
   std::chrono::seconds interval;
   AssistedThread thread;
-
 };
 
 }

@@ -32,6 +32,7 @@
 #include <chrono>
 #include <mutex>
 
+#include "utils/Macros.hh"
 #include "Common.hh"
 
 namespace quarkdb {
@@ -43,39 +44,6 @@ namespace quarkdb {
 // as many error conditions are simulated there, and we'd make the output
 // unreadable.
 void setStacktraceOnError(bool val);
-
-// Returns a stacktrace if 'stacktrace-on-error' is enabled, empty otherwise.
-std::string errorStacktrace(bool crash);
-
-#define DISALLOW_COPY_AND_ASSIGN(TypeName) \
-  TypeName(const TypeName&) = delete;   \
-  void operator=(const TypeName&) = delete
-
-#define SSTR(message) static_cast<std::ostringstream&>(std::ostringstream().flush() << message).str()
-#define quotes(message) SSTR("'" << message << "'")
-
-extern std::mutex logMutex;
-#define TIME_NOW std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count()
-#define ___log(message) { std::lock_guard<std::mutex> logLock(quarkdb::logMutex); \
-  std::cerr << "[" << TIME_NOW << "] " << message << std::endl; }
-
-#define DBG(message) ___log(__FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message)
-#define q(message) SSTR("'" << message << "'")
-
-// temporary solution for now
-#define qdb_log(message) ___log(message)
-#define qdb_event(message) ___log("EVENT: " << message)
-#define qdb_critical(message) ___log("CRITICAL: " << message << quarkdb::errorStacktrace(false))
-#define qdb_misconfig(message) ___log("MISCONFIGURATION: " << message)
-
-#define qdb_warn(message) ___log("WARNING: " << message)
-#define qdb_error(message) ___log("ERROR: " << message)
-#define qdb_info(message) ___log("INFO: " << message)
-#define qdb_debug(message) if(false) { ___log(message); }
-
-// a serious error has occured signifying a bug in the program logic
-#define qdb_throw(message) throw FatalException(SSTR(message << quarkdb::errorStacktrace(true)))
-#define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition << quarkdb::errorStacktrace(true)))
 
 bool my_strtoll(const std::string &str, int64_t &ret);
 bool my_strtod(const std::string &str, double &ret);
