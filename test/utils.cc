@@ -32,6 +32,7 @@
 #include "utils/CommandParsing.hh"
 #include "utils/TimeFormatting.hh"
 #include "utils/Random.hh"
+#include "redis/Authenticator.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -343,4 +344,55 @@ TEST(Random, BasicSanity) {
 
   std::string rnd2 = generateSecureRandomBytes(15);
   ASSERT_NE(rnd, rnd2);
+}
+
+TEST(Authenticator, BasicSanity) {
+  // Test too small secret, verify we throw
+  ASSERT_THROW(Authenticator("hunter2"), FatalException);
+
+  // Initialize authenticator with a random pw
+  std::string secret = "3614e3639c0a98b1006a50ffe5744f054cf4499592fe8ef1b339601208e80066";
+  Authenticator auth(secret);
+
+  std::chrono::system_clock::time_point point(std::chrono::minutes(1333) + std::chrono::milliseconds(333));
+  std::string randomBytes("1234567890adjgffdkadhfklhfaldhj1");
+
+  std::string challenge = auth.generateChallenge(point, randomBytes);
+  ASSERT_EQ(challenge, "79980333---3132333435363738393061646a676666646b616468666b6c6866616c64686a31");
+
+  ASSERT_EQ(
+    StringUtils::base16Encode(Authenticator::generateSignature("super-secret-message", secret)),
+    "1ac4f9c4dd829b0abbe24b7f312480ae0c70c5e17a7104369824744de328a9a7"
+  );
+
+  ASSERT_EQ(
+    StringUtils::base16Encode(Authenticator::generateSignature("super-secret-message-2", secret)),
+    "d70f689ac1ff0035331724a22e72e6de01899c49982d80b1c3eae6640d9d1bc6"
+  );
+
+  // Non-sense signature
+  challenge = auth.generateChallenge();
+  ASSERT_EQ(Authenticator::ValidationStatus::kInvalidSignature, auth.validateSignature("aaaaaa"));
+  ASSERT_EQ(Authenticator::ValidationStatus::kDeadlinePassed, auth.validateSignature("aaaaaa"));
+
+  // Simulate a timeout
+  challenge = auth.generateChallenge();
+  std::string sig1 = Authenticator::generateSignature(challenge, secret);
+  auth.resetDeadline();
+  ASSERT_EQ(Authenticator::ValidationStatus::kDeadlinePassed, auth.validateSignature(sig1));
+
+  // Sign correctly
+  challenge = auth.generateChallenge();
+  std::string sig2 = Authenticator::generateSignature(challenge, secret);
+  ASSERT_EQ(Authenticator::ValidationStatus::kOk, auth.validateSignature(sig2));
+
+  // Sign using the wrong key
+  challenge = auth.generateChallenge();
+  std::string sig3 = Authenticator::generateSignature(challenge, "hunter2");
+  ASSERT_EQ(Authenticator::ValidationStatus::kInvalidSignature, auth.validateSignature(sig3));
+
+  // Something would be terribly wrong if any of the signatures were identical.
+  ASSERT_NE(sig1, sig2);
+  ASSERT_NE(sig2, sig3);
+  ASSERT_NE(sig1, sig3);
 }
