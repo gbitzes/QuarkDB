@@ -68,6 +68,8 @@ class QuarkDBNode;
   if(!ok) { ASSERT_TRUE(cond) << " - failure after " << nretries << " retries "; } \
 }
 
+#define RETRY_ASSERT_TRUE_SPIN(cond) RETRY_ASSERT_TRUE_3(cond, 100000, 0)
+
 #define NUMBER_OF_RETRIES ( (size_t) testconfig.raftTimeouts->getLow().count() * 10)
 
 // retry every 10ms

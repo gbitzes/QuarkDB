@@ -179,17 +179,17 @@ TEST(QClient, T3) {
 
     RedisRequest incoming;
     for(size_t i = 0; i < 10; i++) {
-      RETRY_ASSERT_TRUE(parser.fetch(incoming) == 1);
+      RETRY_ASSERT_TRUE_SPIN(parser.fetch(incoming) == 1);
       ASSERT_EQ(incoming, make_req("PING", std::to_string(i)));
       link.Send(SSTR("+" << i << "\r\n"));
     }
 
-    RETRY_ASSERT_TRUE(parser.fetch(incoming) == 1);
+    RETRY_ASSERT_TRUE_SPIN(parser.fetch(incoming) == 1);
     ASSERT_EQ(incoming, req1);
     link.Send("+OK\r\n");
     ASSERT_REPLY(fut1, "OK");
 
-    RETRY_ASSERT_TRUE(parser.fetch(incoming) == 1);
+    RETRY_ASSERT_TRUE_SPIN(parser.fetch(incoming) == 1);
     ASSERT_EQ(incoming, req2);
     link.Send("+ZZZ\r\n");
     ASSERT_REPLY(fut2, "ZZZ");
