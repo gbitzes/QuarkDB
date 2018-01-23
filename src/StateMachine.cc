@@ -30,6 +30,7 @@
 #include "storage/KeyDescriptorBuilder.hh"
 #include "storage/PatternMatching.hh"
 #include "utils/IntToBinaryString.hh"
+#include "utils/TimeFormatting.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
@@ -986,10 +987,14 @@ void StateMachine::commitBatch(rocksdb::WriteBatch &batch) {
 
 rocksdb::Status StateMachine::verifyChecksum() {
   qdb_info("Initiating a full checksum scan of the state machine.");
+
+  std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
   rocksdb::Status status = db->VerifyChecksum();
+  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+  std::chrono::seconds duration = std::chrono::duration_cast<std::chrono::seconds>(end - start);
 
   if(status.ok()) {
-    qdb_info("State machine checksum scan successful!");
+    qdb_info("State machine checksum scan successful! (took " << formatTime(duration) << ")");
   }
   else {
     qdb_critical("State machine corruption, checksum verification failed: " << status.ToString());
