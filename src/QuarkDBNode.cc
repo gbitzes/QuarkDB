@@ -25,33 +25,42 @@
 #include "QuarkDBNode.hh"
 #include "Version.hh"
 #include "Shard.hh"
+#include "ShardDirectory.hh"
 #include "utils/FileUtils.hh"
 #include "utils/ScopedAdder.hh"
+#include "utils/TimeFormatting.hh"
 
 #include <sys/stat.h>
 
 using namespace quarkdb;
 
 QuarkDBNode::~QuarkDBNode() {
-  delete shard;
-  delete shardDirectory;
-
   qdb_info("Shutting down QuarkDB node.")
 }
 
-QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t)
+QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t,
+  ShardDirectory *injectedDirectory)
+
 : configuration(config), timeouts(t) {
 
   bootStart = std::chrono::steady_clock::now();
-  shardDirectory = new ShardDirectory(configuration.getDatabase(), configuration);
 
-  if(configuration.getMode() == Mode::raft) {
-    shard = new Shard(shardDirectory, configuration.getMyself(), configuration.getMode(), timeouts);
-    // spin up the raft machinery
-    shard->spinup();
+  if(injectedDirectory) {
+    shardDirectory = injectedDirectory; // no ownership!!!
   }
   else {
-    shard = new Shard(shardDirectory, {}, configuration.getMode(), timeouts);
+    shardDirectoryOwnership.reset(new ShardDirectory(configuration.getDatabase(), configuration));
+    shardDirectory = shardDirectoryOwnership.get();
+  }
+
+  if(configuration.getMode() == Mode::raft) {
+    shard.reset(new Shard(shardDirectory, configuration.getMyself(), configuration.getMode(), timeouts));
+    if(!injectedDirectory) {
+      shard->spinup();
+    }
+  }
+  else {
+    shard.reset(new Shard(shardDirectory, {}, configuration.getMode(), timeouts));
   }
 
   bootEnd = std::chrono::steady_clock::now();
@@ -101,4 +110,16 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 
 QuarkDBInfo QuarkDBNode::info() {
   return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH), shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(bootEnd - bootStart).count(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - bootEnd).count() };
+}
+
+std::vector<std::string> QuarkDBInfo::toVector() const {
+  std::vector<std::string> ret;
+  ret.emplace_back(SSTR("MODE " << modeToString(mode)));
+  ret.emplace_back(SSTR("BASE-DIRECTORY " << baseDir));
+  ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
+  ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
+  ret.emplace_back(SSTR("MONITORS " << monitors));
+  ret.emplace_back(SSTR("BOOT-TIME " << bootTime << " (" << formatTime(std::chrono::seconds(bootTime)) << ")"));
+  ret.emplace_back(SSTR("UPTIME " << uptime << " (" << formatTime(std::chrono::seconds(uptime)) << ")"));
+  return ret;
 }

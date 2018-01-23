@@ -29,15 +29,7 @@
 #include "Dispatcher.hh"
 #include "Configuration.hh"
 #include "RedisParser.hh"
-#include "StateMachine.hh"
-#include "Dispatcher.hh"
-#include "utils/TimeFormatting.hh"
-#include "ShardDirectory.hh"
-#include "raft/RaftJournal.hh"
-#include "raft/RaftState.hh"
 #include "raft/RaftTimeouts.hh"
-#include "raft/RaftDirector.hh"
-#include "raft/RaftGroup.hh"
 
 namespace quarkdb {
 
@@ -50,24 +42,14 @@ struct QuarkDBInfo {
   int64_t bootTime;
   int64_t uptime;
 
-  std::vector<std::string> toVector() {
-    std::vector<std::string> ret;
-    ret.emplace_back(SSTR("MODE " << modeToString(mode)));
-    ret.emplace_back(SSTR("BASE-DIRECTORY " << baseDir));
-    ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
-    ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
-    ret.emplace_back(SSTR("MONITORS " << monitors));
-    ret.emplace_back(SSTR("BOOT-TIME " << bootTime << " (" << formatTime(std::chrono::seconds(bootTime)) << ")"));
-    ret.emplace_back(SSTR("UPTIME " << uptime << " (" << formatTime(std::chrono::seconds(uptime)) << ")"));
-    return ret;
-  }
+  std::vector<std::string> toVector() const;
 };
 
-class Shard;
+class Shard; class ShardDirectory;
 
 class QuarkDBNode : public Dispatcher {
 public:
-  QuarkDBNode(const Configuration &config, const RaftTimeouts &t);
+  QuarkDBNode(const Configuration &config, const RaftTimeouts &t, ShardDirectory *injectedDirectory = nullptr);
   ~QuarkDBNode();
 
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &req) override final;
@@ -76,10 +58,17 @@ public:
   const Configuration& getConfiguration() {
     return configuration;
   }
+
+  Shard* getShard() {
+    return shard.get();
+  }
+
 private:
+  std::unique_ptr<ShardDirectory> shardDirectoryOwnership;
+  std::unique_ptr<Shard> shard;
+
   Configuration configuration;
   ShardDirectory *shardDirectory;
-  Shard *shard;
 
   QuarkDBInfo info();
 

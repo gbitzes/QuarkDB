@@ -149,12 +149,12 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
         success = fetchSingle(stream, buffer) && parseBool(buffer, out.writeAheadLog);
       }
       else {
-        qdb_log("Error when parsing configuration - unknown option " << quotes(option));
+        qdb_warn("Error when parsing configuration - unknown option " << quotes(option));
         return false;
       }
 
       if(!success) {
-        qdb_log("Error when parsing configuration option " << quotes("redis." << option));
+        qdb_warn("Error when parsing configuration option " << quotes("redis." << option));
         return false;
       }
 

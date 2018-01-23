@@ -30,6 +30,7 @@
 #include "Shard.hh"
 #include "raft/RaftGroup.hh"
 #include "raft/RaftJournal.hh"
+#include "QuarkDBNode.hh"
 #include <gtest/gtest.h>
 
 namespace quarkdb {
@@ -233,9 +234,27 @@ int TestCluster::getLeaderID() {
 TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)
 : myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
-  std::string shardPath = SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port << "/");
+  std::string shardPath = SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port);
+  Configuration config;
+
+  qdb_warn(shardPath);
+
+  bool status = Configuration::fromString(SSTR(
+    "redis.mode raft\n" <<
+    "redis.database " << shardPath << "\n"
+    "redis.myself " << myselfSrv.toString() << "\n"
+  ), config);
+
+  if(!status) {
+    qdb_warn("Error reading configuration, crashing");
+    std::quick_exit(1);
+  }
+
+  shardPath += "/";
+
+  // We inject the shard directory in QDB node.
   sharddirptr = commonState.getShardDirectory(shardPath, clusterID, initialNodes);
-  shardptr = new Shard(shardDirectory(), myself(), Mode::raft, testconfig.raftTimeouts);
+  qdbnodeptr = new QuarkDBNode(config, testconfig.raftTimeouts, sharddirptr);
 }
 
 ShardDirectory* TestNode::shardDirectory() {
@@ -243,17 +262,21 @@ ShardDirectory* TestNode::shardDirectory() {
 }
 
 Shard* TestNode::shard() {
-  return shardptr;
+  return quarkdbNode()->getShard();
 }
 
 RaftGroup* TestNode::group() {
   return shard()->getRaftGroup();
 }
 
+QuarkDBNode* TestNode::quarkdbNode() {
+  return qdbnodeptr;
+}
+
 TestNode::~TestNode() {
   if(pollerptr) delete pollerptr;
   if(tunnelptr) delete tunnelptr;
-  if(shardptr) delete shardptr;
+  if(qdbnodeptr) delete qdbnodeptr;
 }
 
 RaftServer TestNode::myself() {

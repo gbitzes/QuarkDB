@@ -52,6 +52,7 @@ namespace quarkdb {
 class Shard; class RaftGroup; class ShardDirectory; class RaftJournal;
 class RaftDispatcher; class RaftLease; class RaftDirector;
 class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
+class QuarkDBNode;
 
 #define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
   bool ok = false; \
@@ -113,6 +114,7 @@ public:
   TestNode(RaftServer myself, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
   ~TestNode();
 
+  QuarkDBNode* quarkdbNode();
   ShardDirectory* shardDirectory();
   Shard* shard();
   RaftGroup* group();
@@ -130,8 +132,8 @@ private:
   RaftClusterID clusterID;
   std::vector<RaftServer> initialNodes;
 
+  QuarkDBNode *qdbnodeptr = nullptr;
   ShardDirectory *sharddirptr = nullptr;
-  Shard *shardptr = nullptr;
   Poller *pollerptr = nullptr;
   qclient::QClient *tunnelptr = nullptr;
 };
