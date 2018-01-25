@@ -526,6 +526,11 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   }
 
   raftClock.heartbeat();
+
+  qdb_event("Granting vote for term " << req.term << " to " << req.candidate.toString() <<
+    " with last index " << req.lastIndex << " whose term is " << req.lastTerm <<
+    ". My commit index: " << journal.getCommitIndex() <<
+    ". My last log entry has index " << myLastIndex << " and term " << myLastTerm << ".");
   return {snapshot->term, RaftVote::GRANTED};
 }
 
