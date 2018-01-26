@@ -93,8 +93,10 @@ TEST_F(Replication, lease_expires_under_load) {
 
   // ensure the connection doesn't hang
   std::future<redisReplyPtr> reply = tunnel(leaderID)->exec("ping");
+  tunnel(leaderID)->exec("set", "random evil intertwined", "write");
   ASSERT_TRUE(reply.wait_for(std::chrono::seconds(25)) == std::future_status::ready);
   ASSERT_REPLY(reply, "PONG");
+  ASSERT_REPLY(tunnel(leaderID)->exec("ping", "abc123"), "abc123");
 }
 
 TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes) {

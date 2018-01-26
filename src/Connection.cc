@@ -30,7 +30,14 @@ using namespace quarkdb;
 LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
   std::lock_guard<std::mutex> lock(mtx);
   while(!pending.empty()) {
-    if(conn) conn->writer.send(std::string(msg.val));
+    if(conn) {
+      if(!pending.front().rawResp.empty()) {
+        conn->writer.send(std::move(pending.front().rawResp.val));
+      }
+      else {
+        conn->writer.send(std::string(msg.val));
+      }
+    }
     pending.pop();
   }
   if(conn) conn->writer.flush();

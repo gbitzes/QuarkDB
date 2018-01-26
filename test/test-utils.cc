@@ -286,7 +286,7 @@ std::vector<RaftServer> TestNode::nodes() {
 
 Poller* TestNode::poller() {
   if(pollerptr == nullptr) {
-    pollerptr = new Poller(myself().port, shard());
+    pollerptr = new Poller(myself().port, quarkdbNode());
   }
   return pollerptr;
 }
