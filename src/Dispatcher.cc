@@ -30,6 +30,14 @@
 
 using namespace quarkdb;
 
+RedisEncodedResponse Dispatcher::handlePing(RedisRequest &request) {
+  qdb_assert(request.getCommand() == RedisCommand::PING);
+
+  if(request.size() > 2) return Formatter::errArgs(request[0]);
+  if(request.size() == 1) return Formatter::pong();
+  return Formatter::string(request[1]);
+}
+
 RedisDispatcher::RedisDispatcher(StateMachine &rocksdb) : store(rocksdb) {
 }
 
@@ -214,10 +222,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
 
   switch(request.getCommand()) {
     case RedisCommand::PING: {
-      if(request.size() > 2) return errArgs(request, commit);
-      if(request.size() == 1) return Formatter::pong();
-
-      return Formatter::string(request[1]);
+      return handlePing(request);
     }
     case RedisCommand::GET: {
       if(request.size() != 2) return errArgs(request, commit);

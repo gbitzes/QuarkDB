@@ -28,7 +28,6 @@
 
 #include "Dispatcher.hh"
 #include "Configuration.hh"
-#include "RedisParser.hh"
 #include "raft/RaftTimeouts.hh"
 
 namespace quarkdb {

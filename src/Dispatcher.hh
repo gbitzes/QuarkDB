@@ -48,6 +48,7 @@ public:
     return lastStatus;
   }
 
+  RedisEncodedResponse handlePing(RedisRequest &req);
   virtual ~Dispatcher() {}
 };
 

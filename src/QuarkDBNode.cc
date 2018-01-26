@@ -73,26 +73,23 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, WriteBatch &batch) {
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::PING: {
-      if(req.size() > 2) return conn->errArgs(req[0]);
-      if(req.size() == 1) return conn->pong();
-
-      return conn->string(req[1]);
+      return conn->raw(handlePing(req));
     }
     case RedisCommand::DEBUG: {
       if(req.size() != 2) return conn->errArgs(req[0]);
       if(caseInsensitiveEquals(req[1], "segfault")) {
-        qdb_critical("Performing harakiri on client request: SEGV");
+        qdb_event("Performing harakiri on client request: SEGV");
         *( (int*) 42 ) = 5;
       }
 
       if(caseInsensitiveEquals(req[1], "kill")) {
-        qdb_critical("Performing harakiri on client request: SIGKILL");
+        qdb_event("Performing harakiri on client request: SIGKILL");
         system(SSTR("kill -9 " << getpid()).c_str());
         return conn->ok();
       }
 
       if(caseInsensitiveEquals(req[1], "terminate")) {
-        qdb_critical("Performing harakiri on client request: SIGTERM");
+        qdb_event("Performing harakiri on client request: SIGTERM");
         system(SSTR("kill " << getpid()).c_str());
         return conn->ok();
       }
