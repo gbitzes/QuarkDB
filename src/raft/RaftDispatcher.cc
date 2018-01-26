@@ -211,10 +211,8 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
-  // control command, service even if unavailable
-  if(req.getCommandType() == CommandType::CONTROL) {
-    return conn->addPendingRequest(&redisDispatcher, std::move(req));
-  }
+  // A control command should never reach here.
+  qdb_assert(req.getCommandType() != CommandType::CONTROL);
 
   // if not leader, redirect... except if this is a read,
   // and stale reads are active!
