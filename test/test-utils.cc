@@ -237,8 +237,6 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
   std::string shardPath = SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port);
   Configuration config;
 
-  qdb_warn(shardPath);
-
   bool status = Configuration::fromString(SSTR(
     "redis.mode raft\n" <<
     "redis.database " << shardPath << "\n"
@@ -246,8 +244,7 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
   ), config);
 
   if(!status) {
-    qdb_warn("Error reading configuration, crashing");
-    std::quick_exit(1);
+    qdb_throw("error reading configuration");
   }
 
   shardPath += "/";

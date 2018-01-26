@@ -81,7 +81,6 @@ fedora-tsan-test:
     - export GTEST_TOTAL_SHARDS=10
     - MAX_SHARD=$((GTEST_TOTAL_SHARDS - 1))
     - for i in $(seq 0 ${MAX_SHARD}); do export GTEST_SHARD_INDEX=$i; quarkdb-stress-tests; done
-    - for i in {1..30}; do export GTEST_SHARD_INDEX=4; quarkdb-stress-tests; done
   tags:
     - docker-fc25
 

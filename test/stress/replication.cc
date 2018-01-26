@@ -92,7 +92,9 @@ TEST_F(Replication, lease_expires_under_load) {
   ASSERT_TRUE(journal(followerID)->getLogSize() < NENTRIES);
 
   // ensure the connection doesn't hang
-  tunnel(leaderID)->exec("ping").get();
+  std::future<redisReplyPtr> reply = tunnel(leaderID)->exec("ping");
+  ASSERT_TRUE(reply.wait_for(std::chrono::seconds(25)) == std::future_status::ready);
+  ASSERT_REPLY(reply, "PONG");
 }
 
 TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes) {

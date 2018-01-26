@@ -110,6 +110,7 @@ void RaftDirector::actAsFollower(RaftStateSnapshotPtr &snapshot) {
     RaftStateSnapshotPtr now = state.getSnapshot();
     if(snapshot->term != now->term || snapshot->status != now->status) return;
 
+    writeTracker.flushQueues(Formatter::err("unavailable"));
     state.wait(randomTimeout);
     if(raftClock.timeout()) {
       if(contains(journal.getMembership().nodes, state.getMyself())) {
