@@ -244,6 +244,48 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
   streamingUpdates = false;
 }
 
+bool RaftReplicaTracker::sendPayload(RaftTalker &talker, LogIndex nextIndex, int64_t payloadLimit,
+  std::future<redisReplyPtr> &reply, std::chrono::steady_clock::time_point &contact, int64_t &payloadSize) {
+  RaftTerm prevTerm;
+
+  if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
+    qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString() << ". My log start: " << journal.getLogStart());
+    state.observed(snapshot->term+1, {});
+    return false;
+  }
+
+  // It's critical that we retrieve the commit index before the actual entries.
+  // The following could happen:
+  // - We build the payload.
+  // - We recognize a different leader in the meantime.
+  // - The other leader overwrites some of our enties as inconsistent, and progresses
+  //   our commit index.
+  // - We now send an AppendEntries to the poor target, marking potentially inconsistent
+  //   entries as committed.
+  // - The target crashes after detecting journal inconsistency once the new
+  //   leader tries to replicate entries onto it.
+
+  LogIndex commitIndexForTarget = journal.getCommitIndex();
+
+  std::vector<RaftSerializedEntry> entries;
+  if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {
+    state.observed(snapshot->term+1, {});
+    return false;
+  }
+
+  contact = std::chrono::steady_clock::now();
+  reply = talker.appendEntries(
+    snapshot->term,
+    state.getMyself(),
+    nextIndex-1,
+    prevTerm, 
+    commitIndexForTarget,
+    entries
+  );
+
+  return true;
+}
+
 LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNextIndex) {
   // If we're here, it means our target is very stable, so we should be able to
   // continuously stream updates without waiting for the replies.
@@ -263,23 +305,14 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
       return nextIndex;
     }
 
-    RaftTerm prevTerm;
-    if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
-      qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString() << ". My log start: " << journal.getLogStart());
-      state.wait(timeouts.getHeartbeatInterval());
-      continue;
+    std::chrono::steady_clock::time_point contact;
+    std::future<redisReplyPtr> fut;
+    int64_t payloadSize;
+
+    if(!sendPayload(talker, nextIndex, payloadLimit, fut, contact, payloadSize)) {
+      qdb_warn("Unexpected error when sending payload to target " << target.toString() << ", halting replication");
+      break;
     }
-
-    std::vector<RaftSerializedEntry> entries;
-
-    int64_t payloadSize = 0;
-    if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {
-      state.wait(timeouts.getHeartbeatInterval());
-      continue;
-    }
-
-    std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
-    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot->term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
 
     std::unique_lock<std::mutex> lock(inFlightMtx);
     inFlight.emplace(
@@ -375,25 +408,16 @@ void RaftReplicaTracker::main() {
     if(nextIndex <= 0) qdb_throw("nextIndex has invalid value: " << nextIndex);
     if(nextIndex <= journal.getLogStart()) nextIndex = journal.getLogSize();
 
-    RaftTerm prevTerm;
-    if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
-      qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString() << ". My log start: " << journal.getLogStart());
-      state.wait(timeouts.getHeartbeatInterval());
-      continue;
+    std::chrono::steady_clock::time_point contact;
+    std::future<redisReplyPtr> fut;
+    int64_t payloadSize;
+
+    if(!sendPayload(talker, nextIndex, payloadLimit, fut, contact, payloadSize)) {
+      qdb_warn("Unexpected error when sending payload to target " << target.toString() << ", halting replication");
+      break;
     }
 
-    std::vector<std::string> entries;
-
-    int64_t payloadSize = 0;
-    if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {
-      state.wait(timeouts.getHeartbeatInterval());
-      continue;
-    }
-
-    std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
-    std::future<redisReplyPtr> fut = talker.appendEntries(snapshot->term, state.getMyself(), nextIndex-1, prevTerm, journal.getCommitIndex(), entries);
     RaftAppendEntriesResponse resp;
-
     // Check: Is the target even online?
     if(retrieve_response(fut, resp, std::chrono::milliseconds(500)) != AppendEntriesReception::kOk) {
       if(online) {
