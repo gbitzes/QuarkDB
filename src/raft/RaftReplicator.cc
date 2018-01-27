@@ -100,6 +100,13 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     }
 
     iterator.current(entries[i-nextIndex]);
+
+    RaftTerm entryTerm = RaftEntry::fetchTerm(entries[i-nextIndex]);
+    if(entryTerm < snapshot->term) {
+      qdb_warn("Found journal entry with higher term than my snapshot, " << snapshot->term << " vs " << entryTerm);
+      return false;
+    }
+
     iterator.next();
   }
   return true;
@@ -250,6 +257,12 @@ bool RaftReplicaTracker::sendPayload(RaftTalker &talker, LogIndex nextIndex, int
 
   if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
     qdb_critical("unable to fetch log entry " << nextIndex-1 << " when tracking " << target.toString() << ". My log start: " << journal.getLogStart());
+    state.observed(snapshot->term+1, {});
+    return false;
+  }
+
+  if(snapshot->term < prevTerm) {
+    qdb_warn("Last journal entry has higher term than my snapshot, halting replication.");
     state.observed(snapshot->term+1, {});
     return false;
   }

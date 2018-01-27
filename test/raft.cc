@@ -170,6 +170,33 @@ TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
   ASSERT_EQ(snapshot->leader, myself(0));
 }
 
+TEST_F(Raft_Replicator, no_replication_of_higher_term_entries) {
+  // Try to trick the replicator into sending entries of higher term
+  // than its snapshot, verify it doesn't succeed. That's a race
+  // condition that could happen once a new leader starts replicating
+  // entries into a node which used to be leader, but its replicator
+  // hasn't shut down completely yet.
+
+  ASSERT_TRUE(state(0)->observed(1, {}));
+  ASSERT_TRUE(state(0)->becomeCandidate(1));
+  ASSERT_TRUE(state(0)->ascend(1));
+
+  ASSERT_TRUE(journal(0)->setCurrentTerm(2, {}));
+  ASSERT_TRUE(journal(0)->append(2, RaftEntry(2, "should", "not", "get", "replicated")));
+
+  // activate poller for #1
+  poller(1);
+
+  // launch!
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RETRY_ASSERT_TRUE(!tracker.isRunning());
+  ASSERT_TRUE(journal(0)->getCommitIndex() == 0);
+  ASSERT_TRUE(journal(1)->getCommitIndex() == 0);
+
+  ASSERT_TRUE(journal(0)->getLogSize() == 3);
+  ASSERT_TRUE(journal(1)->getLogSize() == 1);
+}
+
 TEST_F(Raft_Dispatcher, validate_initial_state) {
   RaftInfo info = dispatcher()->info();
   ASSERT_EQ(info.clusterID, clusterID());

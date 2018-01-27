@@ -107,6 +107,7 @@ std::future<redisReplyPtr> RaftTalker::appendEntries(
 
   for(size_t i = 0; i < entries.size(); i++) {
     payload.push_back(entries[i]);
+    qdb_assert(RaftEntry::fetchTerm(entries[i]) <= term);
   }
 
   return tunnel.execute(payload);
