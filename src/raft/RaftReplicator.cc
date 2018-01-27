@@ -102,7 +102,7 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
     iterator.current(entries[i-nextIndex]);
 
     RaftTerm entryTerm = RaftEntry::fetchTerm(entries[i-nextIndex]);
-    if(entryTerm < snapshot->term) {
+    if(snapshot->term < entryTerm) {
       qdb_warn("Found journal entry with higher term than my snapshot, " << snapshot->term << " vs " << entryTerm);
       return false;
     }
