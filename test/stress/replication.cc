@@ -350,3 +350,63 @@ TEST_F(Membership, prevent_promotion_of_outdated_observer) {
   RETRY_ASSERT_TRUE(journal(4)->getCommitIndex() == journal(leaderID)->getCommitIndex());
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(4).toString()), "OK");
 }
+
+TEST_F(Replication, no_committing_entries_from_previous_terms) {
+  // Try to emulate Figure 8 of the raft paper. Certain entries are
+  // present in a majority of replicas, but can still be removed as
+  // conflicting. Ensure the leader never marks them as committed!
+
+  state(0)->observed(2, {});
+  state(1)->observed(2, {});
+  state(2)->observed(2, {});
+
+  for(size_t i = 1; i < 50000; i++) {
+    RaftEntry entry;
+    entry.term = 2;
+    entry.request = make_req("set", SSTR("entry-" << i), SSTR("contents-" << i));
+
+    ASSERT_TRUE(journal(1)->append(i, entry));
+  }
+
+  state(0)->observed(100, {});
+  state(1)->observed(100, {});
+  state(2)->observed(100, {});
+
+  spinup(0); spinup(1);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  ASSERT_TRUE(getLeaderID() == 1);
+
+  // We have node #1 as leader for term > 100 - wait until it replicates
+  // some of the entries, then shut it down.
+  RETRY_ASSERT_TRUE(journal(0)->getLogSize() >= 100);
+  spindown(1); spindown(0);
+
+  // Ensure no entry got committed!
+  ASSERT_TRUE(journal(0)->getCommitIndex() == 0);
+  ASSERT_TRUE(journal(1)->getCommitIndex() == 0);
+
+  // Make things even more interesting by starting up node #2 which
+  // has more up-to-date log. :) Ensure it overwrites the rest.
+  state(2)->observed(2000, {});
+  RaftEntry entry;
+  entry.term = 2000;
+  entry.request = make_req("set", "one entry", "to rule them all");
+  ASSERT_TRUE(journal(2)->append(1, entry));
+
+
+  spinup(2); spinup(1);
+  DBG(".");
+  RETRY_ASSERT_TRUE(checkStateConsensus(1, 2));
+  ASSERT_TRUE(state(1)->getSnapshot()->leader == myself(2));
+  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == 3);
+  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == 2);
+  RETRY_ASSERT_TRUE(journal(2)->getCommitIndex() == 2);
+
+  // now start node #0, too, ensure its contents are overwritten as well
+  spinup(0);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  ASSERT_TRUE(state(0)->getSnapshot()->leader == myself(2));
+  RETRY_ASSERT_TRUE(journal(0)->getLogSize() == 3);
+  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == 2);
+}
+

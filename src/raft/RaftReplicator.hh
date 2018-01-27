@@ -54,13 +54,14 @@ public:
   bool isRunning() { return running; }
 private:
   struct PendingResponse {
-    PendingResponse(std::future<redisReplyPtr> &&f, std::chrono::steady_clock::time_point s, LogIndex pushed, int64_t payload)
-    : fut(std::move(f)), sent(s), pushedFrom(pushed), payloadSize(payload) {}
+    PendingResponse(std::future<redisReplyPtr> &&f, std::chrono::steady_clock::time_point s, LogIndex pushed, int64_t payload, RaftTerm let)
+    : fut(std::move(f)), sent(s), pushedFrom(pushed), payloadSize(payload), lastEntryTerm(let) {}
 
     std::future<redisReplyPtr> fut;
     std::chrono::steady_clock::time_point sent;
     LogIndex pushedFrom;
     int64_t payloadSize;
+    RaftTerm lastEntryTerm;
   };
 
   void sendHeartbeats(ThreadAssistant &assistant);
@@ -75,9 +76,12 @@ private:
   LogIndex streamUpdates(RaftTalker &talker, LogIndex nextIndex);
 
   void triggerResilvering();
-  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftSerializedEntry> &entries, int64_t &payloadSize);
+  bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftSerializedEntry> &entries,
+    int64_t &payloadSize, RaftTerm &lastEntryTerm);
+
   bool sendPayload(RaftTalker &talker, LogIndex nextIndex, int64_t payloadLimit,
-    std::future<redisReplyPtr> &reply, std::chrono::steady_clock::time_point &contact, int64_t &payloadSize);
+    std::future<redisReplyPtr> &reply, std::chrono::steady_clock::time_point &contact, int64_t &payloadSize,
+    RaftTerm &lastEntryTerm);
 
   RaftServer target;
   RaftStateSnapshotPtr snapshot;

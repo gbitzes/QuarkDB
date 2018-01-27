@@ -86,12 +86,13 @@ RaftReplicaTracker::~RaftReplicaTracker() {
 }
 
 bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
-  std::vector<std::string> &entries, int64_t &payloadSize) {
+  std::vector<std::string> &entries, int64_t &payloadSize, RaftTerm &lastEntryTerm) {
 
   payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
   entries.resize(payloadSize);
 
   RaftJournal::Iterator iterator = journal.getIterator(nextIndex);
+  RaftTerm entryTerm = -1;
 
   for(int64_t i = nextIndex; i < nextIndex+payloadSize; i++) {
     if(!iterator.valid()) {
@@ -101,7 +102,7 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
 
     iterator.current(entries[i-nextIndex]);
 
-    RaftTerm entryTerm = RaftEntry::fetchTerm(entries[i-nextIndex]);
+    entryTerm = RaftEntry::fetchTerm(entries[i-nextIndex]);
     if(snapshot->term < entryTerm) {
       qdb_warn("Found journal entry with higher term than my snapshot, " << snapshot->term << " vs " << entryTerm);
       return false;
@@ -109,6 +110,8 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
 
     iterator.next();
   }
+
+  lastEntryTerm = entryTerm;
   return true;
 }
 
@@ -243,7 +246,12 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
 
     // All clear, acknowledgement is OK, carry on.
     lastContact.heartbeat(item.sent);
-    matchIndex.update(response.logSize-1);
+
+    // Only update the commit tracker once we're replicating entries from our
+    // snapshot term. (Figure 8 and section 5.4.2 from the raft paper)
+    if(item.lastEntryTerm == snapshot->term) {
+      matchIndex.update(response.logSize-1);
+    }
 
     lock.lock();
   }
@@ -252,7 +260,8 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
 }
 
 bool RaftReplicaTracker::sendPayload(RaftTalker &talker, LogIndex nextIndex, int64_t payloadLimit,
-  std::future<redisReplyPtr> &reply, std::chrono::steady_clock::time_point &contact, int64_t &payloadSize) {
+  std::future<redisReplyPtr> &reply, std::chrono::steady_clock::time_point &contact, int64_t &payloadSize,
+  RaftTerm &lastEntryTerm) {
   RaftTerm prevTerm;
 
   if(!journal.fetch(nextIndex-1, prevTerm).ok()) {
@@ -281,7 +290,7 @@ bool RaftReplicaTracker::sendPayload(RaftTalker &talker, LogIndex nextIndex, int
   LogIndex commitIndexForTarget = journal.getCommitIndex();
 
   std::vector<RaftSerializedEntry> entries;
-  if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize)) {
+  if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize, lastEntryTerm)) {
     state.observed(snapshot->term+1, {});
     return false;
   }
@@ -321,8 +330,9 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
     std::chrono::steady_clock::time_point contact;
     std::future<redisReplyPtr> fut;
     int64_t payloadSize;
+    RaftTerm lastEntryTerm;
 
-    if(!sendPayload(talker, nextIndex, payloadLimit, fut, contact, payloadSize)) {
+    if(!sendPayload(talker, nextIndex, payloadLimit, fut, contact, payloadSize, lastEntryTerm)) {
       qdb_warn("Unexpected error when sending payload to target " << target.toString() << ", halting replication");
       break;
     }
@@ -332,7 +342,8 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
       std::move(fut),
       contact,
       nextIndex,
-      payloadSize
+      payloadSize,
+      lastEntryTerm
     );
 
     inFlightCV.notify_one();
@@ -424,8 +435,9 @@ void RaftReplicaTracker::main() {
     std::chrono::steady_clock::time_point contact;
     std::future<redisReplyPtr> fut;
     int64_t payloadSize;
+    RaftTerm lastEntryTerm;
 
-    if(!sendPayload(talker, nextIndex, payloadLimit, fut, contact, payloadSize)) {
+    if(!sendPayload(talker, nextIndex, payloadLimit, fut, contact, payloadSize, lastEntryTerm)) {
       qdb_warn("Unexpected error when sending payload to target " << target.toString() << ", halting replication");
       break;
     }
@@ -492,7 +504,12 @@ void RaftReplicaTracker::main() {
       qdb_warn("mismatch in expected logSize. nextIndex = " << nextIndex << ", payloadSize = " << payloadSize << ", logSize: " << resp.logSize << ", resp.term: " << resp.term << ", my term: " << snapshot->term << ", journal size: " << journal.getLogSize());
     }
 
-    matchIndex.update(resp.logSize-1);
+    // Only update the commit tracker once we're replicating entries from our
+    // snapshot term. (Figure 8 and section 5.4.2 from the raft paper)
+    if(lastEntryTerm == snapshot->term) {
+      matchIndex.update(resp.logSize-1);
+    }
+
     nextIndex = resp.logSize;
     if(payloadLimit < 1024) {
       payloadLimit *= 2;
