@@ -44,9 +44,15 @@ RaftCommitTracker::RaftCommitTracker(RaftJournal &jr)
 }
 
 RaftCommitTracker::~RaftCommitTracker() {
+  reset();
+}
+
+void RaftCommitTracker::reset() {
   for(auto it = registrations.begin(); it != registrations.end(); it++) {
     delete it->second;
   }
+  registrations.clear();
+  commitIndex = 0;
 }
 
 RaftMatchIndexTracker& RaftCommitTracker::getHandler(const RaftServer &srv) {

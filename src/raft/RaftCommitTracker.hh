@@ -56,6 +56,9 @@ public:
 
   void updateTargets(const std::vector<RaftServer> &targets);
   RaftMatchIndexTracker& getHandler(const RaftServer &srv);
+
+  // Assumption: No references to index trackers are held when calling this
+  void reset();
 private:
   std::mutex mtx;
 

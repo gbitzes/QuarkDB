@@ -484,6 +484,7 @@ void RaftReplicator::activate(RaftStateSnapshotPtr &snapshot_) {
   qdb_assert(targets.empty());
   snapshot = snapshot_;
 
+  commitTracker.reset();
   reconfigure();
 }
 
@@ -497,6 +498,7 @@ void RaftReplicator::deactivate() {
   targets.clear();
 
   snapshot = {};
+  commitTracker.reset();
 }
 
 ReplicationStatus RaftReplicator::getStatus() {
