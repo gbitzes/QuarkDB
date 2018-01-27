@@ -966,3 +966,13 @@ TEST_F(Raft_JournalIterator, basic_sanity) {
 
   ASSERT_FALSE(it.valid());
 }
+
+TEST(RaftEntry, parsing) {
+  RaftEntry entry;
+  entry.term = 13;
+  entry.request = make_req("set", "abc", "123");
+
+  RaftSerializedEntry serialized = entry.serialize();
+  ASSERT_EQ(RaftEntry::fetchTerm(serialized), 13);
+}
+

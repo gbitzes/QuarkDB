@@ -95,6 +95,10 @@ struct RaftEntry {
     }
   }
 
+  static int64_t fetchTerm(const RaftSerializedEntry &data) {
+    return fetch_int_from_string(data.c_str());
+  }
+
   bool operator==(const RaftEntry &rhs) const {
     return term == rhs.term && request == rhs.request;
   }
