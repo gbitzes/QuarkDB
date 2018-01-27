@@ -491,10 +491,9 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   resp = dispatcher()->requestVote(req);
   ASSERT_EQ(resp.vote, RaftVote::VETO);
 
-  // This case should never trigger under normal circumstances: contacting node's
-  // lastIndex has a higher term than local, committed lastIndex.
+  // contacting node's lastIndex has a higher term than local, committed lastIndex.
   req.lastTerm = 4;
-  ASSERT_THROW(dispatcher()->requestVote(req), FatalException);
+  ASSERT_EQ(dispatcher()->requestVote(req).vote, RaftVote::VETO);
 
   // Case where lastIndex has been trimmed already
   journal()->trimUntil(2);

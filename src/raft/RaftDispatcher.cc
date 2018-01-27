@@ -475,10 +475,6 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
     // as inconsistent, which I consider committed already... Veto!
     if(req.lastTerm != myLastIndexTerm) {
       qdb_event("Vetoing vote request from " << req.candidate.toString() << " because its ascension would overwrite my committed entry with index " << req.lastIndex);
-      if(myLastIndexTerm < req.lastTerm) {
-        // May the Gods be kind on our souls, and we never see this message in production.
-        qdb_throw("Candidate " << req.candidate.toString() << " has a log entry at " << req.lastIndex << " with term " << req.lastTerm << " while I have a COMMITTED entry with a LOWER term: " << myLastIndexTerm << ". MAJOR CORRUPTION, DB IS ON FIRE");
-      }
       return {snapshot->term, RaftVote::VETO};
     }
 
