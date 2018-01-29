@@ -226,7 +226,7 @@ bool RaftState::grantVote(RaftTerm forTerm, const RaftServer &vote) {
     return false;
   }
 
-  // qdb_event("Granting vote for term " << forTerm << " to " << vote.toString());
+  qdb_event("Granting vote for term " << forTerm << " to " << vote.toString());
   votedFor = vote;
   this->updateJournal();
   updateSnapshot();
