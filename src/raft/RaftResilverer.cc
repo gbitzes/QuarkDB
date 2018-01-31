@@ -73,7 +73,7 @@ private:
 
 RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftClusterID &cid, const RaftTimeouts &timeouts, RaftTrimmer &trimmer)
 : shardDirectory(dir), target(trg), clusterID(cid),
-  trimmingBlock(new RaftTrimmingBlock(trimmer, true)),
+  trimmingBlock(new RaftTrimmingBlock(trimmer, 0)),
   talker(target, clusterID, timeouts) {
 
   resilveringID = generateUuid();

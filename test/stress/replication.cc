@@ -436,19 +436,31 @@ TEST_F(Replication, TrimmingBlock) {
   RETRY_ASSERT_TRUE(journal((leaderID+2) % 3)->getLogStart() == (logSize - 3));
 
   // Put a trimming block in place for one of the followers.
-  RaftTrimmingBlock trimmingBlock(*trimmer((leaderID+1)%3), true);
+  RaftTrimmingBlock trimmingBlock(*trimmer((leaderID+1)%3), 0);
 
   for(size_t i = 0; i < 100; i++) {
     ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("entry2-" << i), SSTR("val2-" << i)), "OK");
   }
 
   std::this_thread::sleep_for(std::chrono::seconds(5));
-  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (logSize - 3));
+  ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (logSize - 3));
 
   LogIndex newLogSize = journal(leaderID)->getLogSize();
   RETRY_ASSERT_TRUE(journal((leaderID+2) % 3)->getLogStart() == (newLogSize - 3));
 
   // Lift block, ensure journal is trimmed
+  trimmingBlock.enforce(150);
+  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 149);
+
+  trimmingBlock.enforce(151);
+  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 150);
+
+  trimmingBlock.enforce(155);
+  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 154);
+
+  trimmingBlock.enforce(173);
+  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 172);
+
   trimmingBlock.lift();
   RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (newLogSize - 3));
 }

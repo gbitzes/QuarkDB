@@ -26,36 +26,52 @@
 
 #include "../utils/AssistedThread.hh"
 #include <atomic>
+#include <limits>
+#include "RaftCommon.hh"
 
 namespace quarkdb {
 
 class RaftTrimmer;
 
+// Not thread safe to call enforce or lift from multiple threads!
+// But calling getPreservationIndex is OK, even during calling lift, enforce.
 class RaftTrimmingBlock {
 public:
-  RaftTrimmingBlock(RaftTrimmer &trimmer, bool enabled);
+  // No block by default.
+  RaftTrimmingBlock(RaftTrimmer &trimmer,
+    LogIndex preservationLimit = std::numeric_limits<LogIndex>::max());
   ~RaftTrimmingBlock();
 
+  // Convenience function
+  // Forwards to enforce(std::numeric_limits<LogIndex>::max())
   void lift();
-  void enforce();
-  void reset(bool newval);
+
+  // preserveLimit = 0: Block any and all trimming activity.
+  // Otherwise: Ensure all entries starting from preserveLimit are spared.
+  // This obviously assumes preserveLimit has not been trimmed already. :)
+  // We can't do magic. If that's the case, only remaining entries above
+  // preserveLimit are spared.
+  void enforce(LogIndex preserveLimit = 0);
+  LogIndex getPreservationIndex() const;
 
 private:
+  std::mutex mtx;
   RaftTrimmer &trimmer;
-  bool enabled;
+
+  // max: block is inactive
+  // 0: preserve ALL entries
+  std::atomic<LogIndex> preserveIndex;
+  bool registered {false};
 };
 
 class RaftJournal; class RaftConfig; class StateMachine;
 class RaftTrimmer {
 public:
   RaftTrimmer(RaftJournal &journal, RaftConfig &raftConfig, StateMachine &sm);
-
-  void block();
-  void unblock();
-
+  void registerChange(RaftTrimmingBlock* block);
 private:
   std::mutex mtx;
-  std::atomic<int64_t> blocksActive = {0};
+  std::set<RaftTrimmingBlock*> blocks;
 
   RaftJournal &journal;
   RaftConfig &raftConfig;
@@ -63,6 +79,8 @@ private:
   AssistedThread mainThread;
 
   void main(ThreadAssistant &assistant);
+  bool canTrimUntil(LogIndex threshold);
+  friend class RaftTrimmingBlock;
 };
 
 }

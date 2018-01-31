@@ -28,36 +28,34 @@
 
 using namespace quarkdb;
 
-RaftTrimmingBlock::RaftTrimmingBlock(RaftTrimmer &tr, bool en)
-: trimmer(tr), enabled(en) {
-  if(enabled) {
-    trimmer.block();
-  }
+RaftTrimmingBlock::RaftTrimmingBlock(RaftTrimmer &tr, LogIndex preserve)
+: trimmer(tr) {
+  enforce(preserve);
 }
 
 RaftTrimmingBlock::~RaftTrimmingBlock() {
   lift();
 }
 
-void RaftTrimmingBlock::enforce() {
-  if(enabled) return;
-  enabled = true;
-  trimmer.block();
+LogIndex RaftTrimmingBlock::getPreservationIndex() const {
+  return preserveIndex;
+}
+
+void RaftTrimmingBlock::enforce(LogIndex limit) {
+  preserveIndex = limit;
+
+  if(registered && limit == std::numeric_limits<LogIndex>::max()) {
+    trimmer.registerChange(this);
+    registered = false;
+  }
+  else if(!registered && limit != std::numeric_limits<LogIndex>::max()) {
+    trimmer.registerChange(this);
+    registered = true;
+  }
 }
 
 void RaftTrimmingBlock::lift() {
-  if(!enabled) return;
-  enabled = false;
-  trimmer.unblock();
-}
-
-void RaftTrimmingBlock::reset(bool newval) {
-  if(newval) {
-    enforce();
-  }
-  else {
-    lift();
-  }
+  enforce(std::numeric_limits<LogIndex>::max());
 }
 
 RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
@@ -65,13 +63,37 @@ RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
 
 }
 
+void RaftTrimmer::registerChange(RaftTrimmingBlock* block) {
+  std::lock_guard<std::mutex> guard(mtx);
+
+  // De-register?
+  if(block->getPreservationIndex() == std::numeric_limits<LogIndex>::max()) {
+    blocks.erase(block);
+    return;
+  }
+
+  // Nope, enforce
+  blocks.insert(block);
+}
+
+bool RaftTrimmer::canTrimUntil(LogIndex threshold) {
+  std::lock_guard<std::mutex> lock(mtx);
+
+  for(auto it = blocks.begin(); it != blocks.end(); it++) {
+    if((*it)->getPreservationIndex() <= threshold) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void RaftTrimmer::main(ThreadAssistant &assistant) {
+  // std::chrono::steady_clock::time_point lastMessage;
+
   while(!assistant.terminationRequested()) {
     LogIndex start, size, threshold;
     TrimmingConfig trimConfig;
-
-    // Don't trim at all if any blocks are in force.
-    if(blocksActive != 0) goto wait;
 
     start = journal.getLogStart();
     size = journal.getLogSize();
@@ -86,6 +108,11 @@ void RaftTrimmer::main(ThreadAssistant &assistant) {
 
     threshold = start + trimConfig.step;
 
+    // Check if any trimming block is preserving these entries.
+    if(!canTrimUntil(threshold)) {
+      goto wait;
+    }
+
     // A last, paranoid check: Have the entries we're about to remove been
     // both committed and applied?
     if(journal.getCommitIndex() <= threshold || stateMachine.getLastApplied() <= threshold) {
@@ -98,25 +125,5 @@ void RaftTrimmer::main(ThreadAssistant &assistant) {
 
 wait:
       assistant.wait_for(std::chrono::seconds(1));
-  }
-}
-
-void RaftTrimmer::block() {
-  std::lock_guard<std::mutex> lock(mtx);
-  blocksActive++;
-
-  if(blocksActive == 1) {
-    qdb_info("Pausing journal trimming, as a trimming block was just put in place.");
-  }
-}
-
-void RaftTrimmer::unblock() {
-  std::lock_guard<std::mutex> lock(mtx);
-  blocksActive--;
-
-  qdb_assert(blocksActive >= 0);
-
-  if(blocksActive == 0) {
-    qdb_info("No trimming blocks are in force, resuming journal trimmer.");
   }
 }
