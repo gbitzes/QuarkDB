@@ -29,17 +29,33 @@
 
 namespace quarkdb {
 
+class RaftTrimmer;
+
+class RaftTrimmingBlock {
+public:
+  RaftTrimmingBlock(RaftTrimmer &trimmer, bool enabled);
+  ~RaftTrimmingBlock();
+
+  void lift();
+  void enforce();
+  void reset(bool newval);
+
+private:
+  RaftTrimmer &trimmer;
+  bool enabled;
+};
+
 class RaftJournal; class RaftConfig; class StateMachine;
 class RaftTrimmer {
 public:
   RaftTrimmer(RaftJournal &journal, RaftConfig &raftConfig, StateMachine &sm);
 
-  void resilveringInitiated();
-  void resilveringOver();
+  void block();
+  void unblock();
 
 private:
   std::mutex mtx;
-  std::atomic<int64_t> resilveringsInProgress = {0};
+  std::atomic<int64_t> blocksActive = {0};
 
   RaftJournal &journal;
   RaftConfig &raftConfig;

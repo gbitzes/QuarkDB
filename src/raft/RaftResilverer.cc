@@ -71,19 +71,18 @@ private:
   std::string error;
 };
 
-RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftClusterID &cid, const RaftTimeouts &timeouts, RaftTrimmer *trim)
-: shardDirectory(dir), target(trg), clusterID(cid), trimmer(trim), talker(target, clusterID, timeouts) {
+RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftClusterID &cid, const RaftTimeouts &timeouts, RaftTrimmer &trimmer)
+: shardDirectory(dir), target(trg), clusterID(cid),
+  trimmingBlock(new RaftTrimmingBlock(trimmer, true)),
+  talker(target, clusterID, timeouts) {
 
   resilveringID = generateUuid();
-
-  if(trimmer) trimmer->resilveringInitiated();
   setStatus(ResilveringState::INPROGRESS, "");
   mainThread.reset(&RaftResilverer::main, this);
 }
 
 RaftResilverer::~RaftResilverer() {
   mainThread.join();
-  if(trimmer) trimmer->resilveringOver();
 }
 
 ResilveringStatus RaftResilverer::getStatus() {

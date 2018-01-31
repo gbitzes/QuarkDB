@@ -27,6 +27,8 @@
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
 #include "raft/RaftReplicator.hh"
+#include "raft/RaftConfig.hh"
+#include "raft/RaftTrimmer.hh"
 #include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
@@ -410,3 +412,43 @@ TEST_F(Replication, no_committing_entries_from_previous_terms) {
   RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == 2);
 }
 
+TEST_F(Replication, TrimmingBlock) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  // Set journal trim config to ridiculously low values.
+  TrimmingConfig trimConfig { 2, 1 };
+  EncodedConfigChange configChange = raftconfig(leaderID)->setTrimmingConfig(trimConfig, true);
+  ASSERT_TRUE(configChange.error.empty());
+  ASSERT_REPLY(tunnel(leaderID)->execute(configChange.request), "OK");
+
+  // Ensure it took effect...
+  for(size_t i = 0; i < 100; i++) {
+    ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("entry-" << i), SSTR("val-" << i)), "OK");
+  }
+
+  // Ensure everyone apart from the leader trimmed their journals.
+  // (The replicator might have blocked such aggressive trimming)
+  LogIndex logSize = journal(leaderID)->getLogSize();
+
+  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (logSize - 3));
+  RETRY_ASSERT_TRUE(journal((leaderID+2) % 3)->getLogStart() == (logSize - 3));
+
+  // Put a trimming block in place for one of the followers.
+  RaftTrimmingBlock trimmingBlock(*trimmer((leaderID+1)%3), true);
+
+  for(size_t i = 0; i < 100; i++) {
+    ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("entry2-" << i), SSTR("val2-" << i)), "OK");
+  }
+
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (logSize - 3));
+
+  LogIndex newLogSize = journal(leaderID)->getLogSize();
+  RETRY_ASSERT_TRUE(journal((leaderID+2) % 3)->getLogStart() == (newLogSize - 3));
+
+  // Lift block, ensure journal is trimmed
+  trimmingBlock.lift();
+  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (newLogSize - 3));
+}

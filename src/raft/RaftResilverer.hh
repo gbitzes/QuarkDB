@@ -46,10 +46,11 @@ struct ResilveringStatus {
 };
 
 class ShardDirectory; class RaftTrimmer;
+class RaftTrimmingBlock;
 
 class RaftResilverer {
 public:
-  RaftResilverer(ShardDirectory &directory, const RaftServer &target, const RaftClusterID &clusterID, const RaftTimeouts &timeouts, RaftTrimmer *trimmer = nullptr);
+  RaftResilverer(ShardDirectory &directory, const RaftServer &target, const RaftClusterID &clusterID, const RaftTimeouts &timeouts, RaftTrimmer &trimmer);
   ~RaftResilverer();
 
   ResilveringStatus getStatus();
@@ -57,7 +58,7 @@ private:
   ShardDirectory &shardDirectory;
   RaftServer target;
   RaftClusterID clusterID;
-  RaftTrimmer* trimmer;
+  std::unique_ptr<RaftTrimmingBlock> trimmingBlock;
 
   RaftTalker talker;
 

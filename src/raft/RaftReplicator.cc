@@ -175,7 +175,7 @@ void RaftReplicaTracker::triggerResilvering() {
   }
 
   // Start the resilverer
-  resilverer.reset(new RaftResilverer(shardDirectory, target, journal.getClusterID(), timeouts, &trimmer));
+  resilverer.reset(new RaftResilverer(shardDirectory, target, journal.getClusterID(), timeouts, trimmer));
 }
 
 void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
@@ -300,7 +300,7 @@ bool RaftReplicaTracker::sendPayload(RaftTalker &talker, LogIndex nextIndex, int
     snapshot->term,
     state.getMyself(),
     nextIndex-1,
-    prevTerm, 
+    prevTerm,
     commitIndexForTarget,
     entries
   );

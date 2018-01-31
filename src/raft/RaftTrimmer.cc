@@ -28,6 +28,37 @@
 
 using namespace quarkdb;
 
+RaftTrimmingBlock::RaftTrimmingBlock(RaftTrimmer &tr, bool en)
+: trimmer(tr), enabled(en) {
+  if(enabled) {
+    trimmer.block();
+  }
+}
+
+RaftTrimmingBlock::~RaftTrimmingBlock() {
+  lift();
+}
+
+void RaftTrimmingBlock::enforce() {
+  if(enabled) return;
+  enabled = true;
+  trimmer.block();
+}
+
+void RaftTrimmingBlock::lift() {
+  if(!enabled) return;
+  enabled = false;
+  trimmer.unblock();
+}
+
+void RaftTrimmingBlock::reset(bool newval) {
+  if(newval) {
+    enforce();
+  }
+  else {
+    lift();
+  }
+}
 
 RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
 : journal(jr), raftConfig(conf), stateMachine(sm), mainThread(&RaftTrimmer::main, this) {
@@ -39,8 +70,8 @@ void RaftTrimmer::main(ThreadAssistant &assistant) {
     LogIndex start, size, threshold;
     TrimmingConfig trimConfig;
 
-    // Don't trim at all if resilvering is going on.
-    if(resilveringsInProgress != 0) goto wait;
+    // Don't trim at all if any blocks are in force.
+    if(blocksActive != 0) goto wait;
 
     start = journal.getLogStart();
     size = journal.getLogSize();
@@ -70,22 +101,22 @@ wait:
   }
 }
 
-void RaftTrimmer::resilveringInitiated() {
+void RaftTrimmer::block() {
   std::lock_guard<std::mutex> lock(mtx);
-  resilveringsInProgress++;
+  blocksActive++;
 
-  if(resilveringsInProgress == 1) {
-    qdb_info("Pausing journal trimming, as this node is about to start resilvering another.");
+  if(blocksActive == 1) {
+    qdb_info("Pausing journal trimming, as a trimming block was just put in place.");
   }
 }
 
-void RaftTrimmer::resilveringOver() {
+void RaftTrimmer::unblock() {
   std::lock_guard<std::mutex> lock(mtx);
-  resilveringsInProgress--;
+  blocksActive--;
 
-  qdb_assert(resilveringsInProgress >= 0);
+  qdb_assert(blocksActive >= 0);
 
-  if(resilveringsInProgress == 0) {
-    qdb_info("No resilvering is in progress, resuming journal trimmer.");
+  if(blocksActive == 0) {
+    qdb_info("No trimming blocks are in force, resuming journal trimmer.");
   }
 }
