@@ -69,6 +69,7 @@ class RaftTrimmer {
 public:
   RaftTrimmer(RaftJournal &journal, RaftConfig &raftConfig, StateMachine &sm);
   void registerChange(RaftTrimmingBlock* block);
+  bool canTrimUntil(LogIndex threshold);
 private:
   std::mutex mtx;
   std::set<RaftTrimmingBlock*> blocks;
@@ -79,7 +80,6 @@ private:
   AssistedThread mainThread;
 
   void main(ThreadAssistant &assistant);
-  bool canTrimUntil(LogIndex threshold);
   friend class RaftTrimmingBlock;
 };
 

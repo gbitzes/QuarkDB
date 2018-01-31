@@ -29,6 +29,7 @@
 #include <queue>
 #include "RaftTalker.hh"
 #include "RaftState.hh"
+#include "RaftTrimmer.hh"
 #include "../utils/AssistedThread.hh"
 
 namespace quarkdb {
@@ -114,6 +115,7 @@ private:
   AssistedThread heartbeatThread;
 
   std::unique_ptr<RaftResilverer> resilverer;
+  RaftTrimmingBlock trimmingBlock;
 };
 
 

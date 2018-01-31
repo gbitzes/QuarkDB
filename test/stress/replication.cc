@@ -464,3 +464,45 @@ TEST_F(Replication, TrimmingBlock) {
   trimmingBlock.lift();
   RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (newLogSize - 3));
 }
+
+TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
+  spinup(0); spinup(1);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> replies;
+  for(size_t i = 0; i < 10000; i++) {
+    replies.emplace_back(tunnel(leaderID)->exec("set", SSTR("entry-" << i), SSTR("contents-" << i)));
+  }
+
+  for(size_t i = 0; i < 10000; i++) {
+    ASSERT_REPLY(replies[i], "OK");
+  }
+
+  // Spin up node #2
+  spinup(2);
+  RETRY_ASSERT_TRUE(journal(2)->getLogSize() >= 10);
+
+  // Set an insane trimming limit.
+  TrimmingConfig trimConfig { 2, 1 };
+  EncodedConfigChange configChange = raftconfig(leaderID)->setTrimmingConfig(trimConfig, true);
+  ASSERT_TRUE(configChange.error.empty());
+  ASSERT_REPLY(tunnel(leaderID)->execute(configChange.request), "OK");
+
+  // Ensure the replicator doesn't blow up
+  while(journal(2)->getLogSize() != journal(leaderID)->getLogSize()) {
+    ASSERT_FALSE(trimmer(leaderID)->canTrimUntil(journal(2)->getLogSize()));
+  }
+
+  // Ensure contents are OK.
+  for(size_t i = 0; i < 10000; i++) {
+    std::string value;
+    ASSERT_TRUE(stateMachine(leaderID)->get(SSTR("entry-" << i), value).ok());
+    ASSERT_EQ(value, SSTR("contents-" << i));
+  }
+
+  // Ensure journals are eventually trimmed.
+  RETRY_ASSERT_TRUE(journal(0)->getLogStart() == 10000);
+  RETRY_ASSERT_TRUE(journal(1)->getLogStart() == 10000);
+  RETRY_ASSERT_TRUE(journal(2)->getLogStart() == 10000);
+}

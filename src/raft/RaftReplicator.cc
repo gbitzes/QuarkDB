@@ -33,6 +33,7 @@
 #include "RaftCommitTracker.hh"
 #include "RaftTimeouts.hh"
 #include "RaftLease.hh"
+#include "RaftTrimmer.hh"
 #include "../utils/FileUtils.hh"
 #include <dirent.h>
 #include <fstream>
@@ -52,7 +53,8 @@ RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStat
 : target(target_), snapshot(snapshot_), journal(journal_),
   state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t),
   matchIndex(commitTracker.getHandler(target)),
-  lastContact(lease.getHandler(target))  {
+  lastContact(lease.getHandler(target)),
+  trimmingBlock(trimmer, 0) {
   if(target == state.getMyself()) {
     qdb_throw("attempted to run replication on myself");
   }
@@ -253,6 +255,9 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
       matchIndex.update(response.logSize-1);
     }
 
+    // Progress trimming block.
+    trimmingBlock.enforce(response.logSize-2);
+
     lock.lock();
   }
 
@@ -397,6 +402,33 @@ nextRound:
   }
 }
 
+class OnlineTracker {
+public:
+  OnlineTracker() : online(false) { }
+
+  void seenOnline(){
+    online = true;
+    lastSeen = std::chrono::steady_clock::now();
+  }
+
+  void seenOffline() {
+    online = false;
+  }
+
+  bool isOnline() const {
+    return online;
+  }
+
+  bool hasBeenOfflineForLong() const {
+    if(online) return false;
+    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - lastSeen) > std::chrono::minutes(1);
+  }
+
+private:
+  bool online;
+  std::chrono::steady_clock::time_point lastSeen;
+};
+
 void RaftReplicaTracker::main() {
   RaftTalker talker(target, journal.getClusterID(), timeouts);
   LogIndex nextIndex = journal.getLogSize();
@@ -404,7 +436,7 @@ void RaftReplicaTracker::main() {
   RaftMatchIndexTracker &matchIndex = commitTracker.getHandler(target);
   RaftLastContact &lastContact = lease.getHandler(target);
 
-  bool online = false;
+  OnlineTracker onlineTracker;
   int64_t payloadLimit = 1;
 
   bool warnStreamingHiccup = false;
@@ -417,12 +449,13 @@ void RaftReplicaTracker::main() {
     }
 
     // Target looks pretty stable, start continuous stream
-    if(online && payloadLimit >= 8) {
+    if(onlineTracker.isOnline() && payloadLimit >= 8) {
       qdb_info("Target " << target.toString() << " appears stable, initiating streaming replication.");
       resilverer.reset();
       nextIndex = streamUpdates(talker, nextIndex);
       inFlight = {}; // clear queue
       warnStreamingHiccup = true;
+      onlineTracker.seenOnline();
       // Something happened when streaming updates, switch back to conservative
       // mode and wait for each response
       payloadLimit = 1;
@@ -445,18 +478,18 @@ void RaftReplicaTracker::main() {
     RaftAppendEntriesResponse resp;
     // Check: Is the target even online?
     if(retrieve_response(fut, resp, std::chrono::milliseconds(500)) != AppendEntriesReception::kOk) {
-      if(online) {
+      if(onlineTracker.isOnline()) {
         payloadLimit = 1;
         qdb_event("Replication target " << target.toString() << " went offline.");
-        online = false;
+        onlineTracker.seenOffline();
       }
 
       goto nextRound;
     }
 
-    if(!online) {
+    if(!onlineTracker.isOnline()) {
       // Print an event if the target just came back online
-      online = true;
+      onlineTracker.seenOnline();
       qdb_event("Replication target " << target.toString() << " came back online. Log size: " << resp.logSize << ", lagging " << (journal.getLogSize() - resp.logSize) << " entries behind me. (approximate)");
     }
 
@@ -516,11 +549,19 @@ void RaftReplicaTracker::main() {
     }
 
 nextRound:
-    updateStatus(online, nextIndex);
-    if(!online || needResilvering) {
+    if(onlineTracker.hasBeenOfflineForLong()) {
+      // Don't let a "permanently offline" node block journal trimming indefinitely
+      trimmingBlock.lift();
+    }
+    else {
+      trimmingBlock.enforce(nextIndex-2);
+    }
+
+    updateStatus(onlineTracker.isOnline(), nextIndex);
+    if(!onlineTracker.isOnline() || needResilvering) {
       state.wait(timeouts.getHeartbeatInterval());
     }
-    else if(online && nextIndex >= journal.getLogSize()) {
+    else if(onlineTracker.isOnline() && nextIndex >= journal.getLogSize()) {
       journal.waitForUpdates(nextIndex, timeouts.getHeartbeatInterval());
     }
     else {

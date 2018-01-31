@@ -89,8 +89,6 @@ bool RaftTrimmer::canTrimUntil(LogIndex threshold) {
 }
 
 void RaftTrimmer::main(ThreadAssistant &assistant) {
-  // std::chrono::steady_clock::time_point lastMessage;
-
   while(!assistant.terminationRequested()) {
     LogIndex start, size, threshold;
     TrimmingConfig trimConfig;
