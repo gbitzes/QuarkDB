@@ -505,4 +505,10 @@ TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
   RETRY_ASSERT_TRUE(journal(0)->getLogStart() == 10000);
   RETRY_ASSERT_TRUE(journal(1)->getLogStart() == 10000);
   RETRY_ASSERT_TRUE(journal(2)->getLogStart() == 10000);
+
+  ASSERT_TRUE(trimmer(0)->canTrimUntil(9999));
+  ASSERT_TRUE(trimmer(1)->canTrimUntil(9999));
+  ASSERT_TRUE(trimmer(2)->canTrimUntil(9999));
+
+  ASSERT_FALSE(trimmer(leaderID)->canTrimUntil(10001));
 }
