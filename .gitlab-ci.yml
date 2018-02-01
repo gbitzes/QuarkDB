@@ -41,7 +41,7 @@ fedora-tsan:
     - "$CI_JOB_NAME"
 
 ubuntu-asan:
-  stage: build
+  stage: test
   image: gitlab-registry.cern.ch/eos/quarkdb/ubuntu-enhanced
   script:
     - ci/ubuntu/asan.sh
