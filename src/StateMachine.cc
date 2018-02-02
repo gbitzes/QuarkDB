@@ -101,6 +101,7 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
 
   options.create_if_missing = !dirExists;
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
+  options.row_cache = rocksdb::NewLRUCache(1024 * 1024 * 1024, 8);
 
   if(bulkLoad) {
     qdb_warn("Opening state machine in bulkload mode.");
