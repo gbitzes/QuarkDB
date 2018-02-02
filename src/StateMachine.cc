@@ -96,7 +96,7 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
   // automatically roll-over when necessary, which should alleviate the above.
 
   if(!bulkLoad) {
-    options.max_manifest_file_size = 2 * 1024 * 1024;
+    options.max_manifest_file_size = 1024 * 1024;
   }
 
   options.create_if_missing = !dirExists;

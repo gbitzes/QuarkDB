@@ -113,7 +113,7 @@ void RaftJournal::openDB(const std::string &path) {
 
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
   options.create_if_missing = true;
-  options.max_manifest_file_size = 2 * 1024 * 1024;
+  options.max_manifest_file_size = 1024 * 1024;
   rocksdb::Status status = rocksdb::DB::Open(options, path, &db);
   if(!status.ok()) qdb_throw("Error while opening journal in " << path << ":" << status.ToString());
 }
