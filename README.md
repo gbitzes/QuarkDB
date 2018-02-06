@@ -1,10 +1,14 @@
-# quarkdb
+# QuarkDB
 
 [![build status](https://gitlab.cern.ch/eos/quarkdb/badges/master/build.svg)](https://gitlab.cern.ch/eos/quarkdb/commits/master)
 [![coverage report](https://gitlab.cern.ch/eos/quarkdb/badges/master/coverage.svg)](https://quarkdb.web.cern.ch/quarkdb/coverage/master/)
 
-[quarkdb](https://gitlab.cern.ch/eos/quarkdb) is a highly available key-value store that implements a small subset
+[QuarkDB](https://gitlab.cern.ch/eos/quarkdb) is a highly available datastore that implements a small subset
 of the redis command set, developed by IT-ST at CERN.
+
+# Demo
+
+Watch this [quick demo](https://asciinema.org/a/NdX791Ah4JVkGQnUQkBVm3dDJ) to see QuarkDB in action.
 
 # Documentation
 
