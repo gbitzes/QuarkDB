@@ -52,6 +52,15 @@ public:
     return tx->GetForUpdate(rocksdb::ReadOptions(), slice, &value);
   }
 
+  rocksdb::Status exists(const rocksdb::Slice &slice) {
+    if(bulkLoad) {
+      return rocksdb::Status::NotFound();
+    }
+
+    rocksdb::PinnableSlice ignored;
+    return tx->Get(rocksdb::ReadOptions(), slice, &ignored);
+  }
+
   rocksdb::Status get(const rocksdb::Slice &slice, std::string &value) {
     if(bulkLoad) {
       return rocksdb::Status::NotFound();

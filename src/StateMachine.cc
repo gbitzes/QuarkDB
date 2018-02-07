@@ -684,8 +684,10 @@ rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize) {
 bool StateMachine::WriteOperation::fieldExists(const std::string &field) {
   assertWritable();
 
-  std::string tmp;
-  return getField(field, tmp);
+  FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
+  rocksdb::Status st = stagingArea.exists(locator.toSlice());
+  ASSERT_OK_OR_NOTFOUND(st);
+  return st.ok();
 }
 
 bool StateMachine::WriteOperation::deleteField(const std::string &field) {
