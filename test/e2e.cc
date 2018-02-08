@@ -37,6 +37,7 @@
 #include "qclient/QScanner.hh"
 #include "qclient/QSet.hh"
 #include "qclient/ConnectionInitiator.hh"
+#include "qclient/QHash.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -215,7 +216,7 @@ TEST_F(Raft_e2e, hscan) {
 TEST_F(Raft_e2e, scan) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-  int leaderID = getServerID(state(0)->getSnapshot()->leader);
+  int leaderID = getLeaderID();
 
   for(size_t i = 1; i < 10; i++) {
     ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("f" << i), SSTR("v" << i)), "OK");
@@ -249,6 +250,35 @@ TEST_F(Raft_e2e, scan) {
 
   ASSERT_FALSE(scanner.next(ret));
 }
+
+TEST_F(Raft_e2e, test_qclient_convenience_classes) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> replies;
+  for(size_t i = 0; i < 9; i++) {
+    replies.push_back(tunnel(leaderID)->exec("HSET", "myhash", SSTR("f" << i), SSTR("v" << i)));
+  }
+
+  for(size_t i = 0; i < 9; i++) {
+    ASSERT_REPLY(replies[i], 1);
+  }
+
+  qclient::QHash qhash(*tunnel(leaderID), "myhash");
+  qclient::QHash::Iterator it = qhash.getIterator(2);
+
+  for(size_t i = 0; i < 9; i++) {
+    ASSERT_TRUE(it.valid());
+    ASSERT_EQ(it.getKey(), SSTR("f" << i));
+    ASSERT_EQ(it.getValue(), SSTR("v" << i));
+    it.next();
+  }
+
+  ASSERT_FALSE(it.valid());
+  ASSERT_EQ(it.requestsSoFar(), 5u);
+}
+
 
 TEST_F(Raft_e2e, test_many_redis_commands) {
   spinup(0); spinup(1); spinup(2);
