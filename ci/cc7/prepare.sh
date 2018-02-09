@@ -35,4 +35,4 @@ gitbook build # Gitbook will install more stuff during its first execution
 ## Install rocksdb
 ##------------------------------------------------------------------------------
 
-ci/install-rocksdb.sh
+scl enable devtoolset-7 "ci/install-rocksdb.sh"

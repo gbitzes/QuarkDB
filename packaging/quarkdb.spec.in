@@ -52,15 +52,13 @@ A highly available key-value store.
 %setup -n %{name}-%{version}
 
 %build
-mkdir build
-cd build
-
 %if 0%{?el7} == 1
-scl enable devtoolset-7 "%{cmake_cmd} ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr @ROCKSDB_CACHED_BUILD@"
-%else
-%{cmake_cmd} ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr @ROCKSDB_CACHED_BUILD@
+source /opt/rh/devtoolset-7/enable
 %endif
 
+mkdir build
+cd build
+%{cmake_cmd} ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr @ROCKSDB_CACHED_BUILD@
 %{__make} %{_smp_mflags}
 
 %install
