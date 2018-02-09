@@ -33,7 +33,7 @@ BuildRequires: zlib-static
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
 
-%if 0%{distribution} == 7
+%if 0%{?el7} == 1
 BuildRequires: centos-release-scl
 BuildRequires: devtoolset-7
 %endif
@@ -55,7 +55,7 @@ A highly available key-value store.
 mkdir build
 cd build
 
-%if 0%{distribution} == 7
+%if 0%{?el7} == 1
 scl enable devtoolset-7 %{cmake_cmd} ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr @ROCKSDB_CACHED_BUILD@
 %else
 %{cmake_cmd} ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr @ROCKSDB_CACHED_BUILD@
