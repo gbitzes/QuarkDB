@@ -772,6 +772,59 @@ TEST_F(Raft_e2e, monitor) {
   ASSERT_EQ(response, "+\"get\" \"abc\"\r\n");
 }
 
+class PingCallback : qclient::QCallback {
+public:
+  PingCallback(qclient::QClient &q) : qcl(q) {
+    flag = prom.get_future();
+    qcl.execCB(this, "PING", SSTR(pingCounter));
+  }
+
+  void finalize(bool result) {
+    isOk = result;
+    prom.set_value();
+  }
+
+  virtual void handleResponse(redisReplyPtr &&reply) {
+    if(!reply) finalize(false);
+    if(reply->type != REDIS_REPLY_STRING) finalize(false);
+    if(std::string(reply->str, reply->len) != SSTR(pingCounter)) finalize(false);
+    qdb_info("Received successful ping response: " << pingCounter);
+
+    pingCounter++;
+    if(pingCounter == 5) return finalize(true);
+
+    qcl.execCB(this, "PING", SSTR(pingCounter));
+  }
+
+  bool ok() {
+    return isOk;
+  }
+
+  void wait() {
+    flag.get();
+  }
+
+private:
+  size_t pingCounter = 0;
+
+  std::promise<void> prom;
+  std::future<void> flag;
+  size_t counter;
+  bool isOk = true;
+  qclient::QClient &qcl;
+};
+
+TEST_F(Raft_e2e, PingExtravaganza) {
+  // A most efficient and sophisticated ping machinery.
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  PingCallback pinger(*tunnel(leaderID));
+  pinger.wait();
+  ASSERT_TRUE(pinger.ok());
+}
+
 TEST_F(Raft_e2e, hincrbymulti) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
