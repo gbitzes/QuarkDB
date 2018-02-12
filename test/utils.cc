@@ -140,13 +140,13 @@ TEST(Utils, replication_status) {
 
 TEST(Utils, parseIntegerList) {
   std::vector<int64_t> res, tmp;
-  ASSERT_TRUE(ParseUtils::parseIntegerList("1,4,7", res));
+  ASSERT_TRUE(ParseUtils::parseIntegerList("1,4,7", ",", res));
 
   tmp = {1, 4, 7};
   ASSERT_EQ(res, tmp);
-  ASSERT_FALSE(ParseUtils::parseIntegerList("14 - 7", res));
+  ASSERT_FALSE(ParseUtils::parseIntegerList("14 - 7", ",", res));
 
-  ASSERT_TRUE(ParseUtils::parseIntegerList("147", res));
+  ASSERT_TRUE(ParseUtils::parseIntegerList("147", ",", res));
   tmp = {147};
   ASSERT_EQ(res, tmp);
 }

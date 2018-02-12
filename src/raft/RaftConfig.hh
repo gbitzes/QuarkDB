@@ -38,6 +38,9 @@ struct TrimmingConfig {
   // Trimming step - don't bother to trim if we'd be getting rid of fewer than
   // step entries.
   int64_t step;
+
+  bool parse(const std::string &str);
+  std::string toString() const;
 };
 
 struct EncodedConfigChange {

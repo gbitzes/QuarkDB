@@ -25,12 +25,31 @@
 #include "RaftDispatcher.hh"
 #include "../Connection.hh"
 #include "../StateMachine.hh"
-#include "../utils/IntToBinaryString.hh"
+#include "../utils/ParseUtils.hh"
 
 using namespace quarkdb;
 
-const std::string trimConfigKey("raft.trimming");
-const std::string resilveringEnabledKey("raft.resilvering.enabled");
+const std::string kTrimConfigKey("raft.trimming");
+const std::string kResilveringEnabledKey("raft.resilvering.enabled");
+
+bool TrimmingConfig::parse(const std::string &str) {
+  std::vector<int64_t> parts;
+  if(!ParseUtils::parseIntegerList(str, ":", parts)) {
+    return false;
+  }
+
+  if(parts.size() != 2) {
+    return false;
+  }
+
+  keepAtLeast = parts[0];
+  step = parts[1];
+  return true;
+}
+
+std::string TrimmingConfig::toString() const {
+  return SSTR(keepAtLeast << ":" << step);
+}
 
 RaftConfig::RaftConfig(StateMachine &sm) : stateMachine(sm) {
 
@@ -38,7 +57,7 @@ RaftConfig::RaftConfig(StateMachine &sm) : stateMachine(sm) {
 
 bool RaftConfig::getResilveringEnabled() {
   std::string value;
-  rocksdb::Status st = stateMachine.configGet(resilveringEnabledKey, value);
+  rocksdb::Status st = stateMachine.configGet(kResilveringEnabledKey, value);
 
   if(st.IsNotFound()) {
     return true;
@@ -60,13 +79,13 @@ bool RaftConfig::getResilveringEnabled() {
 }
 
 EncodedConfigChange RaftConfig::setResilveringEnabled(bool value) {
-  RedisRequest req { "CONFIG_SET", resilveringEnabledKey, boolToString(value) };
+  RedisRequest req { "CONFIG_SET", kResilveringEnabledKey, boolToString(value) };
   return { "", req };
 }
 
 TrimmingConfig RaftConfig::getTrimmingConfig() {
   std::string trimConfig;
-  rocksdb::Status st = stateMachine.configGet(trimConfigKey, trimConfig);
+  rocksdb::Status st = stateMachine.configGet(kTrimConfigKey, trimConfig);
 
   if(st.IsNotFound()) {
     // Return default values
@@ -76,11 +95,10 @@ TrimmingConfig RaftConfig::getTrimmingConfig() {
     qdb_throw("Error when retrieving journal trim limit: " << st.ToString());
   }
 
-  qdb_assert(trimConfig.size() == 16);
-
   TrimmingConfig ret;
-  ret.keepAtLeast = binaryStringToInt(trimConfig.c_str());
-  ret.step = binaryStringToInt(trimConfig.c_str() + 8);
+  if(!ret.parse(trimConfig)) {
+    qdb_misconfig("Unable to parse trimming configuration key: " << kTrimConfigKey << " => " << trimConfig);
+  }
 
   return ret;
 }
@@ -99,6 +117,6 @@ EncodedConfigChange RaftConfig::setTrimmingConfig(const TrimmingConfig &trimConf
     return { SSTR("new 'step' too small: " << trimConfig.step), {} };
   }
 
-  RedisRequest req { "CONFIG_SET", trimConfigKey, intToBinaryString(trimConfig.keepAtLeast) + intToBinaryString(trimConfig.step)};
+  RedisRequest req { "CONFIG_SET", kTrimConfigKey, trimConfig.toString() };
   return { "", req};
 }

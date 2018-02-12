@@ -52,10 +52,10 @@ inline bool parseInt64(const std::string &str, int64_t &ret) {
   return true;
 }
 
-inline bool parseIntegerList(const std::string &buffer, std::vector<int64_t> &results) {
+inline bool parseIntegerList(const std::string &buffer, const std::string &separator, std::vector<int64_t> &results) {
   results.clear();
 
-  std::vector<std::string> items = ParseUtils::split(buffer, ",");
+  std::vector<std::string> items = ParseUtils::split(buffer, separator);
 
   for(size_t i = 0; i < items.size(); i++) {
     int64_t value;

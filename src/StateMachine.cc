@@ -560,6 +560,11 @@ rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::str
   // We don't use WriteOperation or key descriptors here,
   // since kConfiguration is special.
 
+  std::string oldvalue = "N/A";
+  rocksdb::Status st = configGet(key, oldvalue);
+  if(st.ok()) oldvalue = SSTR("'" << oldvalue << "'");
+  qdb_info("Applying configuration update: Key " << key << " changes from " << oldvalue << " into '" << value << "'");
+
   std::string tkey = translate_key(InternalKeyType::kConfiguration, key);
   stagingArea.put(tkey, value);
   return rocksdb::Status::OK();

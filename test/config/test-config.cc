@@ -82,7 +82,7 @@ void TestConfig::parseSingle(const std::string &key, const std::string &value) {
 
   if(key == "QDB_BENCH_THREADS") {
     std::vector<int64_t> threads;
-    if(!ParseUtils::parseIntegerList(value, threads)) {
+    if(!ParseUtils::parseIntegerList(value, ",", threads)) {
       goto parse_error;
     }
 
@@ -91,7 +91,7 @@ void TestConfig::parseSingle(const std::string &key, const std::string &value) {
 
   if(key == "QDB_BENCH_EVENTS") {
     std::vector<int64_t> events;
-    if(!ParseUtils::parseIntegerList(value, events)) {
+    if(!ParseUtils::parseIntegerList(value, ",", events)) {
       goto parse_error;
     }
 
