@@ -36,6 +36,7 @@ public:
   using container = std::vector<std::string>;
   using iterator = container::iterator;
   using const_iterator = container::const_iterator;
+  using size_type = container::size_type;
 
   RedisRequest(std::initializer_list<std::string> list) {
     for(auto it = list.begin(); it != list.end(); it++) {

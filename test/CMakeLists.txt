@@ -38,6 +38,7 @@ add_executable(quarkdb-tests
   link.cc
   main.cc
   poller.cc
+  qclient.cc
   raft-journal.cc
   raft-lease.cc
   raft-parser.cc
@@ -48,7 +49,6 @@ add_executable(quarkdb-tests
   redis-parser.cc
   state-machine.cc
   ${COMMON_TEST_SOURCES}
-  tunnel.cc
   utils.cc
 )
 

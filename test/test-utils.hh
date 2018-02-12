@@ -89,6 +89,26 @@ std::vector<std::string> make_vec(Args... args) {
   return std::vector<std::string> { args... };
 }
 
+// Yes, passing a callback to QClient to convert it into a future is really
+// stupid, since QClient supports futures natively. This is used to test that
+// qclient callbacks work as they should..
+class TrivialQCallback : public qclient::QCallback {
+public:
+  TrivialQCallback() {}
+  virtual ~TrivialQCallback() {}
+  virtual void handleResponse(qclient::redisReplyPtr &&reply) override {
+    promise.set_value(std::move(reply));
+  }
+
+  std::future<qclient::redisReplyPtr> getFuture() {
+    return promise.get_future();
+  }
+
+private:
+  std::promise<qclient::redisReplyPtr> promise;
+};
+
+
 class GlobalEnv : public testing::Environment {
 public:
   virtual void SetUp() override;

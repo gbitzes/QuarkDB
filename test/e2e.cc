@@ -501,6 +501,39 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[i++], "i6");
   ASSERT_REPLY(futures[i++], "OK");
   ASSERT_REPLY(futures[i++], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+
+  // Now test qclient callbacks, ensure things stay reasonable when we mix them
+  // with futures.
+  TrivialQCallback c1;
+  tunnel(leaderID)->execCB(&c1, "set", "qcl-counter", "1");
+
+  TrivialQCallback c2;
+  tunnel(leaderID)->execCB(&c2, "get", "qcl-counter");
+
+  std::future<redisReplyPtr> fut1 = tunnel(leaderID)->exec("get", "qcl-counter");
+  std::future<redisReplyPtr> fut2 = tunnel(leaderID)->exec("set", "qcl-counter", "2");
+  std::future<redisReplyPtr> fut3 = tunnel(leaderID)->exec("get", "qcl-counter");
+
+  TrivialQCallback c3;
+  tunnel(leaderID)->execCB(&c3, "get", "qcl-counter");
+
+  TrivialQCallback c4;
+  tunnel(leaderID)->execCB(&c4, "set", "qcl-counter", "3");
+
+  TrivialQCallback c5;
+  tunnel(leaderID)->execCB(&c5, "get", "qcl-counter");
+
+  std::future<redisReplyPtr> fut4 = tunnel(leaderID)->exec("get", "qcl-counter");
+
+  ASSERT_REPLY(c1.getFuture(), "OK");
+  ASSERT_REPLY(c2.getFuture(), "1");
+  ASSERT_REPLY(fut1, "1");
+  ASSERT_REPLY(fut2, "OK");
+  ASSERT_REPLY(fut3, "2");
+  ASSERT_REPLY(c3.getFuture(), "2");
+  ASSERT_REPLY(c4.getFuture(), "OK");
+  ASSERT_REPLY(c5.getFuture(), "3");
+  ASSERT_REPLY(fut4, "3");
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
