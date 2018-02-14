@@ -186,6 +186,10 @@ LinkStatus Connection::vector(const std::vector<std::string> &vec) {
   return pendingQueue->appendResponse(Formatter::vector(vec));
 }
 
+LinkStatus Connection::statusVector(const std::vector<std::string> &vec) {
+  return pendingQueue->appendResponse(Formatter::statusVector(vec));
+}
+
 LinkStatus Connection::scan(const std::string &marker, const std::vector<std::string> &vec) {
   return pendingQueue->appendResponse(Formatter::scan(marker, vec));
 }

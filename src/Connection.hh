@@ -122,6 +122,7 @@ public:
   LinkStatus null();
   LinkStatus integer(int64_t number);
   LinkStatus vector(const std::vector<std::string> &vec);
+  LinkStatus statusVector(const std::vector<std::string> &vec);
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
 
   bool monitor = false;

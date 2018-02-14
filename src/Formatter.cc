@@ -79,6 +79,15 @@ RedisEncodedResponse Formatter::vector(const std::vector<std::string> &vec) {
   return RedisEncodedResponse(ss.str());
 }
 
+RedisEncodedResponse Formatter::statusVector(const std::vector<std::string> &vec) {
+  std::stringstream ss;
+  ss << "*" << vec.size() << "\r\n";
+  for(std::vector<std::string>::const_iterator it = vec.begin(); it != vec.end(); it++) {
+    ss << "+" << *it << "\r\n";
+  }
+  return RedisEncodedResponse(ss.str());
+}
+
 RedisEncodedResponse Formatter::scan(const std::string &marker, const std::vector<std::string> &vec) {
   std::stringstream ss;
   ss << "*2\r\n";
