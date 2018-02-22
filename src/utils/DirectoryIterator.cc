@@ -22,7 +22,7 @@
  ************************************************************************/
 
 #include "DirectoryIterator.hh"
-#include "../Utils.hh"
+#include "Macros.hh"
 #include <string.h>
 
 using namespace quarkdb;

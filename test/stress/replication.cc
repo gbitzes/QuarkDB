@@ -395,21 +395,21 @@ TEST_F(Replication, no_committing_entries_from_previous_terms) {
   entry.request = make_req("set", "one entry", "to rule them all");
   ASSERT_TRUE(journal(2)->append(1, entry));
 
-
   spinup(2); spinup(1);
-  DBG(".");
   RETRY_ASSERT_TRUE(checkStateConsensus(1, 2));
   ASSERT_TRUE(state(1)->getSnapshot()->leader == myself(2));
-  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == 3);
-  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == 2);
-  RETRY_ASSERT_TRUE(journal(2)->getCommitIndex() == 2);
+
+  LogIndex leadershipMarker = state(2)->getSnapshot()->leadershipMarker;
+  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == leadershipMarker+1);
+  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == leadershipMarker);
+  RETRY_ASSERT_TRUE(journal(2)->getCommitIndex() == leadershipMarker);
 
   // now start node #0, too, ensure its contents are overwritten as well
   spinup(0);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   ASSERT_TRUE(state(0)->getSnapshot()->leader == myself(2));
-  RETRY_ASSERT_TRUE(journal(0)->getLogSize() == 3);
-  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == 2);
+  RETRY_ASSERT_TRUE(journal(0)->getLogSize() == leadershipMarker+1);
+  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == leadershipMarker);
 }
 
 TEST_F(Replication, TrimmingBlock) {
