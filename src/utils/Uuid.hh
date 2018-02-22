@@ -32,7 +32,7 @@ inline std::string generateUuid() {
   char buffer[64];
 
   uuid_t uuid;
-  uuid_generate_time(uuid);
+  uuid_generate_random(uuid);
   uuid_unparse(uuid, buffer);
 
   return std::string(buffer);
