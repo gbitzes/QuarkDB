@@ -25,16 +25,13 @@
 #define __QUARKDB_XRDQUARKDB_PROTOCOL_H__
 
 #include "Xrd/XrdProtocol.hh"
-#include "XrdSys/XrdSysError.hh"
-#include "XrdSys/XrdSysPthread.hh"
-#include "Xrd/XrdLink.hh"
-#include "XrdOuc/XrdOucString.hh"
-#include "XrdOuc/XrdOucStream.hh"
 #include "Utils.hh"
 #include "utils/InFlightTracker.hh"
 #include "EventFD.hh"
+#include "qclient/QClient.hh"
 #include <atomic>
-#include <qclient/QClient.hh>
+
+class XrdLink;
 
 namespace quarkdb {
 

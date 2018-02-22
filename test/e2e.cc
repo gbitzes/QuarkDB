@@ -747,6 +747,11 @@ TEST_F(Raft_e2e, monitor) {
 
   int leaderID = getLeaderID();
 
+  // Get connection ID
+  redisReplyPtr connIDReply = tunnel(leaderID)->exec("client-id").get();
+  std::string connID(connIDReply->str, connIDReply->len);
+  qdb_info("Connection ID: " << connID);
+
   // We can't use QClient for this, it can't handle the output of MONITOR
   qclient::ConnectionInitiator initiator("localhost", myself(leaderID).port);
   ASSERT_TRUE(initiator.ok());
@@ -763,13 +768,17 @@ TEST_F(Raft_e2e, monitor) {
 
   tunnel(leaderID)->exec("set", "abc", "aaaa" "\xab" "bbb");
   response.clear();
-  RETRY_ASSERT_TRUE(reader.consume(28, response));
-  ASSERT_EQ(response, "+\"set\" \"abc\" \"aaaa\\xABbbb\"\r\n");
+
+  std::string expectedReply = SSTR("+ [" << connID << "]: \"set\" \"abc\" \"aaaa\\xABbbb\"\r\n");
+  RETRY_ASSERT_TRUE(reader.consume(expectedReply.size(), response));
+  ASSERT_EQ(response, expectedReply);
 
   tunnel(leaderID)->exec("get", "abc");
   response.clear();
-  RETRY_ASSERT_TRUE(reader.consume(14, response));
-  ASSERT_EQ(response, "+\"get\" \"abc\"\r\n");
+
+  expectedReply = SSTR("+ [" << connID << "]: \"get\" \"abc\"\r\n");
+  RETRY_ASSERT_TRUE(reader.consume(expectedReply.size(), response));
+  ASSERT_EQ(response, expectedReply);
 }
 
 class PingCallback : qclient::QCallback {

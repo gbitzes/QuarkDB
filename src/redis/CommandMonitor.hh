@@ -33,7 +33,7 @@ class CommandMonitor {
 public:
   CommandMonitor();
 
-  void broadcast(const RedisRequest &received);
+  void broadcast(const std::string& linkDescription, const RedisRequest &received);
   void addRegistration(Connection *c);
   size_t size();
 

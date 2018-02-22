@@ -96,6 +96,9 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->err(SSTR("unknown argument '" << req[1] << "'"));
     }
+    case RedisCommand::CLIENT_ID: {
+      return conn->status(conn->getID());
+    }
     case RedisCommand::QUARKDB_INFO: {
       return conn->statusVector(this->info().toVector());
     }

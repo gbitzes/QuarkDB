@@ -60,6 +60,7 @@ public:
   // not present in XrdLink, but convenient
   LinkStatus Send(const std::string &str);
   std::string describe() const;
+  std::string getID() const { return uuid; }
 
   // Set global connection logging config
   static void setConnectionLogging(bool val);

@@ -65,6 +65,7 @@ public:
   LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
   bool appendIfAttached(RedisEncodedResponse &&raw);
+  std::string describe() const;
 private:
   LinkStatus appendResponseNoLock(RedisEncodedResponse &&raw);
   Connection *conn;
@@ -109,6 +110,8 @@ class Connection {
 public:
   Connection(Link *link, size_t writeBatchLimit = 1);
   ~Connection();
+  std::string describe() const;
+  std::string getID() const { return uuid; }
 
   LinkStatus raw(RedisEncodedResponse &&encoded);
   LinkStatus moved(int64_t shardId, const RaftServer &location);
@@ -169,6 +172,9 @@ private:
   RedisParser parser;
   std::shared_ptr<PendingQueue> pendingQueue;
   size_t writeBatchLimit;
+
+  std::string description;
+  std::string uuid;
 
   friend class PendingQueue;
 };

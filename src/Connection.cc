@@ -131,7 +131,7 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
 
 Connection::Connection(Link *l, size_t write_batch_limit)
 : writer(l), parser(l), pendingQueue(new PendingQueue(this)),
-  writeBatchLimit(write_batch_limit) {
+  writeBatchLimit(write_batch_limit), description(l->describe()), uuid(l->getID()) {
 }
 
 Connection::~Connection() {
@@ -249,4 +249,8 @@ void Connection::setResponseBuffering(bool value) {
 
 void Connection::flush() {
   writer.flush();
+}
+
+std::string Connection::describe() const {
+  return description;
 }

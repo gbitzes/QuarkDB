@@ -116,7 +116,7 @@ LinkStatus Shard::dispatch(Connection *conn, WriteBatch &batch) {
   }
 
   for(size_t i = 0; i < batch.requests.size(); i++) {
-    commandMonitor.broadcast(batch.requests[i]);
+    commandMonitor.broadcast(conn->describe(), batch.requests[i]);
   }
 
   LinkStatus ret = dispatcher->dispatch(conn, batch);
@@ -125,7 +125,7 @@ LinkStatus Shard::dispatch(Connection *conn, WriteBatch &batch) {
 }
 
 LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
-  commandMonitor.broadcast(req);
+  commandMonitor.broadcast(conn->describe(), req);
 
   switch(req.getCommand()) {
     case RedisCommand::MONITOR: {

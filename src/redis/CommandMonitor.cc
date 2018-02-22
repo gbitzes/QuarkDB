@@ -23,20 +23,21 @@
 
 #include "CommandMonitor.hh"
 #include "../Formatter.hh"
+#include "../Link.hh"
 using namespace quarkdb;
 
 CommandMonitor::CommandMonitor() {
 
 }
 
-void CommandMonitor::broadcast(const RedisRequest &received) {
+void CommandMonitor::broadcast(const std::string& linkDescription, const RedisRequest &received) {
   if(!active) return;
 
   std::lock_guard<std::mutex> lock(mtx);
   auto it = monitors.begin();
 
   while(it != monitors.end()) {
-    bool stillAlive = (*it)->appendIfAttached(Formatter::status(received.toPrintableString()));
+    bool stillAlive = (*it)->appendIfAttached(Formatter::status(SSTR(linkDescription << ": " << received.toPrintableString())));
 
     if(!stillAlive) {
       it = monitors.erase(it);

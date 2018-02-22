@@ -34,6 +34,7 @@ enum class RedisCommand {
   PING,
   DEBUG,
   MONITOR,
+  CLIENT_ID,
 
   FLUSHALL,
 
