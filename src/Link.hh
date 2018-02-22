@@ -59,6 +59,10 @@ public:
 
   // not present in XrdLink, but convenient
   LinkStatus Send(const std::string &str);
+  std::string describe() const;
+
+  // Set global connection logging config
+  static void setConnectionLogging(bool val);
 private:
   qclient::TlsConfig tlsconfig;
   qclient::TlsFilter tlsfilter;
@@ -67,6 +71,9 @@ private:
   XrdLink *link = nullptr;
   bool dead = false;
   int fd = -1;
+
+  std::string uuid;
+  std::string host;
 
   LinkStatus streamRecv(char *buff, int blen, int timeout);
   LinkStatus streamSend(const char *buff, int blen);

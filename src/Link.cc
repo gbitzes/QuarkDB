@@ -27,10 +27,20 @@
 #include "Link.hh"
 #include "Common.hh"
 #include "Utils.hh"
+#include "utils/Uuid.hh"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
 using namespace quarkdb;
+
+namespace {
+  // No external linkage
+  bool connectionLogging = true;
+}
+
+void Link::setConnectionLogging(bool val) {
+  connectionLogging = val;
+}
 
 using std::placeholders::_1;
 using std::placeholders::_2;
@@ -45,22 +55,32 @@ qclient::RecvStatus Link::recvStatus(char *buff, int blen, int timeout) {
 
 Link::Link(const qclient::TlsConfig &tlsconfig_)
 : tlsconfig(tlsconfig_), tlsfilter(tlsconfig, qclient::FilterType::SERVER, std::bind(&Link::recvStatus, this, _1, _2, _3), std::bind(&Link::rawSend, this, _1, _2)) {
-
+  uuid = generateUuid();
 }
 
 Link::Link(int fd_, qclient::TlsConfig tlsconfig_)
 : Link(tlsconfig_) {
+  uuid = generateUuid();
   fd = fd_;
   fcntl(fd, F_SETFL, fcntl(fd, F_GETFL) | O_NONBLOCK);
 }
 
 Link::Link(XrdLink *lp, qclient::TlsConfig tlsconfig_)
 : Link(tlsconfig_) {
+  uuid = generateUuid();
+  host = lp->Host();
   link = lp;
+
+  if(connectionLogging) qdb_info("New link from " << describe());
 }
 
 Link::~Link() {
+  if(connectionLogging) qdb_info("Shutting down link from " << describe());
   Close();
+}
+
+std::string Link::describe() const {
+  return SSTR(host << " [" << uuid << "]");
 }
 
 LinkStatus Link::rawRecv(char *buff, int blen, int timeout) {

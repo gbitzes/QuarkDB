@@ -24,6 +24,7 @@
 #include <gtest/gtest.h>
 #include "../config/test-config.hh"
 #include "Utils.hh"
+#include "Link.hh"
 using namespace quarkdb;
 
 int main(int argc, char **argv) {
@@ -32,5 +33,6 @@ int main(int argc, char **argv) {
   testconfig.databaseReuse.setStatic(false);
   testing::InitGoogleTest(&argc, argv);
   setStacktraceOnError(false);
+  Link::setConnectionLogging(false);
   return RUN_ALL_TESTS();
 }

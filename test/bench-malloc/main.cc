@@ -23,11 +23,13 @@
 
 #include <gtest/gtest.h>
 #include "../config/test-config.hh"
+#include "Link.hh"
 using namespace quarkdb;
 
 int main(int argc, char **argv) {
   printf("Running main() from bench-mallocs/main.cc\n");
   testconfig.raftTimeouts.setStatic(defaultTimeouts);
+  Link::setConnectionLogging(false);
   testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
