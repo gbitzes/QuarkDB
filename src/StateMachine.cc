@@ -112,14 +112,9 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
     options.allow_concurrent_memtable_write = false;
   }
 
-  rocksdb::TransactionDBOptions txopts;
-  txopts.transaction_lock_timeout = -1;
-  txopts.default_lock_timeout = -1;
-
-  rocksdb::Status status = rocksdb::TransactionDB::Open(options, txopts, filename, &transactionDB);
+  rocksdb::Status status = rocksdb::DB::Open(options, filename, &db);
   if(!status.ok()) qdb_throw("Cannot open " << quotes(filename) << ":" << status.ToString());
 
-  db = transactionDB->GetBaseDB();
   ensureCompatibleFormat(!dirExists);
   ensureBulkloadSanity(!dirExists);
   retrieveLastApplied();
@@ -130,10 +125,9 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
 StateMachine::~StateMachine() {
   consistencyScanner.reset();
 
-  if(transactionDB) {
+  if(db) {
     qdb_info("Closing state machine " << quotes(filename));
-    delete transactionDB;
-    transactionDB = nullptr;
+    delete db;
     db = nullptr;
   }
 }
@@ -961,12 +955,6 @@ std::string StateMachine::statistics() {
   return stats;
 }
 
-StateMachine::TransactionPtr StateMachine::startTransaction() {
-  rocksdb::WriteOptions opts;
-  opts.disableWAL = !writeAheadLog;
-  return TransactionPtr(transactionDB->BeginTransaction(opts));
-}
-
 rocksdb::Status StateMachine::noop(LogIndex index) {
   StagingArea stagingArea(*this);
   return stagingArea.commit(index);
@@ -1022,17 +1010,20 @@ bool StateMachine::waitUntilTargetLastApplied(LogIndex targetLastApplied, std::c
   return (targetLastApplied <= lastApplied);
 }
 
-void StateMachine::commitTransaction(TransactionPtr &tx, LogIndex index) {
+void StateMachine::commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index) {
   std::lock_guard<std::mutex> lock(lastAppliedMtx);
 
   if(index <= 0 && lastApplied > 0) qdb_throw("provided invalid index for version-tracked database: " << index << ", current last applied: " << lastApplied);
 
   if(index > 0) {
     if(index != lastApplied+1) qdb_throw("attempted to perform illegal lastApplied update: " << lastApplied << " ==> " << index);
-    THROW_ON_ERROR(tx->Put(KeyConstants::kStateMachine_LastApplied, intToBinaryString(index)));
+    THROW_ON_ERROR(wb.Put(KeyConstants::kStateMachine_LastApplied, intToBinaryString(index)));
   }
 
-  rocksdb::Status st = tx->Commit();
+  rocksdb::WriteOptions opts;
+  opts.disableWAL = !writeAheadLog;
+
+  rocksdb::Status st = db->Write(opts, wb.GetWriteBatch() );
   if(index > 0 && st.ok()) lastApplied = index;
   if(!st.ok()) qdb_throw("unable to commit transaction with index " << index << ": " << st.ToString());
 

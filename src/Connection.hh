@@ -65,7 +65,6 @@ public:
   LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
   bool appendIfAttached(RedisEncodedResponse &&raw);
-  std::string describe() const;
 private:
   LinkStatus appendResponseNoLock(RedisEncodedResponse &&raw);
   Connection *conn;

@@ -38,18 +38,22 @@ public:
   StagingArea(StateMachine &sm) : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()) {
 
     if(!bulkLoad) {
-      tx = stateMachine.startTransaction();
+      stateMachine.writeMtx.lock();
     }
   }
 
-  ~StagingArea() { }
+  ~StagingArea() {
+    if(!bulkLoad) {
+      stateMachine.writeMtx.unlock();
+    }
+  }
 
   rocksdb::Status getForUpdate(const rocksdb::Slice &slice, std::string &value) {
     if(bulkLoad) {
       return rocksdb::Status::NotFound();
     }
 
-    return tx->GetForUpdate(rocksdb::ReadOptions(), slice, &value);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db, rocksdb::ReadOptions(), slice, &value);
   }
 
   rocksdb::Status exists(const rocksdb::Slice &slice) {
@@ -58,7 +62,7 @@ public:
     }
 
     rocksdb::PinnableSlice ignored;
-    return tx->Get(rocksdb::ReadOptions(), slice, &ignored);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db, rocksdb::ReadOptions(), slice, &ignored);
   }
 
   rocksdb::Status get(const rocksdb::Slice &slice, std::string &value) {
@@ -66,7 +70,7 @@ public:
       return rocksdb::Status::NotFound();
     }
 
-    return tx->Get(rocksdb::ReadOptions(), slice, &value);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db, rocksdb::ReadOptions(), slice, &value);
   }
 
   void put(const rocksdb::Slice &slice, const rocksdb::Slice &value) {
@@ -83,30 +87,32 @@ public:
       return;
     }
 
-    THROW_ON_ERROR(tx->Put(slice, value));
+    THROW_ON_ERROR(writeBatchWithIndex.Put(slice, value));
   }
 
   void del(const rocksdb::Slice &slice) {
     if(bulkLoad) qdb_throw("no deletions allowed during bulk load");
-    THROW_ON_ERROR(tx->Delete(slice));
+    THROW_ON_ERROR(writeBatchWithIndex.Delete(slice));
   }
 
   rocksdb::Status commit(LogIndex index) {
+    if(readOnly) qdb_throw("cannot call commit() on a readonly staging area");
     if(bulkLoad) {
       qdb_assert(index == 0);
       stateMachine.commitBatch(writeBatch);
       return rocksdb::Status::OK();
     }
 
-    stateMachine.commitTransaction(tx, index);
+    stateMachine.commitTransaction(writeBatchWithIndex, index);
     return rocksdb::Status::OK();
   }
 
 private:
   StateMachine &stateMachine;
   bool bulkLoad = false;
-  StateMachine::TransactionPtr tx;
+  bool readOnly = false;
   rocksdb::WriteBatch writeBatch;
+  rocksdb::WriteBatchWithIndex writeBatchWithIndex;
 };
 
 }

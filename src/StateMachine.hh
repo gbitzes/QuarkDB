@@ -31,9 +31,7 @@
 #include "storage/ConsistencyScanner.hh"
 #include "storage/KeyConstants.hh"
 #include <rocksdb/db.h>
-#include <rocksdb/utilities/optimistic_transaction_db.h>
-#include <rocksdb/utilities/transaction_db.h>
-#include <rocksdb/utilities/transaction.h>
+#include <rocksdb/utilities/write_batch_with_index.h>
 #include <condition_variable>
 
 namespace quarkdb {
@@ -49,7 +47,6 @@ public:
 
   using VecIterator = std::vector<std::string>::const_iterator;
   using IteratorPtr = std::unique_ptr<rocksdb::Iterator>;
-  using TransactionPtr = std::unique_ptr<rocksdb::Transaction>;
 
   //----------------------------------------------------------------------------
   // API for batched writes - in this case, lastApplied increments once per
@@ -158,8 +155,7 @@ private:
     DISALLOW_COPY_AND_ASSIGN(Snapshot);
   };
 
-  TransactionPtr startTransaction();
-  void commitTransaction(TransactionPtr &tx, LogIndex index);
+  void commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
   rocksdb::Status listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
   rocksdb::Status listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
@@ -213,7 +209,7 @@ private:
   std::condition_variable lastAppliedCV;
   std::mutex lastAppliedMtx;
 
-  rocksdb::TransactionDB* transactionDB = nullptr;
+  std::mutex writeMtx;
   rocksdb::DB* db = nullptr;
 
   std::unique_ptr<ConsistencyScanner> consistencyScanner;
