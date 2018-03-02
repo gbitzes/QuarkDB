@@ -49,8 +49,8 @@ public:
   using IteratorPtr = std::unique_ptr<rocksdb::Iterator>;
 
   //----------------------------------------------------------------------------
-  // API for batched writes - in this case, lastApplied increments once per
-  // batch, not per individual operation.
+  // API for transactional writes - in this case, lastApplied increments once
+  // per batch, not per individual operation.
   //----------------------------------------------------------------------------
   rocksdb::Status set(StagingArea &stagingArea, const std::string& key, const std::string& value);
   rocksdb::Status del(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &removed);
@@ -70,6 +70,12 @@ public:
   rocksdb::Status rpush(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
   rocksdb::Status lpop(StagingArea &stagingArea, const std::string &key, std::string &item);
   rocksdb::Status rpop(StagingArea &stagingArea, const std::string &key, std::string &item);
+
+  //----------------------------------------------------------------------------
+  // API for transactional reads. Can be part of a mixed read-write transaction.
+  //----------------------------------------------------------------------------
+  rocksdb::Status get(StagingArea &stagingArea, const std::string &key, std::string &value);
+  rocksdb::Status exists(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &count);
 
   //----------------------------------------------------------------------------
   // Simple API
@@ -157,6 +163,7 @@ private:
 
   void commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index);
   bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
+  bool assertKeyType(StagingArea &stagingArea, const std::string  &key, KeyType keytype);
   rocksdb::Status listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
   rocksdb::Status listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
 
@@ -198,6 +205,7 @@ private:
 
   KeyDescriptor getKeyDescriptor(const std::string &redisKey);
   KeyDescriptor getKeyDescriptor(Snapshot &snapshot, const std::string &redisKey);
+  KeyDescriptor getKeyDescriptor(StagingArea &stagingArea, const std::string &redisKey);
   KeyDescriptor lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator);
 
   void retrieveLastApplied();

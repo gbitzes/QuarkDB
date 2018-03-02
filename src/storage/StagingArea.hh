@@ -35,10 +35,18 @@ namespace quarkdb {
 
 class StagingArea {
 public:
-  StagingArea(StateMachine &sm) : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()) {
+  StagingArea(StateMachine &sm, bool onlyreads = false)
+  : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()), readOnly(onlyreads) {
 
-    if(!bulkLoad) {
+    if(bulkLoad) qdb_assert(!readOnly);
+
+    if(!bulkLoad && !readOnly) {
       stateMachine.writeMtx.lock();
+    }
+
+    if(readOnly) {
+      // Acquire snapshot.
+      snapshot.reset(new StateMachine::Snapshot(sm.db));
     }
   }
 
@@ -49,6 +57,7 @@ public:
   }
 
   rocksdb::Status getForUpdate(const rocksdb::Slice &slice, std::string &value) {
+    if(readOnly) qdb_throw("cannot call getForUpdate() on a readonly staging area");
     if(bulkLoad) {
       return rocksdb::Status::NotFound();
     }
@@ -58,7 +67,13 @@ public:
 
   rocksdb::Status exists(const rocksdb::Slice &slice) {
     if(bulkLoad) {
+      // No reads during bulkload mode.
       return rocksdb::Status::NotFound();
+    }
+
+    if(readOnly) {
+      std::string ignore;
+      return stateMachine.db->Get(snapshot->opts(), slice, &ignore);
     }
 
     rocksdb::PinnableSlice ignored;
@@ -70,10 +85,15 @@ public:
       return rocksdb::Status::NotFound();
     }
 
+    if(readOnly) {
+      return stateMachine.db->Get(snapshot->opts(), slice, &value);
+    }
+
     return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db, rocksdb::ReadOptions(), slice, &value);
   }
 
   void put(const rocksdb::Slice &slice, const rocksdb::Slice &value) {
+    if(readOnly) qdb_throw("cannot call put() on a readonly staging area");
     if(bulkLoad) {
       if(slice[0] == char(InternalKeyType::kDescriptor)) {
         // Ignore key descriptors, we'll build them all at the end
@@ -91,6 +111,7 @@ public:
   }
 
   void del(const rocksdb::Slice &slice) {
+    if(readOnly) qdb_throw("cannot call del() on a readonly staging area");
     if(bulkLoad) qdb_throw("no deletions allowed during bulk load");
     THROW_ON_ERROR(writeBatchWithIndex.Delete(slice));
   }
@@ -108,9 +129,12 @@ public:
   }
 
 private:
+  friend class StateMachine;
   StateMachine &stateMachine;
   bool bulkLoad = false;
   bool readOnly = false;
+
+  std::unique_ptr<StateMachine::Snapshot> snapshot;
   rocksdb::WriteBatch writeBatch;
   rocksdb::WriteBatchWithIndex writeBatchWithIndex;
 };

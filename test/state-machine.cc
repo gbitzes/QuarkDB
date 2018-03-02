@@ -641,6 +641,33 @@ TEST_F(State_Machine, scan) {
   ASSERT_EQ(newcursor, "");
 }
 
+TEST_F(State_Machine, SnapshotReads) {
+  std::unique_ptr<StagingArea> readArea(new StagingArea(*stateMachine(), true));
+
+  std::string tmp;
+  ASSERT_NOTFOUND(stateMachine()->get(*readArea, "mykey", tmp));
+  ASSERT_OK(stateMachine()->set("mykey", "someval"));
+
+  // readArea still uses the old snapshot, updates to "mykey" should
+  // not be visible.
+  ASSERT_NOTFOUND(stateMachine()->get(*readArea, "mykey", tmp));
+
+  // Refresh snapshot.
+  readArea.reset(new StagingArea(*stateMachine(), true));
+  ASSERT_OK(stateMachine()->get(*readArea, "mykey", tmp));
+  ASSERT_EQ(tmp, "someval");
+
+  ASSERT_OK(stateMachine()->set("mykey-2", "someval-2"));
+  ASSERT_NOTFOUND(stateMachine()->get(*readArea, "mykey-2", tmp));
+  ASSERT_OK(stateMachine()->get("mykey-2", tmp));
+  ASSERT_EQ(tmp, "someval-2");
+
+  int64_t count = 0;
+  std::vector<std::string> vals = {"mykey", "mykey-2"};
+  ASSERT_OK(stateMachine()->exists(*readArea, vals.begin(), vals.end(), count));
+  ASSERT_EQ(count, 1);
+}
+
 static std::string sliceToString(const rocksdb::Slice &slice) {
   return std::string(slice.data(), slice.size());
 }

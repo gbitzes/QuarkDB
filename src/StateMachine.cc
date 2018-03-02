@@ -234,6 +234,13 @@ KeyDescriptor StateMachine::getKeyDescriptor(StateMachine::Snapshot &snapshot, c
   return constructDescriptor(st, tmp);
 }
 
+KeyDescriptor StateMachine::getKeyDescriptor(StagingArea &stagingArea, const std::string &redisKey) {
+  std::string tmp;
+  DescriptorLocator dlocator(redisKey);
+  rocksdb::Status st = stagingArea.get(dlocator.toSlice(), tmp);
+  return constructDescriptor(st, tmp);
+}
+
 KeyDescriptor StateMachine::lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator) {
   std::string tmp;
   rocksdb::Status st = stagingArea.getForUpdate(dlocator.toSlice(), tmp);
@@ -244,6 +251,10 @@ bool StateMachine::assertKeyType(Snapshot &snapshot, const std::string &key, Key
   KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
   if(!keyinfo.empty() && keyinfo.getKeyType() != keytype) return false;
   return true;
+}
+
+bool StateMachine::assertKeyType(StagingArea &stagingArea, const std::string &key, KeyType keytype) {
+  return assertKeyType(*stagingArea.snapshot.get(), key, keytype);
 }
 
 rocksdb::Status StateMachine::hget(const std::string &key, const std::string &field, std::string &value) {
@@ -795,12 +806,11 @@ rocksdb::ReadOptions& StateMachine::Snapshot::opts() {
   return options;
 }
 
-rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kString)) return wrong_type();
+rocksdb::Status StateMachine::get(StagingArea &stagingArea, const std::string &key, std::string &value) {
+  if(!assertKeyType(stagingArea, key, KeyType::kString)) return wrong_type();
 
   StringLocator slocator(key);
-  return db->Get(snapshot.opts(), slocator.toSlice(), &value);
+  return stagingArea.get(slocator.toSlice(), value);
 }
 
 void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea) {
@@ -851,12 +861,11 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const VecIterator &s
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::exists(const VecIterator &start, const VecIterator &end, int64_t &count) {
+rocksdb::Status StateMachine::exists(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &count) {
   count = 0;
-  Snapshot snapshot(db);
 
   for(auto it = start; it != end; it++) {
-    KeyDescriptor keyinfo = getKeyDescriptor(snapshot, *it);
+    KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, *it);
 
     if(!keyinfo.empty()) {
       count++;
@@ -1039,6 +1048,28 @@ void StateMachine::commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex 
   stagingArea.commit(index); \
   return st; \
 }
+
+#define CHAIN_READ(func, ...) { \
+  StagingArea stagingArea(*this, true); \
+  return this->func(stagingArea, ## __VA_ARGS__); \
+}
+
+//------------------------------------------------------------------------------
+// Convenience functions, without having to manually instantiate a staging area.
+// Reads:
+//------------------------------------------------------------------------------
+
+rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
+  CHAIN_READ(get, key, value);
+}
+
+rocksdb::Status StateMachine::exists(const VecIterator &start, const VecIterator &end, int64_t &count) {
+  CHAIN_READ(exists, start, end, count);
+}
+
+//------------------------------------------------------------------------------
+// Writes:
+//------------------------------------------------------------------------------
 
 rocksdb::Status StateMachine::hset(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index) {
   CHAIN(index, hset, key, field, value, fieldcreated);
