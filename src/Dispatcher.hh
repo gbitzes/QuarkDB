@@ -62,7 +62,8 @@ public:
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
 private:
   RedisEncodedResponse dispatchWrite(StagingArea &stagingArea, RedisRequest &req);
-  RedisEncodedResponse errArgs(RedisRequest &request, LogIndex commit);
+  RedisEncodedResponse errArgs(RedisRequest &request);
+  RedisEncodedResponse dispatchingError(RedisRequest &request, LogIndex commit);
 
   StateMachine &store;
 };

@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_ROCKSDB_H__
-#define __QUARKDB_ROCKSDB_H__
+#ifndef QUARKDB_STATE_MACHINE_H
+#define QUARKDB_STATE_MACHINE_H
 
 #include "Common.hh"
 #include "utils/Macros.hh"
@@ -76,6 +76,20 @@ public:
   //----------------------------------------------------------------------------
   rocksdb::Status get(StagingArea &stagingArea, const std::string &key, std::string &value);
   rocksdb::Status exists(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &count);
+  rocksdb::Status keys(StagingArea &stagingArea, const std::string &pattern, std::vector<std::string> &result);
+  rocksdb::Status scan(StagingArea &stagingArea, const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results);
+  rocksdb::Status hget(StagingArea &stagingArea, const std::string &key, const std::string &field, std::string &value);
+  rocksdb::Status hexists(StagingArea &stagingArea, const std::string &key, const std::string &field);
+  rocksdb::Status hkeys(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &keys);
+  rocksdb::Status hgetall(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &res);
+  rocksdb::Status hlen(StagingArea &stagingArea, const std::string &key, size_t &len);
+  rocksdb::Status hvals(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &vals);
+  rocksdb::Status hscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
+  rocksdb::Status sismember(StagingArea &stagingArea, const std::string &key, const std::string &element);
+  rocksdb::Status smembers(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &members);
+  rocksdb::Status scard(StagingArea &stagingArea, const std::string &key, size_t &count);
+  rocksdb::Status sscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
+  rocksdb::Status llen(StagingArea &stagingArea, const std::string &key, size_t &len);
 
   //----------------------------------------------------------------------------
   // Simple API
@@ -119,9 +133,13 @@ public:
   // with the other redis commands.
   //----------------------------------------------------------------------------
   rocksdb::Status configGet(const std::string &key, std::string &value);
+  rocksdb::Status configGet(StagingArea &stagingArea, const std::string &key, std::string &value);
+
   rocksdb::Status configSet(const std::string &key, const std::string &value, LogIndex index = 0);
   rocksdb::Status configSet(StagingArea &stagingArea, const std::string &key, const std::string &value);
+
   rocksdb::Status configGetall(std::vector<std::string> &res);
+  rocksdb::Status configGetall(StagingArea &stagingArea, std::vector<std::string> &res);
 
   rocksdb::Status noop(LogIndex index);
   LogIndex getLastApplied();
@@ -162,7 +180,6 @@ private:
   };
 
   void commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index);
-  bool assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype);
   bool assertKeyType(StagingArea &stagingArea, const std::string  &key, KeyType keytype);
   rocksdb::Status listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
   rocksdb::Status listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
@@ -203,8 +220,6 @@ private:
   };
   friend class WriteOperation;
 
-  KeyDescriptor getKeyDescriptor(const std::string &redisKey);
-  KeyDescriptor getKeyDescriptor(Snapshot &snapshot, const std::string &redisKey);
   KeyDescriptor getKeyDescriptor(StagingArea &stagingArea, const std::string &redisKey);
   KeyDescriptor lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator);
 

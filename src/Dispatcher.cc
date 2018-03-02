@@ -45,9 +45,15 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   return conn->raw(dispatch(req, 0));
 }
 
-RedisEncodedResponse RedisDispatcher::errArgs(RedisRequest &request, LogIndex commit) {
-  if(commit > 0) store.noop(commit);
+RedisEncodedResponse RedisDispatcher::errArgs(RedisRequest &request) {
   return Formatter::errArgs(request[0]);
+}
+
+RedisEncodedResponse RedisDispatcher::dispatchingError(RedisRequest &request, LogIndex commit) {
+  std::string msg = SSTR("internal dispatching error for " << quotes(request[0]));
+  qdb_critical(msg);
+  if(commit != 0) qdb_throw("Could not dispatch request " << quotes(request[0]) << " with positive commit index: " << commit);
+  return Formatter::err(msg);
 }
 
 RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisRequest &request) {
@@ -55,24 +61,24 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
   switch(request.getCommand()) {
     case RedisCommand::FLUSHALL: {
-      if(request.size() != 1) return Formatter::errArgs(request[0]);
+      if(request.size() != 1) return errArgs(request);
       rocksdb::Status st = store.flushall(stagingArea);
       return Formatter::fromStatus(st);
     }
     case RedisCommand::SET: {
-      if(request.size() != 3) return Formatter::errArgs(request[0]);
+      if(request.size() != 3) return errArgs(request);
       rocksdb::Status st = store.set(stagingArea, request[1], request[2]);
       return Formatter::fromStatus(st);
     }
     case RedisCommand::DEL: {
-      if(request.size() <= 1) return Formatter::errArgs(request[0]);
+      if(request.size() <= 1) return errArgs(request);
       int64_t count = 0;
       rocksdb::Status st = store.del(stagingArea, request.begin()+1, request.end(), count);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
     case RedisCommand::HSET: {
-      if(request.size() != 4) return Formatter::errArgs(request[0]);
+      if(request.size() != 4) return errArgs(request);
 
       bool fieldcreated;
       rocksdb::Status st = store.hset(stagingArea, request[1], request[2], request[3], fieldcreated);
@@ -81,7 +87,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       return Formatter::integer(fieldcreated);
     }
     case RedisCommand::HSETNX: {
-      if(request.size() != 4) return Formatter::errArgs(request[0]);
+      if(request.size() != 4) return errArgs(request);
 
       bool fieldcreated;
       rocksdb::Status st = store.hsetnx(stagingArea, request[1], request[2], request[3], fieldcreated);
@@ -96,14 +102,14 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       return Formatter::ok();
     }
     case RedisCommand::HINCRBY: {
-      if(request.size() != 4) return Formatter::errArgs(request[0]);
+      if(request.size() != 4) return errArgs(request);
       int64_t ret = 0;
       rocksdb::Status st = store.hincrby(stagingArea, request[1], request[2], request[3], ret);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(ret);
     }
     case RedisCommand::HINCRBYMULTI: {
-      if(request.size() < 4 || ( ((request.size()-1) % 3)) != 0) return Formatter::errArgs(request[0]);
+      if(request.size() < 4 || ( ((request.size()-1) % 3)) != 0) return errArgs(request);
       size_t index = 1;
       int64_t ret = 0;
       while(index < request.size()) {
@@ -116,49 +122,49 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       return Formatter::integer(ret);
     }
     case RedisCommand::HINCRBYFLOAT: {
-      if(request.size() != 4) return Formatter::errArgs(request[0]);
+      if(request.size() != 4) return errArgs(request);
       double ret = 0;
       rocksdb::Status st = store.hincrbyfloat(stagingArea, request[1], request[2], request[3], ret);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(std::to_string(ret));
     }
     case RedisCommand::HDEL: {
-      if(request.size() <= 2) return Formatter::errArgs(request[0]);
+      if(request.size() <= 2) return errArgs(request);
       int64_t count = 0;
       rocksdb::Status st = store.hdel(stagingArea, request[1], request.begin()+2, request.end(), count);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
     case RedisCommand::SADD: {
-      if(request.size() <= 2) return Formatter::errArgs(request[0]);
+      if(request.size() <= 2) return errArgs(request);
       int64_t count = 0;
       rocksdb::Status st = store.sadd(stagingArea, request[1], request.begin()+2, request.end(), count);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
     case RedisCommand::SREM: {
-      if(request.size() <= 2) return Formatter::errArgs(request[0]);
+      if(request.size() <= 2) return errArgs(request);
       int64_t count = 0;
       rocksdb::Status st = store.srem(stagingArea, request[1], request.begin()+2, request.end(), count);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
     case RedisCommand::LPUSH: {
-      if(request.size() < 3) return Formatter::errArgs(request[0]);
+      if(request.size() < 3) return errArgs(request);
       int64_t length;
       rocksdb::Status st = store.lpush(stagingArea, request[1], request.begin()+2, request.end(), length);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(length);
     }
     case RedisCommand::RPUSH: {
-      if(request.size() < 3) return Formatter::errArgs(request[0]);
+      if(request.size() < 3) return errArgs(request);
       int64_t length;
       rocksdb::Status st = store.rpush(stagingArea, request[1], request.begin()+2, request.end(), length);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(length);
     }
     case RedisCommand::LPOP: {
-      if(request.size() != 2) return Formatter::errArgs(request[0]);
+      if(request.size() != 2) return errArgs(request);
       std::string item;
       rocksdb::Status st = store.lpop(stagingArea, request[1], item);
       if(st.IsNotFound()) return Formatter::null();
@@ -166,7 +172,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       return Formatter::string(item);
     }
     case RedisCommand::RPOP: {
-      if(request.size() != 2) return Formatter::errArgs(request[0]);
+      if(request.size() != 2) return errArgs(request);
       std::string item;
       rocksdb::Status st = store.rpop(stagingArea, request[1], item);
       if(st.IsNotFound()) return Formatter::null();
@@ -174,7 +180,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       return Formatter::string(item);
     }
     case RedisCommand::CONFIG_SET: {
-      if(request.size() != 3) return Formatter::errArgs(request[0]);
+      if(request.size() != 3) return errArgs(request);
       rocksdb::Status st = store.configSet(stagingArea, request[1], request[2]);
       return Formatter::fromStatus(st);
     }
@@ -212,9 +218,18 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
     qdb_throw("attempted to dispatch non-write command '" << request[0] << "' with a positive commit index: " << commit);
   }
 
+  if(request.getCommand() == RedisCommand::PING) {
+    return handlePing(request);
+  }
+
+  if(request.getCommandType() != CommandType::READ && request.getCommandType() != CommandType::WRITE) {
+    return dispatchingError(request, commit);
+  }
+
+  StagingArea stagingArea(store, request.getCommandType() == CommandType::READ);
+
   // Handle writes in a separate function, use batch write API
   if(request.getCommandType() == CommandType::WRITE) {
-    StagingArea stagingArea(store);
     RedisEncodedResponse response = dispatchWrite(stagingArea, request);
     stagingArea.commit(commit);
     return response;
@@ -226,30 +241,30 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
 
   switch(request.getCommand()) {
     case RedisCommand::GET: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
 
       std::string value;
-      rocksdb::Status st = store.get(request[1], value);
+      rocksdb::Status st = store.get(stagingArea, request[1], value);
       if(st.IsNotFound()) return Formatter::null();
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(value);
     }
     case RedisCommand::EXISTS: {
-      if(request.size() <= 1) return errArgs(request, commit);
+      if(request.size() <= 1) return errArgs(request);
       int64_t count = 0;
-      rocksdb::Status st = store.exists(request.begin()+1, request.end(), count);
+      rocksdb::Status st = store.exists(stagingArea, request.begin()+1, request.end(), count);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
     case RedisCommand::KEYS: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       std::vector<std::string> ret;
-      rocksdb::Status st = store.keys(request[1], ret);
+      rocksdb::Status st = store.keys(stagingArea, request[1], ret);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(ret);
     }
     case RedisCommand::SCAN: {
-      if(request.size() < 2) return errArgs(request, commit);
+      if(request.size() < 2) return errArgs(request);
 
       ScanCommandArguments args = parseScanCommand(request.begin()+1, request.end());
       if(!args.error.empty()) {
@@ -258,7 +273,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
 
       std::string newcursor;
       std::vector<std::string> vec;
-      rocksdb::Status st = store.scan(args.cursor, args.match, args.count, newcursor, vec);
+      rocksdb::Status st = store.scan(stagingArea, args.cursor, args.match, args.count, newcursor, vec);
       if(!st.ok()) return Formatter::fromStatus(st);
 
       if(newcursor == "") newcursor = "0";
@@ -266,50 +281,50 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
       return Formatter::scan(newcursor, vec);
     }
     case RedisCommand::HGET: {
-      if(request.size() != 3) return errArgs(request, commit);
+      if(request.size() != 3) return errArgs(request);
 
       std::string value;
-      rocksdb::Status st = store.hget(request[1], request[2], value);
+      rocksdb::Status st = store.hget(stagingArea, request[1], request[2], value);
       if(st.IsNotFound()) return Formatter::null();
       else if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(value);
     }
     case RedisCommand::HEXISTS: {
-      if(request.size() != 3) return errArgs(request, commit);
-      rocksdb::Status st = store.hexists(request[1], request[2]);
+      if(request.size() != 3) return errArgs(request);
+      rocksdb::Status st = store.hexists(stagingArea, request[1], request[2]);
       if(st.ok()) return Formatter::integer(1);
       if(st.IsNotFound()) return Formatter::integer(0);
       return Formatter::fromStatus(st);
     }
     case RedisCommand::HKEYS: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       std::vector<std::string> keys;
-      rocksdb::Status st = store.hkeys(request[1], keys);
+      rocksdb::Status st = store.hkeys(stagingArea, request[1], keys);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(keys);
     }
     case RedisCommand::HGETALL: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       std::vector<std::string> vec;
-      rocksdb::Status st = store.hgetall(request[1], vec);
+      rocksdb::Status st = store.hgetall(stagingArea, request[1], vec);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(vec);
     }
     case RedisCommand::HLEN: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       size_t len;
-      rocksdb::Status st = store.hlen(request[1], len);
+      rocksdb::Status st = store.hlen(stagingArea, request[1], len);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(len);
     }
     case RedisCommand::HVALS: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       std::vector<std::string> values;
-      rocksdb::Status st = store.hvals(request[1], values);
+      rocksdb::Status st = store.hvals(stagingArea, request[1], values);
       return Formatter::vector(values);
     }
     case RedisCommand::HSCAN: {
-      if(request.size() < 3) return errArgs(request, commit);
+      if(request.size() < 3) return errArgs(request);
 
       ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
       if(!args.error.empty()) {
@@ -323,7 +338,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
 
       std::string newcursor;
       std::vector<std::string> vec;
-      rocksdb::Status st = store.hscan(request[1], args.cursor, args.count, newcursor, vec);
+      rocksdb::Status st = store.hscan(stagingArea, request[1], args.cursor, args.count, newcursor, vec);
       if(!st.ok()) return Formatter::fromStatus(st);
 
       if(newcursor == "") newcursor = "0";
@@ -331,28 +346,28 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
       return Formatter::scan(newcursor, vec);
     }
     case RedisCommand::SISMEMBER: {
-      if(request.size() != 3) return errArgs(request, commit);
-      rocksdb::Status st = store.sismember(request[1], request[2]);
+      if(request.size() != 3) return errArgs(request);
+      rocksdb::Status st = store.sismember(stagingArea, request[1], request[2]);
       if(st.ok()) return Formatter::integer(1);
       if(st.IsNotFound()) return Formatter::integer(0);
       return Formatter::fromStatus(st);
     }
     case RedisCommand::SMEMBERS: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       std::vector<std::string> members;
-      rocksdb::Status st = store.smembers(request[1], members);
+      rocksdb::Status st = store.smembers(stagingArea, request[1], members);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(members);
     }
     case RedisCommand::SCARD: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       size_t count;
-      rocksdb::Status st = store.scard(request[1], count);
+      rocksdb::Status st = store.scard(stagingArea, request[1], count);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
     case RedisCommand::SSCAN: {
-      if(request.size() < 3) return errArgs(request, commit);
+      if(request.size() < 3) return errArgs(request);
 
       ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
       if(!args.error.empty()) {
@@ -366,7 +381,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
 
       std::string newcursor;
       std::vector<std::string> vec;
-      rocksdb::Status st = store.sscan(request[1], args.cursor, args.count, newcursor, vec);
+      rocksdb::Status st = store.sscan(stagingArea, request[1], args.cursor, args.count, newcursor, vec);
       if(!st.ok()) return Formatter::fromStatus(st);
 
       if(newcursor == "") newcursor = "0";
@@ -374,33 +389,30 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
       return Formatter::scan(newcursor, vec);
     }
     case RedisCommand::LLEN: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
       size_t len;
-      rocksdb::Status st = store.llen(request[1], len);
+      rocksdb::Status st = store.llen(stagingArea, request[1], len);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(len);
     }
     case RedisCommand::CONFIG_GET: {
-      if(request.size() != 2) return errArgs(request, commit);
+      if(request.size() != 2) return errArgs(request);
 
       std::string value;
-      rocksdb::Status st = store.configGet(request[1], value);
+      rocksdb::Status st = store.configGet(stagingArea, request[1], value);
       if(st.IsNotFound()) return Formatter::null();
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(value);
     }
     case RedisCommand::CONFIG_GETALL: {
-      if(request.size() != 1) return errArgs(request, commit);
+      if(request.size() != 1) return errArgs(request);
       std::vector<std::string> ret;
-      rocksdb::Status st = store.configGetall(ret);
+      rocksdb::Status st = store.configGetall(stagingArea, ret);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(ret);
     }
     default: {
-      std::string msg = SSTR("internal dispatching error for " << quotes(request[0]));
-      qdb_critical(msg);
-      if(commit != 0) qdb_throw("Could not dispatch request " << quotes(request[0]) << " with positive commit index: " << commit);
-      return Formatter::err(msg);
+      return dispatchingError(request, commit);
     }
 
   }

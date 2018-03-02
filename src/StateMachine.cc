@@ -220,20 +220,6 @@ static KeyDescriptor constructDescriptor(rocksdb::Status &st, const std::string 
   return KeyDescriptor(serialization);
 }
 
-KeyDescriptor StateMachine::getKeyDescriptor(const std::string &redisKey) {
-  std::string tmp;
-  DescriptorLocator dlocator(redisKey);
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), dlocator.toSlice(), &tmp);
-  return constructDescriptor(st, tmp);
-}
-
-KeyDescriptor StateMachine::getKeyDescriptor(StateMachine::Snapshot &snapshot, const std::string &redisKey) {
-  std::string tmp;
-  DescriptorLocator dlocator(redisKey);
-  rocksdb::Status st = db->Get(snapshot.opts(), dlocator.toSlice(), &tmp);
-  return constructDescriptor(st, tmp);
-}
-
 KeyDescriptor StateMachine::getKeyDescriptor(StagingArea &stagingArea, const std::string &redisKey) {
   std::string tmp;
   DescriptorLocator dlocator(redisKey);
@@ -247,37 +233,31 @@ KeyDescriptor StateMachine::lockKeyDescriptor(StagingArea &stagingArea, Descript
   return constructDescriptor(st, tmp);
 }
 
-bool StateMachine::assertKeyType(Snapshot &snapshot, const std::string &key, KeyType keytype) {
-  KeyDescriptor keyinfo = getKeyDescriptor(snapshot, key);
+bool StateMachine::assertKeyType(StagingArea &stagingArea, const std::string &key, KeyType keytype) {
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   if(!keyinfo.empty() && keyinfo.getKeyType() != keytype) return false;
   return true;
 }
 
-bool StateMachine::assertKeyType(StagingArea &stagingArea, const std::string &key, KeyType keytype) {
-  return assertKeyType(*stagingArea.snapshot.get(), key, keytype);
-}
-
-rocksdb::Status StateMachine::hget(const std::string &key, const std::string &field, std::string &value) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+rocksdb::Status StateMachine::hget(StagingArea &stagingArea, const std::string &key, const std::string &field, std::string &value) {
+  if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 
   FieldLocator locator(KeyType::kHash, key, field);
-  return db->Get(snapshot.opts(), locator.toSlice(), &value);
+  return db->Get(stagingArea.snapshot->opts(), locator.toSlice(), &value);
 }
 
-rocksdb::Status StateMachine::hexists(const std::string &key, const std::string &field) {
+rocksdb::Status StateMachine::hexists(StagingArea &stagingArea, const std::string &key, const std::string &field) {
   std::string tmp;
-  return this->hget(key, field, tmp);
+  return this->hget(stagingArea, key, field, tmp);
 }
 
-rocksdb::Status StateMachine::hkeys(const std::string &key, std::vector<std::string> &keys) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+rocksdb::Status StateMachine::hkeys(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &keys) {
+  if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 
   keys.clear();
   FieldLocator locator(KeyType::kHash, key);
 
-  IteratorPtr iter(db->NewIterator(snapshot.opts()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -286,14 +266,13 @@ rocksdb::Status StateMachine::hkeys(const std::string &key, std::vector<std::str
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::hgetall(const std::string &key, std::vector<std::string> &res) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+rocksdb::Status StateMachine::hgetall(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &res) {
+  if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 
   res.clear();
   FieldLocator locator(KeyType::kHash, key);
 
-  IteratorPtr iter(db->NewIterator(snapshot.opts()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -411,25 +390,24 @@ static bool isWrongType(KeyDescriptor &descriptor, KeyType keyType) {
   return !descriptor.empty() && (descriptor.getKeyType() != keyType);
 }
 
-rocksdb::Status StateMachine::hlen(const std::string &key, size_t &len) {
+rocksdb::Status StateMachine::hlen(StagingArea &stagingArea, const std::string &key, size_t &len) {
   len = 0;
 
-  KeyDescriptor keyinfo = getKeyDescriptor(key);
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   if(isWrongType(keyinfo, KeyType::kHash)) return wrong_type();
 
   len = keyinfo.getSize();
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+rocksdb::Status StateMachine::hscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
+  if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 
   FieldLocator locator(KeyType::kHash, key, cursor);
   res.clear();
 
   newCursor = "";
-  IteratorPtr iter(db->NewIterator(snapshot.opts()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
@@ -448,15 +426,14 @@ rocksdb::Status StateMachine::hscan(const std::string &key, const std::string &c
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::sscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
+rocksdb::Status StateMachine::sscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
+  if(!assertKeyType(stagingArea, key, KeyType::kSet)) return wrong_type();
 
   FieldLocator locator(KeyType::kSet, key, cursor);
   res.clear();
 
   newCursor = "";
-  IteratorPtr iter(db->NewIterator(snapshot.opts()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
@@ -474,14 +451,13 @@ rocksdb::Status StateMachine::sscan(const std::string &key, const std::string &c
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::hvals(const std::string &key, std::vector<std::string> &vals) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kHash)) return wrong_type();
+rocksdb::Status StateMachine::hvals(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &vals) {
+  if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 
   FieldLocator locator(KeyType::kHash, key);
   vals.clear();
 
-  IteratorPtr iter(db->NewIterator(snapshot.opts()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -507,13 +483,12 @@ rocksdb::Status StateMachine::sadd(StagingArea &stagingArea, const std::string &
   return operation.finalize(operation.keySize() + added);
 }
 
-rocksdb::Status StateMachine::sismember(const std::string &key, const std::string &element) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
+rocksdb::Status StateMachine::sismember(StagingArea &stagingArea, const std::string &key, const std::string &element) {
+  if(!assertKeyType(stagingArea, key, KeyType::kSet)) return wrong_type();
   FieldLocator locator(KeyType::kSet, key, element);
 
   std::string tmp;
-  return db->Get(snapshot.opts(), locator.toSlice(), &tmp);
+  return db->Get(stagingArea.snapshot->opts(), locator.toSlice(), &tmp);
 }
 
 rocksdb::Status StateMachine::srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
@@ -529,14 +504,13 @@ rocksdb::Status StateMachine::srem(StagingArea &stagingArea, const std::string &
   return operation.finalize(operation.keySize() - removed);
 }
 
-rocksdb::Status StateMachine::smembers(const std::string &key, std::vector<std::string> &members) {
-  Snapshot snapshot(db);
-  if(!assertKeyType(snapshot, key, KeyType::kSet)) return wrong_type();
+rocksdb::Status StateMachine::smembers(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &members) {
+  if(!assertKeyType(stagingArea, key, KeyType::kSet)) return wrong_type();
 
   FieldLocator locator(KeyType::kSet, key);
   members.clear();
 
-  IteratorPtr iter(db->NewIterator(snapshot.opts()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -545,20 +519,19 @@ rocksdb::Status StateMachine::smembers(const std::string &key, std::vector<std::
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::scard(const std::string &key, size_t &count) {
+rocksdb::Status StateMachine::scard(StagingArea &stagingArea, const std::string &key, size_t &count) {
   count = 0;
 
-  KeyDescriptor keyinfo = getKeyDescriptor(key);
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   if(isWrongType(keyinfo, KeyType::kSet)) return wrong_type();
 
   count = keyinfo.getSize();
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::configGet(const std::string &key, std::string &value) {
-  Snapshot snapshot(db);
+rocksdb::Status StateMachine::configGet(StagingArea &stagingArea, const std::string &key, std::string &value) {
   std::string tkey = translate_key(InternalKeyType::kConfiguration, key);
-  return db->Get(snapshot.opts(), tkey, &value);
+  return db->Get(stagingArea.snapshot->opts(), tkey, &value);
 }
 
 rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::string &key, const std::string &value) {
@@ -575,7 +548,7 @@ rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::str
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::configGetall(std::vector<std::string> &res) {
+rocksdb::Status StateMachine::configGetall(StagingArea &stagingArea, std::vector<std::string> &res) {
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   res.clear();
 
@@ -758,10 +731,10 @@ rocksdb::Status StateMachine::rpop(StagingArea &stagingArea, const std::string &
   return this->listPop(stagingArea, Direction::kRight, key, item);
 }
 
-rocksdb::Status StateMachine::llen(const std::string &key, size_t &len) {
+rocksdb::Status StateMachine::llen(StagingArea &stagingArea, const std::string &key, size_t &len) {
   len = 0;
 
-  KeyDescriptor keyinfo = getKeyDescriptor(key);
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   if(isWrongType(keyinfo, KeyType::kList)) return wrong_type();
 
   len = keyinfo.getSize();
@@ -875,11 +848,11 @@ rocksdb::Status StateMachine::exists(StagingArea &stagingArea, const VecIterator
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::keys(const std::string &pattern, std::vector<std::string> &result) {
+rocksdb::Status StateMachine::keys(StagingArea &stagingArea, const std::string &pattern, std::vector<std::string> &result) {
   result.clear();
 
   bool allkeys = (pattern.length() == 1 && pattern[0] == '*');
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
 
   std::string searchPrefix(1, char(InternalKeyType::kDescriptor));
   for(iter->Seek(searchPrefix); iter->Valid(); iter->Next()) {
@@ -894,7 +867,7 @@ rocksdb::Status StateMachine::keys(const std::string &pattern, std::vector<std::
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::scan(const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results) {
+rocksdb::Status StateMachine::scan(StagingArea &stagingArea, const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results) {
   results.clear();
 
   // Any hits *must* start with patternPrefix. This will allow us in many
@@ -914,7 +887,7 @@ rocksdb::Status StateMachine::scan(const std::string &cursor, const std::string 
   size_t iterations = 0;
   bool emptyPattern = (pattern.empty() || pattern == "*");
 
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     iterations++;
 
@@ -1065,6 +1038,70 @@ rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
 
 rocksdb::Status StateMachine::exists(const VecIterator &start, const VecIterator &end, int64_t &count) {
   CHAIN_READ(exists, start, end, count);
+}
+
+rocksdb::Status StateMachine::keys(const std::string &pattern, std::vector<std::string> &result) {
+  CHAIN_READ(keys, pattern, result);
+}
+
+rocksdb::Status StateMachine::scan(const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results) {
+  CHAIN_READ(scan, cursor, pattern, count, newcursor, results);
+}
+
+rocksdb::Status StateMachine::hget(const std::string &key, const std::string &field, std::string &value) {
+  CHAIN_READ(hget, key, field, value);
+}
+
+rocksdb::Status StateMachine::hexists(const std::string &key, const std::string &field) {
+  CHAIN_READ(hexists, key, field);
+}
+
+rocksdb::Status StateMachine::hkeys(const std::string &key, std::vector<std::string> &keys) {
+  CHAIN_READ(hkeys, key, keys);
+}
+
+rocksdb::Status StateMachine::hgetall(const std::string &key, std::vector<std::string> &res) {
+  CHAIN_READ(hgetall, key, res);
+}
+
+rocksdb::Status StateMachine::hlen(const std::string &key, size_t &len) {
+  CHAIN_READ(hlen, key, len);
+}
+
+rocksdb::Status StateMachine::hvals(const std::string &key, std::vector<std::string> &vals) {
+  CHAIN_READ(hvals, key, vals);
+}
+
+rocksdb::Status StateMachine::hscan(const std::string &key, const std::string &cursor, size_t count, std::string &newcursor, std::vector<std::string> &results) {
+  CHAIN_READ(hscan, key, cursor, count, newcursor, results);
+}
+
+rocksdb::Status StateMachine::sismember(const std::string &key, const std::string &element) {
+  CHAIN_READ(sismember, key, element);
+}
+
+rocksdb::Status StateMachine::smembers(const std::string &key, std::vector<std::string> &members) {
+  CHAIN_READ(smembers, key, members);
+}
+
+rocksdb::Status StateMachine::scard(const std::string &key, size_t &count) {
+  CHAIN_READ(scard, key, count);
+}
+
+rocksdb::Status StateMachine::sscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
+  CHAIN_READ(sscan, key, cursor, count, newCursor, res);
+}
+
+rocksdb::Status StateMachine::llen(const std::string &key, size_t &len) {
+  CHAIN_READ(llen, key, len);
+}
+
+rocksdb::Status StateMachine::configGet(const std::string &key, std::string &value) {
+  CHAIN_READ(configGet, key, value);
+}
+
+rocksdb::Status StateMachine::configGetall(std::vector<std::string> &res) {
+  CHAIN_READ(configGetall, res);
 }
 
 //------------------------------------------------------------------------------
