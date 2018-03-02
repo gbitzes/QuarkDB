@@ -220,10 +220,11 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
     return response;
   }
 
+  if(request.getCommand() == RedisCommand::PING) {
+    return handlePing(request);
+  }
+
   switch(request.getCommand()) {
-    case RedisCommand::PING: {
-      return handlePing(request);
-    }
     case RedisCommand::GET: {
       if(request.size() != 2) return errArgs(request, commit);
 
@@ -398,6 +399,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
     default: {
       std::string msg = SSTR("internal dispatching error for " << quotes(request[0]));
       qdb_critical(msg);
+      if(commit != 0) qdb_throw("Could not dispatch request " << quotes(request[0]) << " with positive commit index: " << commit);
       return Formatter::err(msg);
     }
 
