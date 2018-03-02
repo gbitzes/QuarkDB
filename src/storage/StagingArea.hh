@@ -51,7 +51,7 @@ public:
   }
 
   ~StagingArea() {
-    if(!bulkLoad) {
+    if(!bulkLoad && !readOnly) {
       stateMachine.writeMtx.unlock();
     }
   }
