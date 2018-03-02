@@ -38,8 +38,6 @@ public:
   StagingArea(StateMachine &sm, bool onlyreads = false)
   : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()), readOnly(onlyreads) {
 
-    if(bulkLoad) qdb_assert(!readOnly);
-
     if(!bulkLoad && !readOnly) {
       stateMachine.writeMtx.lock();
     }
