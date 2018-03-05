@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: response-formatter.cc
+// File: ArrayResponseBuilder.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,29 +21,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "redis/ArrayResponseBuilder.hh"
-#include "Formatter.hh"
-#include <gtest/gtest.h>
-
+#include "ArrayResponseBuilder.hh"
 using namespace quarkdb;
 
-TEST(Response, T1) {
-  ASSERT_EQ(Formatter::err("test").val, "-ERR test\r\n");
-  ASSERT_EQ(Formatter::ok().val, "+OK\r\n");
-  ASSERT_EQ(Formatter::pong().val, "+PONG\r\n");
-  ASSERT_EQ(Formatter::null().val, "$-1\r\n");
-  ASSERT_EQ(Formatter::status("test").val, "+test\r\n");
+ArrayResponseBuilder::ArrayResponseBuilder(size_t size) : itemsRemaining(size) {
+  qdb_assert(itemsRemaining >= 1);
+  ss << "*" << size << "\r\n";
 }
 
-TEST(ArrayResponseBuilder, BasicSanity) {
-  ArrayResponseBuilder builder(3);
-  ASSERT_THROW(builder.buildResponse(), FatalException);
+void ArrayResponseBuilder::push_back(const RedisEncodedResponse &item) {
+  qdb_assert(itemsRemaining != 0);
+  itemsRemaining--;
 
-  builder.push_back(Formatter::ok());
-  builder.push_back(Formatter::integer(999));
-  builder.push_back(Formatter::string("whee"));
-  ASSERT_THROW(builder.push_back(Formatter::integer(123)), FatalException);
+  ss << item.val;
+}
 
-  RedisEncodedResponse resp = builder.buildResponse();
-  ASSERT_EQ(resp.val, "*3\r\n+OK\r\n:999\r\n$4\r\nwhee\r\n");
+RedisEncodedResponse ArrayResponseBuilder::buildResponse() const {
+  qdb_assert(itemsRemaining == 0);
+  return RedisEncodedResponse(ss.str());
 }

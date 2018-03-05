@@ -53,6 +53,7 @@ add_library(XrdQuarkDB SHARED
   recovery/RecoveryEditor.cc       recovery/RecoveryEditor.hh
   recovery/RecoveryRunner.cc       recovery/RecoveryRunner.hh
 
+  redis/ArrayResponseBuilder.cc    redis/ArrayResponseBuilder.hh
   redis/Authenticator.cc           redis/Authenticator.hh
   redis/CommandMonitor.cc          redis/CommandMonitor.hh
   redis/MultiOp.cc                 redis/MultiOp.hh
