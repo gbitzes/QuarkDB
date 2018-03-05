@@ -61,6 +61,8 @@ public:
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
 private:
+  RedisEncodedResponse dispatchInternal(StagingArea &stagingArea, RedisRequest &req);
+  RedisEncodedResponse dispatchRead(StagingArea &stagingArea, RedisRequest &req);
   RedisEncodedResponse dispatchWrite(StagingArea &stagingArea, RedisRequest &req);
   RedisEncodedResponse errArgs(RedisRequest &request);
   RedisEncodedResponse dispatchingError(RedisRequest &request, LogIndex commit);

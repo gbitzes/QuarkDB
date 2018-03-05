@@ -203,42 +203,7 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, WriteBatch &batch) {
   return lastStatus;
 }
 
-RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
-  if(request.getCommand() == RedisCommand::INVALID) {
-    if(startswith(request[0], "JOURNAL_")) {
-      store.noop(commit);
-      return Formatter::ok();
-    }
-
-    qdb_assert(commit == 0);
-    return Formatter::err(SSTR("unknown command " << quotes(request[0])));
-  }
-
-  if(commit > 0 && request.getCommandType() != CommandType::WRITE) {
-    qdb_throw("attempted to dispatch non-write command '" << request[0] << "' with a positive commit index: " << commit);
-  }
-
-  if(request.getCommand() == RedisCommand::PING) {
-    return handlePing(request);
-  }
-
-  if(request.getCommandType() != CommandType::READ && request.getCommandType() != CommandType::WRITE) {
-    return dispatchingError(request, commit);
-  }
-
-  StagingArea stagingArea(store, request.getCommandType() == CommandType::READ);
-
-  // Handle writes in a separate function, use batch write API
-  if(request.getCommandType() == CommandType::WRITE) {
-    RedisEncodedResponse response = dispatchWrite(stagingArea, request);
-    stagingArea.commit(commit);
-    return response;
-  }
-
-  if(request.getCommand() == RedisCommand::PING) {
-    return handlePing(request);
-  }
-
+RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, RedisRequest &request) {
   switch(request.getCommand()) {
     case RedisCommand::GET: {
       if(request.size() != 2) return errArgs(request);
@@ -412,8 +377,51 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
       return Formatter::vector(ret);
     }
     default: {
-      return dispatchingError(request, commit);
+      return dispatchingError(request, 0);
+    }
+  }
+}
+
+RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
+  if(request.getCommand() == RedisCommand::INVALID) {
+    if(startswith(request[0], "JOURNAL_")) {
+      store.noop(commit);
+      return Formatter::ok();
     }
 
+    qdb_assert(commit == 0);
+    return Formatter::err(SSTR("unknown command " << quotes(request[0])));
   }
+
+  if(commit > 0 && request.getCommandType() != CommandType::WRITE) {
+    qdb_throw("attempted to dispatch non-write command '" << request[0] << "' with a positive commit index: " << commit);
+  }
+
+  if(request.getCommand() == RedisCommand::PING) {
+    return handlePing(request);
+  }
+
+  if(request.getCommandType() != CommandType::READ && request.getCommandType() != CommandType::WRITE) {
+    return dispatchingError(request, commit);
+  }
+
+  StagingArea stagingArea(store, request.getCommandType() == CommandType::READ);
+
+  RedisEncodedResponse response = dispatchInternal(stagingArea, request);
+
+  // Handle writes in a separate function, use batch write API
+  if(request.getCommandType() == CommandType::WRITE) {
+    stagingArea.commit(commit);
+  }
+
+  return response;
+}
+
+RedisEncodedResponse RedisDispatcher::dispatchInternal(StagingArea &stagingArea, RedisRequest &request) {
+  // Handle writes in a separate function, use batch write API
+  if(request.getCommandType() == CommandType::WRITE) {
+    return dispatchWrite(stagingArea, request);
+  }
+
+  return dispatchRead(stagingArea, request);
 }
