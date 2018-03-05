@@ -63,6 +63,9 @@ public:
     return requests.size();
   }
 
+  void clear();
+  std::string getFusedCommand() const;
+
 private:
   void checkLastCommandForWrites();
 

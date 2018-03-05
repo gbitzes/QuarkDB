@@ -47,3 +47,56 @@ TEST_F(Multi, Dispatching) {
   resp = dispatcher.dispatch(req, 0);
   ASSERT_EQ(resp.val, "$3\r\nbbb\r\n");
 }
+
+TEST_F(Multi, WithRaft) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  MultiOp write;
+  write.emplace_back("SET", "aaa", "bbb");
+  write.emplace_back("SET", "bbb", "ccc");
+  ASSERT_EQ(write.getFusedCommand(), "MULTIOP_READWRITE");
+
+  int leaderID = getLeaderID();
+
+  redisReplyPtr reply = tunnel(leaderID)->exec(
+    write.getFusedCommand(),
+    write.serialize()
+  ).get();
+
+  ASSERT_EQ(qclient::describeRedisReply(reply),
+    "1) OK\n"
+    "2) OK\n"
+  );
+
+  write.clear();
+  write.emplace_back("SET", "bbb", "ddd");
+  write.emplace_back("GET", "aaa");
+  ASSERT_EQ(write.getFusedCommand(), "MULTIOP_READWRITE");
+
+  reply = tunnel(leaderID)->exec(
+    write.getFusedCommand(),
+    write.serialize()
+  ).get();
+
+  ASSERT_EQ(qclient::describeRedisReply(reply),
+    "1) OK\n"
+    "2) \"bbb\"\n"
+  );
+
+  MultiOp read;
+  read.emplace_back("GET", "aaa");
+  read.emplace_back("GET", "bbb");
+  ASSERT_FALSE(read.containsWrites());
+  ASSERT_EQ(read.getFusedCommand(), "MULTIOP_READ");
+
+  reply = tunnel(leaderID)->exec(
+    read.getFusedCommand(),
+    read.serialize()
+  ).get();
+
+  ASSERT_EQ(qclient::describeRedisReply(reply),
+    "1) \"bbb\"\n"
+    "2) \"ddd\"\n"
+  );
+}

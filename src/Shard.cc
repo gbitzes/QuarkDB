@@ -110,10 +110,6 @@ void Shard::spindown() {
   raftGroup->spindown();
 }
 
-LinkStatus Shard::dispatch(Connection *conn, MultiOp &multiOp) {
-  qdb_throw("NYI");
-}
-
 LinkStatus Shard::dispatch(Connection *conn, WriteBatch &batch) {
   InFlightRegistration registration(inFlightTracker);
   if(!registration.ok()) {

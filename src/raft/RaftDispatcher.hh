@@ -48,7 +48,6 @@ public:
   DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, MultiOp &multiOp) override final;
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);

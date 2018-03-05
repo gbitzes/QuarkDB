@@ -29,10 +29,6 @@ using namespace quarkdb;
 RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {
 }
 
-LinkStatus RecoveryDispatcher::dispatch(Connection *conn, MultiOp &multiOp) {
-  qdb_throw("NYI");
-}
-
 LinkStatus RecoveryDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   return conn->raw(dispatch(req));
 }

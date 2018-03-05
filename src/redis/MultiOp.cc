@@ -89,3 +89,15 @@ bool MultiOp::deserialize(const std::string &src) {
 
   return true;
 }
+
+void MultiOp::clear() {
+  requests.clear();
+}
+
+std::string MultiOp::getFusedCommand() const {
+  if(hasWrites) {
+    return "MULTIOP_READWRITE";
+  }
+
+  return "MULTIOP_READ";
+}

@@ -47,10 +47,6 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   return conn->raw(dispatch(req, 0));
 }
 
-LinkStatus RedisDispatcher::dispatch(Connection *conn, MultiOp &multiOp) {
-  return conn->raw(dispatch(multiOp, 0));
-}
-
 RedisEncodedResponse RedisDispatcher::errArgs(RedisRequest &request) {
   return Formatter::errArgs(request[0]);
 }
@@ -67,7 +63,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(MultiOp &multiOp, LogIndex commit
   ArrayResponseBuilder builder(multiOp.size());
 
   for(size_t i = 0; i < multiOp.size(); i++) {
-    builder.push_back(dispatchInternal(stagingArea, multiOp[i]));
+    builder.push_back(dispatchReadWrite(stagingArea, multiOp[i]));
   }
 
   if(multiOp.containsWrites()) {
@@ -404,6 +400,23 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
   }
 }
 
+RedisEncodedResponse RedisDispatcher::handleMultiOp(RedisRequest &request, LogIndex commit) {
+  MultiOp multiOp;
+  qdb_assert(request.size() == 2);
+  qdb_assert(multiOp.deserialize(request[1]));
+  qdb_assert(request.getCommand() == RedisCommand::MULTIOP_READ || request.getCommand() == RedisCommand::MULTIOP_READWRITE);
+
+
+  if(request.getCommand() == RedisCommand::MULTIOP_READ) {
+    qdb_assert(!multiOp.containsWrites());
+  }
+  else {
+    qdb_assert(multiOp.containsWrites());
+  }
+
+  return dispatch(multiOp, commit);
+}
+
 RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
   if(request.getCommand() == RedisCommand::INVALID) {
     if(startswith(request[0], "JOURNAL_")) {
@@ -427,9 +440,14 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
     return dispatchingError(request, commit);
   }
 
+  // MultiOp, encoded as single RedisRequest?
+  if(request.getCommand() == RedisCommand::MULTIOP_READ || request.getCommand() == RedisCommand::MULTIOP_READWRITE) {
+    return handleMultiOp(request, commit);
+  }
+
   StagingArea stagingArea(store, request.getCommandType() == CommandType::READ);
 
-  RedisEncodedResponse response = dispatchInternal(stagingArea, request);
+  RedisEncodedResponse response = dispatchReadWrite(stagingArea, request);
 
   // Handle writes in a separate function, use batch write API
   if(request.getCommandType() == CommandType::WRITE) {
@@ -439,8 +457,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
   return response;
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchInternal(StagingArea &stagingArea, RedisRequest &request) {
-  // Handle writes in a separate function, use batch write API
+RedisEncodedResponse RedisDispatcher::dispatchReadWrite(StagingArea &stagingArea, RedisRequest &request) {
   if(request.getCommandType() == CommandType::WRITE) {
     return dispatchWrite(stagingArea, request);
   }

@@ -70,10 +70,6 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, WriteBatch &batch) {
   return shard->dispatch(conn, batch);
 }
 
-LinkStatus QuarkDBNode::dispatch(Connection *conn, MultiOp &multiOp) {
-  qdb_throw("NYI");
-}
-
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::PING: {

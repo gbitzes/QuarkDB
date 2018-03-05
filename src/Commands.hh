@@ -74,7 +74,8 @@ enum class RedisCommand {
   LLEN,
 
   MULTI,
-  MULTIOP,
+  MULTIOP_READ,
+  MULTIOP_READWRITE,
 
   CONFIG_GET,
   CONFIG_SET,

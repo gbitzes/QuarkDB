@@ -36,7 +36,6 @@ class RecoveryDispatcher : public Dispatcher {
 public:
   RecoveryDispatcher(RecoveryEditor &editor);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, MultiOp &multiOp) override final;
   RedisEncodedResponse dispatch(RedisRequest &request);
 
 private:

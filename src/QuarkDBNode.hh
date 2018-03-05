@@ -53,7 +53,6 @@ public:
 
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &req) override final;
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, MultiOp &multiOp) override final;
 
   const Configuration& getConfiguration() {
     return configuration;
