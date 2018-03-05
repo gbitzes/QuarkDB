@@ -32,6 +32,7 @@
 #include "utils/CommandParsing.hh"
 #include "utils/TimeFormatting.hh"
 #include "utils/Random.hh"
+#include "redis/MultiOp.hh"
 #include "redis/Authenticator.hh"
 #include "Utils.hh"
 
@@ -397,4 +398,34 @@ TEST(Authenticator, BasicSanity) {
   ASSERT_NE(sig1, sig2);
   ASSERT_NE(sig2, sig3);
   ASSERT_NE(sig1, sig3);
+}
+
+TEST(MultiOp, Parsing) {
+  MultiOp multiOp;
+
+  multiOp.emplace_back("SET", "aaa", "bbb");
+  multiOp.emplace_back("GET", "bbb");
+
+  ASSERT_TRUE(multiOp.containsWrites());
+
+  std::string serialized = multiOp.serialize();
+
+  MultiOp multiOp2;
+  multiOp2.deserialize(serialized);
+
+  ASSERT_EQ(multiOp2.size(), 2u);
+  ASSERT_EQ(multiOp2[0], multiOp[0]);
+  ASSERT_EQ(multiOp2[1], multiOp[1]);
+  ASSERT_EQ(multiOp, multiOp2);
+  ASSERT_TRUE(multiOp2.containsWrites());
+
+  MultiOp multiOp3;
+  multiOp3.emplace_back("GET", "aaa");
+  ASSERT_FALSE(multiOp3.containsWrites());
+  multiOp3.emplace_back("HGET", "aaa", "bbb");
+  ASSERT_FALSE(multiOp3.containsWrites());
+  multiOp3.emplace_back("SET", "aaa", "bbb");
+  ASSERT_TRUE(multiOp3.containsWrites());
+
+  ASSERT_THROW(multiOp3.emplace_back("asdf", "1234"), FatalException);
 }

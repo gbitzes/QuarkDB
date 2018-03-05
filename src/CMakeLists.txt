@@ -55,6 +55,7 @@ add_library(XrdQuarkDB SHARED
 
   redis/Authenticator.cc           redis/Authenticator.hh
   redis/CommandMonitor.cc          redis/CommandMonitor.hh
+  redis/MultiOp.cc                 redis/MultiOp.hh
 
   storage/ConsistencyScanner.cc    storage/ConsistencyScanner.hh
   storage/KeyConstants.cc          storage/KeyConstants.hh
