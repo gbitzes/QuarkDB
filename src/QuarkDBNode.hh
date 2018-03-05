@@ -44,7 +44,7 @@ struct QuarkDBInfo {
   std::vector<std::string> toVector() const;
 };
 
-class Shard; class ShardDirectory;
+class Shard; class ShardDirectory; class MultiOp;
 
 class QuarkDBNode : public Dispatcher {
 public:
@@ -53,6 +53,7 @@ public:
 
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &req) override final;
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  virtual LinkStatus dispatch(Connection *conn, MultiOp &multiOp) override final;
 
   const Configuration& getConfiguration() {
     return configuration;

@@ -73,6 +73,9 @@ enum class RedisCommand {
   RPOP,
   LLEN,
 
+  MULTI,
+  MULTIOP,
+
   CONFIG_GET,
   CONFIG_SET,
   CONFIG_GETALL,
@@ -109,6 +112,7 @@ enum class CommandType {
 
   READ,
   WRITE,
+  MULTIOP,
   CONTROL,
   RAFT,
   QUARKDB

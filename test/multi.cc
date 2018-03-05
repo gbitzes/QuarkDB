@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RecoveryDispatcher.hh
+// File: multi.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,28 +21,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RECOVERY_DISPATCHER_H__
-#define __QUARKDB_RECOVERY_DISPATCHER_H__
+#include "redis/MultiOp.hh"
+#include "test-utils.hh"
+#include "test-reply-macros.hh"
+#include <gtest/gtest.h>
+#include <qclient/QClient.hh>
 
-#include "../Dispatcher.hh"
-#include "RecoveryEditor.hh"
-#include "../Formatter.hh"
+using namespace quarkdb;
+using namespace qclient;
 
-namespace quarkdb {
+class Multi : public TestCluster3NodesFixture {};
 
-class MultiOp;
+TEST_F(Multi, Dispatching) {
+  RedisDispatcher dispatcher(*stateMachine());
 
-class RecoveryDispatcher : public Dispatcher {
-public:
-  RecoveryDispatcher(RecoveryEditor &editor);
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, MultiOp &multiOp) override final;
-  RedisEncodedResponse dispatch(RedisRequest &request);
+  MultiOp multi1;
+  multi1.emplace_back("GET", "aaa");
+  multi1.emplace_back("SET", "aaa", "bbb");
+  multi1.emplace_back("GET", "aaa");
 
-private:
-  RecoveryEditor &editor;
-};
+  RedisEncodedResponse resp = dispatcher.dispatch(multi1, 1);
+  ASSERT_EQ(resp.val, "*3\r\n$-1\r\n+OK\r\n$3\r\nbbb\r\n");
 
+  RedisRequest req = {"GET", "aaa"};
+  resp = dispatcher.dispatch(req, 0);
+  ASSERT_EQ(resp.val, "$3\r\nbbb\r\n");
 }
-
-#endif

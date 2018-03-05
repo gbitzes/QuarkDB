@@ -41,6 +41,10 @@ public:
   std::string serialize() const;
   bool deserialize(const std::string &src);
 
+  RedisRequest& operator[](size_t i) {
+    return requests[i];
+  }
+
   const RedisRequest& operator[](size_t i) const {
     return requests[i];
   }

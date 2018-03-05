@@ -25,6 +25,7 @@
 #include "RequestCounter.hh"
 #include "../Commands.hh"
 #include "../WriteBatch.hh"
+#include "../redis/MultiOp.hh"
 using namespace quarkdb;
 
 RequestCounter::RequestCounter(std::chrono::seconds intv)
@@ -44,6 +45,18 @@ void RequestCounter::account(const WriteBatch &batch) {
   writes += batch.requests.size();
 }
 
+void RequestCounter::account(const MultiOp &multiOp) {
+  batches++;
+
+  for(size_t i = 0; i < multiOp.size(); i++) {
+    account(multiOp[i]);
+  }
+}
+
+std::string RequestCounter::toRate(int64_t val) {
+  return SSTR("(" << val / interval.count() << " Hz)");
+}
+
 void RequestCounter::mainThread(ThreadAssistant &assistant) {
   while(!assistant.terminationRequested()) {
 
@@ -53,7 +66,7 @@ void RequestCounter::mainThread(ThreadAssistant &assistant) {
 
     if(localReads != 0 || localWrites != 0) {
       paused = false;
-      qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads (" << localReads / interval.count() << " Hz), and " << localWrites << " writes (total batches: " << localBatches << ", rate: " << localWrites / interval.count() << " Hz)");
+      qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads " << toRate(localReads) <<  ", and " << localWrites << " writes " << toRate(localWrites) << ". Processed " << localBatches << " batches.");
     }
     else if(!paused) {
       paused = true;

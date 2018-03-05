@@ -39,6 +39,10 @@ RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &s
 : journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt), replicator(rep) {
 }
 
+LinkStatus RaftDispatcher::dispatch(Connection *conn, MultiOp &multiOp) {
+  return -1;
+}
+
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::RAFT_INFO: {

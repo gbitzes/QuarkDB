@@ -29,6 +29,7 @@
 
 namespace quarkdb {
 
+class MultiOp;
 class RedisRequest; struct WriteBatch;
 
 //------------------------------------------------------------------------------
@@ -42,8 +43,11 @@ public:
 
   void account(const RedisRequest &req);
   void account(const WriteBatch &batch);
+  void account(const MultiOp &multiOp);
   void mainThread(ThreadAssistant &assistant);
 private:
+  std::string toRate(int64_t val);
+
   std::atomic<int64_t> reads {0};
   std::atomic<int64_t> writes {0};
   std::atomic<int64_t> batches {0};

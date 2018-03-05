@@ -32,9 +32,12 @@
 
 namespace quarkdb {
 
+class MultiOp;
+
 class Dispatcher {
 public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
+  virtual LinkStatus dispatch(Connection *conn, MultiOp &multiOp) = 0;
 
   // Default implementation simply calls dispatch multiple times. Individual
   // dispatchers should override this with something more efficient.
@@ -59,7 +62,10 @@ public:
   RedisDispatcher(StateMachine &rocksdb);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
+  virtual LinkStatus dispatch(Connection *conn, MultiOp &multiOp) override final;
+
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
+  RedisEncodedResponse dispatch(MultiOp &multiOp, LogIndex commit);
 private:
   RedisEncodedResponse dispatchInternal(StagingArea &stagingArea, RedisRequest &req);
   RedisEncodedResponse dispatchRead(StagingArea &stagingArea, RedisRequest &req);

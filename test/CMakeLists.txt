@@ -37,6 +37,7 @@ add_executable(quarkdb-tests
   formatter.cc
   link.cc
   main.cc
+  multi.cc
   poller.cc
   qclient.cc
   raft-journal.cc

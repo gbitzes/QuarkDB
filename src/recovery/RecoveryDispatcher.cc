@@ -23,9 +23,14 @@
 
 #include "RecoveryDispatcher.hh"
 #include "../Formatter.hh"
+#include "../redis/MultiOp.hh"
 using namespace quarkdb;
 
 RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {
+}
+
+LinkStatus RecoveryDispatcher::dispatch(Connection *conn, MultiOp &multiOp) {
+  qdb_throw("NYI");
 }
 
 LinkStatus RecoveryDispatcher::dispatch(Connection *conn, RedisRequest &req) {

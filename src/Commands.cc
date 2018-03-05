@@ -73,6 +73,9 @@ struct cmdMapInit {
     redis_cmd_map["rpop"] = {RedisCommand::RPOP, CommandType::WRITE};
     redis_cmd_map["config_set"] = {RedisCommand::CONFIG_SET, CommandType::WRITE};
 
+    redis_cmd_map["multi"] = {RedisCommand::MULTI, CommandType::MULTIOP};
+    redis_cmd_map["multiop"] = {RedisCommand::MULTIOP, CommandType::MULTIOP};
+
     redis_cmd_map["raft_handshake"] = {RedisCommand::RAFT_HANDSHAKE, CommandType::RAFT};
     redis_cmd_map["raft_append_entries"] = {RedisCommand::RAFT_APPEND_ENTRIES, CommandType::RAFT};
     redis_cmd_map["raft_info"] = {RedisCommand::RAFT_INFO, CommandType::RAFT};

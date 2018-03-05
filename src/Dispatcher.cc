@@ -23,6 +23,8 @@
 
 #include "storage/StagingArea.hh"
 #include "utils/CommandParsing.hh"
+#include "redis/MultiOp.hh"
+#include "redis/ArrayResponseBuilder.hh"
 #include "StateMachine.hh"
 #include "Dispatcher.hh"
 #include "Utils.hh"
@@ -45,6 +47,10 @@ LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   return conn->raw(dispatch(req, 0));
 }
 
+LinkStatus RedisDispatcher::dispatch(Connection *conn, MultiOp &multiOp) {
+  return conn->raw(dispatch(multiOp, 0));
+}
+
 RedisEncodedResponse RedisDispatcher::errArgs(RedisRequest &request) {
   return Formatter::errArgs(request[0]);
 }
@@ -54,6 +60,21 @@ RedisEncodedResponse RedisDispatcher::dispatchingError(RedisRequest &request, Lo
   qdb_critical(msg);
   if(commit != 0) qdb_throw("Could not dispatch request " << quotes(request[0]) << " with positive commit index: " << commit);
   return Formatter::err(msg);
+}
+
+RedisEncodedResponse RedisDispatcher::dispatch(MultiOp &multiOp, LogIndex commit) {
+  StagingArea stagingArea(store, !multiOp.containsWrites());
+  ArrayResponseBuilder builder(multiOp.size());
+
+  for(size_t i = 0; i < multiOp.size(); i++) {
+    builder.push_back(dispatchInternal(stagingArea, multiOp[i]));
+  }
+
+  if(multiOp.containsWrites()) {
+    stagingArea.commit(commit);
+  }
+
+  return builder.buildResponse();
 }
 
 RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisRequest &request) {
@@ -192,6 +213,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 }
 
 LinkStatus RedisDispatcher::dispatch(Connection *conn, WriteBatch &batch) {
+  // TODO: Remove WriteBatch completely.
   StagingArea stagingArea(store);
 
   LinkStatus lastStatus = 0;

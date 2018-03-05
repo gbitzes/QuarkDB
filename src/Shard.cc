@@ -26,6 +26,7 @@
 #include "ShardDirectory.hh"
 #include "raft/RaftGroup.hh"
 #include "raft/RaftDispatcher.hh"
+#include "redis/MultiOp.hh"
 #include "utils/ScopedAdder.hh"
 #include "utils/RequestCounter.hh"
 
@@ -107,6 +108,10 @@ void Shard::spinup() {
 
 void Shard::spindown() {
   raftGroup->spindown();
+}
+
+LinkStatus Shard::dispatch(Connection *conn, MultiOp &multiOp) {
+  qdb_throw("NYI");
 }
 
 LinkStatus Shard::dispatch(Connection *conn, WriteBatch &batch) {
