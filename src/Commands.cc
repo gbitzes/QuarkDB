@@ -73,6 +73,8 @@ struct cmdMapInit {
     redis_cmd_map["rpop"] = {RedisCommand::RPOP, CommandType::WRITE};
     redis_cmd_map["config_set"] = {RedisCommand::CONFIG_SET, CommandType::WRITE};
 
+    redis_cmd_map["exec"] = {RedisCommand::EXEC, CommandType::CONTROL};
+    redis_cmd_map["discard"] = {RedisCommand::DISCARD, CommandType::CONTROL};
     redis_cmd_map["multi"] = {RedisCommand::MULTI, CommandType::CONTROL};
     redis_cmd_map["multiop_read"] = {RedisCommand::MULTIOP_READ, CommandType::READ};
     redis_cmd_map["multiop_readwrite"] = {RedisCommand::MULTIOP_READWRITE, CommandType::WRITE};

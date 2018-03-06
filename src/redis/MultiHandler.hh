@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: ArrayResponseBuilder.cc
+// File: MultiHandler.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,23 +21,30 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../utils/Macros.hh"
-#include "ArrayResponseBuilder.hh"
-using namespace quarkdb;
+#ifndef QUARKDB_REDIS_MULTIHANDLER_H
+#define QUARKDB_REDIS_MULTIHANDLER_H
 
-ArrayResponseBuilder::ArrayResponseBuilder(size_t size) : itemsRemaining(size) {
-  qdb_assert(itemsRemaining >= 1);
-  ss << "*" << size << "\r\n";
+#include "MultiOp.hh"
+#include "RedisEncodedResponse.hh"
+
+namespace quarkdb {
+
+class Dispatcher; class RedisRequest; class Connection;
+using LinkStatus = int;
+
+class MultiHandler {
+public:
+  MultiHandler();
+
+  bool active() const;
+  LinkStatus process(Dispatcher *dispatcher, Connection *conn, RedisRequest &req);
+  void activate();
+private:
+  MultiOp multiOp;
+  bool activated = false;
+  bool execAbort = false;
+};
+
 }
 
-void ArrayResponseBuilder::push_back(const RedisEncodedResponse &item) {
-  qdb_assert(itemsRemaining != 0);
-  itemsRemaining--;
-
-  ss << item.val;
-}
-
-RedisEncodedResponse ArrayResponseBuilder::buildResponse() const {
-  qdb_assert(itemsRemaining == 0);
-  return RedisEncodedResponse(ss.str());
-}
+#endif

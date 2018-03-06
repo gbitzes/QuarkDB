@@ -63,6 +63,10 @@ public:
     return requests.size();
   }
 
+  bool empty() const {
+    return (requests.size() == 0u);
+  }
+
   void clear();
   std::string getFusedCommand() const;
 

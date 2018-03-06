@@ -24,7 +24,8 @@
 #ifndef QUARKDB_ARRAY_RESPONSE_BUILDER_H
 #define QUARKDB_ARRAY_RESPONSE_BUILDER_H
 
-#include "../Formatter.hh"
+#include <sstream>
+#include "RedisEncodedResponse.hh"
 
 namespace quarkdb {
 

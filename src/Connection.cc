@@ -226,6 +226,18 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
       return 1; // slow link
     }
 
+    // We have a command to process
+    if(multiHandler.active() || currentRequest.getCommand() == RedisCommand::MULTI) {
+      processWriteBatch(dispatcher, writeBatch); // likely not needed
+      multiHandler.process(dispatcher, this, currentRequest);
+      continue;
+    }
+
+    if(currentRequest.getCommand() == RedisCommand::DISCARD) {
+      this->err("DISCARD without MULTI");
+      continue;
+    }
+
     if(currentRequest.getCommandType() == CommandType::WRITE) {
       writeBatch.requests.emplace_back(std::move(currentRequest));
 

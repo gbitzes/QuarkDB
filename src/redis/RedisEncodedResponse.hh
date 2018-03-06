@@ -1,5 +1,5 @@
-// ----------------------------------------------------------------------
-// File: ArrayResponseBuilder.cc
+//-----------------------------------------------------------------------
+// File: RedisEncodedResponse.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,23 +21,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../utils/Macros.hh"
-#include "ArrayResponseBuilder.hh"
-using namespace quarkdb;
+#ifndef QUARKDB_REDIS_REDISENCODEDRESPONSE_H
+#define QUARKDB_REDIS_REDISENCODEDRESPONSE_H
 
-ArrayResponseBuilder::ArrayResponseBuilder(size_t size) : itemsRemaining(size) {
-  qdb_assert(itemsRemaining >= 1);
-  ss << "*" << size << "\r\n";
+#include <string>
+
+namespace quarkdb {
+
+// Phantom type: std::string with a special meaning. Unless explicitly asked
+// with obj.val, this will generate compiler errors when you try to use like
+// plain string.
+class RedisEncodedResponse {
+public:
+  explicit RedisEncodedResponse(std::string &&src) : val(std::move(src)) {}
+  RedisEncodedResponse() {}
+  bool empty() const { return val.empty(); }
+  std::string val;
+};
+
 }
 
-void ArrayResponseBuilder::push_back(const RedisEncodedResponse &item) {
-  qdb_assert(itemsRemaining != 0);
-  itemsRemaining--;
-
-  ss << item.val;
-}
-
-RedisEncodedResponse ArrayResponseBuilder::buildResponse() const {
-  qdb_assert(itemsRemaining == 0);
-  return RedisEncodedResponse(ss.str());
-}
+#endif

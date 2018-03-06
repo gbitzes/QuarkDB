@@ -73,6 +73,8 @@ enum class RedisCommand {
   RPOP,
   LLEN,
 
+  EXEC,
+  DISCARD,
   MULTI,
   MULTIOP_READ,
   MULTIOP_READWRITE,

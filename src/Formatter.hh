@@ -24,22 +24,11 @@
 #ifndef __QUARKDB_FORMATTER_H__
 #define __QUARKDB_FORMATTER_H__
 
-#include <string>
 #include <rocksdb/status.h>
+#include "redis/RedisEncodedResponse.hh"
 #include "Utils.hh"
 
 namespace quarkdb {
-
-// Phantom type: std::string with a special meaning. Unless explicitly asked
-// with obj.val, this will generate compiler errors when you try to use like
-// plain string.
-class RedisEncodedResponse {
-public:
-  explicit RedisEncodedResponse(std::string &&src) : val(std::move(src)) {}
-  RedisEncodedResponse() {}
-  bool empty() const { return val.empty(); }
-  std::string val;
-};
 
 class RaftEntry;
 

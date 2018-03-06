@@ -28,6 +28,7 @@
 #include "RedisParser.hh"
 #include "BufferedWriter.hh"
 #include "Formatter.hh"
+#include "redis/MultiHandler.hh"
 #include <queue>
 
 #define OUTPUT_BUFFER_SIZE (16*1024)
@@ -175,6 +176,7 @@ private:
   std::string description;
   std::string uuid;
 
+  MultiHandler multiHandler;
   friend class PendingQueue;
 };
 

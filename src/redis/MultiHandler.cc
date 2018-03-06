@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: ArrayResponseBuilder.cc
+// File: MultiHandler.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -22,22 +22,67 @@
  ************************************************************************/
 
 #include "../utils/Macros.hh"
-#include "ArrayResponseBuilder.hh"
+#include "MultiHandler.hh"
+#include "../Dispatcher.hh"
+#include "../Connection.hh"
 using namespace quarkdb;
 
-ArrayResponseBuilder::ArrayResponseBuilder(size_t size) : itemsRemaining(size) {
-  qdb_assert(itemsRemaining >= 1);
-  ss << "*" << size << "\r\n";
+MultiHandler::MultiHandler() {
 }
 
-void ArrayResponseBuilder::push_back(const RedisEncodedResponse &item) {
-  qdb_assert(itemsRemaining != 0);
-  itemsRemaining--;
-
-  ss << item.val;
+bool MultiHandler::active() const {
+  return activated;
 }
 
-RedisEncodedResponse ArrayResponseBuilder::buildResponse() const {
-  qdb_assert(itemsRemaining == 0);
-  return RedisEncodedResponse(ss.str());
+void MultiHandler::activate() {
+  qdb_assert(!activated);
+  activated = true;
+}
+
+LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, RedisRequest &req) {
+  qdb_assert(activated || req.getCommand() == RedisCommand::MULTI);
+
+  if(req.getCommand() == RedisCommand::DISCARD) {
+    multiOp.clear();
+    activated = false;
+    return conn->ok();
+  }
+
+  if(req.getCommand() == RedisCommand::MULTI) {
+    if(req.size() != 1u) {
+      return conn->errArgs(req[0]);
+    }
+
+    if(activated) {
+      return conn->err("MULTI calls can not be nested");
+    }
+
+    activated = true;
+    return conn->ok();
+  }
+
+  if(req.getCommand() == RedisCommand::EXEC) {
+    // Empty multi-exec block?
+    if(multiOp.empty()) {
+      activated = false;
+      return conn->vector( {} );
+    }
+
+    RedisRequest fused;
+    fused.emplace_back(multiOp.getFusedCommand());
+    fused.emplace_back(multiOp.serialize());
+
+    multiOp.clear();
+    activated = false;
+
+    return dispatcher->dispatch(conn, fused);
+  }
+
+  if(req.getCommandType() != CommandType::READ && req.getCommandType() != CommandType::WRITE) {
+    return conn->err("Only reads and writes allowed within MULTI/EXEC blocks.");
+  }
+
+  // Queue
+  multiOp.push_back(req);
+  return conn->status("QUEUED");
 }
