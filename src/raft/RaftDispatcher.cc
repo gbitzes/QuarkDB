@@ -141,6 +141,10 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err("I am the leader! I can't revolt against myself, you know.");
       }
 
+      if(!contains(journal.getMembership().nodes, state.getMyself())) {
+        return conn->err("I am not a full cluster member, pointless to start a coup. First promote me from observer status.");
+      }
+
       qdb_event("Received request to attempt a coup d'etat against the current leader.");
       raftClock.triggerTimeout();
       return conn->status("vive la revolution");
