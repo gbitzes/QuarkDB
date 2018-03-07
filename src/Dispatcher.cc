@@ -70,6 +70,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(MultiOp &multiOp, LogIndex commit
     stagingArea.commit(commit);
   }
 
+  store.getRequestCounter().account(multiOp);
   return builder.buildResponse();
 }
 
@@ -454,6 +455,7 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
     stagingArea.commit(commit);
   }
 
+  store.getRequestCounter().account(request);
   return response;
 }
 

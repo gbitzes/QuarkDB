@@ -59,7 +59,8 @@ static rocksdb::Status malformed(const std::string &message) {
 }
 
 StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk_load)
-: filename(f), writeAheadLog(write_ahead_log), bulkLoad(bulk_load) {
+: filename(f), writeAheadLog(write_ahead_log), bulkLoad(bulk_load),
+ requestCounter(std::chrono::seconds(10)) {
 
   if(writeAheadLog) {
     qdb_info("Openning state machine " << quotes(filename) << ".");

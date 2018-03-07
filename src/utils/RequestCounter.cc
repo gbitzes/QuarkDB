@@ -57,6 +57,10 @@ std::string RequestCounter::toRate(int64_t val) {
   return SSTR("(" << val / interval.count() << " Hz)");
 }
 
+void RequestCounter::setReportingStatus(bool val) {
+  activated = val;
+}
+
 void RequestCounter::mainThread(ThreadAssistant &assistant) {
   while(!assistant.terminationRequested()) {
 
@@ -66,11 +70,15 @@ void RequestCounter::mainThread(ThreadAssistant &assistant) {
 
     if(localReads != 0 || localWrites != 0) {
       paused = false;
-      qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads " << toRate(localReads) <<  ", and " << localWrites << " writes " << toRate(localWrites) << ". Processed " << localBatches << " batches.");
+      if(activated) {
+        qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads " << toRate(localReads) <<  ", and " << localWrites << " writes " << toRate(localWrites) << ". Processed " << localBatches << " batches.");
+      }
     }
     else if(!paused) {
       paused = true;
-      qdb_info("No reads or writes during the last " << interval.count() << " seconds - will report again once load re-appears.");
+      if(activated) {
+        qdb_info("No reads or writes during the last " << interval.count() << " seconds - will report again once load re-appears.");
+      }
     }
 
     assistant.wait_for(interval);

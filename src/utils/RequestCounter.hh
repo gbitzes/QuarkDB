@@ -45,6 +45,8 @@ public:
   void account(const WriteBatch &batch);
   void account(const MultiOp &multiOp);
   void mainThread(ThreadAssistant &assistant);
+
+  void setReportingStatus(bool val);
 private:
   std::string toRate(int64_t val);
 
@@ -52,6 +54,7 @@ private:
   std::atomic<int64_t> writes {0};
   std::atomic<int64_t> batches {0};
   bool paused = true;
+  std::atomic<bool> activated {true};
 
   std::chrono::seconds interval;
   AssistedThread thread;

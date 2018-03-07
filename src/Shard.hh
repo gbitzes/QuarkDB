@@ -29,7 +29,6 @@
 #include "Configuration.hh"
 #include "redis/CommandMonitor.hh"
 #include "utils/InFlightTracker.hh"
-#include "utils/RequestCounter.hh"
 
 namespace quarkdb {
 
@@ -64,8 +63,6 @@ private:
   RaftTimeouts timeouts;
 
   InFlightTracker inFlightTracker;
-  RequestCounter requestCounter;
-
   std::mutex raftGroupMtx;
 };
 

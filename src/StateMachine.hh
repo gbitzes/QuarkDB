@@ -26,6 +26,7 @@
 
 #include "Common.hh"
 #include "utils/Macros.hh"
+#include "utils/RequestCounter.hh"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
 #include "storage/ConsistencyScanner.hh"
@@ -163,6 +164,7 @@ public:
   void commitBatch(rocksdb::WriteBatch &batch);
   bool waitUntilTargetLastApplied(LogIndex targetLastApplied, std::chrono::milliseconds duration);
   rocksdb::Status verifyChecksum();
+  RequestCounter& getRequestCounter() { return requestCounter; }
 
 private:
   friend class StagingArea;
@@ -240,6 +242,8 @@ private:
   const std::string filename;
   bool writeAheadLog;
   bool bulkLoad;
+
+  RequestCounter requestCounter;
 };
 
 

@@ -62,6 +62,7 @@ void RaftDirector::main() {
 
 void RaftDirector::actAsLeader(RaftStateSnapshotPtr &snapshot) {
   if(snapshot->leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
+  stateMachine.getRequestCounter().setReportingStatus(true);
 
   replicator.activate(snapshot);
   while(snapshot->term == state.getCurrentTerm() &&
@@ -105,6 +106,7 @@ void RaftDirector::runForLeader() {
 }
 
 void RaftDirector::actAsFollower(RaftStateSnapshotPtr &snapshot) {
+  stateMachine.getRequestCounter().setReportingStatus(false);
   milliseconds randomTimeout = raftClock.getRandomTimeout();
   while(true) {
     RaftStateSnapshotPtr now = state.getSnapshot();
