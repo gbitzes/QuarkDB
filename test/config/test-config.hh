@@ -78,7 +78,7 @@ struct TestConfig {
   ConfigurationOption<bool> databaseReuse {true};
 
   ConfigurationOption<std::vector<int64_t>> benchmarkThreads {1, 2, 4, 8};
-  ConfigurationOption<std::vector<int64_t>> benchmarkEvents {1000000};
+  ConfigurationOption<std::vector<int64_t>> benchmarkEvents {3000000};
 
 };
 
