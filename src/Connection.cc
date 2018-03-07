@@ -129,9 +129,15 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
   return -1;
 }
 
-Connection::Connection(Link *l, size_t write_batch_limit)
+size_t phantomBatchLimit = 100;
+
+void Connection::setPhantomBatchLimit(size_t newval) {
+  phantomBatchLimit = newval;
+}
+
+Connection::Connection(Link *l)
 : writer(l), parser(l), pendingQueue(new PendingQueue(this)),
-  writeBatchLimit(write_batch_limit), description(l->describe()), uuid(l->getID()) {
+  description(l->describe()), uuid(l->getID()) {
 }
 
 Connection::~Connection() {
@@ -194,17 +200,9 @@ LinkStatus Connection::scan(const std::string &marker, const std::vector<std::st
   return pendingQueue->appendResponse(Formatter::scan(marker, vec));
 }
 
-void Connection::processWriteBatch(Dispatcher *dispatcher, WriteBatch &writeBatch) {
-  if(!writeBatch.requests.empty()) {
-    dispatcher->dispatch(this, writeBatch);
-    writeBatch.requests.clear();
-  }
-}
-
 LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTracker &inFlightTracker) {
   FlushGuard guard(this);
 
-  WriteBatch writeBatch;
   while(inFlightTracker.isAcceptingRequests()) {
     if(monitor) {
       // This connection is in "MONITOR" mode, we don't accept any more commands.
@@ -218,40 +216,61 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
 
     LinkStatus status = parser.fetch(currentRequest);
 
-    if(status < 0) return status; // link error
+    if(status < 0) {
+      return status; // link error
+    }
 
     if(status == 0) {
       // slow link - process the write batch, if needed
-      processWriteBatch(dispatcher, writeBatch);
+      multiHandler.finalizePhantomTransaction(dispatcher, this);
       return 1; // slow link
     }
 
-    // We have a command to process
-    if(multiHandler.active() || currentRequest.getCommand() == RedisCommand::MULTI) {
-      processWriteBatch(dispatcher, writeBatch); // likely not needed
+    // Beginning of a MULTI block: Finalize phantom transactions
+    if(currentRequest.getCommand() == RedisCommand::MULTI) {
+      multiHandler.finalizePhantomTransaction(dispatcher, this);
       multiHandler.process(dispatcher, this, currentRequest);
       continue;
     }
 
+    if(currentRequest.getCommand() == RedisCommand::MULTIOP_READWRITE) {
+      multiHandler.finalizePhantomTransaction(dispatcher, this);
+      dispatcher->dispatch(this, currentRequest);
+      continue;
+    }
+
+    if(multiHandler.size() >= phantomBatchLimit) {
+      multiHandler.finalizePhantomTransaction(dispatcher, this);
+    }
+
+    if(multiHandler.active()) {
+      if(multiHandler.isPhantom() && currentRequest.getCommandType() != CommandType::WRITE) {
+        multiHandler.finalizePhantomTransaction(dispatcher, this);
+      }
+      else {
+        multiHandler.process(dispatcher, this, currentRequest);
+        continue;
+      }
+    }
+
     if(currentRequest.getCommand() == RedisCommand::DISCARD) {
+      multiHandler.finalizePhantomTransaction(dispatcher, this);
       this->err("DISCARD without MULTI");
       continue;
     }
 
     if(currentRequest.getCommandType() == CommandType::WRITE) {
-      writeBatch.requests.emplace_back(std::move(currentRequest));
-
-      if(writeBatch.requests.size() >= writeBatchLimit) {
-        processWriteBatch(dispatcher, writeBatch);
-      }
+      multiHandler.activatePhantom();
+      multiHandler.process(dispatcher, this, currentRequest);
+      continue;
     }
     else {
-      processWriteBatch(dispatcher, writeBatch);
+      multiHandler.finalizePhantomTransaction(dispatcher, this);
       dispatcher->dispatch(this, currentRequest);
     }
   }
 
-  processWriteBatch(dispatcher, writeBatch);
+  multiHandler.finalizePhantomTransaction(dispatcher, this);
   return 1;
 }
 

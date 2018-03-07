@@ -34,9 +34,14 @@ bool MultiHandler::active() const {
   return activated;
 }
 
-void MultiHandler::activate() {
-  qdb_assert(!activated);
-  activated = true;
+void MultiHandler::activatePhantom() {
+  if(activated) {
+    qdb_assert(phantom);
+  }
+  else {
+    activated = true;
+    phantom = true;
+  }
 }
 
 LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, RedisRequest &req) {
@@ -58,19 +63,19 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
     }
 
     activated = true;
+    phantom = false;
     return conn->ok();
   }
 
   if(req.getCommand() == RedisCommand::EXEC) {
     // Empty multi-exec block?
     if(multiOp.empty()) {
+      qdb_assert(!phantom);
       activated = false;
       return conn->vector( {} );
     }
 
-    RedisRequest fused;
-    fused.emplace_back(multiOp.getFusedCommand());
-    fused.emplace_back(multiOp.serialize());
+    RedisRequest fused = multiOp.toRedisRequest(phantom);
 
     multiOp.clear();
     activated = false;
@@ -84,5 +89,21 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
 
   // Queue
   multiOp.push_back(req);
-  return conn->status("QUEUED");
+  if(!phantom) {
+    return conn->status("QUEUED");
+  }
+
+  return 0;
+}
+
+LinkStatus MultiHandler::finalizePhantomTransaction(Dispatcher *dispatcher, Connection *conn) {
+  if(!activated || !phantom) return 0;
+  if(multiOp.empty()) return 0;
+
+  RedisRequest req {"EXEC"};
+  return process(dispatcher, conn, req);
+}
+
+size_t MultiHandler::size() const {
+  return multiOp.size();
 }

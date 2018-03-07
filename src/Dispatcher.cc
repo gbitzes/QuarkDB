@@ -58,9 +58,9 @@ RedisEncodedResponse RedisDispatcher::dispatchingError(RedisRequest &request, Lo
   return Formatter::err(msg);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatch(MultiOp &multiOp, LogIndex commit) {
+RedisEncodedResponse RedisDispatcher::dispatch(MultiOp &multiOp, LogIndex commit, bool phantom) {
   StagingArea stagingArea(store, !multiOp.containsWrites());
-  ArrayResponseBuilder builder(multiOp.size());
+  ArrayResponseBuilder builder(multiOp.size(), phantom);
 
   for(size_t i = 0; i < multiOp.size(); i++) {
     builder.push_back(dispatchReadWrite(stagingArea, multiOp[i]));
@@ -403,7 +403,7 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
 
 RedisEncodedResponse RedisDispatcher::handleMultiOp(RedisRequest &request, LogIndex commit) {
   MultiOp multiOp;
-  qdb_assert(request.size() == 2);
+  qdb_assert(request.size() == 3);
   qdb_assert(multiOp.deserialize(request[1]));
   qdb_assert(request.getCommand() == RedisCommand::MULTIOP_READ || request.getCommand() == RedisCommand::MULTIOP_READWRITE);
 
@@ -415,7 +415,11 @@ RedisEncodedResponse RedisDispatcher::handleMultiOp(RedisRequest &request, LogIn
     qdb_assert(multiOp.containsWrites());
   }
 
-  return dispatch(multiOp, commit);
+  qdb_assert(request[2] == "phantom" || request[2] == "real");
+  bool phantom = false;
+  if(request[2] == "phantom") phantom = true;
+
+  return dispatch(multiOp, commit, phantom);
 }
 
 RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {

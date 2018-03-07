@@ -84,7 +84,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   futures.emplace_back(tunnel(leaderID)->exec("ping"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "asdf", "1234"));
   futures.emplace_back(tunnel(leaderID)->exec("get", "asdf"));
-  futures.emplace_back(tunnel(leaderID)->exec("raft-fetch", SSTR(lastEntry+1) ));
+  futures.emplace_back(tunnel(leaderID)->exec("raft-fetch", SSTR(lastEntry+1), "raw"));
 
   ASSERT_REPLY(futures[0], "");
   ASSERT_REPLY(futures[1], "PONG");
@@ -330,7 +330,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("scard", "does-not-exist"));
   futures.emplace_back(tunnel(leaderID)->exec("raft_invalid_command"));
   futures.emplace_back(tunnel(leaderID)->exec("quarkdb_invalid_command"));
-  futures.emplace_back(tunnel(leaderID)->exec("raft_fetch_last", "7"));
+  futures.emplace_back(tunnel(leaderID)->exec("raft-fetch-last", "7", "raw"));
 
   size_t count = 0;
   ASSERT_REPLY(futures[count++], 1);

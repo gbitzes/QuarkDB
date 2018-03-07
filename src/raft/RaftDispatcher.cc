@@ -47,28 +47,48 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
     }
     case RedisCommand::RAFT_FETCH_LAST: {
       // safe, read-only request, does not need authorization
-      if(req.size() != 2) return conn->errArgs(req[0]);
+      if(req.size() != 2 && req.size() != 3) return conn->errArgs(req[0]);
 
       int64_t nentries;
       if(!my_strtoll(req[1], nentries) || nentries <= 0) return conn->err(SSTR("could not parse " << req[1]));
 
+      bool raw = false;
+      if(req.size() == 3) {
+        if(req[2] == "raw") {
+          raw = true;
+        }
+        else {
+          return conn->err(SSTR("could not parse " << req[2]));
+        }
+      }
+
       std::vector<RaftEntry> entries;
       journal.fetch_last(nentries, entries);
 
-      return conn->raw(Formatter::raftEntries(entries));
+      return conn->raw(Formatter::raftEntries(entries, raw));
     }
     case RedisCommand::RAFT_FETCH: {
       // safe, read-only request, does not need authorization
-      if(req.size() != 2) return conn->errArgs(req[0]);
+      if(req.size() != 2 && req.size() != 3) return conn->errArgs(req[0]);
 
       LogIndex index;
       if(!my_strtoll(req[1], index)) return conn->err(SSTR("could not parse " << req[1]));
+
+      bool raw = false;
+      if(req.size() == 3) {
+        if(req[2] == "raw") {
+          raw = true;
+        }
+        else {
+          return conn->err(SSTR("could not parse " << req[2]));
+        }
+      }
 
       RaftEntry entry;
       std::vector<std::string> ret;
 
       if(this->fetch(index, entry)) {
-        return conn->raw(Formatter::raftEntry(entry));
+        return conn->raw(Formatter::raftEntry(entry, raw));
       }
 
       return conn->null();

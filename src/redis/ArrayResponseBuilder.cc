@@ -25,9 +25,13 @@
 #include "ArrayResponseBuilder.hh"
 using namespace quarkdb;
 
-ArrayResponseBuilder::ArrayResponseBuilder(size_t size) : itemsRemaining(size) {
+ArrayResponseBuilder::ArrayResponseBuilder(size_t size, bool phant)
+: itemsRemaining(size), phantom(phant) {
   qdb_assert(itemsRemaining >= 1);
-  ss << "*" << size << "\r\n";
+
+  if(!phantom) {
+    ss << "*" << size << "\r\n";
+  }
 }
 
 void ArrayResponseBuilder::push_back(const RedisEncodedResponse &item) {

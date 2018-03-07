@@ -36,6 +36,8 @@ using namespace quarkdb;
 class Background_Flusher : public TestCluster3NodesFixture {};
 
 TEST_F(Background_Flusher, basic_sanity) {
+  Connection::setPhantomBatchLimit(1);
+  
   // start our cluster as usual
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));

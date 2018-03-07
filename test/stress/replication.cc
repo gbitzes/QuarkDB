@@ -44,6 +44,8 @@ class Replication : public TestCluster3NodesFixture {};
 class Membership : public TestCluster5NodesFixture {};
 
 TEST_F(Replication, entries_50k_with_follower_loss) {
+  Connection::setPhantomBatchLimit(1);
+
   // let's get this party started
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
@@ -74,6 +76,8 @@ TEST_F(Replication, entries_50k_with_follower_loss) {
 }
 
 TEST_F(Replication, lease_expires_under_load) {
+  Connection::setPhantomBatchLimit(1);
+
   // only nodes #0 and #1 are active
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
@@ -128,6 +132,8 @@ TEST_F(Replication, node_has_committed_entries_no_one_else_has_ensure_it_vetoes)
 }
 
 TEST_F(Replication, connection_shuts_down_before_all_replies_arrive) {
+  Connection::setPhantomBatchLimit(1);
+
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
@@ -164,6 +170,8 @@ static void generateLoad(qclient::QClient *qcl, std::string prefix, ThreadAssist
 }
 
 TEST_F(Replication, load_during_election) {
+  Connection::setPhantomBatchLimit(1);
+
   // let's be extra evil and start generating load even before the nodes start up
   AssistedThread t1(generateLoad, tunnel(0), "node0");
   AssistedThread t2(generateLoad, tunnel(1), "node1");
@@ -275,6 +283,8 @@ TEST_F(Replication, linearizability_during_transition) {
 }
 
 TEST_F(Replication, several_transitions) {
+  Connection::setPhantomBatchLimit(1);
+
   // Start load generation..
   AssistedThread t1(generateLoad, tunnel(0), "node0");
   AssistedThread t2(generateLoad, tunnel(1), "node1");
@@ -466,6 +476,8 @@ TEST_F(Replication, TrimmingBlock) {
 }
 
 TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
+  Connection::setPhantomBatchLimit(1);
+
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
   int leaderID = getLeaderID();

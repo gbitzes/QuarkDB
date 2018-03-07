@@ -269,7 +269,7 @@ bool RaftParser::fetchResponse(redisReply *source, RaftEntry &entry) {
     return false;
   }
 
-  if(source->element[0]->type != REDIS_REPLY_STATUS) {
+  if(source->element[0]->type != REDIS_REPLY_STRING) {
     return false;
   }
 
@@ -280,7 +280,7 @@ bool RaftParser::fetchResponse(redisReply *source, RaftEntry &entry) {
   redisReply *req = source->element[1];
 
   for(size_t i = 0; i < req->elements; i++) {
-    if(req->element[i]->type != REDIS_REPLY_STATUS) {
+    if(req->element[i]->type != REDIS_REPLY_STRING) {
       return false;
     }
   }

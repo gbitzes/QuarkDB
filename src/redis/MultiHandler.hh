@@ -38,11 +38,16 @@ public:
 
   bool active() const;
   LinkStatus process(Dispatcher *dispatcher, Connection *conn, RedisRequest &req);
-  void activate();
+  void activatePhantom();
+  size_t size() const;
+  bool isPhantom() const { return activated && phantom; }
+  LinkStatus finalizePhantomTransaction(Dispatcher *dispatcher, Connection *conn);
+
 private:
   MultiOp multiOp;
   bool activated = false;
   bool execAbort = false;
+  bool phantom = false;
 };
 
 }

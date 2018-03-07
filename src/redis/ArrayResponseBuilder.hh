@@ -31,12 +31,13 @@ namespace quarkdb {
 
 class ArrayResponseBuilder {
 public:
-  ArrayResponseBuilder(size_t size);
+  ArrayResponseBuilder(size_t size, bool phantom = false);
   void push_back(const RedisEncodedResponse &item);
   RedisEncodedResponse buildResponse() const;
 
 private:
   size_t itemsRemaining;
+  bool phantom;
   std::stringstream ss;
 };
 

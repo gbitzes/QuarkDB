@@ -68,6 +68,8 @@ public:
   }
 
   void clear();
+
+  RedisRequest toRedisRequest(bool phantom) const;
   std::string getFusedCommand() const;
 
 private:

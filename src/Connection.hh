@@ -108,7 +108,7 @@ class RedisEncodedResponse;
 
 class Connection {
 public:
-  Connection(Link *link, size_t writeBatchLimit = 1);
+  Connection(Link *link);
   ~Connection();
   std::string describe() const;
   std::string getID() const { return uuid; }
@@ -164,14 +164,14 @@ public:
   private:
     Connection *conn;
   };
+
+  static void setPhantomBatchLimit(size_t newval);
 private:
   BufferedWriter writer;
 
-  void processWriteBatch(Dispatcher *dispatcher, WriteBatch &writeBatch);
   RedisRequest currentRequest;
   RedisParser parser;
   std::shared_ptr<PendingQueue> pendingQueue;
-  size_t writeBatchLimit;
 
   std::string description;
   std::string uuid;

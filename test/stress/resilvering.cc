@@ -36,6 +36,8 @@ class Resilvering : public TestCluster3NodesFixture {};
 #define ASSERT_NOTFOUND(msg) ASSERT_TRUE(msg.IsNotFound())
 
 TEST_F(Trimming, configurable_trimming_limit) {
+  Connection::setPhantomBatchLimit(1);
+
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 

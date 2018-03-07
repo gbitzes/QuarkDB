@@ -101,3 +101,22 @@ std::string MultiOp::getFusedCommand() const {
 
   return "MULTIOP_READ";
 }
+
+RedisRequest MultiOp::toRedisRequest(bool phantom) const {
+  if(phantom && requests.size() == 1) {
+    return requests[0];
+  }
+
+  RedisRequest req;
+  req.emplace_back(getFusedCommand());
+  req.emplace_back(serialize());
+
+  if(phantom) {
+    req.emplace_back("phantom");
+  }
+  else {
+    req.emplace_back("real");
+  }
+
+  return req;
+}

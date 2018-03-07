@@ -36,7 +36,7 @@ TEST(Response, T1) {
 }
 
 TEST(ArrayResponseBuilder, BasicSanity) {
-  ArrayResponseBuilder builder(3);
+  ArrayResponseBuilder builder(3, false);
   ASSERT_THROW(builder.buildResponse(), FatalException);
 
   builder.push_back(Formatter::ok());

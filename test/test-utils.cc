@@ -101,6 +101,8 @@ GlobalEnv &commonState(*(GlobalEnv*)commonStatePtr);
 
 TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd)
 : clusterid(clust), initialNodes(nd) {
+
+  Connection::setPhantomBatchLimit(100);
 }
 
 TestCluster::~TestCluster() {

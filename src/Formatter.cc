@@ -111,7 +111,7 @@ RedisEncodedResponse Formatter::simpleRedisRequest(const RedisRequest &req) {
     vec.emplace_back(req[i]);
   }
 
-  return Formatter::statusVector(vec);
+  return Formatter::vector(vec);
 }
 
 RedisEncodedResponse Formatter::redisRequest(const RedisRequest &req) {
@@ -120,7 +120,7 @@ RedisEncodedResponse Formatter::redisRequest(const RedisRequest &req) {
     multiOp.deserialize(req[1]);
 
     ArrayResponseBuilder builder(multiOp.size() + 1);
-    builder.push_back(Formatter::status(req[0]));
+    builder.push_back(Formatter::string(req[0]));
 
     for(size_t i = 0; i < multiOp.size(); i++) {
       builder.push_back(simpleRedisRequest(multiOp[i]));
@@ -133,24 +133,30 @@ RedisEncodedResponse Formatter::redisRequest(const RedisRequest &req) {
   return simpleRedisRequest(req);
 }
 
-RedisEncodedResponse Formatter::raftEntry(const RaftEntry &entry) {
+RedisEncodedResponse Formatter::raftEntry(const RaftEntry &entry, bool raw) {
   // Very inefficient with copying, but this function is only to help
   // debugging, so we don't really mind.
 
   ArrayResponseBuilder builder(2);
 
-  builder.push_back(Formatter::status(SSTR(entry.term)));
-  builder.push_back(redisRequest(entry.request));
+  builder.push_back(Formatter::string(SSTR(entry.term)));
+
+  if(raw) {
+    builder.push_back(simpleRedisRequest(entry.request));
+  }
+  else {
+    builder.push_back(redisRequest(entry.request));
+  }
 
   return builder.buildResponse();
 }
 
-RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entries) {
+RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entries, bool raw) {
   std::stringstream ss;
   ss << "*" << entries.size() << "\r\n";
 
   for(size_t i = 0; i < entries.size(); i++) {
-    ss << Formatter::raftEntry(entries[i]).val;
+    ss << Formatter::raftEntry(entries[i], raw).val;
   }
 
   return RedisEncodedResponse(ss.str());
