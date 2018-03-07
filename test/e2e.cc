@@ -84,7 +84,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   futures.emplace_back(tunnel(leaderID)->exec("ping"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "asdf", "1234"));
   futures.emplace_back(tunnel(leaderID)->exec("get", "asdf"));
-  futures.emplace_back(tunnel(leaderID)->exec("raft_fetch", SSTR(lastEntry+1) ));
+  futures.emplace_back(tunnel(leaderID)->exec("raft-fetch", SSTR(lastEntry+1) ));
 
   ASSERT_REPLY(futures[0], "");
   ASSERT_REPLY(futures[1], "PONG");

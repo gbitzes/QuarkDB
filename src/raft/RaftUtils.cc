@@ -265,12 +265,22 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
 }
 
 bool RaftParser::fetchResponse(redisReply *source, RaftEntry &entry) {
-  if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements < 2) {
+  if(source == nullptr || source->type != REDIS_REPLY_ARRAY || source->elements != 2) {
     return false;
   }
 
-  for(size_t i = 0; i < source->elements; i++) {
-    if(source->element[i]->type != REDIS_REPLY_STRING) {
+  if(source->element[0]->type != REDIS_REPLY_STATUS) {
+    return false;
+  }
+
+  if(source->element[1]->type != REDIS_REPLY_ARRAY) {
+    return false;
+  }
+
+  redisReply *req = source->element[1];
+
+  for(size_t i = 0; i < req->elements; i++) {
+    if(req->element[i]->type != REDIS_REPLY_STATUS) {
       return false;
     }
   }
@@ -279,8 +289,8 @@ bool RaftParser::fetchResponse(redisReply *source, RaftEntry &entry) {
   if(!my_strtoll(tmp, entry.term)) return false;
 
   entry.request.clear();
-  for(size_t i = 1; i < source->elements; i++) {
-    entry.request.emplace_back(source->element[i]->str, source->element[i]->len);
+  for(size_t i = 0; i < req->elements; i++) {
+    entry.request.emplace_back(req->element[i]->str, req->element[i]->len);
   }
 
   return true;

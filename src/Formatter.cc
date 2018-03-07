@@ -25,6 +25,8 @@
 #include "raft/RaftCommon.hh"
 #include "Common.hh"
 #include "Formatter.hh"
+#include "redis/ArrayResponseBuilder.hh"
+#include "redis/MultiOp.hh"
 using namespace quarkdb;
 
 RedisEncodedResponse Formatter::moved(int64_t shardId, const RaftServer &location) {
@@ -102,18 +104,45 @@ RedisEncodedResponse Formatter::scan(const std::string &marker, const std::vecto
   return RedisEncodedResponse(ss.str());
 }
 
+RedisEncodedResponse Formatter::simpleRedisRequest(const RedisRequest &req) {
+  std::vector<std::string> vec;
+
+  for(size_t i = 0; i < req.size(); i++) {
+    vec.emplace_back(req[i]);
+  }
+
+  return Formatter::statusVector(vec);
+}
+
+RedisEncodedResponse Formatter::redisRequest(const RedisRequest &req) {
+  if(req.getCommand() == RedisCommand::MULTIOP_READWRITE || req.getCommand() == RedisCommand::MULTIOP_READ) {
+    MultiOp multiOp;
+    multiOp.deserialize(req[1]);
+
+    ArrayResponseBuilder builder(multiOp.size() + 1);
+    builder.push_back(Formatter::status(req[0]));
+
+    for(size_t i = 0; i < multiOp.size(); i++) {
+      builder.push_back(simpleRedisRequest(multiOp[i]));
+    }
+
+    return builder.buildResponse();
+  }
+
+  // Simple case, no transactions.
+  return simpleRedisRequest(req);
+}
+
 RedisEncodedResponse Formatter::raftEntry(const RaftEntry &entry) {
   // Very inefficient with copying, but this function is only to help
   // debugging, so we don't really mind.
 
-  std::vector<std::string> vec;
-  vec.emplace_back(std::to_string(entry.term));
+  ArrayResponseBuilder builder(2);
 
-  for(size_t i = 0; i < entry.request.size(); i++) {
-    vec.emplace_back(entry.request[i]);
-  }
+  builder.push_back(Formatter::status(SSTR(entry.term)));
+  builder.push_back(redisRequest(entry.request));
 
-  return Formatter::vector(vec);
+  return builder.buildResponse();
 }
 
 RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entries) {

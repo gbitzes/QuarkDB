@@ -31,6 +31,7 @@
 namespace quarkdb {
 
 class RaftEntry;
+class RedisRequest;
 
 class Formatter {
 public:
@@ -49,6 +50,9 @@ public:
   static RedisEncodedResponse scan(const std::string &marker, const std::vector<std::string> &vec);
   static RedisEncodedResponse raftEntry(const RaftEntry &entry);
   static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries);
+
+  static RedisEncodedResponse simpleRedisRequest(const RedisRequest &req);
+  static RedisEncodedResponse redisRequest(const RedisRequest &req);
 };
 
 }
