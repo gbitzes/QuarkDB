@@ -24,7 +24,6 @@
 #include "../Utils.hh"
 #include "RequestCounter.hh"
 #include "../Commands.hh"
-#include "../WriteBatch.hh"
 #include "../redis/MultiOp.hh"
 using namespace quarkdb;
 
@@ -38,11 +37,6 @@ void RequestCounter::account(const RedisRequest &req) {
   else if(req.getCommandType() == CommandType::WRITE) {
     writes++;
   }
-}
-
-void RequestCounter::account(const WriteBatch &batch) {
-  batches++;
-  writes += batch.requests.size();
 }
 
 void RequestCounter::account(const MultiOp &multiOp) {

@@ -30,7 +30,7 @@
 namespace quarkdb {
 
 class MultiOp;
-class RedisRequest; struct WriteBatch;
+class RedisRequest;
 
 //------------------------------------------------------------------------------
 // Count what types of requests we've been servicing, and reports statistics
@@ -42,7 +42,6 @@ public:
   RequestCounter(std::chrono::seconds interval);
 
   void account(const RedisRequest &req);
-  void account(const WriteBatch &batch);
   void account(const MultiOp &multiOp);
   void mainThread(ThreadAssistant &assistant);
 

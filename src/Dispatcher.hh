@@ -24,7 +24,6 @@
 #ifndef __QUARKDB_DISPATCHER_H__
 #define __QUARKDB_DISPATCHER_H__
 
-#include "WriteBatch.hh"
 #include "Common.hh"
 #include "Link.hh"
 #include "Commands.hh"
@@ -37,19 +36,6 @@ class MultiOp;
 class Dispatcher {
 public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
-
-  // Default implementation simply calls dispatch multiple times. Individual
-  // dispatchers should override this with something more efficient.
-  // TODO: remove default implementation once every dispatcher implements this
-
-  virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) {
-    LinkStatus lastStatus = 0;
-    for(size_t i = 0; i < batch.requests.size(); i++) {
-      lastStatus = this->dispatch(conn, batch.requests[i]);
-    }
-    return lastStatus;
-  }
-
   RedisEncodedResponse handlePing(RedisRequest &req);
   virtual ~Dispatcher() {}
 };
@@ -60,7 +46,6 @@ class RedisDispatcher : public Dispatcher {
 public:
   RedisDispatcher(StateMachine &rocksdb);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
 
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
   RedisEncodedResponse dispatch(MultiOp &multiOp, LogIndex commit, bool phantom);

@@ -66,10 +66,6 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t,
   bootEnd = std::chrono::steady_clock::now();
 }
 
-LinkStatus QuarkDBNode::dispatch(Connection *conn, WriteBatch &batch) {
-  return shard->dispatch(conn, batch);
-}
-
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::PING: {

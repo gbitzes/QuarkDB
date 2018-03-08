@@ -42,7 +42,6 @@ public:
   void spinup();
   void spindown();
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, WriteBatch &batch) override final;
   size_t monitors() { return commandMonitor.size(); }
 
 private:

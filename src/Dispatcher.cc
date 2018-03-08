@@ -209,19 +209,6 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
 }
 
-LinkStatus RedisDispatcher::dispatch(Connection *conn, WriteBatch &batch) {
-  // TODO: Remove WriteBatch completely.
-  StagingArea stagingArea(store);
-
-  LinkStatus lastStatus = 0;
-  for(size_t i = 0; i < batch.requests.size(); i++) {
-    lastStatus = conn->raw(dispatchWrite(stagingArea, batch.requests[i]));
-  }
-
-  stagingArea.commit(0);
-  return lastStatus;
-}
-
 RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, RedisRequest &request) {
   switch(request.getCommand()) {
     case RedisCommand::GET: {

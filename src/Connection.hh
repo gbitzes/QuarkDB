@@ -103,7 +103,7 @@ private:
 //------------------------------------------------------------------------------
 // Keeps track of connection-specific state.
 //------------------------------------------------------------------------------
-class Dispatcher; class InFlightTracker; struct WriteBatch;
+class Dispatcher; class InFlightTracker;
 class RedisEncodedResponse;
 
 class Connection {
