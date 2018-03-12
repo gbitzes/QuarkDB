@@ -818,7 +818,6 @@ private:
 
   std::promise<void> prom;
   std::future<void> flag;
-  size_t counter;
   bool isOk = true;
   qclient::QClient &qcl;
 };

@@ -46,7 +46,6 @@ public:
 private:
   MultiOp multiOp;
   bool activated = false;
-  bool execAbort = false;
   bool phantom = false;
 };
 

@@ -30,7 +30,7 @@
 
 namespace quarkdb {
 
-class RaftEntry;
+struct RaftEntry;
 class RedisRequest;
 
 class Formatter {

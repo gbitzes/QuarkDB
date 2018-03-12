@@ -39,7 +39,7 @@ namespace quarkdb {
 class RaftJournal; class RaftState; class RaftClock; class RaftWriteTracker;
 class RaftReplicator;
 
-class RaftStateSnapshot;
+struct RaftStateSnapshot;
 using RaftStateSnapshotPtr = std::shared_ptr<const RaftStateSnapshot>;
 
 class RaftDispatcher : public Dispatcher {
