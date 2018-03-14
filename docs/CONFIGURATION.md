@@ -70,7 +70,7 @@ Using `redis-cli -p 7777`, it's possible to inspect the state of each node by is
 `raft-info` and `quarkdb-info` commands. The output from `raft-info`
 should look a bit like this:
 
-``
+```
 127.0.0.1:7777> raft-info
  1) TERM 6
  2) LOG-START 0
@@ -91,4 +91,4 @@ should look a bit like this:
 17) ----------
 18) REPLICA qdb-test-2.cern.ch ONLINE | UP-TO-DATE | NEXT-INDEX 21
 19) REPLICA qdb-test-3.cern.ch ONLINE | UP-TO-DATE | NEXT-INDEX 21
-``
+```

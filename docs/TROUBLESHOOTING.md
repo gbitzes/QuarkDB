@@ -31,4 +31,5 @@
 * The nodes are holding elections indefinitely, even though I've started all of them!
 
   It's likely a firewall issue. Try running
-  `redis-cli -h qdb-test-2.cern.ch -p 7777 raft-info` from a different node, for example.
+  `redis-cli -h qdb-test-2.cern.ch -p 7777 raft-info` from a different node, for example -
+  if you can't connect, it's a firewall issue.
