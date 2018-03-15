@@ -505,6 +505,40 @@ rocksdb::Status StateMachine::srem(StagingArea &stagingArea, const std::string &
   return operation.finalize(operation.keySize() - removed);
 }
 
+rocksdb::Status StateMachine::smove(StagingArea &stagingArea, const std::string &source, const std::string &destination, const std::string &element, int64_t &outcome) {
+  WriteOperation operation1(stagingArea, source, KeyType::kSet);
+  if(!operation1.valid()) return wrong_type();
+
+  WriteOperation operation2(stagingArea, destination, KeyType::kSet);
+  if(!operation2.valid()) {
+    operation1.finalize(operation1.keySize());
+    return wrong_type();
+  }
+
+  if(operation1.deleteField(element)) {
+    outcome = 1;
+    operation1.finalize(operation1.keySize() - 1);
+
+    if(operation2.fieldExists(element)) {
+      // No-op
+      operation2.finalize(operation2.keySize());
+    }
+    else {
+      operation2.writeField(element, "1");
+      operation2.finalize(operation2.keySize() + 1);
+    }
+
+    return rocksdb::Status::OK();
+  }
+
+  // No operation performed, item does not exist
+  outcome = 0;
+  operation1.finalize(operation1.keySize());
+  operation2.finalize(operation2.keySize());
+
+  return rocksdb::Status::OK();
+}
+
 rocksdb::Status StateMachine::smembers(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &members) {
   if(!assertKeyType(stagingArea, key, KeyType::kSet)) return wrong_type();
 

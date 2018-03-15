@@ -851,6 +851,52 @@ TEST_F(Raft_e2e, hincrbymulti) {
   ASSERT_REPLY(tunnel(leaderID)->exec("hget", "h4", "h8"), "13");
 }
 
+TEST_F(Raft_e2e, smove) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("sadd", "set1", "i1", "i2", "i3", "i4", "i5"), 5);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set1"), 5);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("sadd", "set2", "t1", "t2", "t3", "t4", "t5"), 5);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set2"), 5);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("set", "mykey", "myval"), "OK");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("smove", "set1", "mykey", "i1"), "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(tunnel(leaderID)->exec("smove", "mykey", "set1", "i1"), "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set1"), 5);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set2"), 5);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("smove", "set1", "set2", "i1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set1"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set2"), 6);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set1"), make_vec("i2", "i3", "i4", "i5"));
+  ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set2"), make_vec("i1", "t1", "t2", "t3", "t4", "t5"));
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("smove", "set1", "set2", "not-existing"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set1"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set2"), 6);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("sadd", "set1", "i1"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set1"), make_vec("i1", "i2", "i3", "i4", "i5"));
+  ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set2"), make_vec("i1", "t1", "t2", "t3", "t4", "t5"));
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set1"), 5);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set2"), 6);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("smove", "set1", "set2", "i1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set1"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("scard", "set2"), 6);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set1"), make_vec("i2", "i3", "i4", "i5"));
+  ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set2"), make_vec("i1", "t1", "t2", "t3", "t4", "t5"));
+}
+
 TEST_F(Raft_e2e, sscan) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));

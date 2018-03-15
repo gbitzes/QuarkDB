@@ -67,6 +67,7 @@ struct cmdMapInit {
     redis_cmd_map["hdel"] = {RedisCommand::HDEL, CommandType::WRITE};
     redis_cmd_map["sadd"] = {RedisCommand::SADD, CommandType::WRITE};
     redis_cmd_map["srem"] = {RedisCommand::SREM, CommandType::WRITE};
+    redis_cmd_map["smove"] = {RedisCommand::SMOVE, CommandType::WRITE};
     redis_cmd_map["lpush"] = {RedisCommand::LPUSH, CommandType::WRITE};
     redis_cmd_map["lpop"] = {RedisCommand::LPOP, CommandType::WRITE};
     redis_cmd_map["rpush"] = {RedisCommand::RPUSH, CommandType::WRITE};

@@ -63,6 +63,7 @@ enum class RedisCommand {
   SADD,
   SISMEMBER,
   SREM,
+  SMOVE,
   SMEMBERS,
   SCARD,
   SSCAN,

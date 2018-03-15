@@ -167,6 +167,13 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
+    case RedisCommand::SMOVE: {
+      if(request.size() != 4) return errArgs(request);
+      int64_t count = 0;
+      rocksdb::Status st = store.smove(stagingArea, request[1], request[2], request[3], count);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(count);
+    }
     case RedisCommand::LPUSH: {
       if(request.size() < 3) return errArgs(request);
       int64_t length;
