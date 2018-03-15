@@ -89,6 +89,16 @@ should look a bit like this:
 15) NODES qdb-test-1.cern.ch:7777,qdb-test-2.cern.ch:7777,qdb-test-3.cern.ch:7777
 16) OBSERVERS
 17) ----------
-18) REPLICA qdb-test-2.cern.ch ONLINE | UP-TO-DATE | NEXT-INDEX 21
-19) REPLICA qdb-test-3.cern.ch ONLINE | UP-TO-DATE | NEXT-INDEX 21
+18) REPLICA qdb-test-2.cern.ch:7777 ONLINE | UP-TO-DATE | NEXT-INDEX 21
+19) REPLICA qdb-test-3.cern.ch:7777 ONLINE | UP-TO-DATE | NEXT-INDEX 21
+```
+
+Verify that everything works by issuing a write towards the leader and
+retrieving the data back:
+
+```
+qdb-test-1.cern.ch:7777> set mykey myval
+OK
+qdb-test-1.cern.ch:7777> get mykey
+"myval"
 ```
