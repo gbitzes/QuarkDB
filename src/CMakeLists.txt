@@ -96,6 +96,8 @@ target_link_libraries(
   rocksdb
   ssl
   jemalloc
+  lz4
+  zstd
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${BACKWARD_LIBRARIES}

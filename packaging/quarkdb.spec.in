@@ -40,6 +40,10 @@ BuildRequires: python
 BuildRequires: zlib-static
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
+BuildRequires: libzstd-devel
+Requires: libzstd
+BuildRequires: lz4-devel
+Requires: lz4
 
 %if 0%{?el7} == 1
 BuildRequires: centos-release-scl

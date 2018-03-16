@@ -111,6 +111,9 @@ void RaftJournal::openDB(const std::string &path) {
   table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
   table_options.block_size = 16 * 1024;
 
+  options.compression = rocksdb::kNoCompression;
+  options.bottommost_compression = rocksdb::kNoCompression;
+
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
   options.create_if_missing = true;
   options.max_manifest_file_size = 1024 * 1024;
