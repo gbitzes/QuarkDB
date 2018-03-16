@@ -46,6 +46,7 @@ void Shard::attach() {
   else if(mode == Mode::raft) {
     raftGroup = new RaftGroup(*shardDirectory, myself, timeouts);
     dispatcher = static_cast<Dispatcher*>(raftGroup->dispatcher());
+    stateMachine = shardDirectory->getStateMachine();
   }
   else if(mode == Mode::bulkload) {
     stateMachine = shardDirectory->getStateMachineForBulkload();
@@ -174,6 +175,15 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       stopAcceptingRequests();
       stateMachine->finalizeBulkload();
       return conn->ok();
+    }
+    case RedisCommand::QUARKDB_MANUAL_COMPACTION: {
+      if(req.size() != 1) return conn->errArgs(req[0]);
+      InFlightRegistration registration(inFlightTracker);
+      if(!registration.ok()) {
+        return conn->err("unavailable");
+      }
+
+      return conn->fromStatus(stateMachine->manualCompaction());
     }
     default: {
       if(req.getCommandType() == CommandType::QUARKDB) {

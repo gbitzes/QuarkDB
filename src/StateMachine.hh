@@ -160,6 +160,7 @@ public:
     return bulkLoad;
   }
 
+  rocksdb::Status manualCompaction();
   void finalizeBulkload();
   IteratorPtr getRawIterator();
   void commitBatch(rocksdb::WriteBatch &batch);

@@ -977,9 +977,17 @@ rocksdb::Status StateMachine::noop(LogIndex index) {
   return stagingArea.commit(index);
 }
 
+rocksdb::Status StateMachine::manualCompaction() {
+  qdb_event("Triggering manual compaction..");
+
+  rocksdb::CompactRangeOptions opts;
+  opts.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
+  return db->CompactRange(opts, nullptr, nullptr);
+}
+
 void StateMachine::finalizeBulkload() {
   qdb_event("Finalizing bulkload, issuing manual compaction...");
-  THROW_ON_ERROR(db->CompactRange(rocksdb::CompactRangeOptions(), nullptr, nullptr));
+  THROW_ON_ERROR(manualCompaction());
   qdb_event("Manual compaction was successful. Building key descriptors...");
   KeyDescriptorBuilder builder(*this);
   THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_InBulkload, boolToString(false)));
