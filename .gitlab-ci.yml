@@ -17,8 +17,6 @@ cc7:
   artifacts:
     paths:
     - "$CI_JOB_NAME"
-  tags:
-   - docker-cc7
 
 fedora:
   stage: build
