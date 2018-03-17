@@ -557,6 +557,14 @@ RaftJournal::Iterator::Iterator(std::unique_ptr<rocksdb::Iterator> it, LogIndex 
   iter = std::move(it);
   currentIndex = startingPoint;
   iter->Seek(encodeEntryKey(currentIndex));
+
+  // Maybe the startingPoint does not exist.. return an empty iterator in
+  // such case.
+  if(!this->valid() || iter->key() != encodeEntryKey(currentIndex)) {
+    iter.reset();
+    return;
+  }
+
   validate();
 }
 
