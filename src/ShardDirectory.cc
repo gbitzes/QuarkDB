@@ -64,7 +64,7 @@ ShardDirectory::ShardDirectory(const std::string &initpath, Configuration config
 
   std::string err;
   if(!directoryExists(path, err)) {
-    qdb_throw("Cannot initialize shard directory at '" << path << "': " << err);
+    qdb_fatal("Cannot initialize shard directory at '" << path << "': " << err);
   }
 
   std::string idPath(pathJoin(path, "SHARD-ID"));

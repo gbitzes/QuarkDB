@@ -66,6 +66,7 @@ extern std::mutex logMutex;
 #define qdb_event(message) ___log("EVENT: " << message)
 #define qdb_critical(message) ___log("CRITICAL: " << message << quarkdb::errorStacktrace(false))
 #define qdb_misconfig(message) ___log("MISCONFIGURATION: " << message)
+#define qdb_fatal(message) { ___log(quarkdb::errorStacktrace(true) << std::endl << std::endl); ___log("FATAL: " << message); std::quick_exit(2); }
 
 #define qdb_warn(message) ___log("WARNING: " << message)
 #define qdb_error(message) ___log("ERROR: " << message)
