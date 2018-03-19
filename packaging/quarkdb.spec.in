@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------------------
 
 %if 0%{?el7} == 1
-%global __strip /opt/rh/devtoolset-7/root/bin/strip
+%global __strip /opt/rh/devtoolset-6/root/bin/strip
 %endif
 
 #-------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ Requires: lz4
 
 %if 0%{?el7} == 1
 BuildRequires: centos-release-scl
-BuildRequires: devtoolset-7
+BuildRequires: devtoolset-6
 %endif
 
 BuildRequires: elfutils-devel
@@ -65,7 +65,7 @@ A highly available key-value store.
 
 %build
 %if 0%{?el7} == 1
-source /opt/rh/devtoolset-7/enable
+source /opt/rh/devtoolset-6/enable
 %endif
 
 mkdir build
