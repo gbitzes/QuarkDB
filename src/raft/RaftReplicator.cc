@@ -453,7 +453,7 @@ void RaftReplicaTracker::main() {
       qdb_info("Target " << target.toString() << " appears stable, initiating streaming replication.");
       resilverer.reset();
       nextIndex = streamUpdates(talker, nextIndex);
-      inFlight = {}; // clear queue
+      inFlight = std::queue<PendingResponse>(); // clear queue
       warnStreamingHiccup = true;
       onlineTracker.seenOnline();
       // Something happened when streaming updates, switch back to conservative
