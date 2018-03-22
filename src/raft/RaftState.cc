@@ -58,8 +58,7 @@ RaftTerm RaftState::getCurrentTerm() {
 //------------------------------------------------------------------------------
 
 RaftStateSnapshotPtr RaftState::getSnapshot() {
-  std::lock_guard<std::mutex> lock(update);
-  return currentSnapshot;
+  return std::atomic_load(&currentSnapshot);
 }
 
 RaftServer RaftState::getMyself() {
@@ -329,7 +328,10 @@ bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader
 // Update state snapshot
 //------------------------------------------------------------------------------
 void RaftState::updateSnapshot() {
-  currentSnapshot = std::make_shared<RaftStateSnapshot>(term, status, leader, votedFor, leadershipMarker);
+  std::atomic_store(
+    &currentSnapshot,
+    std::make_shared<const RaftStateSnapshot>(term, status, leader, votedFor, leadershipMarker)
+  );
 }
 
 //------------------------------------------------------------------------------
