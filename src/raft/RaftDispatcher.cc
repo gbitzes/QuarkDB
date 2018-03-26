@@ -43,6 +43,10 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::RAFT_INFO: {
       // safe, read-only request, does not need authorization
+      if(req.size() == 2 && caseInsensitiveEquals(req[1], "leader")) {
+        return conn->string(state.getSnapshot()->leader.toString());
+      }
+
       return conn->statusVector(this->info().toVector());
     }
     case RedisCommand::RAFT_FETCH_LAST: {
