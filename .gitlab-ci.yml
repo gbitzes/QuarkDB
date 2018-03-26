@@ -130,11 +130,14 @@ cc7-koji:
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
     - yum install -y koji --disablerepo=extras
-    - yum install -y git rpm-build
+    - yum install -y git rpm-build python
     - mkdir ~/.koji
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
     - koji build --wait quarkdb7 ./build/SRPMS/*.src.rpm
+    - # get tag name by chopping off "src.rpm"
+    - TAG_NAME="echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); "
+    - koji tag-build quarkdb7-qa ${TAG_NAME}
   only:
     - tags
