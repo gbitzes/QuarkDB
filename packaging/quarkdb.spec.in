@@ -1,10 +1,11 @@
 %define _unpackaged_files_terminate_build 0
+%define distribution %(/usr/lib/rpm/redhat/dist.sh --distnum)
 
 #-------------------------------------------------------------------------------
 # Custom strip command for CC7
 #-------------------------------------------------------------------------------
 
-%if 0%{?el7} == 1
+%if 0%{distribution} == 7
 %global __strip /opt/rh/devtoolset-6/root/bin/strip
 %endif
 
@@ -45,7 +46,7 @@ Requires: libzstd
 BuildRequires: lz4-devel
 Requires: lz4
 
-%if 0%{?el7} == 1
+%if 0%{distribution} == 7
 BuildRequires: centos-release-scl
 BuildRequires: devtoolset-6
 %endif
@@ -64,7 +65,8 @@ A highly available key-value store.
 %setup -n %{name}-%{version}
 
 %build
-%if 0%{?el7} == 1
+
+%if 0%{distribution} == 7
 source /opt/rh/devtoolset-6/enable
 %endif
 
