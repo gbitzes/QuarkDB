@@ -136,7 +136,7 @@ cc7-koji:
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
     - koji build --wait quarkdb7 ./build/SRPMS/*.src.rpm
-    - TAG_NAME="echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); "
+    - TAG_NAME=$(echo ./build/SRPMS/*.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
     - koji tag-build quarkdb7-qa ${TAG_NAME}
   only:
     - tags
