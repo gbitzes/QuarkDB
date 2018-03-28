@@ -48,10 +48,10 @@ void RaftDirector::main() {
       return;
     }
     else if(snapshot->status == RaftStatus::FOLLOWER) {
-      actAsFollower(snapshot);
+      followerLoop(snapshot);
     }
     else if(snapshot->status == RaftStatus::LEADER) {
-      actAsLeader(snapshot);
+      leaderLoop(snapshot);
       raftClock.heartbeat();
     }
     else {
@@ -60,7 +60,7 @@ void RaftDirector::main() {
   }
 }
 
-void RaftDirector::actAsLeader(RaftStateSnapshotPtr &snapshot) {
+void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
   if(snapshot->leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
   stateMachine.getRequestCounter().setReportingStatus(true);
 
@@ -105,7 +105,7 @@ void RaftDirector::runForLeader() {
   }
 }
 
-void RaftDirector::actAsFollower(RaftStateSnapshotPtr &snapshot) {
+void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
   stateMachine.getRequestCounter().setReportingStatus(false);
   milliseconds randomTimeout = raftClock.getRandomTimeout();
   while(true) {
