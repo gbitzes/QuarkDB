@@ -93,6 +93,9 @@ rpms:
   tags:
     - docker-cc7
   retry: 2
+  only:
+    - branches@eos/quarkdb
+    - tags@eos/quarkdb
 
 docs:
   stage: publish
@@ -108,6 +111,9 @@ docs:
   tags:
     - docker-cc7
   retry: 2
+  only:
+    - branches@eos/quarkdb
+    - tags@eos/quarkdb
 
 coverage:
   stage: publish
@@ -124,6 +130,9 @@ coverage:
   tags:
    - docker-cc7
   retry: 2
+  only:
+    - branches@eos/quarkdb
+    - tags@eos/quarkdb
 
 cc7-koji:
   stage: koji
@@ -140,4 +149,4 @@ cc7-koji:
     - TAG_NAME=$(echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
     - koji tag-build quarkdb7-qa ${TAG_NAME}
   only:
-    - tags
+    - tags@eos/quarkdb
