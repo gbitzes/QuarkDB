@@ -20,7 +20,7 @@ Check out `utils/el7-packages.sh` for a list of build dependencies.
 The following will compile QuarkDB and run the tests.
 
 ```
-git clone https://gitlab.cern.ch/eos/quarkdb && cd quarkdb
+git clone https://gitlab.cern.ch/eos/quarkdb.git && cd quarkdb
 git submodule update --recursive --init
 
 mkdir build && cd build
