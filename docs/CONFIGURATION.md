@@ -8,12 +8,13 @@ We will also need an identifier string which uniquely identifies our cluster - a
 different clusters from communicating by accident.
 
 The first step is to initialize the database directory for each node in our cluster.
-Run the following command on each node, only potentially changing `--path`. The rest
-of the arguments need to be identical across every invocation of the command.
+Run the following command on each node, only potentially changing `--path`. 
+For every single node in the cluster, including potential future additions, 
+the values used for `--clusterID` and `--nodes` must be consistent.
 
-``
-quarkbd-create --path /var/lib/quarkdb/node-1 --clusterID your-cluster-id --nodes qdb-test-1.cern.ch:7777,qdb-test-2.cern.ch:7777,qdb-test-3.cern.ch:7777
-``
+```
+quarkdb-create --path /var/lib/quarkdb/node-1 --clusterID your-cluster-id --nodes qdb-test-1.cern.ch:7777,qdb-test-2.cern.ch:7777,qdb-test-3.cern.ch:7777
+```
 
 If you use the default systemd service file to run QuarkDB, you'll also need to
 change the owner of the newly created files: ``chown -R xrootd:xrootd /var/lib/quarkdb/node-1``.
