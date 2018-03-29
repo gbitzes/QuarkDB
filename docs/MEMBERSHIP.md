@@ -1,8 +1,8 @@
 # Membership updates
 
-QuarkDB supports dynamic changes to cluster membership without any impact on
-availability. Caution needs to be taken that at any point in time, a quorum of
-nodes is available and up-to-date for the cluster to function properly.
+QuarkDB supports dynamic changes to cluster membership without any impact on availability. 
+Caution needs to be taken that at any point in time, a quorum of nodes is 
+available and up-to-date for the cluster to function properly.
 
 # Distinction between full nodes and observers
 
@@ -22,14 +22,15 @@ making the cluster unavailable for writes.
 To prevent such an incident, QuarkDB discriminates between two types of nodes:
 
 1. **Full members** participate in voting rounds and are capable of becoming leaders.
-
-1. **Observers** receive all replicated entries, just like full nodes, but do
-not affect quorums, do not vote, are not taken into consideration when deciding whether
-a write has been successful, and will never attempt to become leaders.
+1. **Observers** receive all replicated entries, just like full nodes, however they:
+  * do not affect quorums
+  * do not vote
+  * are not taken into consideration when deciding whether a write has been successful
+  * will never attempt to become leaders
 
 The idea is to first add a node as an observer (which will *not* in any way
-affect quorum size, or availability), and once it has been brought up to date,
-promote it to full member.
+affect quorum size, or availability), then promote it to full member status
+once it has been brought up to date.
 
 QuarkDB will further make an effort to refuse membership updates which might
 compromise availability, as a protection against operator error, but please
@@ -37,21 +38,26 @@ keep the above in mind.
 
 # How to view current cluster membership
 
-Issue command `raft_info` using `redis-cli` to any of the nodes, check fields `NODES` and
-`OBSERVERS`. It's perfectly valid if the list of observers is empty.
+Issue the command `raft_info` using `redis-cli` to any of the nodes, and check the `NODES` and
+`OBSERVERS` fields. It's perfectly valid if the list of observers is empty.
 
 # How to add a node
 
-It's only possible to add a node with observer status at first. Issue
-`raft_add_observer server_hostname:server_port` towards the current leader.
+When adding a new node to an existing cluster, do not include it in the list of
+nodes passed to the `quarkdb-create` command - this prevents the node from
+thinking it is a full member of the cluster, and attempting to start elections.
+
+A new node must always be added as an observer. 
+To do so, issue `raft_add_observer server_hostname:server_port` towards the current leader.
+This allows it to begin receiving existing entries.
 
 # How to promote an observer to full status
 
 Issue `raft_promote_observer server_hostname:server_port` towards the current
 leader.
 
-First make sure it is sufficiently up to date! Issue `raft_info` towards the leader
-to check which replicas are online, which are up-to-date, and which are lagging.
+First make sure it is sufficiently up to date! Running `raft_info` on the leader
+will provide information on which replicas are online, up-to-date, or lagging.
 
 # How to remove a node
 
