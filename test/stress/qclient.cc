@@ -151,3 +151,48 @@ TEST_F(QClientTests, nullptr_only_after_timeout) {
   }
   ASSERT_TRUE(success);
 }
+
+void pingerThread(QClient *qcl, size_t id, bool expectValid) {
+  std::vector<std::future<redisReplyPtr>> futures;
+  for(size_t i = 0; i < 10000; i++) {
+    futures.emplace_back(qcl->exec("PING", SSTR("thread-" << id << "-req-" << i)));
+  }
+
+  for(size_t i = 0; i < 10000; i++) {
+    redisReplyPtr reply = futures[i].get();
+    if(expectValid) {
+      ASSERT_REPLY(reply, SSTR("thread-" << id << "-req-" << i));
+    }
+  }
+}
+
+TEST_F(QClientTests, MultipleWriterThreads) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  // Launch many threads doing pings, using the same QClient object.
+  std::vector<std::thread> threads;
+  for(size_t i = 0; i < 20; i++) {
+    threads.emplace_back(pingerThread, tunnel(leaderID), i, true);
+  }
+
+  for(size_t i = 0; i < 20; i++) {
+    threads[i].join();
+  }
+
+  threads.clear();
+
+  // Let's do the above all over again, but shut down the cluster in the middle
+  // of sending pings. Don't expect correct replies this time, of course.
+
+  for(size_t i = 0; i < 20; i++) {
+    threads.emplace_back(pingerThread, tunnel(leaderID), i, false);
+  }
+
+  spindown(0); spindown(1); spindown(2);
+
+  for(size_t i = 0; i < 20; i++) {
+    threads[i].join();
+  }
+}
