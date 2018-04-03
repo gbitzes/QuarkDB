@@ -49,6 +49,17 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->statusVector(this->info().toVector());
     }
+    case RedisCommand::RAFT_LEADER_INFO: {
+      // safe, read-only request, does not need authorization
+      RaftStateSnapshotPtr snapshot = state.getSnapshot();
+      if(snapshot->status != RaftStatus::LEADER) {
+        if(snapshot->leader.empty()) {
+          return conn->err("unavailable");
+        }
+        return conn->moved(0, snapshot->leader);
+      }
+      return conn->statusVector(this->info().toVector());
+    }
     case RedisCommand::RAFT_FETCH_LAST: {
       // safe, read-only request, does not need authorization
       if(req.size() != 2 && req.size() != 3) return conn->errArgs(req[0]);

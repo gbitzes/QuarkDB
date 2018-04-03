@@ -83,6 +83,7 @@ struct cmdMapInit {
     redis_cmd_map["raft_handshake"] = {RedisCommand::RAFT_HANDSHAKE, CommandType::RAFT};
     redis_cmd_map["raft_append_entries"] = {RedisCommand::RAFT_APPEND_ENTRIES, CommandType::RAFT};
     redis_cmd_map["raft_info"] = {RedisCommand::RAFT_INFO, CommandType::RAFT};
+    redis_cmd_map["raft_leader_info"] = {RedisCommand::RAFT_LEADER_INFO, CommandType::RAFT};
     redis_cmd_map["raft_request_vote"] = {RedisCommand::RAFT_REQUEST_VOTE, CommandType::RAFT};
     redis_cmd_map["raft_fetch"] = {RedisCommand::RAFT_FETCH, CommandType::RAFT};
     redis_cmd_map["raft_checkpoint"] = {RedisCommand::RAFT_CHECKPOINT, CommandType::RAFT};
