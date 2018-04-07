@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_H__
-#define __QUARKDB_RAFT_H__
+#ifndef QUARKDB_RAFT_DISPATCHER_HH
+#define QUARKDB_RAFT_DISPATCHER_HH
 
 #include "../Dispatcher.hh"
 #include "RaftUtils.hh"
@@ -47,6 +47,7 @@ public:
   RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &rt, RaftReplicator &replicator);
   DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
+  LinkStatus dispatchInfo(Connection *conn, RedisRequest &req);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
 
   RaftInfo info();

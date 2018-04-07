@@ -39,15 +39,19 @@ RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &s
 : journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt), replicator(rep) {
 }
 
+LinkStatus RaftDispatcher::dispatchInfo(Connection *conn, RedisRequest &req) {
+  if(req.size() == 2 && caseInsensitiveEquals(req[1], "leader")) {
+    return conn->string(state.getSnapshot()->leader.toString());
+  }
+
+  return conn->statusVector(this->info().toVector());
+}
+
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::RAFT_INFO: {
       // safe, read-only request, does not need authorization
-      if(req.size() == 2 && caseInsensitiveEquals(req[1], "leader")) {
-        return conn->string(state.getSnapshot()->leader.toString());
-      }
-
-      return conn->statusVector(this->info().toVector());
+      return dispatchInfo(conn, req);
     }
     case RedisCommand::RAFT_LEADER_INFO: {
       // safe, read-only request, does not need authorization
@@ -58,7 +62,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         }
         return conn->moved(0, snapshot->leader);
       }
-      return conn->statusVector(this->info().toVector());
+      return dispatchInfo(conn, req);
     }
     case RedisCommand::RAFT_FETCH_LAST: {
       // safe, read-only request, does not need authorization
