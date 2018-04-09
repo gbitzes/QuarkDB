@@ -101,7 +101,7 @@ TEST(QClient, T2) {
   };
 
   // with handshake
-  QClient tunnel("localhost", 1234, false, qclient::RetryStrategy(), qclient::TlsConfig(), std::unique_ptr<Handshake>(new SimpleHandshake()));
+  QClient tunnel("localhost", 1234, false, qclient::RetryStrategy::NoRetries(), qclient::TlsConfig(), std::unique_ptr<Handshake>(new SimpleHandshake()));
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
@@ -158,7 +158,7 @@ TEST(QClient, T3) {
   };
 
   // with handshake
-  qclient::RetryStrategy strategy = {true, std::chrono::seconds(60) };
+  qclient::RetryStrategy strategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(60));
   QClient tunnel("localhost", 1234, false, strategy, qclient::TlsConfig(), std::unique_ptr<Handshake>(new PingHandshake()));
 
 

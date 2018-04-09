@@ -46,7 +46,7 @@ TEST_F(QClientTests, hide_transient_failures) {
   members.push_back(myself(1).hostname, myself(1).port);
   members.push_back(myself(2).hostname, myself(2).port);
 
-  qclient::RetryStrategy retryStrategy = {true, std::chrono::seconds(30)};
+  qclient::RetryStrategy retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(30));
   QClient qcl(members, true, retryStrategy);
 
   // Issue request _before_ spinning up the cluster! Verify it succeeds.
@@ -99,7 +99,7 @@ TEST_F(QClientTests, nullptr_only_after_timeout) {
   members.push_back(myself(1).hostname, myself(1).port);
   members.push_back(myself(2).hostname, myself(2).port);
 
-  qclient::RetryStrategy retryStrategy = {true, std::chrono::seconds(3)};
+  qclient::RetryStrategy retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(3));
   QClient qcl(members, true, retryStrategy);
 
   ASSERT_REPLY(qcl.exec("HSET", "aaaaa", "bbbbb", "cccc"), 1);
