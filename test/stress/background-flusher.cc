@@ -37,7 +37,7 @@ class Background_Flusher : public TestCluster3NodesFixture {};
 
 TEST_F(Background_Flusher, basic_sanity) {
   Connection::setPhantomBatchLimit(1);
-  
+
   // start our cluster as usual
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
@@ -45,12 +45,10 @@ TEST_F(Background_Flusher, basic_sanity) {
   int leaderID = getLeaderID();
   int follower = (leaderID + 1) % 3;
 
-  qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true);
-
   qclient::Notifier dummyNotifier;
   ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
-  qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100,
-    new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
+  qclient::BackgroundFlusher flusher(qclient::Members(myself(follower).hostname, myself(follower).port),
+    dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
   );
 
   const int nentries = 10000;
@@ -87,11 +85,9 @@ TEST_F(Background_Flusher, with_transition) {
   members.push_back(myself(1).hostname, myself(1).port);
   members.push_back(myself(2).hostname, myself(2).port);
 
-  qclient::QClient qcl(members, true);
-
   qclient::Notifier dummyNotifier;
   ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
-  qclient::BackgroundFlusher flusher(qcl, dummyNotifier, 5000, 100,
+  qclient::BackgroundFlusher flusher(members, dummyNotifier,
     new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
   );
 
@@ -122,12 +118,11 @@ TEST_F(Background_Flusher, persistency) {
   int leaderID = getLeaderID();
   int follower = (leaderID + 1) % 3;
 
-  qclient::QClient qcl(myself(follower).hostname, myself(follower).port, true);
   qclient::Notifier dummyNotifier;
 
   ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
   std::unique_ptr<qclient::BackgroundFlusher> flusher(
-    new qclient::BackgroundFlusher(qcl, dummyNotifier, 5000, 100, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"))
+    new qclient::BackgroundFlusher(qclient::Members(myself(follower).hostname, myself(follower).port), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"))
   );
 
   // queue entries
@@ -140,7 +135,7 @@ TEST_F(Background_Flusher, persistency) {
 
   // stop the flusher, recover contents from persistency layer
   flusher.reset();
-  flusher.reset(new qclient::BackgroundFlusher(qcl, dummyNotifier, 5000, 100, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")));
+  flusher.reset(new qclient::BackgroundFlusher(qclient::Members(myself(follower).hostname, myself(follower).port),  dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")));
   ASSERT_GT(flusher->size(), 0u);
 
   RETRY_ASSERT_TRUE(flusher->size() == 0u);
