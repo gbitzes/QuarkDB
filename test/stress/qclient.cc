@@ -152,7 +152,7 @@ TEST_F(QClientTests, nullptr_only_after_timeout) {
   ASSERT_TRUE(success);
 }
 
-void pingerThread(QClient *qcl, size_t id, bool expectValid) {
+static void pingerThread(QClient *qcl, size_t id, bool expectValid) {
   std::vector<std::future<redisReplyPtr>> futures;
   for(size_t i = 0; i < 10000; i++) {
     futures.emplace_back(qcl->exec("PING", SSTR("thread-" << id << "-req-" << i)));
@@ -172,9 +172,12 @@ TEST_F(QClientTests, MultipleWriterThreads) {
   int leaderID = getLeaderID();
 
   // Launch many threads doing pings, using the same QClient object.
+  QClient qcl(myself(leaderID).hostname, myself(leaderID).port, false,
+    RetryStrategy::NoRetries(), BackpressureStrategy::RateLimitPendingRequests(2048));
+
   std::vector<std::thread> threads;
   for(size_t i = 0; i < 20; i++) {
-    threads.emplace_back(pingerThread, tunnel(leaderID), i, true);
+    threads.emplace_back(pingerThread, &qcl, i, true);
   }
 
   for(size_t i = 0; i < 20; i++) {
@@ -187,7 +190,7 @@ TEST_F(QClientTests, MultipleWriterThreads) {
   // of sending pings. Don't expect correct replies this time, of course.
 
   for(size_t i = 0; i < 20; i++) {
-    threads.emplace_back(pingerThread, tunnel(leaderID), i, false);
+    threads.emplace_back(pingerThread, &qcl, i, false);
   }
 
   spindown(0); spindown(1); spindown(2);

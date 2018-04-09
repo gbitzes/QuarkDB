@@ -63,7 +63,7 @@ private:
 
 
 RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID, const RaftTimeouts &timeouts)
-: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, qclient::RetryStrategy::NoRetries(), tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(clusterID, timeouts)) ) {
+: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, qclient::RetryStrategy::NoRetries(), qclient::BackpressureStrategy::Default(), tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(clusterID, timeouts)) ) {
 
 }
 
