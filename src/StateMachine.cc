@@ -77,7 +77,7 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
 
   rocksdb::Options options;
   rocksdb::BlockBasedTableOptions table_options;
-  table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(32, false));
+  table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
   table_options.block_size = 16 * 1024;
 
   // The default settings for rate limiting are a bit too conservative, causing
