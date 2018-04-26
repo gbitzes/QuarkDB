@@ -80,6 +80,16 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
   table_options.filter_policy.reset(rocksdb::NewBloomFilterPolicy(10, false));
   table_options.block_size = 16 * 1024;
 
+  // This option prevents creating bloom filters for the last compaction level.
+  // A bloom filter is used to quickly rule out whether an SST may contain a
+  // given key or not. Having bloom filters for the last compaction layer is
+  // not particularly useful, as it only prevents an extra IO read in cases
+  // where a key is not found. Given that the last compaction layer is the
+  // biggest, turning on this option reduces total bloom filter size on disk
+  // (and associated memory consumption) by ~90%, while only making "not-found"
+  // queries slightly more expensive.
+  table.optimize_filters_for_hits = true;
+
   // The default settings for rate limiting are a bit too conservative, causing
   // bulk loading to stall heavily.
   options.max_write_buffer_number = 6;
