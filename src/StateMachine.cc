@@ -88,7 +88,7 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
   // biggest, turning on this option reduces total bloom filter size on disk
   // (and associated memory consumption) by ~90%, while only making "not-found"
   // queries slightly more expensive.
-  table.optimize_filters_for_hits = true;
+  options.optimize_filters_for_hits = true;
 
   // The default settings for rate limiting are a bit too conservative, causing
   // bulk loading to stall heavily.
