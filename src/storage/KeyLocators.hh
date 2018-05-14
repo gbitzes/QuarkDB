@@ -156,10 +156,13 @@ class LocalityFieldLocator {
 public:
   LocalityFieldLocator(const std::string &redisKey, const std::string &hint, const std::string &field) {
     resetKey(redisKey);
+    resetHint(hint);
+    resetField(field);
   }
 
   LocalityFieldLocator(const std::string &redisKey, const std::string &hint) {
     resetKey(redisKey);
+    resetHint(hint);
   }
 
   LocalityFieldLocator(const std::string &redisKey) {
@@ -202,6 +205,43 @@ public:
 private:
   size_t keyPrefixSize = 0;
   size_t localityPrefixSize = 0;
+  KeyBuffer keyBuffer;
+};
+
+class LocalityIndexLocator {
+public:
+  LocalityIndexLocator(const std::string &redisKey, const std::string &field) {
+    resetKey(redisKey);
+    resetField(field);
+  }
+
+  LocalityIndexLocator(const std::string &redisKey) {
+    resetKey(redisKey);
+  }
+
+  void resetKey(const std::string &redisKey) {
+    qdb_assert(!redisKey.empty());
+
+    keyBuffer.resize(2 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 2);
+    keyBuffer[0] = char(KeyType::kLocalityHash);
+    keyPrefixSize = appendEscapedString(keyBuffer, 1, redisKey);
+    keyBuffer[keyPrefixSize++] = char(InternalLocalityFieldType::kIndex);
+  }
+
+  void resetField(const std::string &field) {
+    qdb_assert(!field.empty());
+
+    keyBuffer.shrink(keyPrefixSize);
+    keyBuffer.expand(keyPrefixSize + field.size());
+    memcpy(keyBuffer.data() + keyPrefixSize, field.data(), field.size());
+  }
+
+  rocksdb::Slice toSlice() {
+    return keyBuffer.toSlice();
+  }
+
+private:
+  size_t keyPrefixSize = 0;
   KeyBuffer keyBuffer;
 };
 

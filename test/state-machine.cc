@@ -783,28 +783,68 @@ TEST(LocalityFieldLocator, BasicSanity) {
   LocalityFieldLocator locator1("some_key");
   ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##d");
 
+  ReverseLocator revlocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "some_key");
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
+
   ASSERT_THROW(LocalityFieldLocator(""), FatalException);
   ASSERT_THROW(locator1.resetField("aaa"), FatalException); // need to specify hint first
 
   locator1.resetHint("my-locality-hint");
   ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##dmy-locality-hint##");
+  revlocator = ReverseLocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "some_key");
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
   locator1.resetField("field##with##hashes");
   ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##dmy-locality-hint##field##with##hashes");
+  revlocator = ReverseLocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "some_key");
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
   locator1.resetHint("evil-hint##with##hashes");
   locator1.resetField("a-field");
   ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##devil-hint|#|#with|#|#hashes##a-field");
+  revlocator = ReverseLocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "some_key");
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
   locator1.resetKey("#evil#key#");
   locator1.resetHint("#evil#hint#");
   locator1.resetField("#evil#field#");
   ASSERT_EQ(locator1.toSlice().ToString(), "e|#evil|#key|###d|#evil|#hint|####evil#field#");
+  revlocator = ReverseLocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "#evil#key#");
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
   locator1.resetKey("my-key");
   locator1.resetHint("my-hint");
   locator1.resetField("my-field");
   ASSERT_EQ(locator1.toSlice().ToString(), "emy-key##dmy-hint##my-field");
+  revlocator = ReverseLocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "my-key");
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
+}
+
+TEST(LocalityIndexLocator, BasicSanity) {
+  LocalityIndexLocator locator1("my-key", "my-field");
+  ASSERT_EQ(locator1.toSlice().ToString(), "emy-key##imy-field");
+
+  ReverseLocator revlocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "my-key");
+
+  locator1.resetKey("key##with##hashes");
+  ASSERT_EQ(locator1.toSlice().ToString(), "ekey|#|#with|#|#hashes##i");
+  revlocator = ReverseLocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "key##with##hashes");
+
+  locator1.resetField("aaaaa");
+  ASSERT_EQ(locator1.toSlice().ToString(), "ekey|#|#with|#|#hashes##iaaaaa");
+  revlocator = ReverseLocator(locator1.toSlice());
+  ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
+  ASSERT_EQ(revlocator.getOriginalKey().ToString(), "key##with##hashes");
 }
 
 TEST(PatternMatching, BasicSanity) {
