@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_KEY_DESCRIPTOR_H__
-#define __QUARKDB_KEY_DESCRIPTOR_H__
+#ifndef QUARKDB_KEY_DESCRIPTOR_H
+#define QUARKDB_KEY_DESCRIPTOR_H
 
 #include "../utils/IntToBinaryString.hh"
 #include "../utils/StaticBuffer.hh"
@@ -37,7 +37,8 @@ enum class KeyType : char {
   kString = 'a',
   kHash = 'b',
   kSet = 'c',
-  kList = 'd'
+  kList = 'd',
+  kLocalityHash = 'e'
 };
 
 inline KeyType parseKeyType(char c) {
@@ -53,6 +54,9 @@ inline KeyType parseKeyType(char c) {
     }
     case char(KeyType::kList): {
       return KeyType::kList;
+    }
+    case char(KeyType::kLocalityHash): {
+      return KeyType::kLocalityHash;
     }
     default: {
       return KeyType::kParseError;
@@ -90,7 +94,8 @@ public:
     switch(keyType) {
       case KeyType::kString:
       case KeyType::kSet:
-      case KeyType::kHash: {
+      case KeyType::kHash:
+      case KeyType::kLocalityHash: {
         qdb_assert(str.size() == kHashDescriptorSize);
 
         // Parse size.
@@ -167,7 +172,8 @@ public:
     switch(keyType) {
       case KeyType::kString:
       case KeyType::kSet:
-      case KeyType::kHash: {
+      case KeyType::kHash:
+      case KeyType::kLocalityHash: {
         serializationBuffer.shrink(kHashDescriptorSize);
 
         // Store the size..

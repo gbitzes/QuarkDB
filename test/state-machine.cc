@@ -779,6 +779,34 @@ TEST(ReverseLocator, BasicSanity) {
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kParseError);
 }
 
+TEST(LocalityFieldLocator, BasicSanity) {
+  LocalityFieldLocator locator1("some_key");
+  ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##d");
+
+  ASSERT_THROW(LocalityFieldLocator(""), FatalException);
+  ASSERT_THROW(locator1.resetField("aaa"), FatalException); // need to specify hint first
+
+  locator1.resetHint("my-locality-hint");
+  ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##dmy-locality-hint##");
+
+  locator1.resetField("field##with##hashes");
+  ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##dmy-locality-hint##field##with##hashes");
+
+  locator1.resetHint("evil-hint##with##hashes");
+  locator1.resetField("a-field");
+  ASSERT_EQ(locator1.toSlice().ToString(), "esome_key##devil-hint|#|#with|#|#hashes##a-field");
+
+  locator1.resetKey("#evil#key#");
+  locator1.resetHint("#evil#hint#");
+  locator1.resetField("#evil#field#");
+  ASSERT_EQ(locator1.toSlice().ToString(), "e|#evil|#key|###d|#evil|#hint|####evil#field#");
+
+  locator1.resetKey("my-key");
+  locator1.resetHint("my-hint");
+  locator1.resetField("my-field");
+  ASSERT_EQ(locator1.toSlice().ToString(), "emy-key##dmy-hint##my-field");
+}
+
 TEST(PatternMatching, BasicSanity) {
   ASSERT_EQ(extractPatternPrefix("abc*"), "abc");
   ASSERT_EQ(extractPatternPrefix("abc"), "abc");
