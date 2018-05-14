@@ -333,6 +333,25 @@ rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, const std::string 
   return operation.finalize(operation.keySize() + 1);
 }
 
+rocksdb::Status StateMachine::lhdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
+  removed = 0;
+
+  WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
+  if(!operation.valid()) return wrong_type();
+
+  for(VecIterator it = start; it != end; it++) {
+    std::string hint;
+    bool exists = operation.getAndDeleteLocalityIndex(*it, hint);
+    if(exists) {
+      removed++;
+      qdb_assert(operation.deleteLocalityField(hint, *it));
+    }
+  }
+
+  int64_t newsize = operation.keySize() - removed;
+  return operation.finalize(newsize);
+}
+
 rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value) {
   if(!assertKeyType(stagingArea, key, KeyType::kLocalityHash)) return wrong_type();
 
@@ -756,6 +775,21 @@ bool StateMachine::WriteOperation::getLocalityIndex(const std::string &field, st
   LocalityIndexLocator locator(redisKey, field);
   rocksdb::Status st = stagingArea.get(locator.toSlice(), out);
   ASSERT_OK_OR_NOTFOUND(st);
+  return st.ok();
+}
+
+bool StateMachine::WriteOperation::getAndDeleteLocalityIndex(const std::string &field, std::string &out) {
+  assertWritable();
+  qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
+
+  LocalityIndexLocator locator(redisKey, field);
+  rocksdb::Status st = stagingArea.get(locator.toSlice(), out);
+  ASSERT_OK_OR_NOTFOUND(st);
+
+  if(st.ok()) {
+    stagingArea.del(locator.toSlice());
+  }
+
   return st.ok();
 }
 

@@ -1002,8 +1002,43 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint1"), "v2");
 
   // Delete key.
+  ASSERT_REPLY(tunnel(leaderID)->exec("exists", "mykey"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("exists", "mykey", "mykey"), 2);
   ASSERT_REPLY(tunnel(leaderID)->exec("del", "mykey"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("exists", "mykey"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("del", "mykey"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f3", "aaaaa"), "");
+
+  // Recreate with five fields.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f1", "hint1", "v1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f2", "hint2", "v2"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f3", "hint3", "v3"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f4", "hint4", "v4"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f5", "hint5", "v5"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("exists", "mykey"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 5);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel", "mykey", "f2", "hint1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2"), "");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint2"), "");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel", "mykey", "f2", "hint1"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel", "mykey", "f1", "f3"), 2);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 2);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f4"), "v4");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f5"), "v5");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel", "mykey", "f4", "f4", "f4", "f4"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f4"), "");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("get", "mykey"), "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel", "mykey", "f4"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f5", "hint5"), "v5");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel", "mykey", "f5"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f5", "hint5"), "");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 0);
 }

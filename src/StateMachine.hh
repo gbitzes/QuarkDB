@@ -65,6 +65,7 @@ public:
   rocksdb::Status hdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
 
   rocksdb::Status lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated);
+  rocksdb::Status lhdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
 
   rocksdb::Status sadd(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added);
   rocksdb::Status srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
@@ -216,6 +217,7 @@ private:
 
     bool deleteField(const std::string &field);
     bool deleteLocalityField(const std::string &hint, const std::string &field);
+    bool getAndDeleteLocalityIndex(const std::string &field, std::string &hint);
 
     rocksdb::Status finalize(int64_t newsize);
 

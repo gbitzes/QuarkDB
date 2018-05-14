@@ -63,6 +63,7 @@ enum class RedisCommand {
   LHSET,
   LHGET,
   LHLEN,
+  LHDEL,
 
   SADD,
   SISMEMBER,
