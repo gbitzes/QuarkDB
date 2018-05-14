@@ -1343,6 +1343,14 @@ rocksdb::Status StateMachine::configGetall(std::vector<std::string> &res) {
   CHAIN_READ(configGetall, res);
 }
 
+rocksdb::Status StateMachine::lhlen(const std::string &key, size_t &len) {
+  CHAIN_READ(lhlen, key, len);
+}
+
+rocksdb::Status StateMachine::lhget(const std::string &key, const std::string &field, const std::string &hint, std::string &value) {
+  CHAIN_READ(lhget, key, field, hint, value);
+}
+
 //------------------------------------------------------------------------------
 // Writes:
 //------------------------------------------------------------------------------
@@ -1409,4 +1417,8 @@ rocksdb::Status StateMachine::rpush(const std::string &key, const VecIterator &s
 
 rocksdb::Status StateMachine::configSet(const std::string &key, const std::string &value, LogIndex index) {
   CHAIN(index, configSet, key, value);
+}
+
+rocksdb::Status StateMachine::lhset(const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated, LogIndex index) {
+  CHAIN(index, lhset, key, field, hint, value, fieldcreated);
 }

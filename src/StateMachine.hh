@@ -133,6 +133,9 @@ public:
   rocksdb::Status lpop(const std::string &key, std::string &item, LogIndex index = 0);
   rocksdb::Status rpop(const std::string &key, std::string &item, LogIndex index = 0);
   rocksdb::Status llen(const std::string &key, size_t &len);
+  rocksdb::Status lhset(const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated, LogIndex index = 0);
+  rocksdb::Status lhlen(const std::string &key, size_t &len);
+  rocksdb::Status lhget(const std::string &key, const std::string &field, const std::string &hint, std::string &value);
 
   //----------------------------------------------------------------------------
   // Internal configuration, not exposed to users through 'KEYS' and friends.

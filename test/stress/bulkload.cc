@@ -68,6 +68,15 @@ TEST(BulkLoad, BasicSanity) {
     int64_t ignored;
     ASSERT_OK(stateMachine.sadd(SSTR("some-set-" << i), items.begin(), items.end(), ignored));
     ASSERT_OK(stateMachine.sadd("some-set", items.begin(), items.end(), ignored));
+
+    ASSERT_OK(stateMachine.lhset("locality-hash-1", SSTR("field-" << i), SSTR("hint-" << i), SSTR("lh1-value-" << i), created));
+    ASSERT_TRUE(created);
+
+    ASSERT_OK(stateMachine.lhset("locality-hash-2", "field", "hint", SSTR("lh2-value-" << i), created));
+    ASSERT_TRUE(created);
+
+    ASSERT_OK(stateMachine.lhset("locality-hash-3", SSTR("field-" << i), "hint", SSTR("lh3-value-" << i), created));
+    ASSERT_TRUE(created);
   }
 
 
@@ -82,6 +91,25 @@ TEST(BulkLoad, BasicSanity) {
   ASSERT_OK(stateMachine.scard("some-set", len));
   ASSERT_EQ(len, 201u);
 
+  ASSERT_OK(stateMachine.lhlen("locality-hash-1", len));
+  ASSERT_EQ(len, 100u);
+
+  ASSERT_OK(stateMachine.lhlen("locality-hash-2", len));
+  ASSERT_EQ(len, 1u);
+
+  ASSERT_OK(stateMachine.lhlen("locality-hash-3", len));
+  ASSERT_EQ(len, 100u);
+
+  std::string contents;
+  ASSERT_OK(stateMachine.lhget("locality-hash-2", "field", "", contents));
+  ASSERT_EQ(contents, "lh2-value-99");
+
+  ASSERT_OK(stateMachine.lhget("locality-hash-2", "field", "wrong-hint", contents));
+  ASSERT_EQ(contents, "lh2-value-99");
+
+  ASSERT_OK(stateMachine.lhget("locality-hash-2", "field", "hint", contents));
+  ASSERT_EQ(contents, "lh2-value-99");
+
   for(size_t i = 0; i < 100; i++) {
     ASSERT_OK(stateMachine.hlen(SSTR("some-key-" << i), len));
     ASSERT_EQ(len, 1u);
@@ -95,6 +123,24 @@ TEST(BulkLoad, BasicSanity) {
 
     ASSERT_OK(stateMachine.scard(SSTR("some-set-" << i), len));
     ASSERT_EQ(len, 3u);
+
+    ASSERT_OK(stateMachine.lhget("locality-hash-1", SSTR("field-" << i), "", contents));
+    ASSERT_EQ(contents, SSTR("lh1-value-" << i));
+
+    ASSERT_OK(stateMachine.lhget("locality-hash-1", SSTR("field-" << i), "wrong-hint", contents));
+    ASSERT_EQ(contents, SSTR("lh1-value-" << i));
+
+    ASSERT_OK(stateMachine.lhget("locality-hash-1", SSTR("field-" << i), SSTR("hint-" << i), contents));
+    ASSERT_EQ(contents, SSTR("lh1-value-" << i));
+
+    ASSERT_OK(stateMachine.lhget("locality-hash-3", SSTR("field-" << i), "", contents));
+    ASSERT_EQ(contents, SSTR("lh3-value-" << i));
+
+    ASSERT_OK(stateMachine.lhget("locality-hash-3", SSTR("field-" << i), "wrong-hint", contents));
+    ASSERT_EQ(contents, SSTR("lh3-value-" << i));
+
+    ASSERT_OK(stateMachine.lhget("locality-hash-3", SSTR("field-" << i), "hint", contents));
+    ASSERT_EQ(contents, SSTR("lh3-value-" << i));
   }
 }
 

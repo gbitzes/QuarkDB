@@ -96,11 +96,12 @@ KeyDescriptorBuilder::KeyDescriptorBuilder(StateMachine &stateMachine) {
       currentKey = revlocator.getOriginalKey().ToString();
 
       descriptor.setKeyType(revlocator.getKeyType());
-      descriptor.setSize(1);
-      continue;
+      descriptor.setSize(0);
     }
 
-    descriptor.setSize(descriptor.getSize() + 1);
+    if(!revlocator.isLocalityIndex()) {
+      descriptor.setSize(descriptor.getSize() + 1);
+    }
   }
 
   qdb_event("Collected " << descriptorBatch.Count() << " descriptors. Flushing write batch..");

@@ -21,10 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_REVERSE_LOCATOR_H__
-#define __QUARKDB_REVERSE_LOCATOR_H__
+#ifndef QUARKDB_REVERSE_LOCATOR_H
+#define QUARKDB_REVERSE_LOCATOR_H
 
 #include "KeyDescriptor.hh"
+#include "KeyLocators.hh"
 
 namespace quarkdb {
 
@@ -113,6 +114,14 @@ public:
   rocksdb::Slice getRawPrefix() {
     qdb_assert(keyType != KeyType::kParseError && keyType != KeyType::kString);
     return rocksdb::Slice(slice.data(), fieldStart);
+  }
+
+  bool isLocalityIndex() {
+    if(keyType != KeyType::kLocalityHash) return false;
+
+    rocksdb::Slice field = getField();
+    qdb_assert(field.size() != 0u);
+    return *(field.data()) == char(InternalLocalityFieldType::kIndex);
   }
 
 private:
