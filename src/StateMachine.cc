@@ -1007,6 +1007,19 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const VecIterator &s
       remove_all_with_prefix(locator.toSlice(), count, stagingArea);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
+    else if(keyInfo.getKeyType() == KeyType::kLocalityHash) {
+      // wipe out fields
+      LocalityFieldLocator fieldLocator(*it);
+      int64_t count = 0;
+      remove_all_with_prefix(fieldLocator.toSlice(), count, stagingArea);
+      if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
+
+      // wipe out indexes
+      LocalityIndexLocator indexLocator(*it);
+      count = 0;
+      remove_all_with_prefix(indexLocator.toSlice(), count, stagingArea);
+      if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
+    }
     else {
       qdb_throw("should never happen");
     }

@@ -1000,4 +1000,10 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v2");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint2"), "v2");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint1"), "v2");
+
+  // Delete key.
+  ASSERT_REPLY(tunnel(leaderID)->exec("del", "mykey"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("del", "mykey"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f3", "aaaaa"), "");
 }
