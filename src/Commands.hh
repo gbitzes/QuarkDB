@@ -60,6 +60,10 @@ enum class RedisCommand {
   HSETNX,
   HINCRBYFLOAT,
 
+  LHSET,
+  LHGET,
+  LHLEN,
+
   SADD,
   SISMEMBER,
   SREM,

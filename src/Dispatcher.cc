@@ -209,6 +209,15 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       rocksdb::Status st = store.configSet(stagingArea, request[1], request[2]);
       return Formatter::fromStatus(st);
     }
+    case RedisCommand::LHSET: {
+      if(request.size() != 5) return errArgs(request);
+
+      bool fieldcreated;
+      rocksdb::Status st = store.lhset(stagingArea, request[1], request[2], request[3], request[4], fieldcreated);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      return Formatter::integer(fieldcreated);
+    }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
     }
@@ -388,6 +397,30 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       rocksdb::Status st = store.configGetall(stagingArea, ret);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(ret);
+    }
+    case RedisCommand::LHGET: {
+      std::string value;
+      rocksdb::Status st;
+
+      if(request.size() == 3) {
+        // Empty locality hint
+        st = store.lhget(stagingArea, request[1], request[2], "", value);
+      }
+      else if(request.size() != 4) {
+        return errArgs(request);
+      }
+
+      st = store.lhget(stagingArea, request[1], request[2], request[3], value);
+      if(st.IsNotFound()) return Formatter::null();
+      else if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::string(value);
+    }
+    case RedisCommand::LHLEN: {
+      if(request.size() != 2) return errArgs(request);
+      size_t len;
+      rocksdb::Status st = store.lhlen(stagingArea, request[1], len);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(len);
     }
     default: {
       return dispatchingError(request, 0);

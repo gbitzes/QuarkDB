@@ -64,6 +64,8 @@ public:
   rocksdb::Status hincrbyfloat(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, double &result);
   rocksdb::Status hdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
 
+  rocksdb::Status lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated);
+
   rocksdb::Status sadd(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added);
   rocksdb::Status srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
   rocksdb::Status smove(StagingArea &stagingArea, const std::string &source, const std::string &destination, const std::string &element, int64_t &outcome);
@@ -92,6 +94,8 @@ public:
   rocksdb::Status scard(StagingArea &stagingArea, const std::string &key, size_t &count);
   rocksdb::Status sscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
   rocksdb::Status llen(StagingArea &stagingArea, const std::string &key, size_t &len);
+  rocksdb::Status lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value);
+  rocksdb::Status lhlen(StagingArea &stagingArea, const std::string &key, size_t &len);
 
   //----------------------------------------------------------------------------
   // Simple API
@@ -196,14 +200,22 @@ private:
     bool valid();
     bool keyExists();
     bool getField(const std::string &field, std::string &out);
+    bool getLocalityIndex(const std::string &field, std::string &out);
+
     int64_t keySize();
 
     void assertWritable();
 
     void write(const std::string &value);
     void writeField(const std::string &field, const std::string &value);
+    void writeLocalityField(const std::string &hint, const std::string &field, const std::string &value);
+    void writeLocalityIndex(const std::string &field, const std::string &hint);
+
     bool fieldExists(const std::string &field);
+    bool localityFieldExists(const std::string &hint, const std::string &field);
+
     bool deleteField(const std::string &field);
+    bool deleteLocalityField(const std::string &hint, const std::string &field);
 
     rocksdb::Status finalize(int64_t newsize);
 

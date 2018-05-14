@@ -942,3 +942,62 @@ TEST_F(Raft_e2e, sscan) {
   ASSERT_EQ(pair.first, "0");
   ASSERT_EQ(pair.second, make_vec());
 }
+
+TEST_F(Raft_e2e, LocalityHash) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  // Insert new field.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f1", "hint1", "v1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v1");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint1"), "v1");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "ayy-lmao"), "v1");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 1);
+
+  // Update old field, no changes to locality hint.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f1", "hint1", "v2"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint1"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "ayy-lmao"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 1);
+
+  // Insert one more field.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f2", "hint2", "v3"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2"), "v3");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint2"), "v3");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint1"), "v3");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 2);
+
+  // Update locality hint of first field.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f1", "hint2", "v2"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint2"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint1"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 2);
+
+  // Update value and locality hint of second field.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f2", "hint3", "v4"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2"), "v4");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint3"), "v4");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint1"), "v4");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 2);
+
+  // Insert one more field.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f3", "aaaaa", "v5"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f3"), "v5");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f3", "aaaaa"), "v5");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f3", "wrong-hint"), "v5");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 3);
+
+  // Re-read everything.
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2"), "v4");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint3"), "v4");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint1"), "v4");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint2"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint1"), "v2");
+}

@@ -296,6 +296,81 @@ rocksdb::Status StateMachine::hgetall(StagingArea &stagingArea, const std::strin
   return rocksdb::Status::OK();
 }
 
+rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated) {
+  fieldcreated = false;
+
+  WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
+  if(!operation.valid()) return wrong_type();
+
+  if(operation.localityFieldExists(hint, field)) {
+    // Cool, field exists, we take the fast path. Just update a single value,
+    // and we are done. No need to update any indexes or key descriptor size,
+    // as we simply override the old value.
+    operation.writeLocalityField(hint, field, value);
+    return operation.finalize(operation.keySize());
+  }
+
+  // Two cases: We've received a different locality hint, or we're creating
+  // a new field.
+
+  std::string previousHint;
+  if(operation.getLocalityIndex(field, previousHint)) {
+    // Changing locality hint. Drop old entry, insert new one.
+    qdb_assert(operation.deleteLocalityField(previousHint, field));
+
+    // Update field and index.
+    operation.writeLocalityField(hint, field, value);
+    operation.writeLocalityIndex(field, hint);
+
+    // No update on key size, we're just rewriting a key.
+    return operation.finalize(operation.keySize());
+  }
+
+  // New field!
+  fieldcreated = true;
+  operation.writeLocalityField(hint, field, value);
+  operation.writeLocalityIndex(field, hint);
+  return operation.finalize(operation.keySize() + 1);
+}
+
+rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value) {
+  if(!assertKeyType(stagingArea, key, KeyType::kLocalityHash)) return wrong_type();
+
+  if(!hint.empty()) {
+    // We were given a hint, whooo. Fast path.
+    LocalityFieldLocator locator(key, hint, field);
+
+    rocksdb::Status st = db->Get(stagingArea.snapshot->opts(), locator.toSlice(), &value);
+    ASSERT_OK_OR_NOTFOUND(st);
+
+    if(st.ok()) {
+      // Done!
+      return st;
+    }
+
+    // Hmh. Either the field does not exist, or we were given a wrong locality
+    // hint.
+  }
+
+  std::string correctHint;
+
+  LocalityIndexLocator indexLocator(key, field);
+  rocksdb::Status st = db->Get(stagingArea.snapshot->opts(), indexLocator.toSlice(), &correctHint);
+  ASSERT_OK_OR_NOTFOUND(st);
+
+  if(st.IsNotFound()) return st;
+
+  if(!hint.empty()) {
+    // Client is drunk and giving wrong locality hints, warn.
+    qdb_assert(hint != correctHint);
+    qdb_warn("Received invalid locality hint (" << hint << " vs " << correctHint << ") for locality hash with key " << key << ", targeting field " << field);
+  }
+
+  // Fetch correct hint.
+  LocalityFieldLocator fieldLocator(key, correctHint, field);
+  THROW_ON_ERROR(db->Get(stagingArea.snapshot->opts(), fieldLocator.toSlice(), &value));
+  return rocksdb::Status::OK();
+}
 
 rocksdb::Status StateMachine::hset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated) {
   WriteOperation operation(stagingArea, key, KeyType::kHash);
@@ -409,6 +484,16 @@ rocksdb::Status StateMachine::hlen(StagingArea &stagingArea, const std::string &
 
   KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   if(isWrongType(keyinfo, KeyType::kHash)) return wrong_type();
+
+  len = keyinfo.getSize();
+  return rocksdb::Status::OK();
+}
+
+rocksdb::Status StateMachine::lhlen(StagingArea &stagingArea, const std::string &key, size_t &len) {
+  len = 0;
+
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
+  if(isWrongType(keyinfo, KeyType::kLocalityHash)) return wrong_type();
 
   len = keyinfo.getSize();
   return rocksdb::Status::OK();
@@ -664,6 +749,16 @@ bool StateMachine::WriteOperation::getField(const std::string &field, std::strin
   return st.ok();
 }
 
+bool StateMachine::WriteOperation::getLocalityIndex(const std::string &field, std::string &out) {
+  assertWritable();
+  qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
+
+  LocalityIndexLocator locator(redisKey, field);
+  rocksdb::Status st = stagingArea.get(locator.toSlice(), out);
+  ASSERT_OK_OR_NOTFOUND(st);
+  return st.ok();
+}
+
 int64_t StateMachine::WriteOperation::keySize() {
   return keyinfo.getSize();
 }
@@ -695,6 +790,24 @@ void StateMachine::WriteOperation::writeField(const std::string &field, const st
   stagingArea.put(locator.toSlice(), value);
 }
 
+void StateMachine::WriteOperation::writeLocalityField(const std::string &hint, const std::string &field, const std::string &value) {
+  assertWritable();
+
+  qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
+
+  LocalityFieldLocator locator(redisKey, hint, field);
+  stagingArea.put(locator.toSlice(), value);
+}
+
+void StateMachine::WriteOperation::writeLocalityIndex(const std::string &field, const std::string &hint) {
+  assertWritable();
+
+  qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
+
+  LocalityIndexLocator locator(redisKey, field);
+  stagingArea.put(locator.toSlice(), hint);
+}
+
 rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize) {
   assertWritable();
 
@@ -721,12 +834,35 @@ bool StateMachine::WriteOperation::fieldExists(const std::string &field) {
   return st.ok();
 }
 
+bool StateMachine::WriteOperation::localityFieldExists(const std::string &hint, const std::string &field) {
+  assertWritable();
+  qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
+
+  LocalityFieldLocator locator(redisKey, hint, field);
+  rocksdb::Status st = stagingArea.exists(locator.toSlice());
+  ASSERT_OK_OR_NOTFOUND(st);
+  return st.ok();
+}
+
 bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   assertWritable();
 
   std::string tmp;
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
+  rocksdb::Status st = stagingArea.get(locator.toSlice(), tmp);
+  ASSERT_OK_OR_NOTFOUND(st);
+
+  if(st.ok()) stagingArea.del(locator.toSlice());
+  return st.ok();
+}
+
+bool StateMachine::WriteOperation::deleteLocalityField(const std::string &hint, const std::string &field) {
+  assertWritable();
+  qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
+
+  std::string tmp;
+  LocalityFieldLocator locator(redisKey, hint, field);
   rocksdb::Status st = stagingArea.get(locator.toSlice(), tmp);
   ASSERT_OK_OR_NOTFOUND(st);
 

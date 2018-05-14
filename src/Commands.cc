@@ -54,6 +54,8 @@ struct cmdMapInit {
     redis_cmd_map["llen"] = {RedisCommand::LLEN, CommandType::READ};
     redis_cmd_map["config_get"] = {RedisCommand::CONFIG_GET, CommandType::READ};
     redis_cmd_map["config_getall"] = {RedisCommand::CONFIG_GETALL, CommandType::READ};
+    redis_cmd_map["lhget"] = {RedisCommand::LHGET, CommandType::READ};
+    redis_cmd_map["lhlen"] = {RedisCommand::LHLEN, CommandType::READ};
 
     redis_cmd_map["flushall"] = {RedisCommand::FLUSHALL, CommandType::WRITE};
     redis_cmd_map["set"] = {RedisCommand::SET, CommandType::WRITE};
@@ -73,6 +75,7 @@ struct cmdMapInit {
     redis_cmd_map["rpush"] = {RedisCommand::RPUSH, CommandType::WRITE};
     redis_cmd_map["rpop"] = {RedisCommand::RPOP, CommandType::WRITE};
     redis_cmd_map["config_set"] = {RedisCommand::CONFIG_SET, CommandType::WRITE};
+    redis_cmd_map["lhset"] = {RedisCommand::LHSET, CommandType::WRITE};
 
     redis_cmd_map["exec"] = {RedisCommand::EXEC, CommandType::CONTROL};
     redis_cmd_map["discard"] = {RedisCommand::DISCARD, CommandType::CONTROL};
