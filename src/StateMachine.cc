@@ -296,18 +296,15 @@ rocksdb::Status StateMachine::hgetall(StagingArea &stagingArea, const std::strin
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated) {
+void StateMachine::lhsetInternal(WriteOperation &operation, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated) {
   fieldcreated = false;
-
-  WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
-  if(!operation.valid()) return wrong_type();
 
   if(operation.localityFieldExists(hint, field)) {
     // Cool, field exists, we take the fast path. Just update a single value,
     // and we are done. No need to update any indexes or key descriptor size,
     // as we simply override the old value.
     operation.writeLocalityField(hint, field, value);
-    return operation.finalize(operation.keySize());
+    return;
   }
 
   // Two cases: We've received a different locality hint, or we're creating
@@ -323,14 +320,39 @@ rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, const std::string 
     operation.writeLocalityIndex(field, hint);
 
     // No update on key size, we're just rewriting a key.
-    return operation.finalize(operation.keySize());
+    return;
   }
 
   // New field!
   fieldcreated = true;
   operation.writeLocalityField(hint, field, value);
   operation.writeLocalityIndex(field, hint);
-  return operation.finalize(operation.keySize() + 1);
+  return;
+}
+
+rocksdb::Status StateMachine::lhmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end) {
+  if((end - start) % 3 != 0) qdb_throw("lhmset: distance between start and end iterators must be a multiple of three");
+
+  WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
+  if(!operation.valid()) return wrong_type();
+
+  int64_t created = 0;
+  for(auto it = start; it != end; it += 3) {
+    bool fieldcreated = false;
+    lhsetInternal(operation, key, *it, *(it+1), *(it+2), fieldcreated);
+    created += fieldcreated;
+  }
+
+  return operation.finalize(operation.keySize() + created);
+}
+
+rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated) {
+  WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
+  if(!operation.valid()) return wrong_type();
+
+  fieldcreated = false;
+  lhsetInternal(operation, key, field, hint, value, fieldcreated);
+  return operation.finalize(operation.keySize() + fieldcreated);
 }
 
 rocksdb::Status StateMachine::lhdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed) {

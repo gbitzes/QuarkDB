@@ -77,6 +77,7 @@ struct cmdMapInit {
     redis_cmd_map["config_set"] = {RedisCommand::CONFIG_SET, CommandType::WRITE};
     redis_cmd_map["lhset"] = {RedisCommand::LHSET, CommandType::WRITE};
     redis_cmd_map["lhdel"] = {RedisCommand::LHDEL, CommandType::WRITE};
+    redis_cmd_map["lhmset"] = {RedisCommand::LHMSET, CommandType::WRITE};
 
     redis_cmd_map["exec"] = {RedisCommand::EXEC, CommandType::CONTROL};
     redis_cmd_map["discard"] = {RedisCommand::DISCARD, CommandType::CONTROL};

@@ -225,6 +225,12 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
+    case RedisCommand::LHMSET: {
+      if(request.size() <= 4 || (request.size()-2) % 3 != 0) return Formatter::errArgs(request[0]);
+      rocksdb::Status st = store.lhmset(stagingArea, request[1], request.begin()+2, request.end());
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::ok();
+    }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
     }

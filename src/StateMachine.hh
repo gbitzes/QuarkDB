@@ -66,6 +66,7 @@ public:
 
   rocksdb::Status lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated);
   rocksdb::Status lhdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status lhmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
 
   rocksdb::Status sadd(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added);
   rocksdb::Status srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
@@ -248,6 +249,7 @@ private:
   void ensureCompatibleFormat(bool justCreated);
   void ensureBulkloadSanity(bool justCreated);
   void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea);
+  void lhsetInternal(WriteOperation &operation, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated);
 
   std::atomic<LogIndex> lastApplied;
   std::condition_variable lastAppliedCV;

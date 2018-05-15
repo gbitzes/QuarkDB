@@ -1041,4 +1041,23 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("lhdel", "mykey", "f5"), 1);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f5", "hint5"), "");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 0);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhmset", "mykey", "f1", "hint1", "v1", "ayy"), "ERR wrong number of arguments for 'lhmset' command");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhmset", "a", "b", "c"), "ERR wrong number of arguments for 'lhmset' command");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhmset", "a", "b"), "ERR wrong number of arguments for 'lhmset' command");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhmset", "a"), "ERR wrong number of arguments for 'lhmset' command");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhmset", "mykey", "f1", "hint1", "v1"), "OK");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v1");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhmset", "mykey", "f1", "hint1", "v2", "f1", "hint3", "v3"), "OK");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v3");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhmset", "mykey", "f2", "hint2", "v5", "f3", "hint1", "v6"), "OK");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 3);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v3");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2"), "v5");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f3"), "v6");
 }
