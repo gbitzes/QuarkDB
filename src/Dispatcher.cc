@@ -238,6 +238,22 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
 }
 
+RedisEncodedResponse RedisDispatcher::dispatchHGET(StagingArea &stagingArea, const std::string &key, const std::string &field) {
+  std::string value;
+  rocksdb::Status st = store.hget(stagingArea, key, field, value);
+  if(st.IsNotFound()) return Formatter::null();
+  else if(!st.ok()) return Formatter::fromStatus(st);
+  return Formatter::string(value);
+}
+
+RedisEncodedResponse RedisDispatcher::dispatchLHGET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint) {
+  std::string value;
+  rocksdb::Status st = store.lhget(stagingArea, key, field, hint, value);
+  if(st.IsNotFound()) return Formatter::null();
+  else if(!st.ok()) return Formatter::fromStatus(st);
+  return Formatter::string(value);
+}
+
 RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, RedisRequest &request) {
   switch(request.getCommand()) {
     case RedisCommand::GET: {
@@ -282,12 +298,7 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
     }
     case RedisCommand::HGET: {
       if(request.size() != 3) return errArgs(request);
-
-      std::string value;
-      rocksdb::Status st = store.hget(stagingArea, request[1], request[2], value);
-      if(st.IsNotFound()) return Formatter::null();
-      else if(!st.ok()) return Formatter::fromStatus(st);
-      return Formatter::string(value);
+      return dispatchHGET(stagingArea, request[1], request[2]);
     }
     case RedisCommand::HEXISTS: {
       if(request.size() != 3) return errArgs(request);
@@ -412,23 +423,32 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       return Formatter::vector(ret);
     }
     case RedisCommand::LHGET: {
-      std::string value;
-      rocksdb::Status st;
-
       if(request.size() == 3) {
-        // Empty locality hint
-        st = store.lhget(stagingArea, request[1], request[2], "", value);
-      }
-      else if(request.size() != 4) {
-        return errArgs(request);
-      }
-      else {
-        st = store.lhget(stagingArea, request[1], request[2], request[3], value);
+        return dispatchLHGET(stagingArea, request[1], request[2], "");
       }
 
-      if(st.IsNotFound()) return Formatter::null();
-      else if(!st.ok()) return Formatter::fromStatus(st);
-      return Formatter::string(value);
+      if(request.size() == 4) {
+        return dispatchLHGET(stagingArea, request[1], request[2], request[3]);
+      }
+
+      return errArgs(request);
+    }
+    case RedisCommand::LHGET_WITH_FALLBACK: {
+      // First, try LHGET...
+      RedisEncodedResponse resp;
+      if(request.size() == 4) {
+        resp = dispatchLHGET(stagingArea, request[1], request[2], "");
+      }
+      else if(request.size() == 5) {
+        resp = dispatchLHGET(stagingArea, request[1], request[2], request[3]);
+      }
+
+      // Did we succeed?
+      if(resp.val != Formatter::null().val) return resp;
+
+      // Nope, fallback. Look for the same field, but in the hash specified as
+      // last argument.
+      return dispatchHGET(stagingArea, request[request.size()-1], request[2]);
     }
     case RedisCommand::LHLEN: {
       if(request.size() != 2) return errArgs(request);

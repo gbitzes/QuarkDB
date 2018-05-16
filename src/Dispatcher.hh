@@ -58,6 +58,10 @@ private:
   RedisEncodedResponse dispatchingError(RedisRequest &request, LogIndex commit);
 
   StateMachine &store;
+
+  RedisEncodedResponse dispatchHGET(StagingArea &stagingArea, const std::string &key, const std::string &field);
+  RedisEncodedResponse dispatchLHGET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint);
+
 };
 
 }
