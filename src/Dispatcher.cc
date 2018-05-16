@@ -422,8 +422,10 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       else if(request.size() != 4) {
         return errArgs(request);
       }
+      else {
+        st = store.lhget(stagingArea, request[1], request[2], request[3], value);
+      }
 
-      st = store.lhget(stagingArea, request[1], request[2], request[3], value);
       if(st.IsNotFound()) return Formatter::null();
       else if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(value);
