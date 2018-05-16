@@ -74,6 +74,20 @@ RedisEncodedResponse RedisDispatcher::dispatch(MultiOp &multiOp, LogIndex commit
   return builder.buildResponse();
 }
 
+RedisEncodedResponse RedisDispatcher::dispatchLHSET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value) {
+  bool fieldcreated;
+  rocksdb::Status st = store.lhset(stagingArea, key, field, hint, value, fieldcreated);
+  if(!st.ok()) return Formatter::fromStatus(st);
+  return Formatter::integer(fieldcreated);
+}
+
+RedisEncodedResponse RedisDispatcher::dispatchHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end) {
+  int64_t count = 0;
+  rocksdb::Status st = store.hdel(stagingArea, key, start, end, count);
+  if(!st.ok()) return Formatter::fromStatus(st);
+  return Formatter::integer(count);
+}
+
 RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisRequest &request) {
   qdb_assert(request.getCommandType() == CommandType::WRITE);
 
@@ -148,10 +162,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
     }
     case RedisCommand::HDEL: {
       if(request.size() <= 2) return errArgs(request);
-      int64_t count = 0;
-      rocksdb::Status st = store.hdel(stagingArea, request[1], request.begin()+2, request.end(), count);
-      if(!st.ok()) return Formatter::fromStatus(st);
-      return Formatter::integer(count);
+      return dispatchHDEL(stagingArea, request[1], request.begin()+2, request.end());
     }
     case RedisCommand::SADD: {
       if(request.size() <= 2) return errArgs(request);
@@ -211,12 +222,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
     }
     case RedisCommand::LHSET: {
       if(request.size() != 5) return errArgs(request);
-
-      bool fieldcreated;
-      rocksdb::Status st = store.lhset(stagingArea, request[1], request[2], request[3], request[4], fieldcreated);
-      if(!st.ok()) return Formatter::fromStatus(st);
-
-      return Formatter::integer(fieldcreated);
+      return dispatchLHSET(stagingArea, request[1], request[2], request[3], request[4]);
     }
     case RedisCommand::LHDEL: {
       if(request.size() <= 2) return errArgs(request);
@@ -230,6 +236,12 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       rocksdb::Status st = store.lhmset(stagingArea, request[1], request.begin()+2, request.end());
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::ok();
+    }
+    case RedisCommand::LHSET_AND_DEL_FALLBACK: {
+      if(request.size() != 6) return errArgs(request);
+      RedisEncodedResponse resp = dispatchLHSET(stagingArea, request[1], request[2], request[3], request[4]);
+      dispatchHDEL(stagingArea, request[5], request.begin()+2, request.begin()+3);
+      return resp;
     }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);

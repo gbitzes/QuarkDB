@@ -42,6 +42,8 @@ public:
 
 class StateMachine; class StagingArea;
 
+using VecIterator = std::vector<std::string>::const_iterator;
+
 class RedisDispatcher : public Dispatcher {
 public:
   RedisDispatcher(StateMachine &rocksdb);
@@ -61,6 +63,8 @@ private:
 
   RedisEncodedResponse dispatchHGET(StagingArea &stagingArea, const std::string &key, const std::string &field);
   RedisEncodedResponse dispatchLHGET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint);
+  RedisEncodedResponse dispatchLHSET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value);
+  RedisEncodedResponse dispatchHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
 
 };
 

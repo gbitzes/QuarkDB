@@ -960,7 +960,7 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget-with-fallback", "mykey", "f1", "ayy-lmao", "emptykey"), "v1");
 
   // Update old field, no changes to locality hint.
-  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f1", "hint1", "v2"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset-and-del-fallback", "mykey", "f1", "hint1", "v2", "fallback"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1"), "v2");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "hint1"), "v2");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f1", "ayy-lmao"), "v2");
@@ -990,7 +990,7 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 2);
 
   // Update value and locality hint of second field.
-  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f2", "hint3", "v4"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset-and-del-fallback", "mykey", "f2", "hint3", "v4", "fallback"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2"), "v4");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint3"), "v4");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f2", "hint1"), "v4");
@@ -1104,8 +1104,26 @@ TEST_F(Raft_e2e, LocalityHash) {
   // Test fallback
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget-with-fallback", "mykey", "f9", "fb"), "");
   ASSERT_REPLY(tunnel(leaderID)->exec("hset", "fb", "f9", "V"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hset", "fb", "f8", "Z"), 1);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget-with-fallback", "mykey", "f9", "fb"), "V");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "mykey", "f9", "hint1", "VVV"), 1);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget-with-fallback", "mykey", "f9", "fb"), "VVV");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "fb"), 2);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset-and-del-fallback", "mykey", "f9", "hint", "ZZZ", "fb"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "fb"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "fb", "f9"), "");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "fb", "f8"), "Z");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget-with-fallback", "mykey", "f9", "fb"), "ZZZ");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f9"), "ZZZ");
+
+
+
+
+
+
+
+
 }
