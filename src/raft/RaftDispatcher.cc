@@ -191,6 +191,11 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::RAFT_ADD_OBSERVER:
     case RedisCommand::RAFT_REMOVE_MEMBER:
     case RedisCommand::RAFT_PROMOTE_OBSERVER: {
+      std::lock_guard<std::mutex> lock(raftCommand);
+      // We need to lock the journal for writes during a membership update.
+      // Otherwise, a different client might race to acquire the same position
+      // in the journal to place a different entry, and cause a crash.
+
       if(req.size() != 2) return conn->errArgs(req[0]);
 
       RaftServer srv;

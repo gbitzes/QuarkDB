@@ -96,7 +96,7 @@ bool RaftWriteTracker::append(LogIndex index, RaftEntry &&entry, const std::shar
   std::lock_guard<std::mutex> lock(mtx);
 
   if(!journal.append(index, entry)) {
-    qdb_critical("appending to journal failed for index = " << index <<
+    qdb_throw("appending to journal failed for index = " << index <<
     " and term " << entry.term << " when appending to write tracker");
     return false;
   }
