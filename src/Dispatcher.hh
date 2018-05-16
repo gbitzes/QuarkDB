@@ -65,7 +65,7 @@ private:
   RedisEncodedResponse dispatchLHGET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint);
   RedisEncodedResponse dispatchLHSET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value);
   RedisEncodedResponse dispatchHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
-
+  RedisEncodedResponse dispatchLHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
 };
 
 }

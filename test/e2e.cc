@@ -1119,11 +1119,13 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget-with-fallback", "mykey", "f9", "fb"), "ZZZ");
   ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "mykey", "f9"), "ZZZ");
 
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel-with-fallback", "mykey", "f9", "fb"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel-with-fallback", "mykey", "f9", "fb"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 3);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget-with-fallback", "mykey", "f9", "fb"), "");
 
-
-
-
-
-
-
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhdel-with-fallback", "mykey", "f8", "fb"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 3);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "fb"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hget", "fb", "f8"), "");
 }

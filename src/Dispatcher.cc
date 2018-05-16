@@ -88,6 +88,13 @@ RedisEncodedResponse RedisDispatcher::dispatchHDEL(StagingArea &stagingArea, con
   return Formatter::integer(count);
 }
 
+RedisEncodedResponse RedisDispatcher::dispatchLHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end) {
+  int64_t count = 0;
+  rocksdb::Status st = store.lhdel(stagingArea, key, start, end, count);
+  if(!st.ok()) return Formatter::fromStatus(st);
+  return Formatter::integer(count);
+}
+
 RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, RedisRequest &request) {
   qdb_assert(request.getCommandType() == CommandType::WRITE);
 
@@ -226,10 +233,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
     }
     case RedisCommand::LHDEL: {
       if(request.size() <= 2) return errArgs(request);
-      int64_t count = 0;
-      rocksdb::Status st = store.lhdel(stagingArea, request[1], request.begin()+2, request.end(), count);
-      if(!st.ok()) return Formatter::fromStatus(st);
-      return Formatter::integer(count);
+      return dispatchLHDEL(stagingArea, request[1], request.begin()+2, request.end());
     }
     case RedisCommand::LHMSET: {
       if(request.size() <= 4 || (request.size()-2) % 3 != 0) return Formatter::errArgs(request[0]);
@@ -241,6 +245,15 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(request.size() != 6) return errArgs(request);
       RedisEncodedResponse resp = dispatchLHSET(stagingArea, request[1], request[2], request[3], request[4]);
       dispatchHDEL(stagingArea, request[5], request.begin()+2, request.begin()+3);
+      return resp;
+    }
+    case RedisCommand::LHDEL_WITH_FALLBACK: {
+      if(request.size() != 4) return errArgs(request);
+      RedisEncodedResponse resp = dispatchLHDEL(stagingArea, request[1], request.begin()+2, request.begin()+3);
+      if(resp.val != Formatter::integer(1).val) {
+        return dispatchHDEL(stagingArea, request[3], request.begin()+2, request.begin()+3);
+      }
+
       return resp;
     }
     default: {
