@@ -507,6 +507,23 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::vector(results);
     }
+    case RedisCommand::RAW_GET_ALL_VERSIONS: {
+      if(request.size() != 2) return errArgs(request);
+
+      std::vector<rocksdb::KeyVersion> versions;
+      rocksdb::Status st = store.rawGetAllVersions(request[1], versions);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      std::vector<std::string> reply;
+      for(const rocksdb::KeyVersion& ver : versions) {
+        reply.emplace_back(SSTR("KEY: " << ver.user_key));
+        reply.emplace_back(SSTR("VALUE: " << ver.value));
+        reply.emplace_back(SSTR("SEQUENCE: " << ver.sequence));
+        reply.emplace_back(SSTR("TYPE: " << ver.type));
+      }
+
+      return Formatter::vector(reply);
+    }
     default: {
       return dispatchingError(request, 0);
     }

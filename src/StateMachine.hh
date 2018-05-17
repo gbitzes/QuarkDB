@@ -33,6 +33,7 @@
 #include "storage/KeyConstants.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/write_batch_with_index.h>
+#include <rocksdb/utilities/debug.h>
 #include <condition_variable>
 
 namespace quarkdb {
@@ -99,6 +100,7 @@ public:
   rocksdb::Status lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value);
   rocksdb::Status lhlen(StagingArea &stagingArea, const std::string &key, size_t &len);
   rocksdb::Status rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements);
+  rocksdb::Status rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions);
 
   //----------------------------------------------------------------------------
   // Simple API

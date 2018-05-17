@@ -85,6 +85,7 @@ enum class RedisCommand {
   LLEN,
 
   RAW_SCAN,
+  RAW_GET_ALL_VERSIONS,
 
   EXEC,
   DISCARD,

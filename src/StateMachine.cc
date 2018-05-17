@@ -540,6 +540,9 @@ rocksdb::Status StateMachine::lhlen(StagingArea &stagingArea, const std::string 
   return rocksdb::Status::OK();
 }
 
+rocksdb::Status StateMachine::rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions) {
+  return rocksdb::GetAllKeyVersions(db, key, key, &versions);
+}
 
 rocksdb::Status StateMachine::rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements) {
   elements.clear();
@@ -548,7 +551,6 @@ rocksdb::Status StateMachine::rawScan(StagingArea &stagingArea, const std::strin
 
   size_t items = 0;
   for(iter->Seek(key); iter->Valid(); iter->Next()) {
-    DBG(items);
     if(items >= 1000000u || items >= count) break;
     items++;
 

@@ -1156,3 +1156,34 @@ TEST_F(Raft_e2e, LocalityHash) {
 
   qdb_info(qclient::describeRedisReply(reply));
 }
+
+TEST_F(Raft_e2e, RawGetAllVersions) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("sadd", "myset-for-raw-get", "s1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("sadd", "myset-for-raw-get", "s2"), 1);
+
+  redisReplyPtr reply = tunnel(leaderID)->exec("raw-get-all-versions", "cmyset-for-raw-get##s1").get();
+  qdb_info(qclient::describeRedisReply(reply));
+
+  ASSERT_EQ(reply->elements, 4u);
+  ASSERT_EQ(std::string(reply->element[0]->str, reply->element[0]->len), "KEY: cmyset-for-raw-get##s1");
+  ASSERT_EQ(std::string(reply->element[1]->str, reply->element[1]->len), "VALUE: 1");
+  // Ignore sequence number
+  ASSERT_EQ(std::string(reply->element[3]->str, reply->element[3]->len), "TYPE: 1");
+
+  reply = tunnel(leaderID)->exec("raw-get-all-versions", "!myset-for-raw-get").get();
+  ASSERT_EQ(reply->elements, 8u);
+  qdb_info(qclient::describeRedisReply(reply));
+
+  ASSERT_EQ(std::string(reply->element[0]->str, reply->element[0]->len), "KEY: !myset-for-raw-get");
+  ASSERT_EQ(std::string(reply->element[1]->str, reply->element[1]->len), SSTR("VALUE: c" << intToBinaryString(2)));
+  ASSERT_EQ(std::string(reply->element[3]->str, reply->element[3]->len), "TYPE: 1");
+
+  ASSERT_EQ(std::string(reply->element[4]->str, reply->element[4]->len), "KEY: !myset-for-raw-get");
+  ASSERT_EQ(std::string(reply->element[5]->str, reply->element[5]->len), SSTR("VALUE: c" << intToBinaryString(1)));
+  ASSERT_EQ(std::string(reply->element[7]->str, reply->element[7]->len), "TYPE: 1");
+}
