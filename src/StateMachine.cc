@@ -540,6 +540,25 @@ rocksdb::Status StateMachine::lhlen(StagingArea &stagingArea, const std::string 
   return rocksdb::Status::OK();
 }
 
+
+rocksdb::Status StateMachine::rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements) {
+  elements.clear();
+
+  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+
+  size_t items = 0;
+  for(iter->Seek(key); iter->Valid(); iter->Next()) {
+    DBG(items);
+    if(items >= 1000000u || items >= count) break;
+    items++;
+
+    elements.emplace_back(iter->key().ToString());
+    elements.emplace_back(iter->value().ToString());
+  }
+
+  return rocksdb::Status::OK();
+}
+
 rocksdb::Status StateMachine::hscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
   if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 

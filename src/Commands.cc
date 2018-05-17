@@ -57,6 +57,7 @@ struct cmdMapInit {
     redis_cmd_map["lhget"] = {RedisCommand::LHGET, CommandType::READ};
     redis_cmd_map["lhlen"] = {RedisCommand::LHLEN, CommandType::READ};
     redis_cmd_map["lhget_with_fallback"] = {RedisCommand::LHGET_WITH_FALLBACK, CommandType::READ};
+    redis_cmd_map["raw_scan"] = {RedisCommand::RAW_SCAN, CommandType::READ};
 
     redis_cmd_map["flushall"] = {RedisCommand::FLUSHALL, CommandType::WRITE};
     redis_cmd_map["set"] = {RedisCommand::SET, CommandType::WRITE};

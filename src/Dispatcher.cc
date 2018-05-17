@@ -23,6 +23,7 @@
 
 #include "storage/StagingArea.hh"
 #include "utils/CommandParsing.hh"
+#include "utils/ParseUtils.hh"
 #include "redis/MultiOp.hh"
 #include "redis/ArrayResponseBuilder.hh"
 #include "StateMachine.hh"
@@ -481,6 +482,30 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       rocksdb::Status st = store.lhlen(stagingArea, request[1], len);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(len);
+    }
+    case RedisCommand::RAW_SCAN: {
+      if(request.size() != 2 && request.size() != 4) return errArgs(request);
+
+      rocksdb::Status st;
+      std::vector<std::string> results;
+      if(request.size() == 2) {
+        st = store.rawScan(stagingArea, request[1], 50, results);
+      }
+      else {
+        if(!caseInsensitiveEquals(request[2], "count")) {
+          return Formatter::err("syntax error");
+        }
+
+        int64_t count;
+        if(!ParseUtils::parseInt64(request[3], count) || count <= 0) {
+          return Formatter::err("syntax error");
+        }
+
+        st = store.rawScan(stagingArea, request[1], count, results);
+      }
+
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::vector(results);
     }
     default: {
       return dispatchingError(request, 0);

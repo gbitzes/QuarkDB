@@ -1128,4 +1128,31 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "mykey"), 3);
   ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "fb"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("hget", "fb", "f8"), "");
+
+  redisReplyPtr reply = tunnel(leaderID)->exec("raw-scan", "\x01", "count", "2000").get();
+  ASSERT_EQ(
+    qclient::describeRedisReply(reply),
+    "1) \"!mykey\"\n"
+    "2) \"e\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x03\"\n"
+    "3) \"__format\"\n"
+    "4) \"0\"\n"
+    "5) \"__in-bulkload\"\n"
+    "6) \"FALSE\"\n"
+    "7) \"__last-applied\"\n"
+    "8) \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\"\"\n"
+    "9) \"emykey##dhint1##f3\"\n"
+    "10) \"v6\"\n"
+    "11) \"emykey##dhint2##f2\"\n"
+    "12) \"v5\"\n"
+    "13) \"emykey##dhint3##f1\"\n"
+    "14) \"v3\"\n"
+    "15) \"emykey##if1\"\n"
+    "16) \"hint3\"\n"
+    "17) \"emykey##if2\"\n"
+    "18) \"hint2\"\n"
+    "19) \"emykey##if3\"\n"
+    "20) \"hint1\"\n"
+  );
+
+  qdb_info(qclient::describeRedisReply(reply));
 }

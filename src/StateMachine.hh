@@ -98,6 +98,7 @@ public:
   rocksdb::Status llen(StagingArea &stagingArea, const std::string &key, size_t &len);
   rocksdb::Status lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value);
   rocksdb::Status lhlen(StagingArea &stagingArea, const std::string &key, size_t &len);
+  rocksdb::Status rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements);
 
   //----------------------------------------------------------------------------
   // Simple API

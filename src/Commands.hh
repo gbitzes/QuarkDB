@@ -84,6 +84,8 @@ enum class RedisCommand {
   RPOP,
   LLEN,
 
+  RAW_SCAN,
+
   EXEC,
   DISCARD,
   MULTI,
