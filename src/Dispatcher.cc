@@ -257,6 +257,30 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
       return resp;
     }
+    case RedisCommand::CONVERT_HASH_FIELD_TO_LHASH: {
+      if(request.size() != 6) return errArgs(request);
+
+      std::string shouldBeEmpty;
+      rocksdb::Status st = store.lhget(stagingArea, request[3], request[4], request[5], shouldBeEmpty);
+      if(st.ok()) return Formatter::err("Destination field already exists!");
+
+      std::string value;
+      st = store.hget(stagingArea, request[1], request[2], value);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      bool fieldCreated = false;
+      st = store.lhset(stagingArea, request[3], request[4], request[5], value, fieldCreated);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      if(!fieldCreated) qdb_throw("should never happen");
+
+      int64_t removed = 0;
+      st = store.hdel(stagingArea, request[1], request.begin()+2, request.begin()+3, removed);
+      if(!st.ok()) qdb_throw("should never happen");
+      qdb_assert(removed == 1);
+
+      return Formatter::ok();
+    }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
     }

@@ -257,7 +257,7 @@ rocksdb::Status StateMachine::hget(StagingArea &stagingArea, const std::string &
   if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 
   FieldLocator locator(KeyType::kHash, key, field);
-  return db->Get(stagingArea.snapshot->opts(), locator.toSlice(), &value);
+  return stagingArea.get(locator.toSlice(), value);
 }
 
 rocksdb::Status StateMachine::hexists(StagingArea &stagingArea, const std::string &key, const std::string &field) {
@@ -381,7 +381,7 @@ rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string 
     // We were given a hint, whooo. Fast path.
     LocalityFieldLocator locator(key, hint, field);
 
-    rocksdb::Status st = db->Get(stagingArea.snapshot->opts(), locator.toSlice(), &value);
+    rocksdb::Status st = stagingArea.get(locator.toSlice(), value);
     ASSERT_OK_OR_NOTFOUND(st);
 
     if(st.ok()) {
@@ -396,7 +396,7 @@ rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string 
   std::string correctHint;
 
   LocalityIndexLocator indexLocator(key, field);
-  rocksdb::Status st = db->Get(stagingArea.snapshot->opts(), indexLocator.toSlice(), &correctHint);
+  rocksdb::Status st = stagingArea.get(indexLocator.toSlice(), correctHint);
   ASSERT_OK_OR_NOTFOUND(st);
 
   if(st.IsNotFound()) return st;
@@ -409,7 +409,7 @@ rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string 
 
   // Fetch correct hint.
   LocalityFieldLocator fieldLocator(key, correctHint, field);
-  THROW_ON_ERROR(db->Get(stagingArea.snapshot->opts(), fieldLocator.toSlice(), &value));
+  THROW_ON_ERROR(stagingArea.get(fieldLocator.toSlice(), value));
   return rocksdb::Status::OK();
 }
 

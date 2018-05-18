@@ -1187,3 +1187,29 @@ TEST_F(Raft_e2e, RawGetAllVersions) {
   ASSERT_EQ(std::string(reply->element[5]->str, reply->element[5]->len), SSTR("VALUE: c" << intToBinaryString(1)));
   ASSERT_EQ(std::string(reply->element[7]->str, reply->element[7]->len), "TYPE: 1");
 }
+
+TEST_F(Raft_e2e, ConvertHashToLHash) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hset", "hash", "f1", "v1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("convert-hash-field-to-lhash", "hash", "f1", "lhash", "f1", "hint"), "OK");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "hash"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "lhash"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "lhash", "f1", "hint"), "v1");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("convert-hash-field-to-lhash", "hash", "f1", "lhash", "f1", "hint"), "ERR Destination field already exists!");
+  ASSERT_REPLY(tunnel(leaderID)->exec("convert-hash-field-to-lhash", "hash", "f2", "lhash", "f2", "hint"), "ERR NotFound: ");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hset", "hash", "f2", "v2"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "hash"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "lhash"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("convert-hash-field-to-lhash", "hash", "f2", "lhash", "f2", "hint"), "OK");
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "lhash", "f2", "hint"), "v2");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "hash"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "lhash"), 2);
+}
