@@ -1,4 +1,4 @@
-# Backup & store
+# Backup & restore
 
 Let's assume there's QuarkDB running at ```/var/lib/quarkdb``` - how to backup
 this directory?
@@ -8,8 +8,8 @@ Please don't do that! Between the time you start the backup, to the time it fini
 the underlying SST files will have likely changed, resulting in a backup that is corrupted.
 
 Instead, take a checkpoint by issuing ``raft-checkpoint /path/to/backup``,
-which will create a point-in-time consistent checkpoint, from which you will be
-able to easily spin up another QDB instance if need be.
+which will create a point-in-time consistent snapshot, containing both state machine
+and journal, from which you will be able to easily spin up another QDB instance if need be.
 
 Please make sure that ```/var/lib/quarkdb``` is on the **same** physical filesystem
 as ```/path/to/backup```. This allows hard-linking the SST files, resulting in a
