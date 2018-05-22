@@ -22,7 +22,9 @@
  ************************************************************************/
 
 #include "RedisRequest.hh"
+#include "redis/MultiOp.hh"
 #include "utils/StringUtils.hh"
+#include "utils/Macros.hh"
 using namespace quarkdb;
 
 void RedisRequest::parseCommand() {
@@ -43,6 +45,21 @@ void RedisRequest::parseCommand() {
 }
 
 std::string RedisRequest::toPrintableString() const {
+  if(this->getCommand() == RedisCommand::MULTIOP_READ || this->getCommand() == RedisCommand::MULTIOP_READWRITE) {
+    MultiOp multiOp;
+    qdb_assert(this->size() == 3);
+    qdb_assert(multiOp.deserialize((*this)[1]));
+
+    std::stringstream ss;
+    ss << (*this)[0] << " (" << (*this)[2] << "), size " << multiOp.size() << std::endl;
+    for(size_t i = 0; i < multiOp.size(); i++) {
+      ss << " --- " << i+1 << ") " << multiOp[i].toPrintableString();
+      if(i != multiOp.size()-1) ss << std::endl;
+    }
+
+    return ss.str();
+  }
+
   std::stringstream ss;
   for(auto it = begin(); it != end(); it++) {
     if(it != begin()) ss << " ";

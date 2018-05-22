@@ -21,6 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "redis/MultiOp.hh"
+#include "utils/Macros.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
 
@@ -97,6 +99,19 @@ TEST_F(Redis_Parser, T2) {
   str = "*3\r\n$3\r\nset\r\n$15\r\nthis_key_is_big\r\n$17\r\nthis_value_is_big\r\n";
   valid = {"set", "this_key_is_big", "this_value_is_big"};
   simulateMany(str, valid, 10);
+}
+
+TEST(RedisRequest, MultiOpPrintableString) {
+  MultiOp multiOp;
+  multiOp.emplace_back("set", "aaa", "bbb");
+  multiOp.emplace_back("get", "qwe", "rty");
+
+  RedisRequest req { "multiop_readwrite", multiOp.serialize(), "phantom" };
+  ASSERT_EQ(req.toPrintableString(),
+    "multiop_readwrite (phantom), size 2\n"
+    " --- 1) \"set\" \"aaa\" \"bbb\"\n"
+    " --- 2) \"get\" \"qwe\" \"rty\""
+  );
 }
 
 TEST_F(Redis_Parser, T3) {
