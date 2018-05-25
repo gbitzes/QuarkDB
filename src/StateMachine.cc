@@ -126,6 +126,9 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
     options.max_subcompactions = 4;
   }
 
+  // Let rocksdb itself decide the target sizes for each compaction level
+  options.level_compaction_dynamic_level_bytes = true;
+
   if(bulkLoad) {
     qdb_warn("Opening state machine in bulkload mode.");
     writeAheadLog = false;
