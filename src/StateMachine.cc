@@ -117,10 +117,18 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
   options.table_factory.reset(rocksdb::NewBlockBasedTableFactory(table_options));
   options.row_cache = rocksdb::NewLRUCache(1024 * 1024 * 1024, 8);
 
+  // Use multiple threads for compaction and flushing jobs
+  options.IncreaseParallelism(std::max(2u, std::thread::hardware_concurrency() / 2));
+
+  // Parallelize compaction, but limit maximum number of subcompactions to 4.
+  options.max_subcompactions = std::max(1u, std::thread::hardware_concurrency() / 2);
+  if(options.max_subcompactions > 4) {
+    options.max_subcompactions = 4;
+  }
+
   if(bulkLoad) {
     qdb_warn("Opening state machine in bulkload mode.");
     writeAheadLog = false;
-    options.max_background_jobs = std::max(4u, std::thread::hardware_concurrency());
     options.PrepareForBulkLoad();
     options.memtable_factory.reset(new rocksdb::VectorRepFactory());
     options.allow_concurrent_memtable_write = false;
