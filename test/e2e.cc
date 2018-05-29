@@ -256,6 +256,7 @@ TEST_F(Raft_e2e, test_qclient_convenience_classes) {
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
 
+  // QHash iterator
   std::vector<std::future<redisReplyPtr>> replies;
   for(size_t i = 0; i < 9; i++) {
     replies.push_back(tunnel(leaderID)->exec("HSET", "myhash", SSTR("f" << i), SSTR("v" << i)));
@@ -277,8 +278,41 @@ TEST_F(Raft_e2e, test_qclient_convenience_classes) {
 
   ASSERT_FALSE(it.valid());
   ASSERT_EQ(it.requestsSoFar(), 5u);
-}
 
+  // QSet iterator
+  replies.clear();
+  for(size_t i = 0; i < 9; i++) {
+    replies.push_back(tunnel(leaderID)->exec("SADD", "myset", SSTR("item-" << i)));
+  }
+
+  for(size_t i = 0; i < 9; i++) {
+    ASSERT_REPLY(replies[i], 1);
+  }
+
+  qclient::QSet qset(*tunnel(leaderID), "myset");
+
+  for(size_t count = 1; count < 15; count++) {
+    qclient::QSet::Iterator it = qset.getIterator(count);
+    for(size_t i = 0; i < 9; i++) {
+      ASSERT_TRUE(it.valid());
+      ASSERT_EQ(it.getElement(), SSTR("item-" << i));
+      it.next();
+    }
+
+    ASSERT_FALSE(it.valid());
+    ASSERT_EQ(it.requestsSoFar(), (9 / count) + (9%count != 0) );
+  }
+
+  qclient::QSet::Iterator it2 = qset.getIterator(3, "next:item-4");
+  for(size_t i = 4; i < 9; i++) {
+    ASSERT_TRUE(it2.valid());
+    ASSERT_EQ(it2.getElement(), SSTR("item-" << i));
+    it2.next();
+  }
+
+  ASSERT_FALSE(it2.valid());
+  ASSERT_EQ(it2.requestsSoFar(), 2u);
+}
 
 TEST_F(Raft_e2e, test_many_redis_commands) {
   spinup(0); spinup(1); spinup(2);
