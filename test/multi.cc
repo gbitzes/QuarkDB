@@ -39,8 +39,9 @@ TEST_F(Multi, Dispatching) {
   multi1.emplace_back("GET", "aaa");
   multi1.emplace_back("SET", "aaa", "bbb");
   multi1.emplace_back("GET", "aaa");
+  multi1.setPhantom(false);
 
-  RedisEncodedResponse resp = dispatcher.dispatch(multi1, 1, false);
+  RedisEncodedResponse resp = dispatcher.dispatch(multi1, 1);
   ASSERT_EQ(resp.val, "*3\r\n$-1\r\n+OK\r\n$3\r\nbbb\r\n");
 
   RedisRequest req = {"GET", "aaa"};

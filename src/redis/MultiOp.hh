@@ -69,13 +69,22 @@ public:
 
   void clear();
 
-  RedisRequest toRedisRequest(bool phantom) const;
+  bool isPhantom() const {
+    return phantom;
+  }
+
+  void setPhantom(bool val) {
+    phantom = val;
+  }
+
+  RedisRequest toRedisRequest() const;
   std::string getFusedCommand() const;
 
 private:
   void checkLastCommandForWrites();
 
   bool hasWrites = false;
+  bool phantom = false;
   std::vector<RedisRequest> requests;
 };
 

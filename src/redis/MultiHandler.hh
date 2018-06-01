@@ -40,13 +40,12 @@ public:
   LinkStatus process(Dispatcher *dispatcher, Connection *conn, RedisRequest &req);
   void activatePhantom();
   size_t size() const;
-  bool isPhantom() const { return activated && phantom; }
+  bool isPhantom() const { return activated && multiOp.isPhantom(); }
   LinkStatus finalizePhantomTransaction(Dispatcher *dispatcher, Connection *conn);
 
 private:
   MultiOp multiOp;
   bool activated = false;
-  bool phantom = false;
 };
 
 }

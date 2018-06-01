@@ -50,7 +50,7 @@ public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
 
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
-  RedisEncodedResponse dispatch(MultiOp &multiOp, LogIndex commit, bool phantom);
+  RedisEncodedResponse dispatch(MultiOp &multiOp, LogIndex commit);
 private:
   RedisEncodedResponse handleMultiOp(RedisRequest &req, LogIndex commit);
   RedisEncodedResponse dispatchReadWrite(StagingArea &stagingArea, RedisRequest &req);
