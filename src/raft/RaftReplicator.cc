@@ -138,7 +138,10 @@ static AppendEntriesReception retrieve_response(
   if(rep == nullptr) return AppendEntriesReception::kError;
 
   if(!RaftParser::appendEntriesResponse(rep, resp)) {
-    qdb_critical("cannot parse response from append entries");
+    if(strncmp(rep->str, "ERR unavailable", strlen("ERR unavailable")) != 0) {
+      // unexpected response
+      qdb_critical("cannot parse response from append entries");
+    }
     return AppendEntriesReception::kError;
   }
 
@@ -155,7 +158,11 @@ static bool retrieve_heartbeat_reply(std::future<redisReplyPtr> &fut, RaftHeartb
   if(rep == nullptr) return false;
 
   if(!RaftParser::heartbeatResponse(rep, resp)) {
-    qdb_critical("cannot parse response from heartbeat");
+    if(strncmp(rep->str, "ERR unavailable", strlen("ERR unavailable")) != 0) {
+      // unexpected response
+      qdb_critical("cannot parse response from heartbeat");
+    }
+
     return false;
   }
 
