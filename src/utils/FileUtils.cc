@@ -114,6 +114,35 @@ bool readFile(const std::string &path, std::string &contents) {
   return retvalue;
 }
 
+bool readPasswordFile(const std::string &path, std::string &contents) {
+  bool retvalue = true;
+
+  FILE *in = fopen(path.c_str(), "rb");
+  if(!in) {
+    qdb_warn("Could not open " << path);
+    return false;
+  }
+
+  // Ensure file permissions are 400.
+  struct stat sb;
+  if(fstat(fileno(in), &sb) != 0) {
+    fclose(in);
+    qdb_warn("Could not fstat " << path << " after opening (should never happen?!)");
+    return false;
+  }
+
+  if(!areFilePermissionsSecure(sb.st_mode)) {
+    qdb_warn("Refusing to read " << path << ", bad file permissions, should be 0400.");
+    fclose(in);
+    return false;
+  }
+
+  retvalue = readFile(in, contents);
+  fclose(in);
+  return retvalue;
+}
+
+
 bool areFilePermissionsSecure(mode_t mode) {
   if ((mode & 0077) != 0) {
     // Should disallow access to other users/groups

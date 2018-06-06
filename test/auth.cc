@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "utils/FileUtils.hh"
+#include "utils/Macros.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
@@ -39,4 +40,28 @@ TEST(FilePermissionChecking, BasicSanity) {
   ASSERT_FALSE(areFilePermissionsSecure(0700));
 
   ASSERT_TRUE(areFilePermissionsSecure(0400));
+}
+
+TEST(ReadPasswordFile, BasicSanity) {
+  ASSERT_EQ(system("mkdir -p /tmp/quarkdb-tests/auth/"), 0);
+  ASSERT_EQ(system("rm -f /tmp/quarkdb-tests/auth/f1"), 0);
+
+  std::string contents;
+  ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
+  ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/non-existing", contents));
+  ASSERT_FALSE(readFile("/tmp/quarkdb-tests/auth/non-existing", contents));
+
+  ASSERT_EQ(system("echo 'pickles' > /tmp/quarkdb-tests/auth/f1"), 0);
+  ASSERT_EQ(system("chmod 777 /tmp/quarkdb-tests/auth/f1"), 0);
+  ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
+  ASSERT_EQ(system("chmod 744 /tmp/quarkdb-tests/auth/f1"), 0);
+  ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
+  ASSERT_EQ(system("chmod 700 /tmp/quarkdb-tests/auth/f1"), 0);
+  ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
+  ASSERT_EQ(system("chmod 500 /tmp/quarkdb-tests/auth/f1"), 0);
+  ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
+  ASSERT_EQ(system("chmod 400 /tmp/quarkdb-tests/auth/f1"), 0);
+  ASSERT_TRUE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
+
+  ASSERT_EQ(system("rm -f /tmp/quarkdb-tests/auth/f1"), 0);
 }

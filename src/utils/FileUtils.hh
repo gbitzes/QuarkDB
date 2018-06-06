@@ -38,6 +38,7 @@ bool write_file(const std::string &path, const std::string &contents, std::strin
 void write_file_or_die(const std::string &path, const std::string &contents);
 void rename_directory_or_die(const std::string &source, const std::string &destination);
 bool areFilePermissionsSecure(mode_t mode);
+bool readPasswordFile(const std::string &path, std::string &contents);
 
 }
 
