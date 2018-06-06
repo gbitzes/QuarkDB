@@ -1,5 +1,5 @@
-//-----------------------------------------------------------------------
-// File: RedisEncodedResponse.hh
+// ----------------------------------------------------------------------
+// File: AuthenticationDispatcher.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,28 +21,42 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_REDIS_REDISENCODEDRESPONSE_H
-#define QUARKDB_REDIS_REDISENCODEDRESPONSE_H
+#include "../utils/Macros.hh"
+#include "AuthenticationDispatcher.hh"
+#include "../Formatter.hh"
+using namespace quarkdb;
 
-#include <string>
-
-namespace quarkdb {
-
-// Phantom type: std::string with a special meaning. Unless explicitly asked
-// with obj.val, this will generate compiler errors when you try to use like
-// plain string.
-class RedisEncodedResponse {
-public:
-  explicit RedisEncodedResponse(std::string &&src) : val(std::move(src)) {}
-  RedisEncodedResponse() {}
-  bool empty() const { return val.empty(); }
-  std::string val;
-
-  bool operator==(const RedisEncodedResponse &other) const {
-    return val == other.val;
+AuthenticationDispatcher::AuthenticationDispatcher(const std::string &secr)
+: secret(secr) {
+  if(secret.size() < 32u && !secret.empty()) {
+    qdb_throw("Password is too small, minimum length is 32");
   }
-};
 
 }
 
-#endif
+RedisEncodedResponse AuthenticationDispatcher::dispatch(const RedisRequest &req, bool &authorized) {
+  authorized = secret.empty();
+
+  switch(req.getCommand()) {
+    case RedisCommand::AUTH: {
+      if(req.size() != 2u) return Formatter::errArgs(req[0]);
+      if(secret.empty()) return Formatter::err("Client sent AUTH, but no password is set");
+      qdb_warn("A client used AUTH, which is highly discouraged.");
+
+      if(secret != req[1]) {
+        qdb_warn("A password attempt was made with an invalid password");
+        return Formatter::err("invalid password");
+      }
+
+      authorized = true;
+      return Formatter::ok();
+    }
+    default: {
+      qdb_throw("Internal dispatching error for command " << req.toPrintableString());
+    }
+  }
+}
+
+LinkStatus AuthenticationDispatcher::dispatch(Connection *conn, RedisRequest &req) {
+  return conn->raw(dispatch(req, conn->authorization));
+}

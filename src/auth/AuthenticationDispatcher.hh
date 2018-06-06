@@ -1,11 +1,11 @@
-//-----------------------------------------------------------------------
-// File: RedisEncodedResponse.hh
+//----------------------------------------------------------------------
+// File: AuthenticationDispatcher.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
 /************************************************************************
  * quarkdb - a redis-like highly available key-value store              *
- * Copyright (C) 2016 CERN/Switzerland                                  *
+ * Copyright (C) 2018 CERN/Switzerland                                  *
  *                                                                      *
  * This program is free software: you can redistribute it and/or modify *
  * it under the terms of the GNU General Public License as published by *
@@ -21,26 +21,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_REDIS_REDISENCODEDRESPONSE_H
-#define QUARKDB_REDIS_REDISENCODEDRESPONSE_H
+#ifndef QUARKDB_AUTHENTICATION_DISPATCHER_H
+#define QUARKDB_AUTHENTICATION_DISPATCHER_H
 
-#include <string>
+#include "../Dispatcher.hh"
 
 namespace quarkdb {
 
-// Phantom type: std::string with a special meaning. Unless explicitly asked
-// with obj.val, this will generate compiler errors when you try to use like
-// plain string.
-class RedisEncodedResponse {
-public:
-  explicit RedisEncodedResponse(std::string &&src) : val(std::move(src)) {}
-  RedisEncodedResponse() {}
-  bool empty() const { return val.empty(); }
-  std::string val;
+class QuarkDBNode;
 
-  bool operator==(const RedisEncodedResponse &other) const {
-    return val == other.val;
-  }
+class AuthenticationDispatcher : public Dispatcher {
+public:
+
+  AuthenticationDispatcher(const std::string &secret);
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  RedisEncodedResponse dispatch(const RedisRequest &req, bool &authorized);
+
+private:
+  std::string secret;
 };
 
 }

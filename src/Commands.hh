@@ -44,6 +44,7 @@ enum class RedisCommand {
   DEL,
   KEYS,
   SCAN,
+  AUTH,
 
   HGET,
   HSET,
@@ -135,7 +136,8 @@ enum class CommandType {
   MULTIOP,
   CONTROL,
   RAFT,
-  QUARKDB
+  QUARKDB,
+  AUTHENTICATION
 };
 
 #define QDB_ALWAYS_INLINE __attribute__((always_inline))

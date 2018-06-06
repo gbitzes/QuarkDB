@@ -23,6 +23,8 @@
 
 #include "utils/FileUtils.hh"
 #include "utils/Macros.hh"
+#include "auth/AuthenticationDispatcher.hh"
+#include "test-utils.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
@@ -64,4 +66,34 @@ TEST(ReadPasswordFile, BasicSanity) {
   ASSERT_TRUE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
 
   ASSERT_EQ(system("rm -f /tmp/quarkdb-tests/auth/f1"), 0);
+}
+
+TEST(AuthenticationDispatcher, NoPassword) {
+  AuthenticationDispatcher dispatcher("");
+
+  bool authorized = false;
+  ASSERT_EQ(Formatter::errArgs("AUTH"), dispatcher.dispatch(make_req("AUTH"), authorized));
+  ASSERT_TRUE(authorized);
+
+  ASSERT_EQ(Formatter::err("Client sent AUTH, but no password is set").val, dispatcher.dispatch(make_req("AUTH", "test"), authorized).val);
+  ASSERT_TRUE(authorized);
+}
+
+TEST(AuthenticationDispatcher, TooSmallPassword) {
+  ASSERT_THROW(AuthenticationDispatcher("hunter2"), FatalException);
+}
+
+TEST(AuthenticationDispatcher, AuthBasicSanity) {
+  AuthenticationDispatcher dispatcher("hunter2_hunter2_hunter2_hunter2_hunter2");
+
+
+  bool authorized = false;
+  ASSERT_EQ(Formatter::errArgs("AUTH"), dispatcher.dispatch(make_req("AUTH"), authorized));
+  ASSERT_FALSE(authorized);
+
+  ASSERT_EQ(Formatter::err("invalid password"), dispatcher.dispatch(make_req("AUTH", "hunter3"), authorized ));
+  ASSERT_FALSE(authorized);
+
+  ASSERT_EQ(Formatter::ok(), dispatcher.dispatch(make_req("AUTH", "hunter2_hunter2_hunter2_hunter2_hunter2"), authorized ));
+  ASSERT_TRUE(authorized);
 }

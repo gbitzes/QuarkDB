@@ -137,6 +137,8 @@ public:
 
   bool raftStaleReads = false;
   bool raftAuthorization = false;
+  bool authorization = false;
+
   LinkStatus processRequests(Dispatcher *dispatcher, const InFlightTracker &tracker);
   void setResponseBuffering(bool value);
   void flush();
