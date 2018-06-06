@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: FileUtils.hh
+// File: auth.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,24 +21,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_FILE_UTILS_H__
-#define __QUARKDB_FILE_UTILS_H__
+#include "utils/FileUtils.hh"
+#include <gtest/gtest.h>
 
-#include <string>
+using namespace quarkdb;
 
-namespace quarkdb {
+TEST(FilePermissionChecking, BasicSanity) {
+  ASSERT_FALSE(areFilePermissionsSecure(0700));
+  ASSERT_FALSE(areFilePermissionsSecure(0777));
+  ASSERT_FALSE(areFilePermissionsSecure(0477));
+  ASSERT_FALSE(areFilePermissionsSecure(0401));
+  ASSERT_FALSE(areFilePermissionsSecure(0455));
+  ASSERT_FALSE(areFilePermissionsSecure(0444));
+  ASSERT_FALSE(areFilePermissionsSecure(0404));
+  ASSERT_FALSE(areFilePermissionsSecure(0440));
+  ASSERT_FALSE(areFilePermissionsSecure(0500));
+  ASSERT_FALSE(areFilePermissionsSecure(0700));
 
-std::string pathJoin(const std::string &part1, const std::string &part2);
-bool mkpath(const std::string &path, mode_t mode, std::string &err);
-void mkpath_or_die(const std::string &path, mode_t mode);
-bool directoryExists(const std::string &path, std::string &err);
-bool readFile(FILE *f, std::string &contents);
-bool readFile(const std::string &path, std::string &contents);
-bool write_file(const std::string &path, const std::string &contents, std::string &err);
-void write_file_or_die(const std::string &path, const std::string &contents);
-void rename_directory_or_die(const std::string &source, const std::string &destination);
-bool areFilePermissionsSecure(mode_t mode);
-
+  ASSERT_TRUE(areFilePermissionsSecure(0400));
 }
-
-#endif

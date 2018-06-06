@@ -114,6 +114,20 @@ bool readFile(const std::string &path, std::string &contents) {
   return retvalue;
 }
 
+bool areFilePermissionsSecure(mode_t mode) {
+  if ((mode & 0077) != 0) {
+    // Should disallow access to other users/groups
+    return false;
+  }
+
+  if ((mode & 0700) != 0400) {
+    // Just read access for user
+    return false;
+  }
+
+  return true;
+}
+
 bool write_file(const std::string &path, const std::string &contents, std::string &err) {
   bool retvalue;
 
