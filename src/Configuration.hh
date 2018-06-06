@@ -66,6 +66,8 @@ public:
   std::string getCertificatePath() const { return certificatePath; }
   std::string getCertificateKeyPath() const { return certificateKeyPath; }
 
+  std::string getPasswordFilePath() const { return passwordFilePath; }
+  std::string getPassword() const { return password; }
   RaftServer getMyself() const { return myself; }
   bool getWriteAheadLog() const { return writeAheadLog; }
 private:
@@ -74,6 +76,8 @@ private:
   TraceLevel trace = TraceLevel::info;
   std::string certificatePath;
   std::string certificateKeyPath;
+  std::string passwordFilePath;
+  std::string password;
   bool writeAheadLog = true;
 
   // raft options

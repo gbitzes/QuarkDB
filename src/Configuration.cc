@@ -148,6 +148,12 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       else if(!strcmp("write_ahead_log", option)) {
         success = fetchSingle(stream, buffer) && parseBool(buffer, out.writeAheadLog);
       }
+      else if(!strcmp("password_file", option)) {
+        success = fetchSingle(stream, out.passwordFilePath);
+      }
+      else if(!strcmp("password", option)) {
+        success = fetchSingle(stream, out.password);
+      }
       else {
         qdb_warn("Error when parsing configuration - unknown option " << quotes(option));
         return false;
@@ -201,6 +207,11 @@ bool Configuration::isValid() {
 
   if(certificatePath.empty() != certificateKeyPath.empty()) {
     qdb_log("Both the TLS certificate and key must be supplied.");
+    return false;
+  }
+
+  if(!passwordFilePath.empty() && !password.empty()) {
+    qdb_log("Cannot both specify redis.password_file and redis.password, choose one or the other");
     return false;
   }
 

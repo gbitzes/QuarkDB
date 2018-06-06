@@ -29,6 +29,7 @@ set(COMMON_TEST_SOURCES
 # Build unit tests
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-tests
+  auth.cc
   buffered-reader.cc
   configuration.cc
   connection.cc
