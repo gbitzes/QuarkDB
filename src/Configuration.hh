@@ -64,7 +64,7 @@ public:
   std::string getDatabase() const { return database; }
   TraceLevel getTraceLevel() const { return trace; }
   std::string getCertificatePath() const { return certificatePath; }
-  std::string getKeyPath() const { return keyPath; }
+  std::string getCertificateKeyPath() const { return certificateKeyPath; }
 
   RaftServer getMyself() const { return myself; }
   bool getWriteAheadLog() const { return writeAheadLog; }
@@ -73,7 +73,7 @@ private:
   std::string database;
   TraceLevel trace = TraceLevel::info;
   std::string certificatePath;
-  std::string keyPath;
+  std::string certificateKeyPath;
   bool writeAheadLog = true;
 
   // raft options

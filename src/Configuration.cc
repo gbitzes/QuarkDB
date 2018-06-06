@@ -142,8 +142,8 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       else if(!strcmp("certificate", option)) {
         success = fetchSingle(stream, out.certificatePath);
       }
-      else if(!strcmp("key", option)) {
-        success = fetchSingle(stream, out.keyPath);
+      else if(!strcmp("certificate_key", option)) {
+        success = fetchSingle(stream, out.certificateKeyPath);
       }
       else if(!strcmp("write_ahead_log", option)) {
         success = fetchSingle(stream, buffer) && parseBool(buffer, out.writeAheadLog);
@@ -199,7 +199,7 @@ bool Configuration::isValid() {
     return false;
   }
 
-  if(certificatePath.empty() != keyPath.empty()) {
+  if(certificatePath.empty() != certificateKeyPath.empty()) {
     qdb_log("Both the TLS certificate and key must be supplied.");
     return false;
   }

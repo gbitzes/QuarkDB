@@ -75,7 +75,7 @@ XrdQuarkDB::XrdQuarkDB(bool tls)
   tlsconfig.active = tls;
   if(tls) {
     tlsconfig.certificatePath = quarkdbNode->getConfiguration().getCertificatePath();
-    tlsconfig.keyPath = quarkdbNode->getConfiguration().getKeyPath();
+    tlsconfig.keyPath = quarkdbNode->getConfiguration().getCertificateKeyPath();
   }
 }
 
