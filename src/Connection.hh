@@ -127,6 +127,7 @@ public:
   LinkStatus vector(const std::vector<std::string> &vec);
   LinkStatus statusVector(const std::vector<std::string> &vec);
   LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
+  LinkStatus noauth(const std::string &msg);
 
   bool monitor = false;
   void setMonitor() {
@@ -159,6 +160,10 @@ public:
     return pendingQueue;
   }
 
+  bool isLocalhost() const {
+    return localhost;
+  }
+
   class FlushGuard {
   public:
     FlushGuard(Connection *c) : conn(c) { }
@@ -177,6 +182,7 @@ private:
 
   std::string description;
   std::string uuid;
+  bool localhost;
 
   MultiHandler multiHandler;
   friend class PendingQueue;

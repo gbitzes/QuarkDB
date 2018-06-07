@@ -137,7 +137,7 @@ void Connection::setPhantomBatchLimit(size_t newval) {
 
 Connection::Connection(Link *l)
 : writer(l), parser(l), pendingQueue(new PendingQueue(this)),
-  description(l->describe()), uuid(l->getID()) {
+  description(l->describe()), uuid(l->getID()), localhost(l->isLocalhost()) {
 }
 
 Connection::~Connection() {
@@ -198,6 +198,10 @@ LinkStatus Connection::statusVector(const std::vector<std::string> &vec) {
 
 LinkStatus Connection::scan(const std::string &marker, const std::vector<std::string> &vec) {
   return pendingQueue->appendResponse(Formatter::scan(marker, vec));
+}
+
+LinkStatus Connection::noauth(const std::string &msg) {
+  return pendingQueue->appendResponse(Formatter::noauth(msg));
 }
 
 LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTracker &inFlightTracker) {

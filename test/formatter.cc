@@ -33,6 +33,7 @@ TEST(Response, T1) {
   ASSERT_EQ(Formatter::pong().val, "+PONG\r\n");
   ASSERT_EQ(Formatter::null().val, "$-1\r\n");
   ASSERT_EQ(Formatter::status("test").val, "+test\r\n");
+  ASSERT_EQ(Formatter::noauth("asdf").val, "-NOAUTH asdf\r\n");
 }
 
 TEST(ArrayResponseBuilder, BasicSanity) {

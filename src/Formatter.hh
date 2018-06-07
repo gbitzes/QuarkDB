@@ -50,6 +50,7 @@ public:
   static RedisEncodedResponse scan(const std::string &marker, const std::vector<std::string> &vec);
   static RedisEncodedResponse raftEntry(const RaftEntry &entry, bool raw);
   static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries, bool raw);
+  static RedisEncodedResponse noauth(const std::string &str);
 
   static RedisEncodedResponse simpleRedisRequest(const RedisRequest &req);
   static RedisEncodedResponse redisRequest(const RedisRequest &req);
