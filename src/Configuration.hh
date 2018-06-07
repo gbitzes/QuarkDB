@@ -70,6 +70,8 @@ public:
   std::string getPassword() const { return password; }
   RaftServer getMyself() const { return myself; }
   bool getWriteAheadLog() const { return writeAheadLog; }
+
+  std::string extractPasswordOrDie() const;
 private:
   Mode mode;
   std::string database;

@@ -29,6 +29,7 @@
 #include "XrdOuc/XrdOucEnv.hh"
 #include "Configuration.hh"
 #include "utils/Macros.hh"
+#include "utils/FileUtils.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -216,4 +217,23 @@ bool Configuration::isValid() {
   }
 
   return true;
+}
+
+std::string Configuration::extractPasswordOrDie() const {
+  qdb_assert(passwordFilePath.empty() || password.empty());
+
+  if(!password.empty()) {
+    return password;
+  }
+
+  if(passwordFilePath.empty()) {
+    return "";
+  }
+
+  std::string contents;
+  if(!readPasswordFile(passwordFilePath, contents)) {
+    qdb_throw("Could not read password file: " << passwordFilePath);
+  }
+
+  return contents;
 }

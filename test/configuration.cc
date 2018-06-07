@@ -47,7 +47,7 @@ TEST(Configuration, T2) {
       "redis.myself server1:7776\n"
       "redis.trace debug\n"
       "redis.write_ahead_log true\n"
-      "redis.password_file /etc/super.secure\n"
+      "redis.password_file /tmp/quarkdb-tests/password-file\n"
       "fi\n";
 
   ASSERT_TRUE(Configuration::fromString(c, config));
@@ -57,7 +57,42 @@ TEST(Configuration, T2) {
   ASSERT_EQ(config.getTraceLevel(), TraceLevel::debug);
   ASSERT_EQ(config.getWriteAheadLog(), true);
   ASSERT_EQ(config.getPassword(), "");
-  ASSERT_EQ(config.getPasswordFilePath(), "/etc/super.secure");
+  ASSERT_EQ(config.getPasswordFilePath(), "/tmp/quarkdb-tests/password-file");
+  ASSERT_THROW(config.extractPasswordOrDie(), FatalException); // file does not exist
+
+  ASSERT_EQ(system("echo 'pickles' > /tmp/quarkdb-tests/password-file"), 0);
+  ASSERT_EQ(system("chmod 700 /tmp/quarkdb-tests/password-file"), 0);
+  ASSERT_THROW(config.extractPasswordOrDie(), FatalException); // bad permissions
+
+  ASSERT_EQ(system("chmod 400 /tmp/quarkdb-tests/password-file"), 0);
+  ASSERT_EQ(config.extractPasswordOrDie(), "pickles\n");
+
+  ASSERT_EQ(system("chmod 700 /tmp/quarkdb-tests/password-file"), 0);
+  ASSERT_EQ(system("rm -f /tmp/quarkdb-tests/password-file"), 0);
+}
+
+TEST(Configuration, NoPassword) {
+  Configuration config;
+  std::string c;
+
+  c = "if exec xrootd\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
+      "redis.mode raft\n"
+      "redis.database /home/user/mydb\n"
+      "redis.myself server1:7776\n"
+      "redis.trace debug\n"
+      "redis.write_ahead_log true\n"
+      "fi\n";
+
+  ASSERT_TRUE(Configuration::fromString(c, config));
+  ASSERT_EQ(config.getMode(), Mode::raft);
+  ASSERT_EQ(config.getDatabase(), "/home/user/mydb");
+  ASSERT_EQ(config.getMyself(), RaftServer("server1", 7776) );
+  ASSERT_EQ(config.getTraceLevel(), TraceLevel::debug);
+  ASSERT_EQ(config.getWriteAheadLog(), true);
+  ASSERT_EQ(config.getPassword(), "");
+  ASSERT_EQ(config.getPasswordFilePath(), "");
+  ASSERT_EQ(config.extractPasswordOrDie(), "");
 }
 
 TEST(Configuration, PasswordAndPasswordPath) {
@@ -113,6 +148,7 @@ TEST(Configuration, T4) {
   ASSERT_EQ(config.getWriteAheadLog(), false);
   ASSERT_EQ(config.getPassword(), "hunter2");
   ASSERT_EQ(config.getPasswordFilePath(), "");
+  ASSERT_EQ(config.extractPasswordOrDie(), "hunter2");
 }
 
 TEST(Configuration, T5) {
