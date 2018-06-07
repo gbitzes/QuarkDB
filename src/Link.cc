@@ -173,3 +173,18 @@ LinkStatus Link::fdSend(const char *buff, int blen) {
 LinkStatus Link::fdClose(int defer) {
   return close(fd);
 }
+
+void Link::overrideHost(const std::string &newhost) {
+  host = newhost;
+}
+
+bool Link::isLocalhost() const {
+  return (
+    host == "localhost.localdomain" ||
+    host == "localhost"             ||
+    host == "127.0.0.1"             ||
+    host == "::1"                   ||
+    host == "localhost6"            ||
+    host == "localhost6.localdomain6"
+  );
+}

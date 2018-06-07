@@ -62,6 +62,9 @@ public:
   std::string describe() const;
   std::string getID() const { return uuid; }
 
+  bool isLocalhost() const;
+  void overrideHost(const std::string &host);
+
   // Set global connection logging config
   static void setConnectionLogging(bool val);
 private:

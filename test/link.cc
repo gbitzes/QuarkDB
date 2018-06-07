@@ -59,3 +59,34 @@ TEST(Link, T2) {
   ASSERT_EQ(link.Recv(buffer, 2, 0), 2);
   ASSERT_EQ("ad", std::string(buffer, 2));
 }
+
+TEST(Link, LocalhostDetection) {
+  Link link;
+
+  link.overrideHost("cern.ch");
+  ASSERT_FALSE(link.isLocalhost());
+
+  link.overrideHost("localhost");
+  ASSERT_TRUE(link.isLocalhost());
+
+  link.overrideHost("localhost6");
+  ASSERT_TRUE(link.isLocalhost());
+
+  link.overrideHost("example.com");
+  ASSERT_FALSE(link.isLocalhost());
+
+  link.overrideHost("localhost.localdomain");
+  ASSERT_TRUE(link.isLocalhost());
+
+  link.overrideHost("localhost6.localdomain6");
+  ASSERT_TRUE(link.isLocalhost());
+
+  link.overrideHost("::1");
+  ASSERT_TRUE(link.isLocalhost());
+
+  link.overrideHost("127.0.0.1");
+  ASSERT_TRUE(link.isLocalhost());
+
+  link.overrideHost("asdf.example.com");
+  ASSERT_FALSE(link.isLocalhost());
+}

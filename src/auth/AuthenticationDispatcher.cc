@@ -52,7 +52,7 @@ RedisEncodedResponse AuthenticationDispatcher::dispatch(const RedisRequest &req,
       return Formatter::ok();
     }
     default: {
-      qdb_throw("Internal dispatching error for command " << req.toPrintableString());
+      qdb_throw("internal dispatching error for command " << req.toPrintableString());
     }
   }
 }
