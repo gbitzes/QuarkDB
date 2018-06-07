@@ -23,10 +23,13 @@
 
 #include "utils/FileUtils.hh"
 #include "utils/Macros.hh"
+#include "utils/Random.hh"
 #include "auth/AuthenticationDispatcher.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
+#include "qclient/QClient.hh"
 
+using namespace qclient;
 using namespace quarkdb;
 
 TEST(FilePermissionChecking, BasicSanity) {
@@ -70,12 +73,19 @@ TEST(ReadPasswordFile, BasicSanity) {
 
 TEST(AuthenticationDispatcher, NoPassword) {
   AuthenticationDispatcher dispatcher("");
+  std::unique_ptr<Authenticator> unused;
 
   bool authorized = false;
-  ASSERT_EQ(Formatter::errArgs("AUTH"), dispatcher.dispatch(make_req("AUTH"), authorized));
+  ASSERT_EQ(Formatter::errArgs("AUTH"), dispatcher.dispatch(make_req("AUTH"), authorized, unused));
   ASSERT_TRUE(authorized);
 
-  ASSERT_EQ(Formatter::err("Client sent AUTH, but no password is set").val, dispatcher.dispatch(make_req("AUTH", "test"), authorized).val);
+  ASSERT_EQ(Formatter::err("Client sent AUTH, but no password is set").val, dispatcher.dispatch(make_req("AUTH", "test"), authorized, unused).val);
+  ASSERT_TRUE(authorized);
+
+  ASSERT_EQ(Formatter::err("no password is set"), dispatcher.dispatch(make_req("HMAC-AUTH-GENERATE-CHALLENGE", generateSecureRandomBytes(64)), authorized, unused));
+  ASSERT_TRUE(authorized);
+
+  ASSERT_EQ(Formatter::err("no password is set"), dispatcher.dispatch(make_req("HMAC-AUTH-VALIDATE-CHALLENGE", generateSecureRandomBytes(64)), authorized, unused));
   ASSERT_TRUE(authorized);
 }
 
@@ -85,15 +95,53 @@ TEST(AuthenticationDispatcher, TooSmallPassword) {
 
 TEST(AuthenticationDispatcher, AuthBasicSanity) {
   AuthenticationDispatcher dispatcher("hunter2_hunter2_hunter2_hunter2_hunter2");
-
+  std::unique_ptr<Authenticator> unused;
 
   bool authorized = false;
-  ASSERT_EQ(Formatter::errArgs("AUTH"), dispatcher.dispatch(make_req("AUTH"), authorized));
+  ASSERT_EQ(Formatter::errArgs("AUTH"), dispatcher.dispatch(make_req("AUTH"), authorized, unused));
   ASSERT_FALSE(authorized);
 
-  ASSERT_EQ(Formatter::err("invalid password"), dispatcher.dispatch(make_req("AUTH", "hunter3"), authorized ));
+  ASSERT_EQ(Formatter::err("invalid password"), dispatcher.dispatch(make_req("AUTH", "hunter3"), authorized, unused ));
   ASSERT_FALSE(authorized);
 
-  ASSERT_EQ(Formatter::ok(), dispatcher.dispatch(make_req("AUTH", "hunter2_hunter2_hunter2_hunter2_hunter2"), authorized ));
+  ASSERT_EQ(Formatter::ok(), dispatcher.dispatch(make_req("AUTH", "hunter2_hunter2_hunter2_hunter2_hunter2"), authorized, unused ));
   ASSERT_TRUE(authorized);
+}
+
+TEST(AuthenticationDispatcher, ChallengesBasicSanity) {
+  std::string secretKey = "hunter2_hunter2_hunter2_hunter2_hunter2";
+  AuthenticationDispatcher dispatcher(secretKey);
+  std::unique_ptr<Authenticator> authenticator1, authenticator2;
+
+  bool authorized = false;
+  ASSERT_EQ(Formatter::errArgs("HMAC-AUTH-GENERATE-CHALLENGE"), dispatcher.dispatch(make_req("HMAC-AUTH-GENERATE-CHALLENGE"), authorized, authenticator1));
+  ASSERT_FALSE(authorized);
+
+  ASSERT_EQ(Formatter::err("no challenge is in progress"), dispatcher.dispatch(make_req("HMAC-AUTH-VALIDATE-CHALLENGE", "asdf"), authorized, authenticator1));
+  ASSERT_FALSE(authorized);
+
+  ASSERT_EQ(Formatter::err("exactly 64 random bytes must be provided").val, dispatcher.dispatch(make_req("HMAC-AUTH-GENERATE-CHALLENGE", "1234"), authorized, authenticator1).val);
+  ASSERT_FALSE(authorized);
+
+  RedisEncodedResponse resp = dispatcher.dispatch(make_req("HMAC-AUTH-GENERATE-CHALLENGE", generateSecureRandomBytes(64)), authorized, authenticator1);
+  ASSERT_FALSE(authorized);
+
+  // parse..
+  redisReader* reader = redisReaderCreate();
+  redisReaderFeed(reader, resp.val.c_str(), resp.val.size());
+
+  void* reply = nullptr;
+  ASSERT_EQ(redisReaderGetReply(reader, &reply), REDIS_OK);
+  ASSERT_TRUE(reply != nullptr);
+
+  redisReplyPtr rr = redisReplyPtr(redisReplyPtr((redisReply*) reply, freeReplyObject));
+
+  ASSERT_EQ(rr->type, REDIS_REPLY_STRING);
+  std::string challengeString = std::string(rr->str, rr->len);
+
+  resp = dispatcher.dispatch(make_req("HMAC-AUTH-VALIDATE-CHALLENGE", Authenticator::generateSignature(challengeString, secretKey)), authorized, authenticator1);
+  ASSERT_EQ(Formatter::ok(), resp);
+  ASSERT_TRUE(authorized);
+
+  redisReaderFree(reader);
 }

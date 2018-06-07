@@ -34,7 +34,7 @@ AuthenticationDispatcher::AuthenticationDispatcher(const std::string &secr)
 
 }
 
-RedisEncodedResponse AuthenticationDispatcher::dispatch(const RedisRequest &req, bool &authorized) {
+RedisEncodedResponse AuthenticationDispatcher::dispatch(const RedisRequest &req, bool &authorized, std::unique_ptr<Authenticator> &authenticator) {
   authorized = secret.empty();
 
   switch(req.getCommand()) {
@@ -51,6 +51,36 @@ RedisEncodedResponse AuthenticationDispatcher::dispatch(const RedisRequest &req,
       authorized = true;
       return Formatter::ok();
     }
+    case RedisCommand::HMAC_AUTH_GENERATE_CHALLENGE: {
+      if(req.size() != 2u) return Formatter::errArgs(req[0]);
+      if(secret.empty()) return Formatter::err("no password is set");
+
+      if(req[1].size() != 64) return Formatter::err("exactly 64 random bytes must be provided");
+
+      authenticator.reset(new Authenticator(secret));
+      return Formatter::string(authenticator->generateChallenge(req[1]));
+    }
+    case RedisCommand::HMAC_AUTH_VALIDATE_CHALLENGE: {
+      if(req.size() != 2u) return Formatter::errArgs(req[0]);
+      if(secret.empty()) return Formatter::err("no password is set");
+
+      if(!authenticator) return Formatter::err("no challenge is in progress");
+
+      Authenticator::ValidationStatus validationStatus = authenticator->validateSignature(req[1]);
+      authenticator.reset();
+
+      if(validationStatus == Authenticator::ValidationStatus::kInvalidSignature) {
+        return Formatter::err("invalid signature");
+      }
+
+      if(validationStatus == Authenticator::ValidationStatus::kDeadlinePassed) {
+        return Formatter::err("deadline passed");
+      }
+
+      qdb_assert(validationStatus == Authenticator::ValidationStatus::kOk);
+      authorized = true;
+      return Formatter::ok();
+    }
     default: {
       qdb_throw("internal dispatching error for command " << req.toPrintableString());
     }
@@ -58,5 +88,5 @@ RedisEncodedResponse AuthenticationDispatcher::dispatch(const RedisRequest &req,
 }
 
 LinkStatus AuthenticationDispatcher::dispatch(Connection *conn, RedisRequest &req) {
-  return conn->raw(dispatch(req, conn->authorization));
+  return conn->raw(dispatch(req, conn->authorization, conn->authenticator));
 }

@@ -29,6 +29,7 @@
 #include "BufferedWriter.hh"
 #include "Formatter.hh"
 #include "redis/MultiHandler.hh"
+#include "redis/Authenticator.hh"
 #include <queue>
 
 #define OUTPUT_BUFFER_SIZE (16*1024)
@@ -105,6 +106,7 @@ private:
 //------------------------------------------------------------------------------
 class Dispatcher; class InFlightTracker;
 class RedisEncodedResponse;
+class Authenticator;
 
 class Connection {
 public:
@@ -139,6 +141,7 @@ public:
   bool raftStaleReads = false;
   bool raftAuthorization = false;
   bool authorization = false;
+  std::unique_ptr<Authenticator> authenticator;
 
   LinkStatus processRequests(Dispatcher *dispatcher, const InFlightTracker &tracker);
   void setResponseBuffering(bool value);

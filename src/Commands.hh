@@ -38,13 +38,16 @@ enum class RedisCommand {
 
   FLUSHALL,
 
+  AUTH,
+  HMAC_AUTH_GENERATE_CHALLENGE,
+  HMAC_AUTH_VALIDATE_CHALLENGE,
+
   GET,
   SET,
   EXISTS,
   DEL,
   KEYS,
   SCAN,
-  AUTH,
 
   HGET,
   HSET,
