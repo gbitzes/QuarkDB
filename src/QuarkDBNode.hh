@@ -29,6 +29,7 @@
 #include "Dispatcher.hh"
 #include "Configuration.hh"
 #include "raft/RaftTimeouts.hh"
+#include "auth/AuthenticationDispatcher.hh"
 
 namespace quarkdb {
 
@@ -75,6 +76,9 @@ private:
 
   std::chrono::steady_clock::time_point bootStart;
   std::chrono::steady_clock::time_point bootEnd;
+
+  std::string password;
+  AuthenticationDispatcher authDispatcher;
 };
 
 }

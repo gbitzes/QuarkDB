@@ -41,7 +41,8 @@ QuarkDBNode::~QuarkDBNode() {
 QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t,
   ShardDirectory *injectedDirectory)
 
-: configuration(config), timeouts(t) {
+: configuration(config), timeouts(t), password(config.extractPasswordOrDie()),
+  authDispatcher(password) {
 
   bootStart = std::chrono::steady_clock::now();
 
@@ -67,6 +68,22 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t,
 }
 
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
+  // Authentication command?
+  if(req.getCommandType() == CommandType::AUTHENTICATION) {
+    return authDispatcher.dispatch(conn, req);
+  }
+
+  // Allow un-authenticated connections from localhost, or if we're running
+  // in insecure mode.
+  if(conn->isLocalhost() || password.empty()) {
+    conn->authorization = true;
+  }
+
+  // We need to be authenticated past this point. Are we?
+  if(!conn->authorization) {
+    return conn->noauth("Authentication required.");
+  }
+
   switch(req.getCommand()) {
     case RedisCommand::PING: {
       return conn->raw(handlePing(req));
