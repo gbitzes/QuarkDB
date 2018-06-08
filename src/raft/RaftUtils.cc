@@ -53,14 +53,14 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
   }
 
   qdb_info(state.getMyself().toString() << ": Starting election round for term " << votereq.term);
-  std::vector<RaftTalker*> talkers;
+  std::vector<std::unique_ptr<RaftTalker>> talkers;
 
   std::chrono::steady_clock::time_point broadcastTimepoint = std::chrono::steady_clock::now();
 
   std::vector<std::future<redisReplyPtr>> futures;
   for(const RaftServer &node : state.getNodes()) {
     if(node != state.getMyself()) {
-      talkers.push_back(new RaftTalker(node, state.getClusterID(), timeouts));
+      talkers.emplace_back(new RaftTalker(node, state.getClusterID(), timeouts));
       futures.push_back(talkers.back()->requestVote(votereq));
     }
   }
@@ -105,9 +105,7 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
     }
   }
 
-  for(RaftTalker* talker : talkers) {
-    delete talker;
-  }
+  talkers.clear();
 
   std::string description = SSTR("Contacted " << futures.size() << " nodes, received "
     << replies.size() << " replies with a tally of " << granted << " positive votes, " << refused << " refused votes, and " << veto << " vetoes.");
