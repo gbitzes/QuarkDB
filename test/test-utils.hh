@@ -143,6 +143,7 @@ public:
   Poller *poller();
   qclient::QClient *tunnel();
   qclient::Options makeNoRedirectOptions();
+  std::unique_ptr<qclient::Handshake> makeQClientHandshake();
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
@@ -185,6 +186,8 @@ public:
   const RaftContactDetails* contactDetails(int id = 0);
 
   qclient::Options makeNoRedirectOptions(int id = 0);
+  std::unique_ptr<qclient::Handshake> makeQClientHandshake(int id = 0);
+
   void killTunnel(int id = 0);
 
   // manage node state

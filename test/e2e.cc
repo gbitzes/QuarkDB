@@ -26,6 +26,7 @@
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
 #include "raft/RaftConfig.hh"
+#include "raft/RaftContactDetails.hh"
 #include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
@@ -794,10 +795,14 @@ TEST_F(Raft_e2e, monitor) {
   Link link(initiator.getFd());
   BufferedReader reader(&link);
 
+  ASSERT_EQ(link.Send(SSTR("*2\r\n$4\r\nAUTH\r\n$" << contactDetails()->getPassword().size() << "\r\n" << contactDetails()->getPassword() << "\r\n")), 56);
+  std::string response;
+  RETRY_ASSERT_TRUE(reader.consume(5, response));
+  ASSERT_EQ(response, "+OK\r\n");
+
   ASSERT_EQ(link.Send("*1\r\n$7\r\nMONITOR\r\n"), 17);
   ASSERT_EQ(link.Send("random string"), 13);
 
-  std::string response;
   RETRY_ASSERT_TRUE(reader.consume(5, response));
   ASSERT_EQ(response, "+OK\r\n");
 

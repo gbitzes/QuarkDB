@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "redis/MultiOp.hh"
+#include "raft/RaftContactDetails.hh"
 #include "test-utils.hh"
 #include "test-reply-macros.hh"
 #include <gtest/gtest.h>

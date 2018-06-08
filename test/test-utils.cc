@@ -159,6 +159,10 @@ qclient::QClient* TestCluster::tunnel(int id) {
   return node(id)->tunnel();
 }
 
+std::unique_ptr<qclient::Handshake> TestCluster::makeQClientHandshake(int id) {
+  return node(id)->makeQClientHandshake();
+}
+
 qclient::Options TestCluster::makeNoRedirectOptions(int id) {
   return node(id)->makeNoRedirectOptions();
 }
@@ -251,6 +255,7 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
     "redis.mode raft\n" <<
     "redis.database " << shardPath << "\n"
     "redis.myself " << myselfSrv.toString() << "\n"
+    "redis.password 1234567890-qwerty-0987654321-ytrewq\n"
   ), config);
 
   if(!status) {
@@ -304,7 +309,17 @@ Poller* TestNode::poller() {
 qclient::Options TestNode::makeNoRedirectOptions() {
   qclient::Options options;
   options.transparentRedirects = false;
+  options.handshake = makeQClientHandshake();
+
   return options;
+}
+
+std::unique_ptr<qclient::Handshake> TestNode::makeQClientHandshake() {
+  if(group()->contactDetails()->getPassword().empty()) {
+    return {};
+  }
+
+  return std::unique_ptr<qclient::Handshake>(new qclient::AuthHandshake(group()->contactDetails()->getPassword()));
 }
 
 qclient::QClient* TestNode::tunnel() {

@@ -48,6 +48,8 @@ TEST_F(QClientTests, hide_transient_failures) {
   qclient::Options opts;
   opts.transparentRedirects = true;
   opts.retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(30));
+  opts.handshake = makeQClientHandshake();
+
   QClient qcl(members, std::move(opts));
 
   // Issue request _before_ spinning up the cluster! Verify it succeeds.
@@ -102,6 +104,7 @@ TEST_F(QClientTests, nullptr_only_after_timeout) {
 
   qclient::Options opts;
   opts.transparentRedirects = true;
+  opts.handshake = makeQClientHandshake();
   opts.retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(3));
   QClient qcl(members, std::move(opts));
 
@@ -177,6 +180,7 @@ TEST_F(QClientTests, MultipleWriterThreads) {
   // Launch many threads doing pings, using the same QClient object.
   qclient::Options opts;
   opts.backpressureStrategy = BackpressureStrategy::RateLimitPendingRequests(2048);
+  opts.handshake = makeQClientHandshake();
 
   QClient qcl(myself(leaderID).hostname, myself(leaderID).port, std::move(opts));
 

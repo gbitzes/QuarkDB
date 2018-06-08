@@ -47,8 +47,11 @@ TEST_F(Background_Flusher, basic_sanity) {
 
   qclient::Notifier dummyNotifier;
   ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
+
+  qclient::Options opts;
+  opts.handshake = makeQClientHandshake();
   qclient::BackgroundFlusher flusher(qclient::Members(myself(follower).hostname, myself(follower).port),
-    qclient::Options(), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
+    std::move(opts), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
   );
 
   const int nentries = 10000;
@@ -87,7 +90,10 @@ TEST_F(Background_Flusher, with_transition) {
 
   qclient::Notifier dummyNotifier;
   ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
-  qclient::BackgroundFlusher flusher(members, qclient::Options(), dummyNotifier,
+  qclient::Options opts;
+  opts.handshake = makeQClientHandshake();
+
+  qclient::BackgroundFlusher flusher(members, std::move(opts), dummyNotifier,
     new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")
   );
 
@@ -121,8 +127,10 @@ TEST_F(Background_Flusher, persistency) {
   qclient::Notifier dummyNotifier;
 
   ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-flusher"), 0);
+  qclient::Options opts;
+  opts.handshake = makeQClientHandshake();
   std::unique_ptr<qclient::BackgroundFlusher> flusher(
-    new qclient::BackgroundFlusher(qclient::Members(myself(follower).hostname, myself(follower).port), qclient::Options(), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"))
+    new qclient::BackgroundFlusher(qclient::Members(myself(follower).hostname, myself(follower).port), std::move(opts), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher"))
   );
 
   // queue entries
@@ -135,7 +143,9 @@ TEST_F(Background_Flusher, persistency) {
 
   // stop the flusher, recover contents from persistency layer
   flusher.reset();
-  flusher.reset(new qclient::BackgroundFlusher(qclient::Members(myself(follower).hostname, myself(follower).port), qclient::Options(), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")));
+  opts = {};
+  opts.handshake = makeQClientHandshake();
+  flusher.reset(new qclient::BackgroundFlusher(qclient::Members(myself(follower).hostname, myself(follower).port), std::move(opts), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")));
   ASSERT_GT(flusher->size(), 0u);
 
   RETRY_ASSERT_TRUE(flusher->size() == 0u);

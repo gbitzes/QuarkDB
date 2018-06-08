@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "raft/RaftContactDetails.hh"
 #include "StateMachine.hh"
 #include "../test-utils.hh"
 #include "bench-utils.hh"
@@ -90,7 +91,8 @@ template<typename TestcaseProvider>
 class ExecutorHelper : public Executor {
 public:
   ExecutorHelper(size_t ev, StateMachine *sm) : Executor(ev), stateMachine(sm) {}
-  ExecutorHelper(size_t ev, const RaftServer &srv) : Executor(ev), server(srv) {}
+  ExecutorHelper(size_t ev, const RaftServer &srv, const std::string &pw)
+  : Executor(ev), server(srv), password(pw) {}
 
   void main(int threadId) override {
     if(stateMachine) {
@@ -109,7 +111,12 @@ public:
   }
 
   void mainRedis(int threadId) {
-    qclient::QClient tunnel(server.hostname, server.port, {} );
+    qclient::Options opts;
+    if(!password.empty()) {
+      opts.handshake.reset(new qclient::AuthHandshake(password));
+    }
+
+    qclient::QClient tunnel(server.hostname, server.port, std::move(opts) );
     while(true) {
       size_t next = nextEvent++;
       if(next > events) break;
@@ -126,6 +133,7 @@ private:
   RaftServer server;
   StateMachine *stateMachine = nullptr;
   std::atomic<size_t> nextEvent {0};
+  std::string password;
 };
 
 class Benchmarker {
@@ -170,12 +178,12 @@ public:
     else if(params.mode == Mode::kRedisStandalone) {
       customDispatcher = new RedisDispatcher(*stateMachine());
       customPoller = new Poller(34567, customDispatcher);
-      executor = new ExecutorHelper<TestcaseProvider>(params.events, {"localhost", 34567});
+      executor = new ExecutorHelper<TestcaseProvider>(params.events, {"localhost", 34567}, "");
     }
     else if(params.mode == Mode::kConsensus) {
       spinup(0); spinup(1); spinup(2);
       RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-      executor = new ExecutorHelper<TestcaseProvider>(params.events, myself(getLeaderID()));
+      executor = new ExecutorHelper<TestcaseProvider>(params.events, myself(getLeaderID()), contactDetails()->getPassword() );
     }
   }
 protected:
