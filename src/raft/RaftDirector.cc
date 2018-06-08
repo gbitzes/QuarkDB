@@ -28,8 +28,8 @@
 #include "../Dispatcher.hh"
 using namespace quarkdb;
 
-RaftDirector::RaftDirector(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &conf, RaftReplicator &rep)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), shardDirectory(sharddir), config(conf), replicator(rep) {
+RaftDirector::RaftDirector(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &conf, RaftReplicator &rep, const RaftContactDetails &cd)
+: journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), shardDirectory(sharddir), config(conf), replicator(rep), contactDetails(cd) {
   mainThread = std::thread(&RaftDirector::main, this);
 }
 
@@ -100,7 +100,7 @@ void RaftDirector::runForLeader() {
     return;
   }
 
-  if(!RaftElection::perform(votereq, state, lease, raftClock.getTimeouts())) {
+  if(!RaftElection::perform(votereq, state, lease, contactDetails)) {
     state.dropOut(snapshot->term+1);
   }
 }

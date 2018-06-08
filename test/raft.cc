@@ -30,6 +30,7 @@
 #include "raft/RaftMembers.hh"
 #include "raft/RaftJournal.hh"
 #include "raft/RaftLease.hh"
+#include "raft/RaftContactDetails.hh"
 #include "Poller.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
@@ -51,11 +52,11 @@ TEST_F(Raft_Replicator, no_replication_on_myself) {
   ASSERT_TRUE(state()->observed(2, {}));
   ASSERT_TRUE(state()->becomeCandidate(2));
   ASSERT_TRUE(state()->ascend(2));
-  ASSERT_THROW(RaftReplicaTracker(myself(), state()->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(myself(), state()->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails()), FatalException);
 }
 
 TEST_F(Raft_Replicator, only_leader_can_launch_replicator) {
-  ASSERT_THROW(RaftReplicaTracker(nodes()[1], state()->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(nodes()[1], state()->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails()), FatalException);
 }
 
 TEST_F(Raft_Replicator, verify_sane_snapshot_term) {
@@ -67,11 +68,11 @@ TEST_F(Raft_Replicator, verify_sane_snapshot_term) {
   RaftStateSnapshotPtr snapshot = state()->getSnapshot();
   RaftStateSnapshot snapshot2(*snapshot.get());
   snapshot2.term = 3;
-  ASSERT_THROW(RaftReplicaTracker(nodes()[1], RaftStateSnapshotPtr(new RaftStateSnapshot(snapshot2)), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts()), FatalException);
+  ASSERT_THROW(RaftReplicaTracker(nodes()[1], RaftStateSnapshotPtr(new RaftStateSnapshot(snapshot2)), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails()), FatalException);
 
   // stale term - this can naturally happen, so it is not an exception
   ASSERT_TRUE(state()->observed(4, {}));
-  RaftReplicaTracker tracker(nodes()[1], snapshot, *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(nodes()[1], snapshot, *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails());
   ASSERT_FALSE(tracker.isRunning());
 }
 
@@ -90,7 +91,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
   poller(1);
 
   // launch!
-  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails());
   ASSERT_TRUE(tracker.isRunning());
 
   // populate #0's journal
@@ -125,7 +126,7 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   poller(1);
 
   // launch
-  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails());
   ASSERT_TRUE(tracker.isRunning());
 
   // verify everything's sane
@@ -159,7 +160,7 @@ TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
   poller(1);
 
   // launch!
-  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails());
   ASSERT_TRUE(tracker.isRunning());
 
   // verify #1 recognized #0 as leader and that replication was successful
@@ -188,7 +189,7 @@ TEST_F(Raft_Replicator, no_replication_of_higher_term_entries) {
   poller(1);
 
   // launch!
-  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), raftclock()->getTimeouts());
+  RaftReplicaTracker tracker(myself(1), state(0)->getSnapshot(), *journal(), *state(), *lease(), *commitTracker(), *trimmer(), *shardDirectory(), *raftconfig(), *contactDetails());
   RETRY_ASSERT_TRUE(!tracker.isRunning());
   ASSERT_TRUE(journal(0)->getCommitIndex() == 0);
   ASSERT_TRUE(journal(1)->getCommitIndex() == 0);
@@ -351,9 +352,9 @@ TEST_F(Raft_Dispatcher, incompatible_timeouts) {
   // try to talk to a raft server while providing the wrong timeouts
 
   poller(0);
-  RaftTimeouts timeouts(std::chrono::milliseconds(1), std::chrono::milliseconds(2),
-    std::chrono::milliseconds(3));
-  RaftTalker talker(myself(0), clusterID(), timeouts);
+  RaftContactDetails cd(clusterID(), RaftTimeouts(std::chrono::milliseconds(1), std::chrono::milliseconds(2),
+    std::chrono::milliseconds(3)));
+  RaftTalker talker(myself(0), cd);
 
   RaftVoteRequest votereq;
   votereq.term = 1337;
@@ -369,7 +370,8 @@ TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
   // cluster id, verify it sends us to hell
 
   poller(0);
-  RaftTalker talker(myself(0), "random_cluster_id", testconfig.raftTimeouts);
+  RaftContactDetails cd("random_cluster_id", testconfig.raftTimeouts);
+  RaftTalker talker(myself(0), cd);
 
   RaftVoteRequest votereq;
   votereq.term = 1337;
@@ -573,18 +575,18 @@ TEST_F(Raft_Election, basic_sanity) {
   // term mismatch, can't perform election
   RaftVoteRequest votereq;
   votereq.term = 1;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 
   // we have a leader already, can't do election
   ASSERT_TRUE(state()->observed(2, myself(1)));
   votereq.term = 2;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 
   // votereq.candidate must be empty
   votereq.candidate = myself(1);
   votereq.term = 3;
   ASSERT_TRUE(state()->observed(3, {}));
-  ASSERT_THROW(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts), FatalException);
+  ASSERT_THROW(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()), FatalException);
 }
 
 TEST_F(Raft_Election, leader_cannot_call_election) {
@@ -594,7 +596,7 @@ TEST_F(Raft_Election, leader_cannot_call_election) {
 
   RaftVoteRequest votereq;
   votereq.term = 2;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 }
 
 TEST_F(Raft_Election, observer_cannot_call_election) {
@@ -609,7 +611,7 @@ TEST_F(Raft_Election, observer_cannot_call_election) {
   RaftVoteRequest votereq;
   votereq.term = 1;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), testconfig.raftTimeouts));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 }
 
 TEST_F(Raft_Election, complete_simple_election) {
@@ -624,7 +626,7 @@ TEST_F(Raft_Election, complete_simple_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 
   RaftStateSnapshotPtr snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0->term, 2);
@@ -647,7 +649,7 @@ TEST_F(Raft_Election, unsuccessful_election_not_enough_votes) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 }
 
 TEST_F(Raft_Election, split_votes_successful_election) {
@@ -669,7 +671,7 @@ TEST_F(Raft_Election, split_votes_successful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
+  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 
   RaftStateSnapshotPtr snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0->term, 2);
@@ -695,7 +697,7 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), testconfig.raftTimeouts));
+  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 
   RaftStateSnapshotPtr snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0->term, 2);
@@ -1001,4 +1003,3 @@ TEST(RaftEntry, parsing) {
   RaftSerializedEntry serialized = entry.serialize();
   ASSERT_EQ(RaftEntry::fetchTerm(serialized), 13);
 }
-

@@ -34,7 +34,7 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 // Forward declarations
 //------------------------------------------------------------------------------
-class RaftState; class RaftLease;
+class RaftState; class RaftLease; class RaftContactDetails;
 
 class RaftParser {
 public:
@@ -50,7 +50,7 @@ public:
 
 class RaftElection {
 public:
-  static bool perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftTimeouts timeouts);
+  static bool perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails);
 };
 
 }

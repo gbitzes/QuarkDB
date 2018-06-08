@@ -23,6 +23,7 @@
 
 #include "utils/IntToBinaryString.hh"
 #include "raft/RaftTalker.hh"
+#include "raft/RaftContactDetails.hh"
 #include "Common.hh"
 #include "Version.hh"
 #include "test-utils.hh"
@@ -37,7 +38,8 @@ TEST(RaftTalker, T1) {
     std::chrono::milliseconds(3));
   RaftServer node = {"localhost", 12344};
   RaftServer myself = {"its_me_ur_leader", 1337};
-  RaftTalker talker(node, clusterID, timeouts);
+  RaftContactDetails cd(clusterID, timeouts);
+  RaftTalker talker(node, cd);
 
   SocketListener listener(12344);
   int s2 = listener.accept();

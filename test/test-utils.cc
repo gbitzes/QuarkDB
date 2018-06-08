@@ -163,6 +163,10 @@ RaftClock* TestCluster::raftclock(int id) {
   return node(id)->group()->raftclock();
 }
 
+const RaftContactDetails* TestCluster::contactDetails(int id) {
+  return node(id)->group()->contactDetails();
+}
+
 RaftLease* TestCluster::lease(int id) {
   return node(id)->group()->lease();
 }

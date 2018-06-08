@@ -26,10 +26,11 @@
 #include "RaftTalker.hh"
 #include "RaftState.hh"
 #include "RaftLease.hh"
+#include "RaftContactDetails.hh"
 #include "../Utils.hh"
 using namespace quarkdb;
 
-bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftTimeouts timeouts) {
+bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails) {
   if(!votereq.candidate.empty()) {
     qdb_throw("candidate member of votereq must be empty, it is filled out by this function");
   }
@@ -60,17 +61,17 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
   std::vector<std::future<redisReplyPtr>> futures;
   for(const RaftServer &node : state.getNodes()) {
     if(node != state.getMyself()) {
-      talkers.emplace_back(new RaftTalker(node, state.getClusterID(), timeouts));
+      talkers.emplace_back(new RaftTalker(node, contactDetails));
       futures.push_back(talkers.back()->requestVote(votereq));
     }
   }
 
   std::vector<redisReplyPtr> replies;
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-  std::chrono::steady_clock::time_point deadline = now + timeouts.getHeartbeatInterval()*2;
+  std::chrono::steady_clock::time_point deadline = now + contactDetails.getRaftTimeouts().getHeartbeatInterval()*2;
 
   qdb_info(state.getMyself().toString() <<  ": Vote requests have been sent off, will allow a window of "
-    << timeouts.getLow().count() << "ms to receive replies.");
+    << contactDetails.getRaftTimeouts().getLow().count() << "ms to receive replies.");
 
   for(size_t i = 0; i < futures.size(); i++) {
     if(futures[i].wait_until(deadline) == std::future_status::ready) {

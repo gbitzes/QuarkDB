@@ -37,9 +37,11 @@
 namespace quarkdb {
 
 class RaftTrimmer; class ShardDirectory; class RaftConfig; class RaftReplicator;
+class RaftContactDetails;
+
 class RaftDirector {
 public:
-  RaftDirector(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &config, RaftReplicator &replicator);
+  RaftDirector(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &config, RaftReplicator &replicator, const RaftContactDetails &contactDetails);
   ~RaftDirector();
   DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
@@ -59,6 +61,7 @@ private:
   ShardDirectory &shardDirectory;
   RaftConfig &config;
   RaftReplicator &replicator;
+  const RaftContactDetails &contactDetails;
 
   std::thread mainThread;
 };

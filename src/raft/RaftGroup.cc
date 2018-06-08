@@ -39,7 +39,8 @@ using namespace quarkdb;
 
 RaftGroup::RaftGroup(ShardDirectory &shardDir, const RaftServer &myself, const RaftTimeouts &t)
 : shardDirectory(shardDir), stateMachineRef(*shardDirectory.getStateMachine()),
-raftJournalRef(*shardDirectory.getRaftJournal()), me(myself), timeouts(t) {
+  raftJournalRef(*shardDirectory.getRaftJournal()), me(myself),
+  raftContactDetails(raftJournalRef.getClusterID(), t) {
 
 }
 
@@ -123,7 +124,7 @@ RaftDispatcher* RaftGroup::dispatcher() {
 RaftClock* RaftGroup::raftclock() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(clockptr == nullptr) {
-    clockptr = new RaftClock(timeouts);
+    clockptr = new RaftClock(contactDetails()->getRaftTimeouts());
   }
   return clockptr;
 }
@@ -139,7 +140,7 @@ RaftState* RaftGroup::state() {
 RaftDirector* RaftGroup::director() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), shardDirectory, *config(), *replicator());
+    directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), shardDirectory, *config(), *replicator(), *contactDetails());
   }
   return directorptr;
 }
@@ -187,7 +188,11 @@ RaftConfig* RaftGroup::config() {
 RaftReplicator* RaftGroup::replicator() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(replicatorptr == nullptr) {
-    replicatorptr = new RaftReplicator(*journal(), *state(), *lease(), *commitTracker(), *trimmer(), shardDirectory, *config(), timeouts);
+    replicatorptr = new RaftReplicator(*journal(), *state(), *lease(), *commitTracker(), *trimmer(), shardDirectory, *config(), *contactDetails());
   }
   return replicatorptr;
+}
+
+const RaftContactDetails* RaftGroup::contactDetails() const {
+  return &raftContactDetails;
 }

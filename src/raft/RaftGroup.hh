@@ -25,6 +25,7 @@
 #define __QUARKDB_RAFT_GROUP_H__
 
 #include "../Utils.hh"
+#include "RaftContactDetails.hh"
 
 namespace quarkdb {
 
@@ -35,7 +36,7 @@ class StateMachine; class RaftJournal; class RaftDispatcher;
 class RaftState; class RaftReplicator; class RaftClock;
 class RaftDirector; class RaftLease; class RaftWriteTracker;
 class RaftTrimmer; class RaftCommitTracker; class RaftConfig;
-class ShardDirectory;
+class ShardDirectory; class RaftContactDetails;
 
 //------------------------------------------------------------------------------
 // This class keeps track of and owns all objects needed for the raft party.
@@ -60,6 +61,7 @@ public:
   RaftTrimmer *trimmer();
   RaftConfig *config();
   RaftReplicator *replicator();
+  const RaftContactDetails* contactDetails() const;
 
   RaftServer myself();
 
@@ -74,7 +76,7 @@ private:
   RaftJournal &raftJournalRef;
 
   const RaftServer me;
-  const RaftTimeouts timeouts;
+  const RaftContactDetails raftContactDetails;
 
   // All components needed for the raft party - owned by this class.
   RaftDispatcher *dispatcherptr = nullptr;

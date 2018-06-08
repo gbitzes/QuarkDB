@@ -52,7 +52,7 @@ namespace quarkdb {
 class Shard; class RaftGroup; class ShardDirectory; class RaftJournal;
 class RaftDispatcher; class RaftLease; class RaftDirector;
 class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
-class QuarkDBNode;
+class QuarkDBNode; class RaftContactDetails;
 
 #define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
   bool ok = false; \
@@ -181,6 +181,7 @@ public:
   RaftCommitTracker *commitTracker(int id = 0);
   RaftConfig *raftconfig(int id = 0);
   RaftTrimmer* trimmer(int id = 0);
+  const RaftContactDetails* contactDetails(int id = 0);
 
   void killTunnel(int id = 0);
 

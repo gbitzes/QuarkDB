@@ -107,7 +107,7 @@ TEST_F(Resilvering, manual) {
   }
 
   // Let's drive the resilvering logic of #2 manually.
-  RaftResilverer resilverer(*shardDirectory(0), myself(2), clusterID(), testconfig.raftTimeouts, *trimmer(0));
+  RaftResilverer resilverer(*shardDirectory(0), myself(2), *contactDetails(), *trimmer(0));
   RETRY_ASSERT_TRUE(resilverer.getStatus().state == ResilveringState::SUCCEEDED);
 
   // Ensure the data is there after resilvering.

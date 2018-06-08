@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: RaftTalker.hh
+// File: RaftContactDetails.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,41 +21,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_TALKER_H__
-#define __QUARKDB_RAFT_TALKER_H__
+#ifndef QUARKDB_RAFT_CONTACT_DETAILS_H
+#define QUARKDB_RAFT_CONTACT_DETAILS_H
 
-#include <qclient/QClient.hh>
-#include "RaftCommon.hh"
-#include <mutex>
+#include "RaftTimeouts.hh"
 
 namespace quarkdb {
-using namespace qclient;
 
-class RaftTimeouts; class RaftContactDetails;
-using ResilveringEventID = std::string;
+using RaftClusterID = std::string;
 
-class RaftTalker {
+//------------------------------------------------------------------------------
+//! An immutable class containing all auxiliary information required to
+//! establish a node-to-node connection.
+//------------------------------------------------------------------------------
+class RaftContactDetails {
 public:
-  RaftTalker(const RaftServer &server, const RaftContactDetails &contactDetails);
-  RaftTalker(const RaftServer &server);
-  std::future<redisReplyPtr> appendEntries(RaftTerm term, RaftServer leader, LogIndex prevIndex,
-                                           RaftTerm prevTerm, LogIndex commit,
-                                           const std::vector<RaftSerializedEntry> &entries);
+  RaftContactDetails(const RaftClusterID &cid, const RaftTimeouts &t)
+  : clusterID(cid), timeouts(t) { }
 
-  std::future<redisReplyPtr> requestVote(const RaftVoteRequest &req);
-  std::future<redisReplyPtr> fetch(LogIndex index);
+  const RaftClusterID& getClusterID() const {
+    return clusterID;
+  }
 
-  std::future<redisReplyPtr> resilveringStart(const ResilveringEventID &id);
-  std::future<redisReplyPtr> resilveringCopy(const ResilveringEventID &id, const std::string &filename, const std::string &contents);
-  std::future<redisReplyPtr> resilveringFinish(const ResilveringEventID &id);
-  std::future<redisReplyPtr> resilveringCancel(const ResilveringEventID &id, const std::string &reason);
+  const RaftTimeouts& getRaftTimeouts() const {
+    return timeouts;
+  }
 
-  std::future<redisReplyPtr> heartbeat(RaftTerm term, const RaftServer &leader);
-  RaftServer getServer() { return server; }
 private:
-  RaftServer server;
-  TlsConfig tlsconfig;
-  QClient tunnel;
+  const RaftClusterID clusterID;
+  const RaftTimeouts timeouts;
 };
 
 }

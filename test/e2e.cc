@@ -23,7 +23,6 @@
 
 #include "raft/RaftDispatcher.hh"
 #include "raft/RaftReplicator.hh"
-#include "raft/RaftTalker.hh"
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
 #include "raft/RaftConfig.hh"

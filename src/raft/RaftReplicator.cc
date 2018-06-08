@@ -34,14 +34,15 @@
 #include "RaftTimeouts.hh"
 #include "RaftLease.hh"
 #include "RaftTrimmer.hh"
+#include "RaftContactDetails.hh"
 #include "../utils/FileUtils.hh"
 #include <dirent.h>
 #include <fstream>
 
 using namespace quarkdb;
 
-RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
-: journal(journal_), state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t) {
+RaftReplicator::RaftReplicator(RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftContactDetails &cd)
+: journal(journal_), state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), contactDetails(cd) {
 
 }
 
@@ -49,9 +50,9 @@ RaftReplicator::~RaftReplicator() {
   deactivate();
 }
 
-RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshotPtr &snapshot_, RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftTimeouts t)
+RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStateSnapshotPtr &snapshot_, RaftJournal &journal_, RaftState &state_, RaftLease &lease_, RaftCommitTracker &ct, RaftTrimmer &trim, ShardDirectory &sharddir, RaftConfig &conf, const RaftContactDetails &cd)
 : target(target_), snapshot(snapshot_), journal(journal_),
-  state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), timeouts(t),
+  state(state_), lease(lease_), commitTracker(ct), trimmer(trim), shardDirectory(sharddir), config(conf), contactDetails(cd),
   matchIndex(commitTracker.getHandler(target)),
   lastContact(lease.getHandler(target)),
   trimmingBlock(trimmer, 0) {
@@ -184,7 +185,7 @@ void RaftReplicaTracker::triggerResilvering() {
   }
 
   // Start the resilverer
-  resilverer.reset(new RaftResilverer(shardDirectory, target, journal.getClusterID(), timeouts, trimmer));
+  resilverer.reset(new RaftResilverer(shardDirectory, target, contactDetails, trimmer));
 }
 
 void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
@@ -193,7 +194,7 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
   while(!assistant.terminationRequested()) {
     if(inFlight.size() == 0) {
       // Empty queue, sleep
-      inFlightCV.wait_for(lock, timeouts.getHeartbeatInterval());
+      inFlightCV.wait_for(lock, contactDetails.getRaftTimeouts().getHeartbeatInterval());
       continue;
     }
 
@@ -367,7 +368,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
 
     updateStatus(true, nextIndex);
     if(nextIndex >= journal.getLogSize()) {
-      journal.waitForUpdates(nextIndex, timeouts.getHeartbeatInterval());
+      journal.waitForUpdates(nextIndex, contactDetails.getRaftTimeouts().getHeartbeatInterval());
     }
     else {
       // fire next round
@@ -389,7 +390,7 @@ ReplicaStatus RaftReplicaTracker::getStatus() {
 }
 
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
-  RaftTalker talker(target, journal.getClusterID(), timeouts);
+  RaftTalker talker(target, contactDetails);
 
   while(!assistant.terminationRequested() && shutdown == 0 && snapshot->term == state.getCurrentTerm() && !state.inShutdown()) {
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
@@ -405,7 +406,7 @@ void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
     lastContact.heartbeat(contact);
 
 nextRound:
-    state.wait(timeouts.getHeartbeatInterval());
+    state.wait(contactDetails.getRaftTimeouts().getHeartbeatInterval());
   }
 }
 
@@ -437,7 +438,7 @@ private:
 };
 
 void RaftReplicaTracker::main() {
-  RaftTalker talker(target, journal.getClusterID(), timeouts);
+  RaftTalker talker(target, contactDetails);
   LogIndex nextIndex = journal.getLogSize();
 
   RaftMatchIndexTracker &matchIndex = commitTracker.getHandler(target);
@@ -566,10 +567,10 @@ nextRound:
 
     updateStatus(onlineTracker.isOnline(), nextIndex);
     if(!onlineTracker.isOnline() || needResilvering) {
-      state.wait(timeouts.getHeartbeatInterval());
+      state.wait(contactDetails.getRaftTimeouts().getHeartbeatInterval());
     }
     else if(onlineTracker.isOnline() && nextIndex >= journal.getLogSize()) {
-      journal.waitForUpdates(nextIndex, timeouts.getHeartbeatInterval());
+      journal.waitForUpdates(nextIndex, contactDetails.getRaftTimeouts().getHeartbeatInterval());
     }
     else {
       // don't wait, fire next round of updates
@@ -660,7 +661,7 @@ void RaftReplicator::setTargets(const std::vector<RaftServer> &newTargets) {
   // add targets?
   for(size_t i = 0; i < newTargets.size(); i++) {
     if(targets.find(newTargets[i]) == targets.end()) {
-      targets[newTargets[i]] = new RaftReplicaTracker(newTargets[i], snapshot, journal, state, lease, commitTracker, trimmer, shardDirectory, config, timeouts);
+      targets[newTargets[i]] = new RaftReplicaTracker(newTargets[i], snapshot, journal, state, lease, commitTracker, trimmer, shardDirectory, config, contactDetails);
     }
   }
 

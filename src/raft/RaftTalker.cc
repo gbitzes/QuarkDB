@@ -23,6 +23,7 @@
 
 #include "../utils/IntToBinaryString.hh"
 #include "RaftTalker.hh"
+#include "RaftContactDetails.hh"
 #include "RaftTimeouts.hh"
 #include "../Version.hh"
 
@@ -32,11 +33,11 @@ class RaftHandshake : public qclient::Handshake {
 public:
   virtual ~RaftHandshake() override {}
 
-  RaftHandshake(const RaftClusterID &clusterID_, const RaftTimeouts &timeouts_)
-  : clusterID(clusterID_), timeouts(timeouts_) { }
+  RaftHandshake(const RaftContactDetails &cd)
+  : contactDetails(cd) { }
 
   virtual std::vector<std::string> provideHandshake() override {
-    return {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()};
+    return {"RAFT_HANDSHAKE", VERSION_FULL_STRING, contactDetails.getClusterID(), contactDetails.getRaftTimeouts().toString() };
   }
 
   virtual Status validateResponse(const redisReplyPtr &reply) override {
@@ -57,13 +58,12 @@ public:
 
   virtual void restart() override { }
 private:
-  RaftClusterID clusterID;
-  RaftTimeouts timeouts;
+  const RaftContactDetails &contactDetails;
 };
 
 
-RaftTalker::RaftTalker(const RaftServer &server_, const RaftClusterID &clusterID, const RaftTimeouts &timeouts)
-: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, qclient::RetryStrategy::NoRetries(), qclient::BackpressureStrategy::Default(), tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(clusterID, timeouts)) ) {
+RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &contactDetails)
+: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, qclient::RetryStrategy::NoRetries(), qclient::BackpressureStrategy::Default(), tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(contactDetails)) ) {
 
 }
 

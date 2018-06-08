@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_REPLICATOR_H__
-#define __QUARKDB_RAFT_REPLICATOR_H__
+#ifndef QUARKDB_RAFT_REPLICATOR_H
+#define QUARKDB_RAFT_REPLICATOR_H
 
 #include "RaftTimeouts.hh"
 #include <mutex>
@@ -41,6 +41,7 @@ class RaftTalker; class RaftResilverer; class RaftTrimmer;
 class ShardDirectory; class RaftConfig; class RaftState;
 class StateMachine; class RaftJournal; class RaftLease;
 class RaftCommitTracker; class RaftMatchIndexTracker; class RaftLastContact;
+class RaftContactDetails;
 
 //------------------------------------------------------------------------------
 // Tracks a single raft replica
@@ -48,7 +49,7 @@ class RaftCommitTracker; class RaftMatchIndexTracker; class RaftLastContact;
 
 class RaftReplicaTracker {
 public:
-  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshotPtr &snapshot, RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
+  RaftReplicaTracker(const RaftServer &target, const RaftStateSnapshotPtr &snapshot, RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftContactDetails &contactDetails);
   ~RaftReplicaTracker();
 
   ReplicaStatus getStatus();
@@ -103,7 +104,7 @@ private:
   RaftTrimmer &trimmer;
   ShardDirectory &shardDirectory;
   RaftConfig &config;
-  const RaftTimeouts timeouts;
+  const RaftContactDetails &contactDetails;
 
   RaftMatchIndexTracker &matchIndex;
   RaftLastContact &lastContact;
@@ -126,7 +127,7 @@ private:
 
 class RaftReplicator {
 public:
-  RaftReplicator(RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftTimeouts t);
+  RaftReplicator(RaftJournal &journal, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftTrimmer &trimmer, ShardDirectory &shardDirectory, RaftConfig &config, const RaftContactDetails &contactDetails);
   ~RaftReplicator();
 
   void activate(RaftStateSnapshotPtr &snapshot);
@@ -145,7 +146,7 @@ private:
   RaftTrimmer &trimmer;
   ShardDirectory &shardDirectory;
   RaftConfig &config;
-  const RaftTimeouts timeouts;
+  const RaftContactDetails &contactDetails;
 
   std::map<RaftServer, RaftReplicaTracker*> targets;
   std::recursive_mutex mtx;

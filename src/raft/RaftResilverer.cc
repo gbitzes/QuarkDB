@@ -23,6 +23,7 @@
 
 #include "RaftResilverer.hh"
 #include "RaftTrimmer.hh"
+#include "RaftContactDetails.hh"
 #include "../ShardDirectory.hh"
 #include "../Utils.hh"
 #include <dirent.h>
@@ -71,10 +72,10 @@ private:
   std::string error;
 };
 
-RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftClusterID &cid, const RaftTimeouts &timeouts, RaftTrimmer &trimmer)
-: shardDirectory(dir), target(trg), clusterID(cid),
+RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftContactDetails &contactDetails, RaftTrimmer &trimmer)
+: shardDirectory(dir), target(trg),
   trimmingBlock(new RaftTrimmingBlock(trimmer, 0)),
-  talker(target, clusterID, timeouts) {
+  talker(target, contactDetails) {
 
   resilveringID = generateUuid();
   setStatus(ResilveringState::INPROGRESS, "");
