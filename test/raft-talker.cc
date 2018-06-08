@@ -38,7 +38,7 @@ TEST(RaftTalker, T1) {
     std::chrono::milliseconds(3));
   RaftServer node = {"localhost", 12344};
   RaftServer myself = {"its_me_ur_leader", 1337};
-  RaftContactDetails cd(clusterID, timeouts);
+  RaftContactDetails cd(clusterID, timeouts, "");
   RaftTalker talker(node, cd);
 
   SocketListener listener(12344);

@@ -35,7 +35,7 @@ namespace quarkdb {
 class RaftGroup; class ShardDirectory;
 class Shard : public Dispatcher {
 public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t);
+  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t, const std::string &password);
   ~Shard();
 
   RaftGroup* getRaftGroup();
@@ -60,6 +60,7 @@ private:
   RaftServer myself;
   Mode mode;
   RaftTimeouts timeouts;
+  std::string password;
 
   InFlightTracker inFlightTracker;
   std::mutex raftGroupMtx;

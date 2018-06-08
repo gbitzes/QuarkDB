@@ -45,7 +45,7 @@ class ShardDirectory; class RaftContactDetails;
 
 class RaftGroup {
 public:
-  RaftGroup(ShardDirectory &shardDirectory, const RaftServer &myself, const RaftTimeouts &t);
+  RaftGroup(ShardDirectory &shardDirectory, const RaftServer &myself, const RaftTimeouts &t, const std::string &password);
   DISALLOW_COPY_AND_ASSIGN(RaftGroup);
   ~RaftGroup();
 

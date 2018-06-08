@@ -36,8 +36,8 @@ using RaftClusterID = std::string;
 //------------------------------------------------------------------------------
 class RaftContactDetails {
 public:
-  RaftContactDetails(const RaftClusterID &cid, const RaftTimeouts &t)
-  : clusterID(cid), timeouts(t) { }
+  RaftContactDetails(const RaftClusterID &cid, const RaftTimeouts &t, const std::string &pw)
+  : clusterID(cid), timeouts(t), password(pw) { }
 
   const RaftClusterID& getClusterID() const {
     return clusterID;
@@ -47,9 +47,14 @@ public:
     return timeouts;
   }
 
+  const std::string& getPassword() const {
+    return password;
+  }
+
 private:
   const RaftClusterID clusterID;
   const RaftTimeouts timeouts;
+  const std::string password;
 };
 
 }

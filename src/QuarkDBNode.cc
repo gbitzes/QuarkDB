@@ -55,13 +55,13 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t,
   }
 
   if(configuration.getMode() == Mode::raft) {
-    shard.reset(new Shard(shardDirectory, configuration.getMyself(), configuration.getMode(), timeouts));
+    shard.reset(new Shard(shardDirectory, configuration.getMyself(), configuration.getMode(), timeouts, password));
     if(!injectedDirectory) {
       shard->spinup();
     }
   }
   else {
-    shard.reset(new Shard(shardDirectory, {}, configuration.getMode(), timeouts));
+    shard.reset(new Shard(shardDirectory, {}, configuration.getMode(), timeouts, password));
   }
 
   bootEnd = std::chrono::steady_clock::now();

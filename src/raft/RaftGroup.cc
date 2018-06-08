@@ -37,10 +37,10 @@
 
 using namespace quarkdb;
 
-RaftGroup::RaftGroup(ShardDirectory &shardDir, const RaftServer &myself, const RaftTimeouts &t)
+RaftGroup::RaftGroup(ShardDirectory &shardDir, const RaftServer &myself, const RaftTimeouts &t, const std::string &password)
 : shardDirectory(shardDir), stateMachineRef(*shardDirectory.getStateMachine()),
   raftJournalRef(*shardDirectory.getRaftJournal()), me(myself),
-  raftContactDetails(raftJournalRef.getClusterID(), t) {
+  raftContactDetails(raftJournalRef.getClusterID(), t, password) {
 
 }
 

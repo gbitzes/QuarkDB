@@ -34,13 +34,28 @@ public:
   virtual ~RaftHandshake() override {}
 
   RaftHandshake(const RaftContactDetails &cd)
-  : contactDetails(cd) { }
+  : contactDetails(cd), authHandshake(cd.getPassword()) { }
 
   virtual std::vector<std::string> provideHandshake() override {
+    if(!contactDetails.getPassword().empty() && requestsSent == 0) {
+      requestsSent++;
+      return authHandshake.provideHandshake();
+    }
+
     return {"RAFT_HANDSHAKE", VERSION_FULL_STRING, contactDetails.getClusterID(), contactDetails.getRaftTimeouts().toString() };
   }
 
   virtual Status validateResponse(const redisReplyPtr &reply) override {
+    if(!contactDetails.getPassword().empty() && requestsValidated == 0) {
+      requestsValidated++;
+
+      if(authHandshake.validateResponse(reply) != Status::VALID_COMPLETE) {
+        return Status::INVALID;
+      }
+
+      return Status::VALID_INCOMPLETE;
+    }
+
     if(!reply) {
       return Status::INVALID;
     }
@@ -56,9 +71,17 @@ public:
     return Status::VALID_COMPLETE;
   }
 
-  virtual void restart() override { }
+  virtual void restart() override {
+    requestsSent = 0;
+    requestsValidated = 0;
+    authHandshake.restart();
+  }
+
 private:
+  size_t requestsSent = 0;
+  size_t requestsValidated = 0;
   const RaftContactDetails &contactDetails;
+  qclient::AuthHandshake authHandshake;
 };
 
 

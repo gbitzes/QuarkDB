@@ -31,8 +31,8 @@
 
 using namespace quarkdb;
 
-Shard::Shard(ShardDirectory *shardDir, const RaftServer &me, Mode m, const RaftTimeouts &t)
-: shardDirectory(shardDir), myself(me), mode(m), timeouts(t), inFlightTracker(false) {
+Shard::Shard(ShardDirectory *shardDir, const RaftServer &me, Mode m, const RaftTimeouts &t, const std::string &pw)
+: shardDirectory(shardDir), myself(me), mode(m), timeouts(t), password(pw), inFlightTracker(false) {
   attach();
 }
 
@@ -44,7 +44,7 @@ void Shard::attach() {
     dispatcher = new RedisDispatcher(*stateMachine);
   }
   else if(mode == Mode::raft) {
-    raftGroup = new RaftGroup(*shardDirectory, myself, timeouts);
+    raftGroup = new RaftGroup(*shardDirectory, myself, timeouts, password);
     dispatcher = static_cast<Dispatcher*>(raftGroup->dispatcher());
     stateMachine = shardDirectory->getStateMachine();
   }
