@@ -197,3 +197,41 @@ TEST(QClient, T3) {
     link.Close();
   }
 }
+
+TEST(QClient, AuthHandshake) {
+  // with handshake
+  qclient::RetryStrategy strategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(60));
+  QClient tunnel("localhost", 1235, false, strategy, qclient::BackpressureStrategy::Default(), qclient::TlsConfig(), std::unique_ptr<Handshake>(new qclient::AuthHandshake("hunter2")));
+
+  for(size_t attempts = 0; attempts < 2; attempts++) {
+    SocketListener listener(1235);
+    int s2 = listener.accept();
+    ASSERT_GT(s2, 0);
+
+    Link link(s2);
+    RedisParser parser(&link);
+
+    RedisRequest req1 { "set", "abc", "123" };
+    std::future<redisReplyPtr> fut1 = tunnel.execute(req1);
+
+    RedisRequest req2 { "set", "aaa", "bbb" };
+    std::future<redisReplyPtr> fut2 = tunnel.execute(req2);
+
+    RedisRequest incoming;
+    RETRY_ASSERT_TRUE_SPIN(parser.fetch(incoming) == 1);
+    ASSERT_EQ(incoming, make_req("AUTH", "hunter2"));
+    link.Send("+OK\r\n");
+
+    RETRY_ASSERT_TRUE_SPIN(parser.fetch(incoming) == 1);
+    ASSERT_EQ(incoming, req1);
+    link.Send("+OK\r\n");
+    ASSERT_REPLY(fut1, "OK");
+
+    RETRY_ASSERT_TRUE_SPIN(parser.fetch(incoming) == 1);
+    ASSERT_EQ(incoming, req2);
+    link.Send("+ZZZ\r\n");
+    ASSERT_REPLY(fut2, "ZZZ");
+
+    link.Close();
+  }
+}
