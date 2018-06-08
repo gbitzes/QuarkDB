@@ -109,7 +109,7 @@ public:
   }
 
   void mainRedis(int threadId) {
-    qclient::QClient tunnel(server.hostname, server.port);
+    qclient::QClient tunnel(server.hostname, server.port, {} );
     while(true) {
       size_t next = nextEvent++;
       if(next > events) break;

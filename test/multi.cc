@@ -65,7 +65,7 @@ TEST_F(Multi, HandlerBasicSanity) {
   ASSERT_REPLY(replies[2], "QUEUED");
 
   // No dirty reads
-  QClient connection2(myself(leaderID).hostname, myself(leaderID).port);
+  QClient connection2(myself(leaderID).hostname, myself(leaderID).port, makeNoRedirectOptions());
   ASSERT_REPLY(connection2.exec("GET", "key"), "");
 
   redisReplyPtr reply = tunnel(leaderID)->exec("EXEC").get();

@@ -159,6 +159,10 @@ qclient::QClient* TestCluster::tunnel(int id) {
   return node(id)->tunnel();
 }
 
+qclient::Options TestCluster::makeNoRedirectOptions(int id) {
+  return node(id)->makeNoRedirectOptions();
+}
+
 RaftClock* TestCluster::raftclock(int id) {
   return node(id)->group()->raftclock();
 }
@@ -297,9 +301,15 @@ Poller* TestNode::poller() {
   return pollerptr;
 }
 
+qclient::Options TestNode::makeNoRedirectOptions() {
+  qclient::Options options;
+  options.transparentRedirects = false;
+  return options;
+}
+
 qclient::QClient* TestNode::tunnel() {
   if(tunnelptr == nullptr) {
-    tunnelptr = new qclient::QClient(myself().hostname, myself().port);
+    tunnelptr = new qclient::QClient(myself().hostname, myself().port, makeNoRedirectOptions());
   }
   return tunnelptr;
 }

@@ -46,7 +46,7 @@ static std::string str_from_reply(redisReplyPtr &reply) {
 }
 
 TEST(Tunnel, T1) {
-  QClient tunnel("localhost", 1234);
+  QClient tunnel("localhost", 1234, {} );
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
@@ -101,7 +101,10 @@ TEST(QClient, T2) {
   };
 
   // with handshake
-  QClient tunnel("localhost", 1234, false, qclient::RetryStrategy::NoRetries(), qclient::BackpressureStrategy::Default(), qclient::TlsConfig(), std::unique_ptr<Handshake>(new SimpleHandshake()));
+  qclient::Options options;
+  options.handshake.reset(new SimpleHandshake());
+
+  QClient tunnel("localhost", 1234, std::move(options));
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
@@ -158,8 +161,11 @@ TEST(QClient, T3) {
   };
 
   // with handshake
-  qclient::RetryStrategy strategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(60));
-  QClient tunnel("localhost", 1234, false, strategy, qclient::BackpressureStrategy::Default(), qclient::TlsConfig(), std::unique_ptr<Handshake>(new PingHandshake()));
+  qclient::Options options;
+  options.retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(60));
+  options.handshake.reset(new PingHandshake());
+
+  QClient tunnel("localhost", 1234, std::move(options));
 
 
   for(size_t attempts = 0; attempts < 2; attempts++) {
@@ -200,8 +206,10 @@ TEST(QClient, T3) {
 
 TEST(QClient, AuthHandshake) {
   // with handshake
-  qclient::RetryStrategy strategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(60));
-  QClient tunnel("localhost", 1235, false, strategy, qclient::BackpressureStrategy::Default(), qclient::TlsConfig(), std::unique_ptr<Handshake>(new qclient::AuthHandshake("hunter2")));
+  qclient::Options opts;
+  opts.retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(60));
+  opts.handshake.reset(new qclient::AuthHandshake("hunter2"));
+  QClient tunnel("localhost", 1235, std::move(opts));
 
   for(size_t attempts = 0; attempts < 2; attempts++) {
     SocketListener listener(1235);

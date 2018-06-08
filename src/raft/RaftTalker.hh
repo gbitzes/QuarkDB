@@ -24,9 +24,13 @@
 #ifndef __QUARKDB_RAFT_TALKER_H__
 #define __QUARKDB_RAFT_TALKER_H__
 
-#include <qclient/QClient.hh>
+#include "qclient/QClient.hh"
 #include "RaftCommon.hh"
 #include <mutex>
+
+namespace qclient {
+  class QClient; class Options;
+}
 
 namespace quarkdb {
 using namespace qclient;
@@ -54,8 +58,7 @@ public:
   RaftServer getServer() { return server; }
 private:
   RaftServer server;
-  TlsConfig tlsconfig;
-  QClient tunnel;
+  std::unique_ptr<QClient> qcl;
 };
 
 }

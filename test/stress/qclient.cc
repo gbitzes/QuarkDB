@@ -45,8 +45,10 @@ TEST_F(QClientTests, hide_transient_failures) {
   members.push_back(myself(1).hostname, myself(1).port);
   members.push_back(myself(2).hostname, myself(2).port);
 
-  qclient::RetryStrategy retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(30));
-  QClient qcl(members, true, retryStrategy);
+  qclient::Options opts;
+  opts.transparentRedirects = true;
+  opts.retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(30));
+  QClient qcl(members, std::move(opts));
 
   // Issue request _before_ spinning up the cluster! Verify it succeeds.
   std::future<redisReplyPtr> reply = qcl.exec("HSET", "aaaaa", "bbbbb", "cccc");
@@ -98,8 +100,10 @@ TEST_F(QClientTests, nullptr_only_after_timeout) {
   members.push_back(myself(1).hostname, myself(1).port);
   members.push_back(myself(2).hostname, myself(2).port);
 
-  qclient::RetryStrategy retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(3));
-  QClient qcl(members, true, retryStrategy);
+  qclient::Options opts;
+  opts.transparentRedirects = true;
+  opts.retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(3));
+  QClient qcl(members, std::move(opts));
 
   ASSERT_REPLY(qcl.exec("HSET", "aaaaa", "bbbbb", "cccc"), 1);
   ASSERT_REPLY(qcl.exec("HGET", "aaaaa", "bbbbb"), "cccc");
@@ -171,8 +175,10 @@ TEST_F(QClientTests, MultipleWriterThreads) {
   int leaderID = getLeaderID();
 
   // Launch many threads doing pings, using the same QClient object.
-  QClient qcl(myself(leaderID).hostname, myself(leaderID).port, false,
-    RetryStrategy::NoRetries(), BackpressureStrategy::RateLimitPendingRequests(2048));
+  qclient::Options opts;
+  opts.backpressureStrategy = BackpressureStrategy::RateLimitPendingRequests(2048);
+
+  QClient qcl(myself(leaderID).hostname, myself(leaderID).port, std::move(opts));
 
   std::vector<std::thread> threads;
   for(size_t i = 0; i < 20; i++) {

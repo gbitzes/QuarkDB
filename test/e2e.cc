@@ -112,8 +112,8 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   futures.clear();
 
   // interwine pipelined requests from three connections
-  qclient::QClient tunnel2(myself(leaderID).hostname, myself(leaderID).port);
-  qclient::QClient tunnel3(myself(leaderID).hostname, myself(leaderID).port);
+  qclient::QClient tunnel2(myself(leaderID).hostname, myself(leaderID).port, makeNoRedirectOptions());
+  qclient::QClient tunnel3(myself(leaderID).hostname, myself(leaderID).port, makeNoRedirectOptions());
 
   futures.emplace_back(tunnel2.exec("get", "qwerty"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "client2", "val"));

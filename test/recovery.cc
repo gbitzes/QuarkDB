@@ -93,7 +93,7 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
 
   {
     RecoveryRunner runner("/tmp/quarkdb-recovery-test", 30100);
-    qclient::QClient qcl("localhost", 30100);
+    qclient::QClient qcl("localhost", 30100, {} );
 
     ASSERT_REPLY(qcl.exec("get", KeyConstants::kJournal_ClusterID), "some-cluster-id");
     ASSERT_REPLY(qcl.exec("set", KeyConstants::kJournal_ClusterID, "different-cluster-id"), "OK");

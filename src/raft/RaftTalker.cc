@@ -86,12 +86,20 @@ private:
 
 
 RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &contactDetails)
-: server(server_), tlsconfig(), tunnel(server.hostname, server.port, false, qclient::RetryStrategy::NoRetries(), qclient::BackpressureStrategy::Default(), tlsconfig, std::unique_ptr<Handshake>(new RaftHandshake(contactDetails)) ) {
+: server(server_) {
 
+  qclient::Options opts;
+
+  opts.transparentRedirects = false;
+  opts.retryStrategy = qclient::RetryStrategy::NoRetries();
+  opts.backpressureStrategy = qclient::BackpressureStrategy::Default();
+  opts.handshake.reset(new RaftHandshake(contactDetails));
+
+  qcl.reset(new QClient(server.hostname, server.port, std::move(opts)));
 }
 
 RaftTalker::RaftTalker(const RaftServer &server_)
-: server(server_), tunnel(server.hostname, server.port) {
+: server(server_), qcl(new QClient(server.hostname, server.port, {} )) {
 }
 
 std::future<redisReplyPtr> RaftTalker::heartbeat(RaftTerm term, const RaftServer &leader) {
@@ -101,7 +109,7 @@ std::future<redisReplyPtr> RaftTalker::heartbeat(RaftTerm term, const RaftServer
   payload.emplace_back(std::to_string(term));
   payload.emplace_back(leader.toString());
 
-  return tunnel.execute(payload);
+  return qcl->execute(payload);
 }
 
 std::future<redisReplyPtr> RaftTalker::appendEntries(
@@ -133,7 +141,7 @@ std::future<redisReplyPtr> RaftTalker::appendEntries(
     qdb_assert(RaftEntry::fetchTerm(entries[i]) <= term);
   }
 
-  return tunnel.execute(payload);
+  return qcl->execute(payload);
 }
 
 std::future<redisReplyPtr> RaftTalker::requestVote(const RaftVoteRequest &req) {
@@ -145,7 +153,7 @@ std::future<redisReplyPtr> RaftTalker::requestVote(const RaftVoteRequest &req) {
   payload.emplace_back(std::to_string(req.lastIndex));
   payload.emplace_back(std::to_string(req.lastTerm));
 
-  return tunnel.execute(payload);
+  return qcl->execute(payload);
 }
 
 std::future<redisReplyPtr> RaftTalker::fetch(LogIndex index) {
@@ -154,21 +162,21 @@ std::future<redisReplyPtr> RaftTalker::fetch(LogIndex index) {
   payload.emplace_back("RAFT_FETCH");
   payload.emplace_back(std::to_string(index));
 
-  return tunnel.execute(payload);
+  return qcl->execute(payload);
 }
 
 std::future<redisReplyPtr> RaftTalker::resilveringStart(const ResilveringEventID &id) {
-  return tunnel.exec("quarkdb_start_resilvering", id);
+  return qcl->exec("quarkdb_start_resilvering", id);
 }
 
 std::future<redisReplyPtr> RaftTalker::resilveringCopy(const ResilveringEventID &id, const std::string &filename, const std::string &contents) {
-  return tunnel.exec("quarkdb_resilvering_copy_file", id, filename, contents);
+  return qcl->exec("quarkdb_resilvering_copy_file", id, filename, contents);
 }
 
 std::future<redisReplyPtr> RaftTalker::resilveringFinish(const ResilveringEventID &id) {
-  return tunnel.exec("quarkdb_finish_resilvering", id);
+  return qcl->exec("quarkdb_finish_resilvering", id);
 }
 
 std::future<redisReplyPtr> RaftTalker::resilveringCancel(const ResilveringEventID &id, const std::string &reason) {
-  return tunnel.exec("quarkdb_cancel_resilvering");
+  return qcl->exec("quarkdb_cancel_resilvering");
 }

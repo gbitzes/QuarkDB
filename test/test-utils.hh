@@ -142,6 +142,7 @@ public:
   RaftGroup* group();
   Poller *poller();
   qclient::QClient *tunnel();
+  qclient::Options makeNoRedirectOptions();
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
@@ -183,6 +184,7 @@ public:
   RaftTrimmer* trimmer(int id = 0);
   const RaftContactDetails* contactDetails(int id = 0);
 
+  qclient::Options makeNoRedirectOptions(int id = 0);
   void killTunnel(int id = 0);
 
   // manage node state
