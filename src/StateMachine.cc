@@ -1222,6 +1222,12 @@ std::string StateMachine::statistics() {
   return stats;
 }
 
+std::string StateMachine::levelStats() {
+  std::string stats;
+  db->GetProperty(rocksdb::DB::Properties::kLevelStats, &stats);
+  return stats;
+}
+
 rocksdb::Status StateMachine::noop(LogIndex index) {
   StagingArea stagingArea(*this);
   return stagingArea.commit(index);

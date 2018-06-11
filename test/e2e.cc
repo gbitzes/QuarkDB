@@ -936,6 +936,7 @@ TEST_F(Raft_e2e, smove) {
   ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set1"), make_vec("i2", "i3", "i4", "i5"));
   ASSERT_REPLY(tunnel(leaderID)->exec("smembers", "set2"), make_vec("i1", "t1", "t2", "t3", "t4", "t5"));
   ASSERT_REPLY(tunnel(leaderID)->exec("quarkdb-manual-compaction"), "OK");
+  qdb_info(qclient::describeRedisReply(tunnel(leaderID)->exec("quarkdb-level-stats").get()));
 }
 
 TEST_F(Raft_e2e, sscan) {

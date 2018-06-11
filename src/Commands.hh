@@ -128,6 +128,7 @@ enum class RedisCommand {
   QUARKDB_BULKLOAD_FINALIZE,
   QUARKDB_INVALID_COMMAND,                  // used in tests
   QUARKDB_MANUAL_COMPACTION,
+  QUARKDB_LEVEL_STATS,
   RECOVERY_INFO
 };
 

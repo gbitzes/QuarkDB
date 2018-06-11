@@ -185,6 +185,15 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->fromStatus(stateMachine->manualCompaction());
     }
+    case RedisCommand::QUARKDB_LEVEL_STATS: {
+      if(req.size() != 1) return conn->errArgs(req[0]);
+      InFlightRegistration registration(inFlightTracker);
+      if(!registration.ok()) {
+        return conn->err("unavailable");
+      }
+
+      return conn->status(stateMachine->levelStats());
+    }
     default: {
       if(req.getCommandType() == CommandType::QUARKDB) {
         qdb_critical("Unable to dispatch command '" << req[0] << "' of type QUARKDB");
