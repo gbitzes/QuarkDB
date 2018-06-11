@@ -113,7 +113,7 @@ public:
   void mainRedis(int threadId) {
     qclient::Options opts;
     if(!password.empty()) {
-      opts.handshake.reset(new qclient::AuthHandshake(password));
+      opts.handshake.reset(new qclient::HmacAuthHandshake(password));
     }
 
     qclient::QClient tunnel(server.hostname, server.port, std::move(opts) );

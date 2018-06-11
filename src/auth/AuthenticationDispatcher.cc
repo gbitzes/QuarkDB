@@ -70,6 +70,7 @@ RedisEncodedResponse AuthenticationDispatcher::dispatch(const RedisRequest &req,
       authenticator.reset();
 
       if(validationStatus == Authenticator::ValidationStatus::kInvalidSignature) {
+        qdb_warn("An attempted hmac authentication challenge failed. Client supplied invalid signature.")
         return Formatter::err("invalid signature");
       }
 

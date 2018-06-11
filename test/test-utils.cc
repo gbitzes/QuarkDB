@@ -319,7 +319,7 @@ std::unique_ptr<qclient::Handshake> TestNode::makeQClientHandshake() {
     return {};
   }
 
-  return std::unique_ptr<qclient::Handshake>(new qclient::AuthHandshake(group()->contactDetails()->getPassword()));
+  return std::unique_ptr<qclient::Handshake>(new qclient::HmacAuthHandshake(group()->contactDetails()->getPassword()));
 }
 
 qclient::QClient* TestNode::tunnel() {
