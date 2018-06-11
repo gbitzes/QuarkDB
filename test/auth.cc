@@ -146,9 +146,14 @@ TEST(AuthenticationDispatcher, ChallengesBasicSanity) {
   redisReaderFree(reader);
 }
 
-void setStr(redisReplyPtr reply, const std::string &str) {
-  reply->str = (char*) str.c_str(); // evil const cast
+qclient::redisReplyPtr strResponse(const std::string &str) {
+  qclient::redisReplyPtr reply((redisReply*) malloc(sizeof(redisReply)), freeReplyObject);
+  reply->type = REDIS_REPLY_STRING;
+
+  reply->str = (char*) malloc(str.size());
+  memcpy(reply->str, str.c_str(), str.size());
   reply->len = str.size();
+  return reply;
 }
 
 TEST(HmacAuthHandshake, BasicSanity) {
@@ -160,10 +165,7 @@ TEST(HmacAuthHandshake, BasicSanity) {
   ASSERT_EQ(cmd.size(), 2u);
   ASSERT_EQ(cmd[0], "HMAC-AUTH-GENERATE-CHALLENGE");
 
-  qclient::redisReplyPtr reply = qclient::redisReplyPtr((redisReply*) malloc(sizeof(redisReply)));
-  reply->type = REDIS_REPLY_STRING;
-  setStr(reply, "some-string-to-sign");
-
+  qclient::redisReplyPtr reply = strResponse("some-string-to-sign");
   ASSERT_EQ(qclient::Handshake::Status::INVALID, handshake.validateResponse(reply));
   handshake.restart();
 
@@ -171,7 +173,7 @@ TEST(HmacAuthHandshake, BasicSanity) {
   ASSERT_EQ(cmd.size(), 2u);
   ASSERT_EQ(cmd[0], "HMAC-AUTH-GENERATE-CHALLENGE");
   std::string challenge = authenticator.generateChallenge(cmd[1]);
-  setStr(reply, challenge);
+  reply = strResponse(challenge);
 
   ASSERT_EQ(qclient::Handshake::Status::VALID_INCOMPLETE, handshake.validateResponse(reply));
   cmd = handshake.provideHandshake();
@@ -179,7 +181,7 @@ TEST(HmacAuthHandshake, BasicSanity) {
   ASSERT_EQ(cmd[0], "HMAC-AUTH-VALIDATE-CHALLENGE");
   ASSERT_EQ(authenticator.validateSignature(cmd[1]), Authenticator::ValidationStatus::kOk);
 
+  reply = strResponse("OK");
   reply->type = REDIS_REPLY_STATUS;
-  setStr(reply, "OK");
   ASSERT_EQ(qclient::Handshake::Status::VALID_COMPLETE, handshake.validateResponse(reply));
 }
