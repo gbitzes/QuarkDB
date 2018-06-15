@@ -48,6 +48,7 @@ TEST(Configuration, T2) {
       "redis.trace debug\n"
       "redis.write_ahead_log true\n"
       "redis.password_file /tmp/quarkdb-tests/password-file\n"
+      "redis.require_password_for_localhost true\n"
       "fi\n";
 
   ASSERT_TRUE(Configuration::fromString(c, config));
@@ -58,6 +59,7 @@ TEST(Configuration, T2) {
   ASSERT_EQ(config.getWriteAheadLog(), true);
   ASSERT_EQ(config.getPassword(), "");
   ASSERT_EQ(config.getPasswordFilePath(), "/tmp/quarkdb-tests/password-file");
+  ASSERT_TRUE(config.getRequirePasswordForLocalhost());
   ASSERT_THROW(config.extractPasswordOrDie(), FatalException); // file does not exist
 
   ASSERT_EQ(system("echo 'pickles' > /tmp/quarkdb-tests/password-file"), 0);
@@ -94,6 +96,24 @@ TEST(Configuration, NoPassword) {
   ASSERT_EQ(config.getPasswordFilePath(), "");
   ASSERT_EQ(config.extractPasswordOrDie(), "");
 }
+
+TEST(Configuration, NoPasswordButRequireForLocalhost) {
+  Configuration config;
+  std::string c;
+
+  c = "if exec xrootd\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
+      "redis.mode raft\n"
+      "redis.database /home/user/mydb\n"
+      "redis.myself server1:7776\n"
+      "redis.trace debug\n"
+      "redis.write_ahead_log true\n"
+      "redis.require_password_for_localhost true\n"
+      "fi\n";
+
+  ASSERT_FALSE(Configuration::fromString(c, config));
+}
+
 
 TEST(Configuration, PasswordAndPasswordPath) {
   Configuration config;

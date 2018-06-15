@@ -73,9 +73,10 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
     return authDispatcher.dispatch(conn, req);
   }
 
-  // Allow un-authenticated connections from localhost, or if we're running
-  // in insecure mode.
-  if(conn->isLocalhost() || password.empty()) {
+  // Always permit access if:
+  // - No password is set. (duh)
+  // - Link is from localhost, AND we don't require that all localhost connections be authenticated.
+  if(password.empty() || (conn->isLocalhost() && !configuration.getRequirePasswordForLocalhost() )) {
     conn->authorization = true;
   }
 

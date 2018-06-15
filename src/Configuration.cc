@@ -155,6 +155,9 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       else if(!strcmp("password", option)) {
         success = fetchSingle(stream, out.password);
       }
+      else if(!strcmp("require_password_for_localhost", option)) {
+        success = fetchSingle(stream, buffer) && parseBool(buffer, out.requirePasswordForLocalhost);
+      }
       else {
         qdb_warn("Error when parsing configuration - unknown option " << quotes(option));
         return false;
@@ -213,6 +216,11 @@ bool Configuration::isValid() {
 
   if(!passwordFilePath.empty() && !password.empty()) {
     qdb_log("Cannot both specify redis.password_file and redis.password, choose one or the other");
+    return false;
+  }
+
+  if(password.empty() && passwordFilePath.empty() && requirePasswordForLocalhost) {
+    qdb_log("Cannot require password for localhost, when no password has been set!");
     return false;
   }
 

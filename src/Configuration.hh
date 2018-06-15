@@ -70,6 +70,7 @@ public:
   std::string getPassword() const { return password; }
   RaftServer getMyself() const { return myself; }
   bool getWriteAheadLog() const { return writeAheadLog; }
+  bool getRequirePasswordForLocalhost() const { return requirePasswordForLocalhost; }
 
   std::string extractPasswordOrDie() const;
 private:
@@ -80,6 +81,7 @@ private:
   std::string certificateKeyPath;
   std::string passwordFilePath;
   std::string password;
+  bool requirePasswordForLocalhost = false;
   bool writeAheadLog = true;
 
   // raft options
