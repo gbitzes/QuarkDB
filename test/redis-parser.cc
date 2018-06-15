@@ -108,7 +108,7 @@ TEST(RedisRequest, MultiOpPrintableString) {
 
   RedisRequest req { "multiop_readwrite", multiOp.serialize(), "phantom" };
   ASSERT_EQ(req.toPrintableString(),
-    "multiop_readwrite (phantom), size 2\n"
+    "MULTIOP_READWRITE (phantom), size 2\n"
     " --- 1) \"set\" \"aaa\" \"bbb\"\n"
     " --- 2) \"get\" \"qwe\" \"rty\""
   );

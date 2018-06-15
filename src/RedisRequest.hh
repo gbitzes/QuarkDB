@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_REDIS_REQUEST_H__
-#define __QUARKDB_REDIS_REQUEST_H__
+#ifndef QUARKDB_REDIS_REQUEST_H
+#define QUARKDB_REDIS_REQUEST_H
 
 #include "Commands.hh"
 #include <string>

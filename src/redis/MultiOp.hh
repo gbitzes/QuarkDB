@@ -79,6 +79,8 @@ public:
 
   RedisRequest toRedisRequest() const;
   std::string getFusedCommand() const;
+  void fromRedisRequest(const RedisRequest &req);
+  std::string toPrintableString() const;
 
 private:
   void checkLastCommandForWrites();
@@ -86,6 +88,7 @@ private:
   bool hasWrites = false;
   bool phantom = false;
   std::vector<RedisRequest> requests;
+  std::string multiOpTypeInString() const;
 };
 
 }

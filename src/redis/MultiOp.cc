@@ -120,3 +120,38 @@ RedisRequest MultiOp::toRedisRequest() const {
 
   return req;
 }
+
+void MultiOp::fromRedisRequest(const RedisRequest &req) {
+  qdb_assert(req.getCommand() == RedisCommand::MULTIOP_READ || req.getCommand() == RedisCommand::MULTIOP_READWRITE);
+  qdb_assert(req.size() == 3);
+  qdb_assert(deserialize(req[1]));
+
+  if(req[2] == "phantom") {
+    setPhantom(true);
+  }
+  else if(req[2] == "real") {
+    setPhantom(false);
+  }
+  else {
+    qdb_throw("should never happen");
+  }
+
+}
+
+std::string MultiOp::multiOpTypeInString() const {
+  if(phantom) {
+    return "phantom";
+  }
+  return "real";
+}
+
+std::string MultiOp::toPrintableString() const {
+  std::stringstream ss;
+  ss << getFusedCommand() << " (" << multiOpTypeInString() << "), size " << requests.size() << std::endl;
+  for(size_t i = 0; i < requests.size(); i++) {
+    ss << " --- " << i+1 << ") " << requests[i].toPrintableString();
+    if(i != requests.size()-1) ss << std::endl;
+  }
+
+  return ss.str();
+}
