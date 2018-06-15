@@ -30,11 +30,11 @@ namespace quarkdb {
 
 class QuarkDBNode;
 
-class AuthenticationDispatcher : public Dispatcher {
+class AuthenticationDispatcher {
 public:
 
   AuthenticationDispatcher(const std::string &secret);
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  LinkStatus dispatch(Connection *conn, RedisRequest &req);
   RedisEncodedResponse dispatch(const RedisRequest &req, bool &authorized, std::unique_ptr<Authenticator> &authenticator);
 
 private:

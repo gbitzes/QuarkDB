@@ -63,6 +63,8 @@ public:
   }
 
 private:
+  bool isAuthenticated(Connection *conn) const;
+
   std::unique_ptr<ShardDirectory> shardDirectoryOwnership;
   std::unique_ptr<Shard> shard;
 

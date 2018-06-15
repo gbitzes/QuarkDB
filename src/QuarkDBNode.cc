@@ -67,12 +67,7 @@ QuarkDBNode::QuarkDBNode(const Configuration &config, const RaftTimeouts &t,
   bootEnd = std::chrono::steady_clock::now();
 }
 
-LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
-  // Authentication command?
-  if(req.getCommandType() == CommandType::AUTHENTICATION) {
-    return authDispatcher.dispatch(conn, req);
-  }
-
+bool QuarkDBNode::isAuthenticated(Connection *conn) const {
   // Always permit access if:
   // - No password is set. (duh)
   // - Link is from localhost, AND we don't require that all localhost connections be authenticated.
@@ -80,8 +75,17 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
     conn->authorization = true;
   }
 
+  return conn->authorization;
+}
+
+LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
+  // Authentication command?
+  if(req.getCommandType() == CommandType::AUTHENTICATION) {
+    return authDispatcher.dispatch(conn, req);
+  }
+
   // We need to be authenticated past this point. Are we?
-  if(!conn->authorization) {
+  if(!isAuthenticated(conn)) {
     return conn->noauth("Authentication required.");
   }
 
