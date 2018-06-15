@@ -32,8 +32,6 @@
 #include "redis/Authenticator.hh"
 #include <queue>
 
-#define OUTPUT_BUFFER_SIZE (16*1024)
-
 namespace rocksdb {
   class Status;
 }
