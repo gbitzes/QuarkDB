@@ -82,6 +82,22 @@ public:
   void fromRedisRequest(const RedisRequest &req);
   std::string toPrintableString() const;
 
+  //----------------------------------------------------------------------------
+  // How many responses is the client to this MultiOp expecting?
+  // - size() if this is a phantom transaction. The client cannot possibly
+  //   know we're batching the requests in the background, and will be utterly
+  //   confused if we provide fewer responses than actual requests sent.
+  // - Just one, otherwise. The client issued a real transaction, and knows to
+  //   expect just a single (vector) response.
+  //----------------------------------------------------------------------------
+  int64_t expectedResponses() const {
+    if(phantom) {
+      return requests.size();
+    }
+
+    return 1;
+  }
+
 private:
   void checkLastCommandForWrites();
 

@@ -408,6 +408,11 @@ TEST(MultiOp, Parsing) {
 
   ASSERT_TRUE(multiOp.containsWrites());
 
+  multiOp.setPhantom(false);
+  ASSERT_EQ(multiOp.expectedResponses(), 1);
+  multiOp.setPhantom(true);
+  ASSERT_EQ(multiOp.expectedResponses(), 2);
+
   std::string serialized = multiOp.serialize();
 
   MultiOp multiOp2;
@@ -426,6 +431,10 @@ TEST(MultiOp, Parsing) {
   ASSERT_FALSE(multiOp3.containsWrites());
   multiOp3.emplace_back("SET", "aaa", "bbb");
   ASSERT_TRUE(multiOp3.containsWrites());
+
+  ASSERT_EQ(multiOp3.expectedResponses(), 1);
+  multiOp3.setPhantom(true);
+  ASSERT_EQ(multiOp3.expectedResponses(), 3);
 
   ASSERT_THROW(multiOp3.emplace_back("asdf", "1234"), FatalException);
 }
