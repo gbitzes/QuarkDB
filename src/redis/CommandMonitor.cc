@@ -30,14 +30,14 @@ CommandMonitor::CommandMonitor() {
 
 }
 
-void CommandMonitor::broadcast(const std::string& linkDescription, const RedisRequest &received) {
+void CommandMonitor::broadcast(const std::string& linkDescription, const std::string& printableString) {
   if(!active) return;
 
   std::lock_guard<std::mutex> lock(mtx);
   auto it = monitors.begin();
 
   while(it != monitors.end()) {
-    bool stillAlive = (*it)->appendIfAttached(Formatter::status(SSTR(linkDescription << ": " << received.toPrintableString())));
+    bool stillAlive = (*it)->appendIfAttached(Formatter::status(SSTR(linkDescription << ": " << printableString)));
 
     if(!stillAlive) {
       it = monitors.erase(it);
@@ -48,6 +48,16 @@ void CommandMonitor::broadcast(const std::string& linkDescription, const RedisRe
   }
 
   if(monitors.size() == 0) active = false;
+}
+
+void CommandMonitor::broadcast(const std::string& linkDescription, const RedisRequest& req) {
+  if(!active) return;
+  return broadcast(linkDescription, req.toPrintableString());
+}
+
+void CommandMonitor::broadcast(const std::string& linkDescription, const MultiOp& multiOp) {
+  if(!active) return;
+  return broadcast(linkDescription, multiOp.toPrintableString());
 }
 
 void CommandMonitor::addRegistration(Connection *c) {

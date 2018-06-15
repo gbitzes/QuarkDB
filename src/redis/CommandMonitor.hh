@@ -21,23 +21,29 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_COMMAND_MONITOR_H__
-#define __QUARKDB_COMMAND_MONITOR_H__
+#ifndef QUARKDB_COMMAND_MONITOR_H
+#define QUARKDB_COMMAND_MONITOR_H
 
 #include <list>
 #include "../Connection.hh"
 
 namespace quarkdb {
 
+class MultiOp;
+
 class CommandMonitor {
 public:
   CommandMonitor();
 
-  void broadcast(const std::string& linkDescription, const RedisRequest &received);
+  void broadcast(const std::string& linkDescription, const RedisRequest& received);
+  void broadcast(const std::string& linkDescription, const MultiOp& multiOp);
+
   void addRegistration(Connection *c);
   size_t size();
 
 private:
+  void broadcast(const std::string& linkDescription, const std::string& printableString);
+  
   std::atomic<int64_t> active {false};
   std::mutex mtx;
 
