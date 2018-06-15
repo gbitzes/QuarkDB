@@ -172,10 +172,23 @@ static void generateLoad(qclient::QClient *qcl, std::string prefix, ThreadAssist
 TEST_F(Replication, load_during_election) {
   Connection::setPhantomBatchLimit(1);
 
+  // add backpressure to load-generating threads
+  qclient::Options opts0 = makeNoRedirectOptions();
+  opts0.backpressureStrategy = qclient::BackpressureStrategy::RateLimitPendingRequests(1024);
+  qclient::QClient qcl0(myself(0).hostname, myself(0).port, std::move(opts0));
+
+  qclient::Options opts1 = makeNoRedirectOptions();
+  opts1.backpressureStrategy = qclient::BackpressureStrategy::RateLimitPendingRequests(1024);
+  qclient::QClient qcl1(myself(1).hostname, myself(1).port, std::move(opts1));
+
+  qclient::Options opts2 = makeNoRedirectOptions();
+  opts2.backpressureStrategy = qclient::BackpressureStrategy::RateLimitPendingRequests(1024);
+  qclient::QClient qcl2(myself(2).hostname, myself(2).port, std::move(opts2));
+
   // let's be extra evil and start generating load even before the nodes start up
-  AssistedThread t1(generateLoad, tunnel(0), "node0");
-  AssistedThread t2(generateLoad, tunnel(1), "node1");
-  AssistedThread t3(generateLoad, tunnel(2), "node2");
+  AssistedThread t1(generateLoad, &qcl0, "node0");
+  AssistedThread t2(generateLoad, &qcl1, "node1");
+  AssistedThread t3(generateLoad, &qcl2, "node2");
 
   // start the cluster
   spinup(0); spinup(1); spinup(2);
