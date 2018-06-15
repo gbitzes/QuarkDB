@@ -41,7 +41,7 @@ TEST_F(AllocationCount, 30k_entries) {
 
   std::vector<std::future<redisReplyPtr>> futures;
 
-  const int64_t NENTRIES = 30000;
+  constexpr int64_t NENTRIES = 5000000;
   for(size_t i = 0; i < NENTRIES; i++) {
     futures.emplace_back(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)));
   }

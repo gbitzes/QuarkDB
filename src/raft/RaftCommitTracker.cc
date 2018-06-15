@@ -108,10 +108,11 @@ void RaftCommitTracker::recalculateCommitIndex() {
   // a RaftMatchIndexTracker on it. But it has to be taken into account in the
   // commitIndex calculation.
 
-  std::vector<LogIndex> matchIndexes;
+  matchIndexes.resize(targets.size());
 
+  size_t i = 0;
   for(auto it = targets.begin(); it != targets.end(); it++) {
-    matchIndexes.push_back(it->second->get());
+    matchIndexes[i++] = it->second->get();
   }
 
   std::sort(matchIndexes.begin(), matchIndexes.end());

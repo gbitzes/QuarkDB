@@ -67,6 +67,7 @@ private:
 
   std::map<RaftServer, RaftMatchIndexTracker*> registrations;
   std::map<RaftServer, RaftMatchIndexTracker*> targets;
+  std::vector<LogIndex> matchIndexes;
 
   LogIndex commitIndex = 0;
   bool commitIndexLagging = false;
