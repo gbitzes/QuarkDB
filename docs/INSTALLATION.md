@@ -19,7 +19,7 @@ Then, run `yum install quarkdb quarkdb-debuginfo`, and you're done.
 ### Requirements/ Dependencies
   * Check out `utils/el7-packages.sh` for a list of build dependencies.
   * Build will fail with older versions of gcc/gcc-c++
-    * On CC7, run `yum install centos-release-sc && yum install devtoolset-6 && source /opt/rh/devtoolset-6/enable`
+    * On CC7, run `yum install centos-release-sc && yum install devtoolset-7 && source /opt/rh/devtoolset-7/enable`
 
 The following will compile QuarkDB and run the tests.
 
