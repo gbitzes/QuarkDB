@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_FORMATTER_H__
-#define __QUARKDB_FORMATTER_H__
+#ifndef QUARKDB_FORMATTER_H
+#define QUARKDB_FORMATTER_H
 
 #include <rocksdb/status.h>
 #include "redis/RedisEncodedResponse.hh"
@@ -54,6 +54,8 @@ public:
 
   static RedisEncodedResponse simpleRedisRequest(const RedisRequest &req);
   static RedisEncodedResponse redisRequest(const RedisRequest &req);
+
+  static RedisEncodedResponse multiply(const RedisEncodedResponse &resp, size_t factor);
 };
 
 }

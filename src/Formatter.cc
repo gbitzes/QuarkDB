@@ -165,3 +165,14 @@ RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entrie
 RedisEncodedResponse Formatter::noauth(const std::string &str) {
   return RedisEncodedResponse(SSTR("-NOAUTH " << str << "\r\n"));
 }
+
+RedisEncodedResponse Formatter::multiply(const RedisEncodedResponse &resp, size_t factor) {
+  qdb_assert(factor >= 1);
+
+  std::ostringstream ss;
+  for(size_t i = 0; i < factor; i++) {
+    ss << resp.val;
+  }
+
+  return RedisEncodedResponse(ss.str());
+}

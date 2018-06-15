@@ -34,6 +34,10 @@ TEST(Response, T1) {
   ASSERT_EQ(Formatter::null().val, "$-1\r\n");
   ASSERT_EQ(Formatter::status("test").val, "+test\r\n");
   ASSERT_EQ(Formatter::noauth("asdf").val, "-NOAUTH asdf\r\n");
+  ASSERT_EQ(
+    Formatter::multiply(Formatter::noauth("you shall not pass"), 3).val,
+    "-NOAUTH you shall not pass\r\n-NOAUTH you shall not pass\r\n-NOAUTH you shall not pass\r\n"
+  );
 }
 
 TEST(ArrayResponseBuilder, BasicSanity) {
