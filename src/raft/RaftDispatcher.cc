@@ -307,10 +307,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
   }
 
   // At this point, the received command *must* be a write - verify!
-  if(req.getCommandType() != CommandType::WRITE) {
-    qdb_critical("RaftDispatcher: unable to dispatch non-write command: " << req[0]);
-    return conn->err("internal dispatching error");
-  }
+  qdb_assert(req.getCommandType() == CommandType::WRITE);
 
   // send request to the write tracker
   std::lock_guard<std::mutex> lock(raftCommand);

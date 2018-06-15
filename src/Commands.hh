@@ -114,7 +114,6 @@ enum class RedisCommand {
   RAFT_REMOVE_MEMBER,
   RAFT_PROMOTE_OBSERVER,
   RAFT_HEARTBEAT,
-  RAFT_INVALID_COMMAND,                     // used in tests
   RAFT_FETCH_LAST,
   ACTIVATE_STALE_READS,
 
