@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: MultiOp.cc
+// File: Transaction.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,16 +21,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "MultiOp.hh"
+#include "Transaction.hh"
 #include "../utils/Macros.hh"
 #include "../utils/IntToBinaryString.hh"
 using namespace quarkdb;
 
-MultiOp::MultiOp() {}
+Transaction::Transaction() {}
 
-MultiOp::~MultiOp() {}
+Transaction::~Transaction() {}
 
-void MultiOp::push_back(const RedisRequest &req) {
+void Transaction::push_back(const RedisRequest &req) {
   requests.push_back(req);
   checkLastCommandForWrites();
 }
@@ -43,7 +43,7 @@ void serializeRequestToString(std::stringstream &ss, const RedisRequest &req) {
   }
 }
 
-std::string MultiOp::serialize() const {
+std::string Transaction::serialize() const {
   std::stringstream ss;
   ss << intToBinaryString(requests.size());
 
@@ -54,7 +54,7 @@ std::string MultiOp::serialize() const {
   return ss.str();
 }
 
-void MultiOp::checkLastCommandForWrites() {
+void Transaction::checkLastCommandForWrites() {
   RedisRequest &lastreq = requests.back();
 
   qdb_assert(lastreq.getCommandType() == CommandType::READ || lastreq.getCommandType() == CommandType::WRITE);
@@ -63,7 +63,7 @@ void MultiOp::checkLastCommandForWrites() {
   }
 }
 
-bool MultiOp::deserialize(const std::string &src) {
+bool Transaction::deserialize(const std::string &src) {
   qdb_assert(requests.empty());
   if(src.empty()) return false;
 
@@ -90,19 +90,19 @@ bool MultiOp::deserialize(const std::string &src) {
   return true;
 }
 
-void MultiOp::clear() {
+void Transaction::clear() {
   requests.clear();
 }
 
-std::string MultiOp::getFusedCommand() const {
+std::string Transaction::getFusedCommand() const {
   if(hasWrites) {
-    return "MULTIOP_READWRITE";
+    return "TX_READWRITE";
   }
 
-  return "MULTIOP_READ";
+  return "TX_READONLY";
 }
 
-RedisRequest MultiOp::toRedisRequest() const {
+RedisRequest Transaction::toRedisRequest() const {
   if(phantom && requests.size() == 1) {
     return requests[0];
   }
@@ -121,8 +121,8 @@ RedisRequest MultiOp::toRedisRequest() const {
   return req;
 }
 
-void MultiOp::fromRedisRequest(const RedisRequest &req) {
-  qdb_assert(req.getCommand() == RedisCommand::MULTIOP_READ || req.getCommand() == RedisCommand::MULTIOP_READWRITE);
+void Transaction::fromRedisRequest(const RedisRequest &req) {
+  qdb_assert(req.getCommand() == RedisCommand::TX_READONLY || req.getCommand() == RedisCommand::TX_READWRITE);
   qdb_assert(req.size() == 3);
   qdb_assert(deserialize(req[1]));
 
@@ -138,16 +138,16 @@ void MultiOp::fromRedisRequest(const RedisRequest &req) {
 
 }
 
-std::string MultiOp::multiOpTypeInString() const {
+std::string Transaction::typeInString() const {
   if(phantom) {
     return "phantom";
   }
   return "real";
 }
 
-std::string MultiOp::toPrintableString() const {
+std::string Transaction::toPrintableString() const {
   std::stringstream ss;
-  ss << getFusedCommand() << " (" << multiOpTypeInString() << "), size " << requests.size() << std::endl;
+  ss << getFusedCommand() << " (" << typeInString() << "), size " << requests.size() << std::endl;
   for(size_t i = 0; i < requests.size(); i++) {
     ss << " --- " << i+1 << ") " << requests[i].toPrintableString();
     if(i != requests.size()-1) ss << std::endl;

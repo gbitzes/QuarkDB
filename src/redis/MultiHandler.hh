@@ -24,7 +24,7 @@
 #ifndef QUARKDB_REDIS_MULTIHANDLER_H
 #define QUARKDB_REDIS_MULTIHANDLER_H
 
-#include "MultiOp.hh"
+#include "Transaction.hh"
 #include "RedisEncodedResponse.hh"
 
 namespace quarkdb {
@@ -40,11 +40,11 @@ public:
   LinkStatus process(Dispatcher *dispatcher, Connection *conn, RedisRequest &req);
   void activatePhantom();
   size_t size() const;
-  bool isPhantom() const { return activated && multiOp.isPhantom(); }
+  bool isPhantom() const { return activated && transaction.isPhantom(); }
   LinkStatus finalizePhantomTransaction(Dispatcher *dispatcher, Connection *conn);
 
 private:
-  MultiOp multiOp;
+  Transaction transaction;
   bool activated = false;
 };
 

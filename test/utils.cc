@@ -32,7 +32,7 @@
 #include "utils/CommandParsing.hh"
 #include "utils/TimeFormatting.hh"
 #include "utils/Random.hh"
-#include "redis/MultiOp.hh"
+#include "redis/Transaction.hh"
 #include "redis/Authenticator.hh"
 #include "Utils.hh"
 
@@ -400,41 +400,41 @@ TEST(Authenticator, BasicSanity) {
   ASSERT_NE(sig1, sig3);
 }
 
-TEST(MultiOp, Parsing) {
-  MultiOp multiOp;
+TEST(Transaction, Parsing) {
+  Transaction tx;
 
-  multiOp.emplace_back("SET", "aaa", "bbb");
-  multiOp.emplace_back("GET", "bbb");
+  tx.emplace_back("SET", "aaa", "bbb");
+  tx.emplace_back("GET", "bbb");
 
-  ASSERT_TRUE(multiOp.containsWrites());
+  ASSERT_TRUE(tx.containsWrites());
 
-  multiOp.setPhantom(false);
-  ASSERT_EQ(multiOp.expectedResponses(), 1);
-  multiOp.setPhantom(true);
-  ASSERT_EQ(multiOp.expectedResponses(), 2);
+  tx.setPhantom(false);
+  ASSERT_EQ(tx.expectedResponses(), 1);
+  tx.setPhantom(true);
+  ASSERT_EQ(tx.expectedResponses(), 2);
 
-  std::string serialized = multiOp.serialize();
+  std::string serialized = tx.serialize();
 
-  MultiOp multiOp2;
-  multiOp2.deserialize(serialized);
+  Transaction tx2;
+  tx2.deserialize(serialized);
 
-  ASSERT_EQ(multiOp2.size(), 2u);
-  ASSERT_EQ(multiOp2[0], multiOp[0]);
-  ASSERT_EQ(multiOp2[1], multiOp[1]);
-  ASSERT_EQ(multiOp, multiOp2);
-  ASSERT_TRUE(multiOp2.containsWrites());
+  ASSERT_EQ(tx2.size(), 2u);
+  ASSERT_EQ(tx2[0], tx[0]);
+  ASSERT_EQ(tx2[1], tx[1]);
+  ASSERT_EQ(tx, tx2);
+  ASSERT_TRUE(tx2.containsWrites());
 
-  MultiOp multiOp3;
-  multiOp3.emplace_back("GET", "aaa");
-  ASSERT_FALSE(multiOp3.containsWrites());
-  multiOp3.emplace_back("HGET", "aaa", "bbb");
-  ASSERT_FALSE(multiOp3.containsWrites());
-  multiOp3.emplace_back("SET", "aaa", "bbb");
-  ASSERT_TRUE(multiOp3.containsWrites());
+  Transaction tx3;
+  tx3.emplace_back("GET", "aaa");
+  ASSERT_FALSE(tx3.containsWrites());
+  tx3.emplace_back("HGET", "aaa", "bbb");
+  ASSERT_FALSE(tx3.containsWrites());
+  tx3.emplace_back("SET", "aaa", "bbb");
+  ASSERT_TRUE(tx3.containsWrites());
 
-  ASSERT_EQ(multiOp3.expectedResponses(), 1);
-  multiOp3.setPhantom(true);
-  ASSERT_EQ(multiOp3.expectedResponses(), 3);
+  ASSERT_EQ(tx3.expectedResponses(), 1);
+  tx3.setPhantom(true);
+  ASSERT_EQ(tx3.expectedResponses(), 3);
 
-  ASSERT_THROW(multiOp3.emplace_back("asdf", "1234"), FatalException);
+  ASSERT_THROW(tx3.emplace_back("asdf", "1234"), FatalException);
 }

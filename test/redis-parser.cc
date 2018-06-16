@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "redis/MultiOp.hh"
+#include "redis/Transaction.hh"
 #include "utils/Macros.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
@@ -101,14 +101,14 @@ TEST_F(Redis_Parser, T2) {
   simulateMany(str, valid, 10);
 }
 
-TEST(RedisRequest, MultiOpPrintableString) {
-  MultiOp multiOp;
-  multiOp.emplace_back("set", "aaa", "bbb");
-  multiOp.emplace_back("get", "qwe", "rty");
+TEST(RedisRequest, TransactionToPrintableString) {
+  Transaction tx;
+  tx.emplace_back("set", "aaa", "bbb");
+  tx.emplace_back("get", "qwe", "rty");
 
-  RedisRequest req { "multiop_readwrite", multiOp.serialize(), "phantom" };
+  RedisRequest req { "tx_readwrite", tx.serialize(), "phantom" };
   ASSERT_EQ(req.toPrintableString(),
-    "MULTIOP_READWRITE (phantom), size 2\n"
+    "TX_READWRITE (phantom), size 2\n"
     " --- 1) \"set\" \"aaa\" \"bbb\"\n"
     " --- 2) \"get\" \"qwe\" \"rty\""
   );

@@ -26,7 +26,7 @@
 #include "Common.hh"
 #include "Formatter.hh"
 #include "redis/ArrayResponseBuilder.hh"
-#include "redis/MultiOp.hh"
+#include "redis/Transaction.hh"
 using namespace quarkdb;
 
 RedisEncodedResponse Formatter::moved(int64_t shardId, const RaftServer &location) {
@@ -115,15 +115,15 @@ RedisEncodedResponse Formatter::simpleRedisRequest(const RedisRequest &req) {
 }
 
 RedisEncodedResponse Formatter::redisRequest(const RedisRequest &req) {
-  if(req.getCommand() == RedisCommand::MULTIOP_READWRITE || req.getCommand() == RedisCommand::MULTIOP_READ) {
-    MultiOp multiOp;
-    multiOp.deserialize(req[1]);
+  if(req.getCommand() == RedisCommand::TX_READWRITE || req.getCommand() == RedisCommand::TX_READONLY) {
+    Transaction transaction;
+    transaction.deserialize(req[1]);
 
-    ArrayResponseBuilder builder(multiOp.size() + 1);
+    ArrayResponseBuilder builder(transaction.size() + 1);
     builder.push_back(Formatter::string(req[0]));
 
-    for(size_t i = 0; i < multiOp.size(); i++) {
-      builder.push_back(simpleRedisRequest(multiOp[i]));
+    for(size_t i = 0; i < transaction.size(); i++) {
+      builder.push_back(simpleRedisRequest(transaction[i]));
     }
 
     return builder.buildResponse();

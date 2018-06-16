@@ -23,7 +23,6 @@
 
 #include "RecoveryDispatcher.hh"
 #include "../Formatter.hh"
-#include "../redis/MultiOp.hh"
 using namespace quarkdb;
 
 RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {

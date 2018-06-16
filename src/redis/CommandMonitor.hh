@@ -29,21 +29,21 @@
 
 namespace quarkdb {
 
-class MultiOp;
+class Transaction;
 
 class CommandMonitor {
 public:
   CommandMonitor();
 
   void broadcast(const std::string& linkDescription, const RedisRequest& received);
-  void broadcast(const std::string& linkDescription, const MultiOp& multiOp);
+  void broadcast(const std::string& linkDescription, const Transaction& transaction);
 
   void addRegistration(Connection *c);
   size_t size();
 
 private:
   void broadcast(const std::string& linkDescription, const std::string& printableString);
-  
+
   std::atomic<int64_t> active {false};
   std::mutex mtx;
 

@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: MultiOp.hh
+// File: Transaction.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,17 +21,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_REDIS_MULTIOP_H
-#define QUARKDB_REDIS_MULTIOP_H
+#ifndef QUARKDB_REDIS_TRANSACTION_H
+#define QUARKDB_REDIS_TRANSACTION_H
 
 #include "../RedisRequest.hh"
 
 namespace quarkdb {
 
-class MultiOp {
+class Transaction {
 public:
-  MultiOp();
-  ~MultiOp();
+  Transaction();
+  ~Transaction();
 
   void push_back(const RedisRequest &req);
   bool containsWrites() const {
@@ -49,7 +49,7 @@ public:
     return requests[i];
   }
 
-  bool operator==(const MultiOp &rhs) const {
+  bool operator==(const Transaction &rhs) const {
     return requests == rhs.requests;
   }
 
@@ -83,7 +83,7 @@ public:
   std::string toPrintableString() const;
 
   //----------------------------------------------------------------------------
-  // How many responses is the client to this MultiOp expecting?
+  // How many responses is the client to this transaction expecting?
   // - size() if this is a phantom transaction. The client cannot possibly
   //   know we're batching the requests in the background, and will be utterly
   //   confused if we provide fewer responses than actual requests sent.
@@ -104,7 +104,7 @@ private:
   bool hasWrites = false;
   bool phantom = false;
   std::vector<RedisRequest> requests;
-  std::string multiOpTypeInString() const;
+  std::string typeInString() const;
 };
 
 }

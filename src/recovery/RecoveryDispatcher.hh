@@ -30,8 +30,6 @@
 
 namespace quarkdb {
 
-class MultiOp;
-
 class RecoveryDispatcher : public Dispatcher {
 public:
   RecoveryDispatcher(RecoveryEditor &editor);

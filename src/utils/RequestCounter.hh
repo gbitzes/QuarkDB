@@ -29,7 +29,7 @@
 
 namespace quarkdb {
 
-class MultiOp;
+class Transaction;
 class RedisRequest;
 
 //------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ public:
   RequestCounter(std::chrono::seconds interval);
 
   void account(const RedisRequest &req);
-  void account(const MultiOp &multiOp);
+  void account(const Transaction &transaction);
   void mainThread(ThreadAssistant &assistant);
 
   void setReportingStatus(bool val);

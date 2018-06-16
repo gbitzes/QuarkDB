@@ -36,11 +36,11 @@ bool MultiHandler::active() const {
 
 void MultiHandler::activatePhantom() {
   if(activated) {
-    qdb_assert(multiOp.isPhantom());
+    qdb_assert(transaction.isPhantom());
   }
   else {
     activated = true;
-    multiOp.setPhantom(true);
+    transaction.setPhantom(true);
   }
 }
 
@@ -48,7 +48,7 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
   qdb_assert(activated || req.getCommand() == RedisCommand::MULTI);
 
   if(req.getCommand() == RedisCommand::DISCARD) {
-    multiOp.clear();
+    transaction.clear();
     activated = false;
     return conn->ok();
   }
@@ -63,21 +63,21 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
     }
 
     activated = true;
-    multiOp.setPhantom(false);
+    transaction.setPhantom(false);
     return conn->ok();
   }
 
   if(req.getCommand() == RedisCommand::EXEC) {
     // Empty multi-exec block?
-    if(multiOp.empty()) {
-      qdb_assert(!multiOp.isPhantom());
+    if(transaction.empty()) {
+      qdb_assert(!transaction.isPhantom());
       activated = false;
       return conn->vector( {} );
     }
 
-    RedisRequest fused = multiOp.toRedisRequest();
+    RedisRequest fused = transaction.toRedisRequest();
 
-    multiOp.clear();
+    transaction.clear();
     activated = false;
 
     return dispatcher->dispatch(conn, fused);
@@ -88,8 +88,8 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
   }
 
   // Queue
-  multiOp.push_back(req);
-  if(!multiOp.isPhantom()) {
+  transaction.push_back(req);
+  if(!transaction.isPhantom()) {
     return conn->status("QUEUED");
   }
 
@@ -97,13 +97,13 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
 }
 
 LinkStatus MultiHandler::finalizePhantomTransaction(Dispatcher *dispatcher, Connection *conn) {
-  if(!activated || !multiOp.isPhantom()) return 0;
-  if(multiOp.empty()) return 0;
+  if(!activated || !transaction.isPhantom()) return 0;
+  if(transaction.empty()) return 0;
 
   RedisRequest req {"EXEC"};
   return process(dispatcher, conn, req);
 }
 
 size_t MultiHandler::size() const {
-  return multiOp.size();
+  return transaction.size();
 }

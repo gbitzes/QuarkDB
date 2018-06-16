@@ -24,7 +24,7 @@
 #include "storage/StagingArea.hh"
 #include "utils/CommandParsing.hh"
 #include "utils/ParseUtils.hh"
-#include "redis/MultiOp.hh"
+#include "redis/Transaction.hh"
 #include "redis/ArrayResponseBuilder.hh"
 #include "StateMachine.hh"
 #include "Dispatcher.hh"
@@ -59,19 +59,19 @@ RedisEncodedResponse RedisDispatcher::dispatchingError(RedisRequest &request, Lo
   return Formatter::err(msg);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatch(MultiOp &multiOp, LogIndex commit) {
-  StagingArea stagingArea(store, !multiOp.containsWrites());
-  ArrayResponseBuilder builder(multiOp.size(), multiOp.isPhantom());
+RedisEncodedResponse RedisDispatcher::dispatch(Transaction &transaction, LogIndex commit) {
+  StagingArea stagingArea(store, !transaction.containsWrites());
+  ArrayResponseBuilder builder(transaction.size(), transaction.isPhantom());
 
-  for(size_t i = 0; i < multiOp.size(); i++) {
-    builder.push_back(dispatchReadWrite(stagingArea, multiOp[i]));
+  for(size_t i = 0; i < transaction.size(); i++) {
+    builder.push_back(dispatchReadWrite(stagingArea, transaction[i]));
   }
 
-  if(multiOp.containsWrites()) {
+  if(transaction.containsWrites()) {
     stagingArea.commit(commit);
   }
 
-  store.getRequestCounter().account(multiOp);
+  store.getRequestCounter().account(transaction);
   return builder.buildResponse();
 }
 
@@ -554,26 +554,26 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
   }
 }
 
-RedisEncodedResponse RedisDispatcher::handleMultiOp(RedisRequest &request, LogIndex commit) {
-  MultiOp multiOp;
+RedisEncodedResponse RedisDispatcher::handleTransaction(RedisRequest &request, LogIndex commit) {
+  Transaction transaction;
   qdb_assert(request.size() == 3);
-  qdb_assert(multiOp.deserialize(request[1]));
-  qdb_assert(request.getCommand() == RedisCommand::MULTIOP_READ || request.getCommand() == RedisCommand::MULTIOP_READWRITE);
+  qdb_assert(transaction.deserialize(request[1]));
+  qdb_assert(request.getCommand() == RedisCommand::TX_READONLY || request.getCommand() == RedisCommand::TX_READWRITE);
 
 
-  if(request.getCommand() == RedisCommand::MULTIOP_READ) {
-    qdb_assert(!multiOp.containsWrites());
+  if(request.getCommand() == RedisCommand::TX_READONLY) {
+    qdb_assert(!transaction.containsWrites());
   }
   else {
-    qdb_assert(multiOp.containsWrites());
+    qdb_assert(transaction.containsWrites());
   }
 
   qdb_assert(request[2] == "phantom" || request[2] == "real");
   bool phantom = false;
   if(request[2] == "phantom") phantom = true;
-  multiOp.setPhantom(phantom);
+  transaction.setPhantom(phantom);
 
-  return dispatch(multiOp, commit);
+  return dispatch(transaction, commit);
 }
 
 RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
@@ -599,9 +599,9 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
     return dispatchingError(request, commit);
   }
 
-  // MultiOp, encoded as single RedisRequest?
-  if(request.getCommand() == RedisCommand::MULTIOP_READ || request.getCommand() == RedisCommand::MULTIOP_READWRITE) {
-    return handleMultiOp(request, commit);
+  // Transaction, encoded as single RedisRequest?
+  if(request.getCommand() == RedisCommand::TX_READONLY || request.getCommand() == RedisCommand::TX_READWRITE) {
+    return handleTransaction(request, commit);
   }
 
   StagingArea stagingArea(store, request.getCommandType() == CommandType::READ);

@@ -55,9 +55,9 @@ void CommandMonitor::broadcast(const std::string& linkDescription, const RedisRe
   return broadcast(linkDescription, req.toPrintableString());
 }
 
-void CommandMonitor::broadcast(const std::string& linkDescription, const MultiOp& multiOp) {
+void CommandMonitor::broadcast(const std::string& linkDescription, const Transaction& transaction) {
   if(!active) return;
-  return broadcast(linkDescription, multiOp.toPrintableString());
+  return broadcast(linkDescription, transaction.toPrintableString());
 }
 
 void CommandMonitor::addRegistration(Connection *c) {

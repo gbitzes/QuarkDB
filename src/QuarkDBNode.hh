@@ -45,7 +45,7 @@ struct QuarkDBInfo {
   std::vector<std::string> toVector() const;
 };
 
-class Shard; class ShardDirectory; class MultiOp;
+class Shard; class ShardDirectory;
 
 class QuarkDBNode : public Dispatcher {
 public:

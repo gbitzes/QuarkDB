@@ -92,8 +92,13 @@ struct cmdMapInit {
     redis_cmd_map["exec"] = {RedisCommand::EXEC, CommandType::CONTROL};
     redis_cmd_map["discard"] = {RedisCommand::DISCARD, CommandType::CONTROL};
     redis_cmd_map["multi"] = {RedisCommand::MULTI, CommandType::CONTROL};
-    redis_cmd_map["multiop_read"] = {RedisCommand::MULTIOP_READ, CommandType::READ};
-    redis_cmd_map["multiop_readwrite"] = {RedisCommand::MULTIOP_READWRITE, CommandType::WRITE};
+    redis_cmd_map["tx_readonly"] = {RedisCommand::TX_READONLY, CommandType::READ};
+    redis_cmd_map["tx_readwrite"] = {RedisCommand::TX_READWRITE, CommandType::WRITE};
+
+    // These have been retained for compatibility, to ensure old raft journal
+    // entries can still be processed correctly. TODO: Remove after a couple of releases.
+    redis_cmd_map["multiop_read"] = {RedisCommand::TX_READONLY, CommandType::READ};
+    redis_cmd_map["multiop_readwrite"] = {RedisCommand::TX_READWRITE, CommandType::WRITE};
 
     redis_cmd_map["raft_handshake"] = {RedisCommand::RAFT_HANDSHAKE, CommandType::RAFT};
     redis_cmd_map["raft_append_entries"] = {RedisCommand::RAFT_APPEND_ENTRIES, CommandType::RAFT};

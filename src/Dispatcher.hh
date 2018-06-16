@@ -31,7 +31,7 @@
 
 namespace quarkdb {
 
-class MultiOp;
+class Transaction;
 
 class Dispatcher {
 public:
@@ -50,9 +50,9 @@ public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
 
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
-  RedisEncodedResponse dispatch(MultiOp &multiOp, LogIndex commit);
+  RedisEncodedResponse dispatch(Transaction &transaction, LogIndex commit);
 private:
-  RedisEncodedResponse handleMultiOp(RedisRequest &req, LogIndex commit);
+  RedisEncodedResponse handleTransaction(RedisRequest &req, LogIndex commit);
   RedisEncodedResponse dispatchReadWrite(StagingArea &stagingArea, RedisRequest &req);
   RedisEncodedResponse dispatchRead(StagingArea &stagingArea, RedisRequest &req);
   RedisEncodedResponse dispatchWrite(StagingArea &stagingArea, RedisRequest &req);

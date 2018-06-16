@@ -26,7 +26,6 @@
 #include "ShardDirectory.hh"
 #include "raft/RaftGroup.hh"
 #include "raft/RaftDispatcher.hh"
-#include "redis/MultiOp.hh"
 #include "utils/ScopedAdder.hh"
 
 using namespace quarkdb;

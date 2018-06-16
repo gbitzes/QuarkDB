@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "redis/MultiOp.hh"
+#include "redis/Transaction.hh"
 #include "raft/RaftContactDetails.hh"
 #include "test-utils.hh"
 #include "test-reply-macros.hh"
@@ -36,13 +36,13 @@ class Multi : public TestCluster3NodesFixture {};
 TEST_F(Multi, Dispatching) {
   RedisDispatcher dispatcher(*stateMachine());
 
-  MultiOp multi1;
-  multi1.emplace_back("GET", "aaa");
-  multi1.emplace_back("SET", "aaa", "bbb");
-  multi1.emplace_back("GET", "aaa");
-  multi1.setPhantom(false);
+  Transaction tx1;
+  tx1.emplace_back("GET", "aaa");
+  tx1.emplace_back("SET", "aaa", "bbb");
+  tx1.emplace_back("GET", "aaa");
+  tx1.setPhantom(false);
 
-  RedisEncodedResponse resp = dispatcher.dispatch(multi1, 1);
+  RedisEncodedResponse resp = dispatcher.dispatch(tx1, 1);
   ASSERT_EQ(resp.val, "*3\r\n$-1\r\n+OK\r\n$3\r\nbbb\r\n");
 
   RedisRequest req = {"GET", "aaa"};
@@ -123,10 +123,10 @@ TEST_F(Multi, WithRaft) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
-  MultiOp write;
+  Transaction write;
   write.emplace_back("SET", "aaa", "bbb");
   write.emplace_back("SET", "bbb", "ccc");
-  ASSERT_EQ(write.getFusedCommand(), "MULTIOP_READWRITE");
+  ASSERT_EQ(write.getFusedCommand(), "TX_READWRITE");
 
   int leaderID = getLeaderID();
 
@@ -144,7 +144,7 @@ TEST_F(Multi, WithRaft) {
   write.clear();
   write.emplace_back("SET", "bbb", "ddd");
   write.emplace_back("GET", "aaa");
-  ASSERT_EQ(write.getFusedCommand(), "MULTIOP_READWRITE");
+  ASSERT_EQ(write.getFusedCommand(), "TX_READWRITE");
 
   reply = tunnel(leaderID)->exec(
     write.getFusedCommand(),
@@ -157,11 +157,11 @@ TEST_F(Multi, WithRaft) {
     "2) \"bbb\"\n"
   );
 
-  MultiOp read;
+  Transaction read;
   read.emplace_back("GET", "aaa");
   read.emplace_back("GET", "bbb");
   ASSERT_FALSE(read.containsWrites());
-  ASSERT_EQ(read.getFusedCommand(), "MULTIOP_READ");
+  ASSERT_EQ(read.getFusedCommand(), "TX_READONLY");
 
   reply = tunnel(leaderID)->exec(
     read.getFusedCommand(),

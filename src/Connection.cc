@@ -237,7 +237,7 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
       continue;
     }
 
-    if(currentRequest.getCommand() == RedisCommand::MULTIOP_READWRITE) {
+    if(currentRequest.getCommand() == RedisCommand::TX_READWRITE) {
       multiHandler.finalizePhantomTransaction(dispatcher, this);
       dispatcher->dispatch(this, currentRequest);
       continue;

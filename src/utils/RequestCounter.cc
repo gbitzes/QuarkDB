@@ -24,7 +24,7 @@
 #include "../Utils.hh"
 #include "RequestCounter.hh"
 #include "../Commands.hh"
-#include "../redis/MultiOp.hh"
+#include "../redis/Transaction.hh"
 using namespace quarkdb;
 
 RequestCounter::RequestCounter(std::chrono::seconds intv)
@@ -39,11 +39,11 @@ void RequestCounter::account(const RedisRequest &req) {
   }
 }
 
-void RequestCounter::account(const MultiOp &multiOp) {
+void RequestCounter::account(const Transaction &transaction) {
   batches++;
 
-  for(size_t i = 0; i < multiOp.size(); i++) {
-    account(multiOp[i]);
+  for(size_t i = 0; i < transaction.size(); i++) {
+    account(transaction[i]);
   }
 }
 

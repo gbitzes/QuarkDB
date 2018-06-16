@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_COMMANDS_H__
-#define __QUARKDB_COMMANDS_H__
+#ifndef QUARKDB_COMMANDS_H
+#define QUARKDB_COMMANDS_H
 
 #include <map>
 
@@ -95,8 +95,8 @@ enum class RedisCommand {
   EXEC,
   DISCARD,
   MULTI,
-  MULTIOP_READ,
-  MULTIOP_READWRITE,
+  TX_READONLY,
+  TX_READWRITE,
 
   CONFIG_GET,
   CONFIG_SET,
@@ -136,7 +136,6 @@ enum class CommandType {
 
   READ,
   WRITE,
-  MULTIOP,
   CONTROL,
   RAFT,
   QUARKDB,
