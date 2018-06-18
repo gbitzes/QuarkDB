@@ -86,6 +86,7 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 
   // We need to be authenticated past this point. Are we?
   if(!isAuthenticated(conn)) {
+    qdb_warn("Unauthenticated client attempted to execute command " << req[0]);
     return conn->noauth("Authentication required.");
   }
 
