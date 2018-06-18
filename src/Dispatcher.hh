@@ -36,6 +36,7 @@ class Transaction;
 class Dispatcher {
 public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
+  virtual LinkStatus dispatch(Connection *conn, Transaction &multiOp) = 0;
   RedisEncodedResponse handlePing(RedisRequest &req);
   virtual ~Dispatcher() {}
 };
@@ -48,6 +49,7 @@ class RedisDispatcher : public Dispatcher {
 public:
   RedisDispatcher(StateMachine &rocksdb);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  virtual LinkStatus dispatch(Connection *conn, Transaction &req) override final;
 
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
   RedisEncodedResponse dispatch(Transaction &transaction, LogIndex commit);

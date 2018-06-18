@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_CONNECTION_H__
-#define __QUARKDB_CONNECTION_H__
+#ifndef QUARKDB_CONNECTION_H
+#define QUARKDB_CONNECTION_H
 
 #include "Link.hh"
 #include "RedisParser.hh"

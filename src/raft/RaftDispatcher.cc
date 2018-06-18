@@ -47,6 +47,11 @@ LinkStatus RaftDispatcher::dispatchInfo(Connection *conn, RedisRequest &req) {
   return conn->statusVector(this->info().toVector());
 }
 
+LinkStatus RaftDispatcher::dispatch(Connection *conn, Transaction &transaction) {
+  RedisRequest req = transaction.toRedisRequest();
+  return this->service(conn, req);
+}
+
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   switch(req.getCommand()) {
     case RedisCommand::RAFT_INFO: {
@@ -253,14 +258,14 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       return conn->ok();
     }
     default: {
+      // Must be either a read, or write at this point.
+      qdb_assert(req.getCommandType() == CommandType::WRITE || req.getCommandType() == CommandType::READ);
       return this->service(conn, req);
     }
   }
 }
 
 LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
-  // A control command should never reach here.
-  qdb_assert(req.getCommandType() != CommandType::CONTROL);
 
   // if not leader, redirect... except if this is a read,
   // and stale reads are active!

@@ -49,6 +49,7 @@ public:
 
   LinkStatus dispatchInfo(Connection *conn, RedisRequest &req);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);

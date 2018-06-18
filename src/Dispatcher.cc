@@ -44,6 +44,10 @@ RedisEncodedResponse Dispatcher::handlePing(RedisRequest &request) {
 RedisDispatcher::RedisDispatcher(StateMachine &rocksdb) : store(rocksdb) {
 }
 
+LinkStatus RedisDispatcher::dispatch(Connection *conn, Transaction &transaction) {
+  return conn->raw(dispatch(transaction, 0));
+}
+
 LinkStatus RedisDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   return conn->raw(dispatch(req, 0));
 }

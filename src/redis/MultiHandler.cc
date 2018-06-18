@@ -75,12 +75,12 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
       return conn->vector( {} );
     }
 
-    RedisRequest fused = transaction.toRedisRequest();
+    LinkStatus retstatus = dispatcher->dispatch(conn, transaction);
 
     transaction.clear();
     activated = false;
 
-    return dispatcher->dispatch(conn, fused);
+    return retstatus;
   }
 
   if(req.getCommandType() != CommandType::READ && req.getCommandType() != CommandType::WRITE) {

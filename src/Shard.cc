@@ -108,6 +108,17 @@ void Shard::spindown() {
   raftGroup->spindown();
 }
 
+LinkStatus Shard::dispatch(Connection *conn, Transaction &transaction) {
+  commandMonitor.broadcast(conn->describe(), transaction);
+
+  InFlightRegistration registration(inFlightTracker);
+  if(!registration.ok()) {
+    return conn->raw(Formatter::multiply(Formatter::err("unavailable"), transaction.expectedResponses()));
+  }
+
+  return dispatcher->dispatch(conn, transaction);
+}
+
 LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
   commandMonitor.broadcast(conn->describe(), req);
 

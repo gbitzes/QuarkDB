@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_NODE_H__
-#define __QUARKDB_NODE_H__
+#ifndef QUARKDB_NODE_H
+#define QUARKDB_NODE_H
 
 #include <chrono>
 
@@ -53,6 +53,7 @@ public:
   ~QuarkDBNode();
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
 
   const Configuration& getConfiguration() {
     return configuration;

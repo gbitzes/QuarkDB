@@ -78,6 +78,15 @@ bool QuarkDBNode::isAuthenticated(Connection *conn) const {
   return conn->authorization;
 }
 
+LinkStatus QuarkDBNode::dispatch(Connection *conn, Transaction &transaction) {
+  // We need to be authenticated past this point. Are we?
+  if(!isAuthenticated(conn)) {
+    return conn->noauth("Authentication required.");
+  }
+
+  return shard->dispatch(conn, transaction);
+}
+
 LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
   // Authentication command?
   if(req.getCommandType() == CommandType::AUTHENTICATION) {

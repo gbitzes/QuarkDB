@@ -30,9 +30,12 @@
 
 namespace quarkdb {
 
+class Transaction;
+
 class RecoveryDispatcher : public Dispatcher {
 public:
   RecoveryDispatcher(RecoveryEditor &editor);
+  virtual LinkStatus dispatch(Connection *conn, Transaction &tx) override final;
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   RedisEncodedResponse dispatch(RedisRequest &request);
 

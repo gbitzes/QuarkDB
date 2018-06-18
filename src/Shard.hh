@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_SHARD_H__
-#define __QUARKDB_SHARD_H__
+#ifndef QUARKDB_SHARD_H
+#define QUARKDB_SHARD_H
 
 #include "raft/RaftTimeouts.hh"
 #include "Dispatcher.hh"
@@ -42,6 +42,7 @@ public:
   void spinup();
   void spindown();
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
   size_t monitors() { return commandMonitor.size(); }
 
 private:
