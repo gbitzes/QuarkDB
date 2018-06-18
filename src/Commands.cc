@@ -126,7 +126,11 @@ struct cmdMapInit {
     redis_cmd_map["quarkdb_invalid_command"] = {RedisCommand::QUARKDB_INVALID_COMMAND, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_manual_compaction"] = {RedisCommand::QUARKDB_MANUAL_COMPACTION, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_level_stats"] = {RedisCommand::QUARKDB_LEVEL_STATS, CommandType::QUARKDB};
-    redis_cmd_map["recovery_info"] = {RedisCommand::RECOVERY_INFO, CommandType::QUARKDB};
+
+    redis_cmd_map["recovery_info"] = {RedisCommand::RECOVERY_INFO, CommandType::RECOVERY};
+    redis_cmd_map["recovery_set"] = {RedisCommand::RECOVERY_SET, CommandType::RECOVERY};
+    redis_cmd_map["recovery_get"] = {RedisCommand::RECOVERY_GET, CommandType::RECOVERY};
+    redis_cmd_map["recovery_del"] = {RedisCommand::RECOVERY_DEL, CommandType::RECOVERY};
 
   }
 } cmd_map_init;

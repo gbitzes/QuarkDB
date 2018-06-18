@@ -111,6 +111,10 @@ void Shard::spindown() {
 LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
   commandMonitor.broadcast(conn->describe(), req);
 
+  if(req.getCommandType() == CommandType::RECOVERY) {
+    return conn->err("recovery commands not allowed, not in recovery mode");
+  }
+
   switch(req.getCommand()) {
     case RedisCommand::MONITOR: {
       commandMonitor.addRegistration(conn);

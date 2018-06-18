@@ -128,6 +128,10 @@ enum class RedisCommand {
   QUARKDB_INVALID_COMMAND,                  // used in tests
   QUARKDB_MANUAL_COMPACTION,
   QUARKDB_LEVEL_STATS,
+
+  RECOVERY_GET,
+  RECOVERY_SET,
+  RECOVERY_DEL,
   RECOVERY_INFO
 };
 
@@ -139,7 +143,8 @@ enum class CommandType {
   CONTROL,
   RAFT,
   QUARKDB,
-  AUTHENTICATION
+  AUTHENTICATION,
+  RECOVERY
 };
 
 #define QDB_ALWAYS_INLINE __attribute__((always_inline))

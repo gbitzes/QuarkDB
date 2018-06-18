@@ -95,12 +95,12 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
     RecoveryRunner runner("/tmp/quarkdb-recovery-test", 30100);
     qclient::QClient qcl("localhost", 30100, {} );
 
-    ASSERT_REPLY(qcl.exec("get", KeyConstants::kJournal_ClusterID), "some-cluster-id");
-    ASSERT_REPLY(qcl.exec("set", KeyConstants::kJournal_ClusterID, "different-cluster-id"), "OK");
-    ASSERT_REPLY(qcl.exec("set", KeyConstants::kJournal_LogSize, intToBinaryString(2)), "OK");
-    ASSERT_REPLY(qcl.exec("del", "does-not-exist"), "ERR Invalid argument: key not found, but I inserted a tombstone anyway. Deletion status: OK");
-    ASSERT_REPLY(qcl.exec("get", SSTR("E" << intToBinaryString(2))), RaftEntry(4, "set", "abc", "cdf").serialize());
-    ASSERT_REPLY(qcl.exec("del", SSTR("E" << intToBinaryString(2))), "OK");
+    ASSERT_REPLY(qcl.exec("recovery-get", KeyConstants::kJournal_ClusterID), "some-cluster-id");
+    ASSERT_REPLY(qcl.exec("recovery-set", KeyConstants::kJournal_ClusterID, "different-cluster-id"), "OK");
+    ASSERT_REPLY(qcl.exec("recovery-set", KeyConstants::kJournal_LogSize, intToBinaryString(2)), "OK");
+    ASSERT_REPLY(qcl.exec("recovery-del", "does-not-exist"), "ERR Invalid argument: key not found, but I inserted a tombstone anyway. Deletion status: OK");
+    ASSERT_REPLY(qcl.exec("recovery-get", SSTR("E" << intToBinaryString(2))), RaftEntry(4, "set", "abc", "cdf").serialize());
+    ASSERT_REPLY(qcl.exec("recovery-del", SSTR("E" << intToBinaryString(2))), "OK");
 
     std::vector<std::string> rep = {
       "RAFT_CURRENT_TERM",

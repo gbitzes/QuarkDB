@@ -33,8 +33,14 @@ LinkStatus RecoveryDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
+  if(request.getCommandType() != CommandType::RECOVERY) {
+    std::string msg = SSTR("unable to dispatch command " << quotes(request[0]) << " - remember we're running in recovery mode, not all operations are available");
+    qdb_warn(msg);
+    return Formatter::err(msg);
+  }
+
   switch(request.getCommand()) {
-    case RedisCommand::GET: {
+    case RedisCommand::RECOVERY_GET: {
       if(request.size() != 2) return Formatter::errArgs(request[0]);
 
       std::string value;
@@ -42,11 +48,11 @@ RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(value);
     }
-    case RedisCommand::SET: {
+    case RedisCommand::RECOVERY_SET: {
       if(request.size() != 3) return Formatter::errArgs(request[0]);
       return Formatter::fromStatus(editor.set(request[1], request[2]));
     }
-    case RedisCommand::DEL: {
+    case RedisCommand::RECOVERY_DEL: {
       if(request.size() != 2) return Formatter::errArgs(request[0]);
       return Formatter::fromStatus(editor.del(request[1]));
     }
@@ -55,9 +61,7 @@ RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
       return Formatter::vector(editor.retrieveMagicValues());
     }
     default: {
-      std::string msg = SSTR("unable to dispatch command " << quotes(request[0]) << " - remember we're running in recovery mode, not all operations are available");
-      qdb_warn(msg);
-      return Formatter::err(msg);
+      qdb_throw("should never reach here");
     }
   }
 }

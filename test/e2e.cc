@@ -458,6 +458,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("exists", "hash"));
   futures.emplace_back(tunnel(leaderID)->exec("exists", "hash2"));
   futures.emplace_back(tunnel(leaderID)->exec("raft_info", "leader"));
+  futures.emplace_back(tunnel(leaderID)->exec("recovery_get", "test"));
 
   ASSERT_REPLY(futures[0], 1);
   ASSERT_REPLY(futures[1], 1);
@@ -468,6 +469,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[6], 0);
   ASSERT_REPLY(futures[7], 1);
   ASSERT_REPLY(futures[8], myself(leaderID).toString() );
+  ASSERT_REPLY(futures[9], "ERR recovery commands not allowed, not in recovery mode");
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("hmset", "hmset_test", "f1", "v1", "f2", "v2"));
