@@ -57,6 +57,7 @@ void CommandMonitor::broadcast(const std::string& linkDescription, const RedisRe
 
 void CommandMonitor::broadcast(const std::string& linkDescription, const Transaction& transaction) {
   if(!active) return;
+  if(transaction.size() == 1u) return broadcast(linkDescription, transaction[0].toPrintableString());
   return broadcast(linkDescription, transaction.toPrintableString());
 }
 
