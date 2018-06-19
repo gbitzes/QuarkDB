@@ -56,7 +56,7 @@ TEST(ReadPasswordFile, BasicSanity) {
   ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/non-existing", contents));
   ASSERT_FALSE(readFile("/tmp/quarkdb-tests/auth/non-existing", contents));
 
-  ASSERT_EQ(system("echo 'pickles' > /tmp/quarkdb-tests/auth/f1"), 0);
+  ASSERT_EQ(system("echo 'pickles\n\n   ' > /tmp/quarkdb-tests/auth/f1"), 0);
   ASSERT_EQ(system("chmod 777 /tmp/quarkdb-tests/auth/f1"), 0);
   ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
   ASSERT_EQ(system("chmod 744 /tmp/quarkdb-tests/auth/f1"), 0);
@@ -67,6 +67,7 @@ TEST(ReadPasswordFile, BasicSanity) {
   ASSERT_FALSE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
   ASSERT_EQ(system("chmod 400 /tmp/quarkdb-tests/auth/f1"), 0);
   ASSERT_TRUE(readPasswordFile("/tmp/quarkdb-tests/auth/f1", contents));
+  ASSERT_EQ(contents, "pickles");
 
   ASSERT_EQ(system("rm -f /tmp/quarkdb-tests/auth/f1"), 0);
 }

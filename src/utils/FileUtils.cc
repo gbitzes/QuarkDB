@@ -139,6 +139,14 @@ bool readPasswordFile(const std::string &path, std::string &contents) {
 
   retvalue = readFile(in, contents);
   fclose(in);
+
+  if(retvalue) {
+    // Right trim any newlines and whitespace. By far the most common case will
+    // be to have a single line in the password file. Users will expect to be
+    // able to copy/paste that, let's not complicate matters with newlines.
+    contents.erase(contents.find_last_not_of(" \t\n\r\f\v") + 1);
+  }
+
   return retvalue;
 }
 

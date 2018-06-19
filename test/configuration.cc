@@ -62,12 +62,12 @@ TEST(Configuration, T2) {
   ASSERT_TRUE(config.getRequirePasswordForLocalhost());
   ASSERT_THROW(config.extractPasswordOrDie(), FatalException); // file does not exist
 
-  ASSERT_EQ(system("echo 'pickles' > /tmp/quarkdb-tests/password-file"), 0);
+  ASSERT_EQ(system("echo 'pickles\n   \n' > /tmp/quarkdb-tests/password-file"), 0);
   ASSERT_EQ(system("chmod 700 /tmp/quarkdb-tests/password-file"), 0);
   ASSERT_THROW(config.extractPasswordOrDie(), FatalException); // bad permissions
 
   ASSERT_EQ(system("chmod 400 /tmp/quarkdb-tests/password-file"), 0);
-  ASSERT_EQ(config.extractPasswordOrDie(), "pickles\n");
+  ASSERT_EQ(config.extractPasswordOrDie(), "pickles");
 
   ASSERT_EQ(system("chmod 700 /tmp/quarkdb-tests/password-file"), 0);
   ASSERT_EQ(system("rm -f /tmp/quarkdb-tests/password-file"), 0);
