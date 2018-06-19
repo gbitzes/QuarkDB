@@ -208,6 +208,21 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->status(stateMachine->levelStats());
     }
+    case RedisCommand::QUARKDB_COMPRESSION_STATS: {
+      if(req.size() != 1) return conn->errArgs(req[0]);
+      InFlightRegistration registration(inFlightTracker);
+      if(!registration.ok()) {
+        return conn->err("unavailable");
+      }
+
+      std::ostringstream ss;
+      std::vector<std::string> stats = stateMachine->compressionStats();
+      for(size_t i = 0; i < stats.size(); i++) {
+        ss << "Level " << i << ": " << stats[i] << std::endl;
+      }
+
+      return conn->status(ss.str());
+    }
     default: {
       if(req.getCommandType() == CommandType::QUARKDB) {
         qdb_critical("Unable to dispatch command '" << req[0] << "' of type QUARKDB");

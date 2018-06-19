@@ -1229,6 +1229,18 @@ std::string StateMachine::levelStats() {
   return stats;
 }
 
+std::vector<std::string> StateMachine::compressionStats() {
+  std::vector<std::string> results;
+
+  for(size_t i = 0; i <= 6; i++) {
+    std::string tmp;
+    db->GetProperty(SSTR(rocksdb::DB::Properties::kCompressionRatioAtLevelPrefix << i), &tmp);
+    results.emplace_back(tmp);
+  }
+
+  return results;
+}
+
 rocksdb::Status StateMachine::noop(LogIndex index) {
   StagingArea stagingArea(*this);
   return stagingArea.commit(index);
