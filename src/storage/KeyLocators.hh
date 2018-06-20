@@ -30,7 +30,7 @@
 
 namespace quarkdb {
 
-using KeyBuffer = SmartBuffer<30>;
+using KeyBuffer = SmartBuffer<512>;
 
 enum class InternalKeyType : char {
   kInternal = '_',
