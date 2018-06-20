@@ -847,6 +847,14 @@ TEST(LocalityIndexLocator, BasicSanity) {
   ASSERT_EQ(revlocator.getOriginalKey().ToString(), "key##with##hashes");
 }
 
+TEST(LeaseLocator, BasicSanity) {
+  LeaseLocator locator1("my-key");
+  ASSERT_EQ(locator1.toSlice().ToString(), "fmy-key");
+
+  LeaseLocator locator2("my#key");
+  ASSERT_EQ(locator2.toSlice().ToString(), "fmy#key");
+}
+
 TEST(PatternMatching, BasicSanity) {
   ASSERT_EQ(extractPatternPrefix("abc*"), "abc");
   ASSERT_EQ(extractPatternPrefix("abc"), "abc");

@@ -245,6 +245,25 @@ private:
   KeyBuffer keyBuffer;
 };
 
+class LeaseLocator {
+public:
+  LeaseLocator(const std::string &redisKey) {
+    reset(redisKey);
+  }
+
+  void reset(const std::string &redisKey) {
+    keyBuffer.resize(redisKey.size() + 1);
+    keyBuffer[0] = char(KeyType::kLease);
+    memcpy(keyBuffer.data()+1, redisKey.data(), redisKey.size());
+  }
+
+  rocksdb::Slice toSlice() {
+    return keyBuffer.toSlice();
+  }
+private:
+  KeyBuffer keyBuffer;
+};
+
 }
 
 #endif

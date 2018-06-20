@@ -38,7 +38,8 @@ enum class KeyType : char {
   kHash = 'b',
   kSet = 'c',
   kList = 'd',
-  kLocalityHash = 'e'
+  kLocalityHash = 'e',
+  kLease = 'f'
 };
 
 inline KeyType parseKeyType(char c) {
