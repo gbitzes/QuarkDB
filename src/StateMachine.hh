@@ -261,6 +261,7 @@ private:
   void retrieveLastApplied();
   void ensureCompatibleFormat(bool justCreated);
   void ensureBulkloadSanity(bool justCreated);
+  void ensureClockSanity(bool justCreated);
   void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea);
   void lhsetInternal(WriteOperation &operation, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated);
 

@@ -44,6 +44,7 @@ namespace KeyConstants {
   constexpr char kStateMachine_Format[]              = "__format";
   constexpr char kStateMachine_LastApplied[]         = "__last-applied";
   constexpr char kStateMachine_InBulkload[]          = "__in-bulkload";
+  constexpr char kStateMachine_Clock[]               = "__clock";
 
   extern std::vector<std::string> allKeys;
 };

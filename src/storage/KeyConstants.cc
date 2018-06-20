@@ -49,6 +49,7 @@ public:
     ADD_TO_ALLKEYS(kStateMachine_Format);
     ADD_TO_ALLKEYS(kStateMachine_LastApplied);
     ADD_TO_ALLKEYS(kStateMachine_InBulkload);
+    ADD_TO_ALLKEYS(kStateMachine_Clock);
   }
 };
 

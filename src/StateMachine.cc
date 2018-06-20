@@ -143,9 +143,37 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
 
   ensureCompatibleFormat(!dirExists);
   ensureBulkloadSanity(!dirExists);
+  ensureClockSanity(!dirExists);
   retrieveLastApplied();
 
   consistencyScanner.reset(new ConsistencyScanner(*this));
+}
+
+void StateMachine::ensureClockSanity(bool justCreated) {
+  std::string value;
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), KeyConstants::kStateMachine_Clock, &value);
+
+  if(justCreated) {
+    if(!st.IsNotFound()) qdb_throw("Error when reading __clock, which should not exist: " << st.ToString());
+    THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_Clock, unsignedIntToBinaryString(0u)));
+  }
+  else {
+    if(st.IsNotFound()) {
+      // Compatibility: When opening old state machines, set expected __clock key.
+      // TODO: Remove in a couple of releases.
+      THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_Clock, unsignedIntToBinaryString(0u)));
+    }
+  }
+
+  st = db->Get(rocksdb::ReadOptions(), KeyConstants::kStateMachine_Clock, &value);
+  if(!st.ok()) qdb_throw("Error when reading __clock: " << st.ToString());
+
+  if(value.size() != 8u) {
+    qdb_throw("Detected corruption of __clock, received size " << value.size() << ", was expecting 8");
+  }
+
+  // We survived!
+  qdb_info("StateMachine clock is at " << binaryStringToUnsignedInt(value.c_str()));
 }
 
 StateMachine::~StateMachine() {
@@ -166,6 +194,7 @@ void StateMachine::reset() {
 
   ensureCompatibleFormat(true);
   ensureBulkloadSanity(true);
+  ensureClockSanity(true);
   retrieveLastApplied();
 }
 

@@ -51,7 +51,7 @@ TEST(Recovery, BasicSanity) {
 
   std::vector<std::string> magicValues = recovery.retrieveMagicValues();
 
-  ASSERT_EQ(magicValues.size(), 16u);
+  ASSERT_EQ(magicValues.size(), 18u);
 
   ASSERT_EQ(magicValues[0], "RAFT_CURRENT_TERM: NotFound: ");
   ASSERT_EQ(magicValues[1], "RAFT_LOG_SIZE: NotFound: ");
@@ -69,6 +69,8 @@ TEST(Recovery, BasicSanity) {
   ASSERT_EQ(magicValues[13], intToBinaryString(2));
   ASSERT_EQ(magicValues[14], "__in-bulkload");
   ASSERT_EQ(magicValues[15], boolToString(false));
+  ASSERT_EQ(magicValues[16], "__clock");
+  ASSERT_EQ(magicValues[17], unsignedIntToBinaryString(0u));
 }
 
 TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
@@ -123,7 +125,8 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
       "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ",
       "__format: NotFound: ",
       "__last-applied: NotFound: ",
-      "__in-bulkload: NotFound: "
+      "__in-bulkload: NotFound: ",
+      "__clock: NotFound: "
     };
 
     ASSERT_REPLY(qcl.exec("recovery-info"), rep);
