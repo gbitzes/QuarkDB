@@ -78,6 +78,8 @@ public:
   rocksdb::Status lpop(StagingArea &stagingArea, const std::string &key, std::string &item);
   rocksdb::Status rpop(StagingArea &stagingArea, const std::string &key, std::string &item);
 
+  void advanceClock(StagingArea &stagingArea, ClockValue newValue);
+
   //----------------------------------------------------------------------------
   // API for transactional reads. Can be part of a mixed read-write transaction.
   //----------------------------------------------------------------------------
@@ -100,7 +102,7 @@ public:
   rocksdb::Status lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value);
   rocksdb::Status lhlen(StagingArea &stagingArea, const std::string &key, size_t &len);
   rocksdb::Status rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements);
-  rocksdb::Status rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions);
+  void getClock(StagingArea &stagingArea, ClockValue &value);
 
   //----------------------------------------------------------------------------
   // Simple API
@@ -140,6 +142,9 @@ public:
   rocksdb::Status lhset(const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated, LogIndex index = 0);
   rocksdb::Status lhlen(const std::string &key, size_t &len);
   rocksdb::Status lhget(const std::string &key, const std::string &field, const std::string &hint, std::string &value);
+  void advanceClock(ClockValue newValue, LogIndex index = 0);
+  void getClock(ClockValue &value);
+  rocksdb::Status rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions);
 
   //----------------------------------------------------------------------------
   // Internal configuration, not exposed to users through 'KEYS' and friends.

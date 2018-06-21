@@ -668,6 +668,32 @@ TEST_F(State_Machine, SnapshotReads) {
   ASSERT_EQ(count, 1);
 }
 
+TEST_F(State_Machine, Clock) {
+  ClockValue clk;
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 0u);
+
+  stateMachine()->advanceClock(ClockValue(123));
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 123u);
+
+  stateMachine()->advanceClock(ClockValue(234));
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 234u);
+
+  ASSERT_THROW(stateMachine()->advanceClock(ClockValue(233)), FatalException);
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 234u);
+
+  stateMachine()->advanceClock(ClockValue(234));
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 234u);
+
+  stateMachine()->advanceClock(ClockValue(345));
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 345u);
+}
+
 static std::string sliceToString(const rocksdb::Slice &slice) {
   return std::string(slice.data(), slice.size());
 }

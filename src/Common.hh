@@ -124,6 +124,7 @@ struct RaftServer {
 using RaftClusterID = std::string;
 using RaftTerm = int64_t;
 using LogIndex = int64_t;
+using ClockValue = uint64_t;
 
 }
 

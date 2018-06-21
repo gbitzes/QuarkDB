@@ -173,7 +173,6 @@ void StateMachine::ensureClockSanity(bool justCreated) {
   }
 
   // We survived!
-  qdb_info("StateMachine clock is at " << binaryStringToUnsignedInt(value.c_str()));
 }
 
 StateMachine::~StateMachine() {
@@ -1031,6 +1030,41 @@ rocksdb::Status StateMachine::lpop(StagingArea &stagingArea, const std::string &
 
 rocksdb::Status StateMachine::rpop(StagingArea &stagingArea, const std::string &key, std::string &item) {
   return this->listPop(stagingArea, Direction::kRight, key, item);
+}
+
+void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
+  // Assert we're not setting the clock back..
+  ClockValue prevValue;
+  getClock(stagingArea, prevValue);
+
+  if(newValue < prevValue) {
+    qdb_throw("Attempted to set state machine clock in the past: " << prevValue << " ==> " << newValue);
+  }
+
+  // Update value
+  stagingArea.put(KeyConstants::kStateMachine_Clock, unsignedIntToBinaryString(newValue));
+}
+
+void StateMachine::advanceClock(ClockValue newValue, LogIndex index) {
+  StagingArea stagingArea(*this);
+  advanceClock(stagingArea, newValue);
+  stagingArea.commit(index);
+}
+
+void StateMachine::getClock(StagingArea &stagingArea, ClockValue &value) {
+  std::string prevValue;
+  THROW_ON_ERROR(stagingArea.get(KeyConstants::kStateMachine_Clock, prevValue));
+
+  if(prevValue.size() != 8u) {
+    qdb_throw("Clock corruption, expected exactly 8 bytes, got " << prevValue.size());
+  }
+
+  value = binaryStringToUnsignedInt(prevValue.c_str());
+}
+
+void StateMachine::getClock(ClockValue &value) {
+  StagingArea stagingArea(*this, true);
+  getClock(stagingArea, value);
 }
 
 rocksdb::Status StateMachine::llen(StagingArea &stagingArea, const std::string &key, size_t &len) {
