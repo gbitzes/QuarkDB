@@ -694,6 +694,31 @@ TEST_F(State_Machine, Clock) {
   ASSERT_EQ(clk, 345u);
 }
 
+TEST_F(State_Machine, Leases) {
+  ClockValue clk;
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 0u);
+
+  bool acquired;
+  ASSERT_OK(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(1), 10, acquired));
+  ASSERT_TRUE(acquired);
+
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 1u);
+
+  ASSERT_OK(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(9), 10, acquired));
+  ASSERT_TRUE(acquired);
+
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 9u);
+
+  stateMachine()->lease_acquire("my-lease", "some-other-string", ClockValue(12), 10, acquired);
+  ASSERT_FALSE(acquired);
+
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 12u);
+}
+
 static std::string sliceToString(const rocksdb::Slice &slice) {
   return std::string(slice.data(), slice.size());
 }

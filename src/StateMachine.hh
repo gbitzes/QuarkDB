@@ -79,6 +79,7 @@ public:
   rocksdb::Status rpop(StagingArea &stagingArea, const std::string &key, std::string &item);
 
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
+  rocksdb::Status lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired);
 
   //----------------------------------------------------------------------------
   // API for transactional reads. Can be part of a mixed read-write transaction.
@@ -107,7 +108,6 @@ public:
   //----------------------------------------------------------------------------
   // Simple API
   //----------------------------------------------------------------------------
-
   rocksdb::Status hget(const std::string &key, const std::string &field, std::string &value);
   rocksdb::Status hexists(const std::string &key, const std::string &field);
   rocksdb::Status hkeys(const std::string &key, std::vector<std::string> &keys);
@@ -145,6 +145,7 @@ public:
   void advanceClock(ClockValue newValue, LogIndex index = 0);
   void getClock(ClockValue &value);
   rocksdb::Status rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions);
+  rocksdb::Status lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired, LogIndex index = 0);
 
   //----------------------------------------------------------------------------
   // Internal configuration, not exposed to users through 'KEYS' and friends.
