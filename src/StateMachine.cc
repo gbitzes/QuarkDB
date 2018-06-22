@@ -311,7 +311,7 @@ rocksdb::Status StateMachine::hkeys(StagingArea &stagingArea, const std::string 
   keys.clear();
   FieldLocator locator(KeyType::kHash, key);
 
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -326,7 +326,7 @@ rocksdb::Status StateMachine::hgetall(StagingArea &stagingArea, const std::strin
   res.clear();
   FieldLocator locator(KeyType::kHash, key);
 
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -587,7 +587,7 @@ rocksdb::Status StateMachine::rawGetAllVersions(const std::string &key, std::vec
 rocksdb::Status StateMachine::rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements) {
   elements.clear();
 
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
 
   size_t items = 0;
   for(iter->Seek(key); iter->Valid(); iter->Next()) {
@@ -608,7 +608,7 @@ rocksdb::Status StateMachine::hscan(StagingArea &stagingArea, const std::string 
   res.clear();
 
   newCursor = "";
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
@@ -634,7 +634,7 @@ rocksdb::Status StateMachine::sscan(StagingArea &stagingArea, const std::string 
   res.clear();
 
   newCursor = "";
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
@@ -658,7 +658,7 @@ rocksdb::Status StateMachine::hvals(StagingArea &stagingArea, const std::string 
   FieldLocator locator(KeyType::kHash, key);
   vals.clear();
 
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -745,7 +745,7 @@ rocksdb::Status StateMachine::smembers(StagingArea &stagingArea, const std::stri
   FieldLocator locator(KeyType::kSet, key);
   members.clear();
 
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
   for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
     if(!StringUtils::startswith(tmp, locator.toSlice())) break;
@@ -784,7 +784,7 @@ rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::str
 }
 
 rocksdb::Status StateMachine::configGetall(StagingArea &stagingArea, std::vector<std::string> &res) {
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(stagingArea.getIterator());
   res.clear();
 
   std::string searchPrefix(1, char(InternalKeyType::kConfiguration));
@@ -1201,7 +1201,7 @@ void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t 
   removed = 0;
 
   std::string tmp;
-  IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
+  IteratorPtr iter(stagingArea.getIterator());
 
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     std::string key = iter->key().ToString();
@@ -1276,7 +1276,7 @@ rocksdb::Status StateMachine::keys(StagingArea &stagingArea, const std::string &
   result.clear();
 
   bool allkeys = (pattern.length() == 1 && pattern[0] == '*');
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
 
   std::string searchPrefix(1, char(InternalKeyType::kDescriptor));
   for(iter->Seek(searchPrefix); iter->Valid(); iter->Next()) {
@@ -1311,7 +1311,7 @@ rocksdb::Status StateMachine::scan(StagingArea &stagingArea, const std::string &
   size_t iterations = 0;
   bool emptyPattern = (pattern.empty() || pattern == "*");
 
-  IteratorPtr iter(db->NewIterator(stagingArea.snapshot->opts()));
+  IteratorPtr iter(stagingArea.getIterator());
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     iterations++;
 

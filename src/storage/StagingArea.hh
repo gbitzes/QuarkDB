@@ -36,7 +36,11 @@ namespace quarkdb {
 class StagingArea {
 public:
   StagingArea(StateMachine &sm, bool onlyreads = false)
-  : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()), readOnly(onlyreads) {
+  : stateMachine(sm), bulkLoad(stateMachine.inBulkLoad()), readOnly(onlyreads),
+    /* construct writeBatchWithIndex with default arguments for all, apart from
+       overwrite_key, which we set to true. This allows iterating over the
+       batch + the DB. */
+    writeBatchWithIndex(rocksdb::BytewiseComparator(), 0, true, 0) {
 
     if(!bulkLoad && !readOnly) {
       stateMachine.writeMtx.lock();
@@ -124,6 +128,24 @@ public:
 
     stateMachine.commitTransaction(writeBatchWithIndex, index);
     return rocksdb::Status::OK();
+  }
+
+  StateMachine::IteratorPtr getIterator() {
+    if(readOnly) {
+      // Return an iterator that views only the current snapshot.
+      return StateMachine::IteratorPtr(stateMachine.db->NewIterator(snapshot->opts()));
+    }
+
+    if(bulkLoad) {
+      // No reading
+      return StateMachine::IteratorPtr(rocksdb::NewEmptyIterator());
+    }
+
+    // Return an iterator which takes into account keys both in WriteBatchWithIndex,
+    // and the DB.
+    return StateMachine::IteratorPtr(
+      writeBatchWithIndex.NewIteratorWithBase(stateMachine.db->NewIterator(rocksdb::ReadOptions()))
+    );
   }
 
 private:

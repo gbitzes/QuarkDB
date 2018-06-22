@@ -1255,3 +1255,24 @@ TEST_F(Raft_e2e, ConvertHashToLHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("hlen", "hash"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("lhlen", "lhash"), 2);
 }
+
+TEST_F(Raft_e2e, InconsistentIteratorsTest) {
+  // Try to trigger "inconsistent iterators" condition
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> futs;
+  for(size_t i = 0; i < 100; i++) {
+    futs.emplace_back(tunnel(leaderID)->exec("hset", "hash", SSTR("f" << i), SSTR("v" << i)));
+  }
+
+  std::future<redisReplyPtr> delReply = tunnel(leaderID)->exec("del", "hash");
+
+  for(size_t i = 0; i < 100; i++) {
+    ASSERT_REPLY(futs[i], 1);
+  }
+
+  ASSERT_REPLY(delReply, 1);
+}
