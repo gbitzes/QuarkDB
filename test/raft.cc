@@ -574,7 +574,9 @@ TEST_F(Raft_Election, basic_sanity) {
 
   // term mismatch, can't perform election
   RaftVoteRequest votereq;
+  votereq.lastIndex = 1;
   votereq.term = 1;
+  votereq.lastTerm = 0;
   ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 
   // we have a leader already, can't do election
@@ -597,6 +599,7 @@ TEST_F(Raft_Election, leader_cannot_call_election) {
   RaftVoteRequest votereq;
   votereq.lastIndex = 5;
   votereq.term = 2;
+  votereq.lastTerm = 1;
   ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 }
 
@@ -611,6 +614,8 @@ TEST_F(Raft_Election, observer_cannot_call_election) {
 
   RaftVoteRequest votereq;
   votereq.term = 1;
+  votereq.lastTerm = 0;
+  votereq.lastIndex = 5;
 
   ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 }
