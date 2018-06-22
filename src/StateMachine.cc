@@ -1056,6 +1056,25 @@ void StateMachine::advanceClock(ClockValue newValue, LogIndex index) {
   stagingArea.commit(index);
 }
 
+ClockValue StateMachine::maybeAdvanceClock(StagingArea &stagingArea, ClockValue clockUpdate) {
+  // Get current clock time.
+  ClockValue currentClock;
+  getClock(stagingArea, currentClock);
+
+  // Two cases:
+  // - currentClock is behind clockUpdate - should be by far the most common.
+  //   Simply update currentClock to clockUpdate.
+  // - currentClock is ahead.. we were hit by a rare race condition. Advance
+  //   clockUpdate to currentClock instead.
+  if(currentClock < clockUpdate) {
+    advanceClock(stagingArea, clockUpdate);
+    return clockUpdate;
+  }
+  else {
+    return currentClock;
+  }
+}
+
 void StateMachine::getClock(StagingArea &stagingArea, ClockValue &value) {
   std::string prevValue;
   THROW_ON_ERROR(stagingArea.get(KeyConstants::kStateMachine_Clock, prevValue));
@@ -1075,21 +1094,8 @@ void StateMachine::getClock(ClockValue &value) {
 rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired) {
   qdb_assert(!value.empty());
 
-  // First, some timekeeping. Get current clock time.
-  ClockValue currentClock;
-  getClock(stagingArea, currentClock);
-
-  // Two cases:
-  // - currentClock is behind clockUpdate - should be by far the most common.
-  //   Simply update currentClock to clockUpdate.
-  // - currentClock is ahead.. we were hit by a rare race condition. Advance
-  //   clockUpdate to currentClock instead.
-  if(currentClock < clockUpdate) {
-    advanceClock(stagingArea, clockUpdate);
-  }
-  else {
-    clockUpdate = currentClock;
-  }
+  // First, some timekeeping, update clock time if necessary.
+  clockUpdate = maybeAdvanceClock(stagingArea, clockUpdate);
 
   // Quick check that no-one else holds the lease right now.
   // Could it be that the lease has actually expired? Not at this point.

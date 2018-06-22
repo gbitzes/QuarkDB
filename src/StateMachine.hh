@@ -197,6 +197,7 @@ public:
   RequestCounter& getRequestCounter() { return requestCounter; }
 
 private:
+  ClockValue maybeAdvanceClock(StagingArea &stagingArea, ClockValue newValue);
   friend class StagingArea;
 
   class Snapshot {
