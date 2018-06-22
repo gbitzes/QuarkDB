@@ -25,6 +25,7 @@
 #include "storage/StagingArea.hh"
 #include "storage/ReverseLocator.hh"
 #include "storage/PatternMatching.hh"
+#include "storage/ExpirationEventIterator.hh"
 #include "StateMachine.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
@@ -699,6 +700,13 @@ TEST_F(State_Machine, Leases) {
   stateMachine()->getClock(clk);
   ASSERT_EQ(clk, 0u);
 
+  {
+    StagingArea stagingArea(*stateMachine());
+    ExpirationEventIterator iterator(stagingArea);
+    ASSERT_FALSE(iterator.valid());
+  }
+
+
   bool acquired;
   ASSERT_OK(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(1), 10, acquired));
   ASSERT_TRUE(acquired);
@@ -706,17 +714,55 @@ TEST_F(State_Machine, Leases) {
   stateMachine()->getClock(clk);
   ASSERT_EQ(clk, 1u);
 
+  {
+    StagingArea stagingArea(*stateMachine());
+    ExpirationEventIterator iterator(stagingArea);
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 11u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease");
+    iterator.next();
+    ASSERT_FALSE(iterator.valid());
+  }
+
   ASSERT_OK(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(9), 10, acquired));
   ASSERT_TRUE(acquired);
 
   stateMachine()->getClock(clk);
   ASSERT_EQ(clk, 9u);
 
+  {
+    StagingArea stagingArea(*stateMachine());
+    ExpirationEventIterator iterator(stagingArea);
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 19u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease");
+    iterator.next();
+    ASSERT_FALSE(iterator.valid());
+  }
+
   stateMachine()->lease_acquire("my-lease", "some-other-string", ClockValue(12), 10, acquired);
   ASSERT_FALSE(acquired);
 
   stateMachine()->getClock(clk);
   ASSERT_EQ(clk, 12u);
+
+  stateMachine()->lease_acquire("my-lease-2", "some-other-string", ClockValue(13), 10, acquired);
+  ASSERT_TRUE(acquired);
+
+  {
+    StagingArea stagingArea(*stateMachine());
+    ExpirationEventIterator iterator(stagingArea);
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 19u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease");
+    iterator.next();
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 23u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease-2");
+    iterator.next();
+    ASSERT_FALSE(iterator.valid());
+  }
+
 }
 
 static std::string sliceToString(const rocksdb::Slice &slice) {
