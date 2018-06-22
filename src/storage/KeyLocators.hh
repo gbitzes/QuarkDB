@@ -31,11 +31,13 @@
 namespace quarkdb {
 
 using KeyBuffer = SmartBuffer<512>;
+using ClockValue = uint64_t;
 
 enum class InternalKeyType : char {
   kInternal = '_',
   kConfiguration = '~',
-  kDescriptor = '!'
+  kDescriptor = '!',
+  kExpirationEvent = '@'
 };
 
 class DescriptorLocator {
@@ -260,6 +262,28 @@ public:
   rocksdb::Slice toSlice() {
     return keyBuffer.toSlice();
   }
+private:
+  KeyBuffer keyBuffer;
+};
+
+class ExpirationEventLocator {
+public:
+  ExpirationEventLocator(ClockValue deadline, const std::string &redisKey) {
+    reset(deadline, redisKey);
+  }
+
+  void reset(ClockValue deadline, const std::string &redisKey) {
+    keyBuffer.resize(1 + sizeof(ClockValue) + redisKey.size());
+    keyBuffer[0] = char(InternalKeyType::kExpirationEvent);
+
+    unsignedIntToBinaryString(deadline, keyBuffer.data() + 1);
+    memcpy(keyBuffer.data()+1+sizeof(ClockValue), redisKey.data(), redisKey.size());
+  }
+
+  rocksdb::Slice toSlice() {
+    return keyBuffer.toSlice();
+  }
+
 private:
   KeyBuffer keyBuffer;
 };

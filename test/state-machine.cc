@@ -881,6 +881,11 @@ TEST(LeaseLocator, BasicSanity) {
   ASSERT_EQ(locator2.toSlice().ToString(), "fmy#key");
 }
 
+TEST(ExpirationEventLocator, BasicSanity) {
+  ExpirationEventLocator locator1(ClockValue(123u), "some-key");
+  ASSERT_EQ(locator1.toSlice().ToString(), SSTR("@" << unsignedIntToBinaryString(123u) << "some-key"));
+}
+
 TEST(PatternMatching, BasicSanity) {
   ASSERT_EQ(extractPatternPrefix("abc*"), "abc");
   ASSERT_EQ(extractPatternPrefix("abc"), "abc");
