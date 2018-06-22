@@ -595,6 +595,7 @@ TEST_F(Raft_Election, leader_cannot_call_election) {
   ASSERT_TRUE(state()->ascend(2));
 
   RaftVoteRequest votereq;
+  votereq.lastIndex = 5;
   votereq.term = 2;
   ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 }
