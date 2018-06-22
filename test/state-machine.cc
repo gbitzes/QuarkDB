@@ -753,6 +753,17 @@ TEST(KeyDescriptor, BasicSanity) {
   ASSERT_EQ(setDesc2.getKeyType(), KeyType::kSet);
   ASSERT_EQ(setDesc2.getSize(), 9);
   assertEqualDescriptors(setDesc, setDesc2);
+
+  KeyDescriptor leaseDescr;
+  leaseDescr.setKeyType(KeyType::kLease);
+  leaseDescr.setSize(10);
+  leaseDescr.setStartIndex(10);
+  leaseDescr.setEndIndex(15);
+
+  KeyDescriptor leaseDescr2(sliceToString(leaseDescr.serialize()));
+  ASSERT_EQ(leaseDescr.getKeyType(), KeyType::kLease);
+  ASSERT_EQ(leaseDescr.getStartIndex(), 10u);
+  ASSERT_EQ(leaseDescr.getEndIndex(), 15u);
 }
 
 TEST(FieldLocator, BasicSanity) {

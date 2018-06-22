@@ -59,6 +59,9 @@ inline KeyType parseKeyType(char c) {
     case char(KeyType::kLocalityHash): {
       return KeyType::kLocalityHash;
     }
+    case char(KeyType::kLease): {
+      return KeyType::kLease;
+    }
     default: {
       return KeyType::kParseError;
     }
@@ -105,7 +108,8 @@ public:
         // All done
         return;
       }
-      case KeyType::kList: {
+      case KeyType::kList:
+      case KeyType::kLease: {
         qdb_assert(str.size() == kListDescriptorSize);
 
         // Parse size.
@@ -120,7 +124,7 @@ public:
         return;
       }
       default: {
-        qdb_throw("error parsing key descriptor");
+        qdb_throw("error parsing key descriptor - unknown key type");
       }
     }
   }
@@ -139,12 +143,12 @@ public:
   }
 
   uint64_t getStartIndex() const {
-    qdb_assert(keyType == KeyType::kList);
+    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
     return startIndex;
   }
 
   uint64_t getEndIndex() const {
-    qdb_assert(keyType == KeyType::kList);
+    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
     return endIndex;
   }
 
@@ -158,12 +162,12 @@ public:
   }
 
   void setStartIndex(uint64_t newval) {
-    qdb_assert(keyType == KeyType::kList);
+    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
     startIndex = newval;
   }
 
   void setEndIndex(uint64_t newval) {
-    qdb_assert(keyType == KeyType::kList);
+    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
     endIndex = newval;
   }
 
@@ -181,7 +185,8 @@ public:
         intToBinaryString(sz, serializationBuffer.data() + kOffsetSize);
         return serializationBuffer.toSlice();
       }
-      case KeyType::kList: {
+      case KeyType::kList:
+      case KeyType::kLease: {
         serializationBuffer.shrink(kListDescriptorSize);
 
         // Store the size..
