@@ -763,6 +763,21 @@ TEST_F(State_Machine, Leases) {
     ASSERT_FALSE(iterator.valid());
   }
 
+  ASSERT_OK(stateMachine()->lease_release("my-lease-2"));
+  int64_t count = 0;
+  std::vector<std::string> keys = { "my-lease-2" };
+  ASSERT_OK(stateMachine()->exists(keys.begin(), keys.end(), count) );
+  ASSERT_EQ(count, 0);
+
+  {
+    StagingArea stagingArea(*stateMachine());
+    ExpirationEventIterator iterator(stagingArea);
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 19u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease");
+    iterator.next();
+    ASSERT_FALSE(iterator.valid());
+  }
 }
 
 static std::string sliceToString(const rocksdb::Slice &slice) {

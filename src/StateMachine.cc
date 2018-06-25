@@ -1142,6 +1142,23 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
   return operation.finalize(value.size());
 }
 
+rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std::string &key) {
+  WriteOperation operation(stagingArea, key, KeyType::kLease);
+  if(!operation.valid()) return wrong_type();
+
+  KeyDescriptor &descriptor = operation.descriptor();
+
+  ExpirationEventLocator event(descriptor.getEndIndex(), key);
+  THROW_ON_ERROR(stagingArea.exists(event.toSlice()));
+  stagingArea.del(event.toSlice());
+
+  LeaseLocator leaseLocator(key);
+  THROW_ON_ERROR(stagingArea.exists(leaseLocator.toSlice()));
+  stagingArea.del(leaseLocator.toSlice());
+
+  return operation.finalize(0u);
+}
+
 rocksdb::Status StateMachine::llen(StagingArea &stagingArea, const std::string &key, size_t &len) {
   len = 0;
 
@@ -1647,4 +1664,8 @@ rocksdb::Status StateMachine::lhset(const std::string &key, const std::string &f
 
 rocksdb::Status StateMachine::lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired, LogIndex index) {
   CHAIN(index, lease_acquire, key, value, clockUpdate, duration, acquired);
+}
+
+rocksdb::Status StateMachine::lease_release(const std::string &key, LogIndex index) {
+  CHAIN(index, lease_release, key);
 }
