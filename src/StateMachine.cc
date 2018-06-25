@@ -930,7 +930,7 @@ void StateMachine::WriteOperation::writeLocalityIndex(const std::string &field, 
   stagingArea.put(locator.toSlice(), hint);
 }
 
-rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize) {
+rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize, bool forceUpdate) {
   assertWritable();
 
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
@@ -938,7 +938,7 @@ rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize) {
   if(newsize == 0) {
     stagingArea.del(dlocator.toSlice());
   }
-  else if(keyinfo.getSize() != newsize) {
+  else if(keyinfo.getSize() != newsize || forceUpdate) {
     keyinfo.setSize(newsize);
     stagingArea.put(dlocator.toSlice(), keyinfo.serialize());
   }
@@ -1139,7 +1139,7 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
   // Update lease value.
   operation.write(value);
   acquired = true;
-  return operation.finalize(value.size());
+  return operation.finalize(value.size(), true);
 }
 
 rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std::string &key) {

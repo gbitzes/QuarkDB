@@ -771,6 +771,17 @@ TEST_F(State_Machine, Leases) {
 
   {
     StagingArea stagingArea(*stateMachine());
+    DescriptorLocator locator("my-lease");
+    std::string tmp;
+    ASSERT_OK(stagingArea.get(locator.toSlice(), tmp));
+    KeyDescriptor descr(tmp);
+    ASSERT_EQ(descr.getSize(), 11u);
+    ASSERT_EQ(descr.getStartIndex(), 9u);
+    ASSERT_EQ(descr.getEndIndex(), 19u);
+  }
+
+  {
+    StagingArea stagingArea(*stateMachine());
     ExpirationEventIterator iterator(stagingArea);
     ASSERT_TRUE(iterator.valid());
     ASSERT_EQ(iterator.getDeadline(), 19u);

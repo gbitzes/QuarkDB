@@ -245,7 +245,7 @@ private:
     bool deleteLocalityField(const std::string &hint, const std::string &field);
     bool getAndDeleteLocalityIndex(const std::string &field, std::string &hint);
 
-    rocksdb::Status finalize(int64_t newsize);
+    rocksdb::Status finalize(int64_t newsize, bool forceUpdate = false);
 
     KeyDescriptor& descriptor() {
       return keyinfo;
