@@ -789,6 +789,50 @@ TEST_F(State_Machine, Leases) {
     iterator.next();
     ASSERT_FALSE(iterator.valid());
   }
+
+  stateMachine()->lease_acquire("my-lease-3", "some-other-string", ClockValue(18), 10, acquired);
+  ASSERT_TRUE(acquired);
+
+  stateMachine()->lease_acquire("my-lease-4", "some-other-string", ClockValue(18), 10, acquired);
+  ASSERT_TRUE(acquired);
+
+  stateMachine()->getClock(clk);
+  ASSERT_EQ(clk, 18u);
+
+  {
+    StagingArea stagingArea(*stateMachine());
+    ExpirationEventIterator iterator(stagingArea);
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 19u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease");
+    iterator.next();
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 28u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease-3");
+    iterator.next();
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 28u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease-4");
+    iterator.next();
+    ASSERT_FALSE(iterator.valid());
+  }
+
+  stateMachine()->lease_acquire("my-lease-4", "some-other-string", ClockValue(25), 10, acquired);
+  ASSERT_TRUE(acquired);
+
+  {
+    StagingArea stagingArea(*stateMachine());
+    ExpirationEventIterator iterator(stagingArea);
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 28u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease-3");
+    iterator.next();
+    ASSERT_TRUE(iterator.valid());
+    ASSERT_EQ(iterator.getDeadline(), 35u);
+    ASSERT_EQ(iterator.getRedisKey(), "my-lease-4");
+    iterator.next();
+    ASSERT_FALSE(iterator.valid());
+  }
 }
 
 static std::string sliceToString(const rocksdb::Slice &slice) {

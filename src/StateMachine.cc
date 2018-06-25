@@ -29,6 +29,7 @@
 #include "storage/StagingArea.hh"
 #include "storage/KeyDescriptorBuilder.hh"
 #include "storage/PatternMatching.hh"
+#include "storage/ExpirationEventIterator.hh"
 #include "utils/IntToBinaryString.hh"
 #include "utils/TimeFormatting.hh"
 #include <sys/stat.h>
@@ -1046,6 +1047,13 @@ void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
     qdb_throw("Attempted to set state machine clock in the past: " << prevValue << " ==> " << newValue);
   }
 
+  // Clear out any leases past the deadline
+  ExpirationEventIterator iter(stagingArea);
+  while(iter.valid() && iter.getDeadline() <= newValue) {
+    qdb_assert(lease_release(stagingArea, std::string(iter.getRedisKey())).ok());
+    iter.next();
+  }
+
   // Update value
   stagingArea.put(KeyConstants::kStateMachine_Clock, unsignedIntToBinaryString(newValue));
 }
@@ -1100,7 +1108,6 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
   // Quick check that no-one else holds the lease right now.
   // Could it be that the lease has actually expired? Not at this point.
   // advanceClock() should have taken care of removing expired leases.
-  // TODO: Actually implement that in advanceClock ;>
 
   LeaseLocator locator(key);
   std::string oldLeaseHolder;
