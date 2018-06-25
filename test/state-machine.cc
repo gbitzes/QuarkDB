@@ -769,6 +769,8 @@ TEST_F(State_Machine, Leases) {
   ASSERT_OK(stateMachine()->exists(keys.begin(), keys.end(), count) );
   ASSERT_EQ(count, 0);
 
+  ASSERT_NOTFOUND(stateMachine()->lease_release("not-existing"));
+
   {
     StagingArea stagingArea(*stateMachine());
     DescriptorLocator locator("my-lease");

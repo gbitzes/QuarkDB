@@ -1153,6 +1153,11 @@ rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std:
   WriteOperation operation(stagingArea, key, KeyType::kLease);
   if(!operation.valid()) return wrong_type();
 
+  if(!operation.keyExists()) {
+    operation.finalize(0u);
+    return rocksdb::Status::NotFound();
+  }
+
   KeyDescriptor &descriptor = operation.descriptor();
 
   ExpirationEventLocator event(descriptor.getEndIndex(), key);
