@@ -1058,6 +1058,30 @@ void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
   stagingArea.put(KeyConstants::kStateMachine_Clock, unsignedIntToBinaryString(newValue));
 }
 
+rocksdb::Status StateMachine::lease_get(StagingArea &stagingArea, const std::string &key, ClockValue clockUpdate, LeaseInfo &info) {
+
+  // Advance clock, and clear out any expired leases.
+  maybeAdvanceClock(stagingArea, clockUpdate);
+
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
+
+  if(keyinfo.empty()) {
+    return rocksdb::Status::NotFound();
+  }
+
+  if(keyinfo.getKeyType() != KeyType::kLease) {
+    return wrong_type();
+  }
+
+  LeaseLocator locator(key);
+
+  std::string value;
+  THROW_ON_ERROR(stagingArea.get(locator.toSlice(), value));
+
+  info = LeaseInfo(value, keyinfo.getStartIndex(), keyinfo.getEndIndex());
+  return rocksdb::Status::OK();
+}
+
 void StateMachine::advanceClock(ClockValue newValue, LogIndex index) {
   StagingArea stagingArea(*this);
   advanceClock(stagingArea, newValue);
@@ -1676,6 +1700,10 @@ rocksdb::Status StateMachine::lhset(const std::string &key, const std::string &f
 
 rocksdb::Status StateMachine::lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired, LogIndex index) {
   CHAIN(index, lease_acquire, key, value, clockUpdate, duration, acquired);
+}
+
+rocksdb::Status StateMachine::lease_get(const std::string &key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index) {
+  CHAIN(index, lease_get, key, clockUpdate, info);
 }
 
 rocksdb::Status StateMachine::lease_release(const std::string &key, LogIndex index) {

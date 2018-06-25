@@ -31,6 +31,7 @@
 #include "storage/KeyLocators.hh"
 #include "storage/ConsistencyScanner.hh"
 #include "storage/KeyConstants.hh"
+#include "storage/LeaseInfo.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/write_batch_with_index.h>
 #include <rocksdb/utilities/debug.h>
@@ -81,6 +82,7 @@ public:
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
   rocksdb::Status lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired);
   rocksdb::Status lease_release(StagingArea &stagingArea, const std::string &key);
+  rocksdb::Status lease_get(StagingArea &stagingArea, const std::string &key, ClockValue clockUpdate, LeaseInfo &info);
 
   //----------------------------------------------------------------------------
   // API for transactional reads. Can be part of a mixed read-write transaction.
@@ -148,6 +150,7 @@ public:
   rocksdb::Status rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions);
   rocksdb::Status lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired, LogIndex index = 0);
   rocksdb::Status lease_release(const std::string &key, LogIndex index = 0);
+  rocksdb::Status lease_get(const std::string &key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index = 0);
 
   //----------------------------------------------------------------------------
   // Internal configuration, not exposed to users through 'KEYS' and friends.

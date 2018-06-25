@@ -835,6 +835,14 @@ TEST_F(State_Machine, Leases) {
     iterator.next();
     ASSERT_FALSE(iterator.valid());
   }
+
+  LeaseInfo info;
+  ASSERT_OK(stateMachine()->lease_get("my-lease-4", ClockValue(25), info));
+  ASSERT_EQ(info.getLastRenewal(), ClockValue(25));
+  ASSERT_EQ(info.getDeadline(), ClockValue(35));
+  ASSERT_EQ(info.getValue(), "some-other-string");
+
+  ASSERT_NOTFOUND(stateMachine()->lease_get("does-not-exist", ClockValue(25), info));
 }
 
 static std::string sliceToString(const rocksdb::Slice &slice) {
