@@ -34,29 +34,15 @@ public:
   virtual ~RaftHandshake() override {}
 
   RaftHandshake(const RaftContactDetails &cd)
-  : contactDetails(cd), authHandshake(cd.getPassword()) {
+  : contactDetails(cd) {
     restart();
   }
 
   virtual std::vector<std::string> provideHandshake() override {
-    if(!authHandshakeDone) {
-      return authHandshake.provideHandshake();
-    }
-
     return {"RAFT_HANDSHAKE", VERSION_FULL_STRING, contactDetails.getClusterID(), contactDetails.getRaftTimeouts().toString() };
   }
 
   virtual Status validateResponse(const redisReplyPtr &reply) override {
-    if(!authHandshakeDone) {
-      Status st = authHandshake.validateResponse(reply);
-      if(st == Status::INVALID) return Status::INVALID;
-      if(st == Status::VALID_INCOMPLETE) return Status::VALID_INCOMPLETE;
-
-      qdb_assert(st == Status::VALID_COMPLETE);
-      authHandshakeDone = true;
-      return Status::VALID_INCOMPLETE;
-    }
-
     if(!reply) {
       return Status::INVALID;
     }
@@ -72,15 +58,10 @@ public:
     return Status::VALID_COMPLETE;
   }
 
-  virtual void restart() override {
-    authHandshakeDone = contactDetails.getPassword().empty();
-    authHandshake.restart();
-  }
+  virtual void restart() override {}
 
 private:
   const RaftContactDetails &contactDetails;
-  bool authHandshakeDone = false;
-  qclient::HmacAuthHandshake authHandshake;
 };
 
 
@@ -92,7 +73,9 @@ RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &cont
   opts.transparentRedirects = false;
   opts.retryStrategy = qclient::RetryStrategy::NoRetries();
   opts.backpressureStrategy = qclient::BackpressureStrategy::Default();
-  opts.handshake.reset(new RaftHandshake(contactDetails));
+
+  opts.chainHmacHandshake(contactDetails.getPassword());
+  opts.chainHandshake(std::unique_ptr<Handshake>(new RaftHandshake(contactDetails)));
 
   qcl.reset(new QClient(server.hostname, server.port, std::move(opts)));
 }
