@@ -333,8 +333,9 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
   LogIndex index = journal.getLogSize();
 
   if(!writeTracker.append(index, RaftEntry(snapshot->term, std::move(req)), conn->getQueue(), redisDispatcher)) {
-    qdb_throw("appending write for index = " << index <<
+    qdb_warn("appending write for index = " << index <<
     " and term " << snapshot->term << " failed when servicing client request");
+    return conn->err("unavailable");
   }
 
   return 1;
