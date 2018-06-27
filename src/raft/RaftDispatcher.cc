@@ -333,9 +333,12 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
   LogIndex index = journal.getLogSize();
 
   if(!writeTracker.append(index, RaftEntry(snapshot->term, std::move(req)), conn->getQueue(), redisDispatcher)) {
-    qdb_warn("appending write for index = " << index <<
-    " and term " << snapshot->term << " failed when servicing client request");
-    return conn->err("unavailable");
+    // We were most likely hit by the following race:
+    // - We retrieved the state snapshot.
+    // - The raft term was changed in the meantime, we lost leadership.
+    // - The journal rejected the entry due to term mismatch.
+    // Let's simply retry.
+    return this->service(conn, req);
   }
 
   return 1;
