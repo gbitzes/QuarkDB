@@ -60,7 +60,7 @@ static rocksdb::Status malformed(const std::string &message) {
 }
 
 StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk_load)
-: filename(f), writeAheadLog(write_ahead_log), bulkLoad(bulk_load),
+: filename(f), writeAheadLog(write_ahead_log), bulkLoad(bulk_load), timeKeeper(0u),
  requestCounter(std::chrono::seconds(10)) {
 
   if(writeAheadLog) {
@@ -174,6 +174,7 @@ void StateMachine::ensureClockSanity(bool justCreated) {
   }
 
   // We survived!
+  timeKeeper.reset(binaryStringToUnsignedInt(value.c_str()));
 }
 
 StateMachine::~StateMachine() {
@@ -196,6 +197,17 @@ void StateMachine::reset() {
   ensureBulkloadSanity(true);
   ensureClockSanity(true);
   retrieveLastApplied();
+}
+
+void StateMachine::hardSynchronizeDynamicClock() {
+  ClockValue syncPoint;
+  getClock(syncPoint);
+
+  timeKeeper.synchronize(syncPoint);
+}
+
+ClockValue StateMachine::getDynamicTime() {
+  return timeKeeper.getDynamicTime();
 }
 
 void StateMachine::ensureBulkloadSanity(bool justCreated) {

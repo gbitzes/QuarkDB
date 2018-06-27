@@ -30,31 +30,47 @@ using namespace quarkdb;
 
 TEST(Timekeeper, BasicSanity) {
   Timekeeper tk(ClockValue(123));
-  ASSERT_GE(tk.getCurrentTime(), ClockValue(123));
-  std::cerr << "Initialization: " << tk.getCurrentTime() << std::endl;
+  ASSERT_GE(tk.getDynamicTime(), ClockValue(123));
+  std::cerr << "Initialization: " << tk.getDynamicTime() << std::endl;
 
   std::this_thread::sleep_for(std::chrono::seconds(1));
-  ASSERT_GE(tk.getCurrentTime(), ClockValue(1123));
-  std::cerr << "After 1 sec: " << tk.getCurrentTime() << std::endl;
+  ASSERT_GE(tk.getDynamicTime(), ClockValue(1123));
+  std::cerr << "After 1 sec: " << tk.getDynamicTime() << std::endl;
 
-  // Timekeeper should not go back in time
-  ASSERT_FALSE(tk.synchronize(ClockValue(1000)));
-  ASSERT_GE(tk.getCurrentTime(), ClockValue(1123));
-  std::cerr << "After unsuccessful synchronization: " << tk.getCurrentTime() << std::endl;
+  // Static clock should not go back in time
+  ASSERT_THROW(tk.synchronize(15u), FatalException);
+  ASSERT_GE(tk.getDynamicTime(), ClockValue(1123));
+  std::cerr << "After unsuccessful synchronization: " << tk.getDynamicTime() << std::endl;
 
   // Timejump
-  ASSERT_TRUE(tk.synchronize(ClockValue(2000)));
-  ASSERT_GE(tk.getCurrentTime(), ClockValue(2000));
-  std::cerr << "After successful synchronization at 2000 ClockValue: " << tk.getCurrentTime() << std::endl;
+  tk.synchronize(ClockValue(2000));
+  ASSERT_GE(tk.getDynamicTime(), ClockValue(2000));
+  std::cerr << "After successful synchronization at 2000 ClockValue: " << tk.getDynamicTime() << std::endl;
 
   // Ensure the clock doesn't go back, or something
-  ClockValue prevValue = tk.getCurrentTime();
+  ClockValue prevValue = tk.getDynamicTime();
 
   for(size_t i = 0; i < 10; i++) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    ClockValue curVal = tk.getCurrentTime();
+    ClockValue curVal = tk.getDynamicTime();
     ASSERT_GE(curVal, prevValue);
     prevValue = curVal;
     std::cerr << "Tick: " << prevValue << std::endl;
   }
+
+  // Timejump which actually sets the dynamic clock back
+  tk.synchronize(ClockValue(2001));
+  std::cerr << "Synchronized static clock to 2001" << std::endl;
+
+  prevValue = tk.getDynamicTime();
+
+  for(size_t i = 0; i < 10; i++) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    ClockValue curVal = tk.getDynamicTime();
+    ASSERT_GE(curVal, prevValue);
+    prevValue = curVal;
+    std::cerr << "Tick: " << prevValue << std::endl;
+  }
+
+
 }

@@ -40,28 +40,43 @@ public:
   Timekeeper(ClockValue startup);
 
   //----------------------------------------------------------------------------
-  // The static clock has been updated to the given value. Most of the time,
-  // the given value should actually be less than what we have. If that's not
-  // the case, update.
-  //
-  // A Timekeeper will never go back in time!
+  // Reset a Timekeeper object completely, disregarding its previous state.
+  // You probably want to use synchronize() to update the clock value!
   //----------------------------------------------------------------------------
-  bool synchronize(ClockValue observed);
+  void reset(ClockValue startup);
 
   //----------------------------------------------------------------------------
-  // Get the current time in milliseconds.
+  // The static clock has been updated to the given value. The static clock
+  // should _never_  go back in time, that indicates serious corruption - an
+  // assertion in synchronize() enforces this.
+  //
+  // However, the dynamic clock (as given by getCurrentTime) might go back
+  // if the following happens:
+  // - synchronize(0)
+  // - sleep(10 ms)
+  // - getCurrentTime() -> 10
+  // - synchronize(5)
+  // - getCurrentTime() -> 5
+  //
+  // The static clock only went forward in time, but the dynamic clock was
+  // set back, and that's okay in the context we're using this.
   //----------------------------------------------------------------------------
-  ClockValue getCurrentTime();
+  void synchronize(ClockValue newval);
+
+  //----------------------------------------------------------------------------
+  // Get the current dynamic time in milliseconds.
+  //----------------------------------------------------------------------------
+  ClockValue getDynamicTime() const;
 
 private:
-  std::shared_mutex mtx;
+  mutable std::shared_mutex mtx;
   ClockValue staticClock;
   std::chrono::steady_clock::time_point anchorPoint;
 
   //----------------------------------------------------------------------------
   // Get time elapsed since last anchor point
   //----------------------------------------------------------------------------
-  std::chrono::milliseconds getTimeSinceAnchor();
+  std::chrono::milliseconds getTimeSinceAnchor() const;
 };
 
 }

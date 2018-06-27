@@ -583,6 +583,16 @@ RedisEncodedResponse RedisDispatcher::handleTransaction(RedisRequest &request, L
 RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
   if(request.getCommand() == RedisCommand::INVALID) {
     if(startswith(request[0], "JOURNAL_")) {
+
+      if(request[0] == "JOURNAL_LEADERSHIP_MARKER") {
+        // Hard-synchronize our dynamic clock to the static one. The dynamic
+        // clock is only used in leaders to timestamp incoming lease requests.
+        // So, strictly speaking, synchronizing the clock is only necessary for
+        // leader nodes, but it's so cheap to do that we don't care. Let's
+        // synchronize all nodes.
+        store.hardSynchronizeDynamicClock();
+      }
+
       store.noop(commit);
       return Formatter::ok();
     }

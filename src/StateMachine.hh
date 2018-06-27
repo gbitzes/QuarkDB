@@ -24,6 +24,7 @@
 #ifndef QUARKDB_STATE_MACHINE_H
 #define QUARKDB_STATE_MACHINE_H
 
+#include "Timekeeper.hh"
 #include "Common.hh"
 #include "utils/Macros.hh"
 #include "utils/RequestCounter.hh"
@@ -201,6 +202,9 @@ public:
   rocksdb::Status verifyChecksum();
   RequestCounter& getRequestCounter() { return requestCounter; }
 
+  ClockValue getDynamicTime();
+  void hardSynchronizeDynamicClock();
+
 private:
   ClockValue maybeAdvanceClock(StagingArea &stagingArea, ClockValue newValue);
   friend class StagingArea;
@@ -290,6 +294,7 @@ private:
   bool writeAheadLog;
   bool bulkLoad;
 
+  Timekeeper timeKeeper;
   RequestCounter requestCounter;
 };
 

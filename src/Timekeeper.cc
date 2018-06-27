@@ -22,33 +22,34 @@
  ************************************************************************/
 
 #include "Timekeeper.hh"
+#include "utils/Macros.hh"
 using namespace quarkdb;
 
 Timekeeper::Timekeeper(ClockValue startup) : staticClock(startup) {
   anchorPoint = std::chrono::steady_clock::now();
 }
 
-bool Timekeeper::synchronize(ClockValue observed) {
+void Timekeeper::reset(ClockValue startup) {
   std::unique_lock<std::shared_mutex> lock(mtx);
-
-  if(observed > staticClock + getTimeSinceAnchor().count() ) {
-    // We have a timejump. Re-anchor, update static clock
-    anchorPoint = std::chrono::steady_clock::now();
-    staticClock = observed;
-    return true;
-  }
-  else {
-    // Nothing to do, the clock never goes back in time
-    return false;
-  }
+  staticClock = startup;
+  anchorPoint = std::chrono::steady_clock::now();
 }
 
-ClockValue Timekeeper::getCurrentTime() {
+void Timekeeper::synchronize(ClockValue newval) {
+  std::unique_lock<std::shared_mutex> lock(mtx);
+  qdb_assert(staticClock <= newval);
+
+  // We have a timejump. Re-anchor, update static clock
+  anchorPoint = std::chrono::steady_clock::now();
+  staticClock = newval;
+}
+
+ClockValue Timekeeper::getDynamicTime() const {
   std::shared_lock<std::shared_mutex> lock(mtx);
   return staticClock + getTimeSinceAnchor().count();
 }
 
-std::chrono::milliseconds Timekeeper::getTimeSinceAnchor() {
+std::chrono::milliseconds Timekeeper::getTimeSinceAnchor() const {
   return std::chrono::duration_cast<std::chrono::milliseconds>(
     std::chrono::steady_clock::now() - anchorPoint
   );
