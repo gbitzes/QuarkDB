@@ -206,7 +206,7 @@ void StateMachine::hardSynchronizeDynamicClock() {
   timeKeeper.synchronize(syncPoint);
 }
 
-ClockValue StateMachine::getDynamicTime() {
+ClockValue StateMachine::getDynamicClock() {
   return timeKeeper.getDynamicTime();
 }
 

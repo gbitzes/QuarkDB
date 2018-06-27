@@ -202,7 +202,7 @@ public:
   rocksdb::Status verifyChecksum();
   RequestCounter& getRequestCounter() { return requestCounter; }
 
-  ClockValue getDynamicTime();
+  ClockValue getDynamicClock();
   void hardSynchronizeDynamicClock();
 
 private:

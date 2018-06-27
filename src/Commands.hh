@@ -98,6 +98,8 @@ enum class RedisCommand {
   TX_READONLY,
   TX_READWRITE,
 
+  CLOCK_GET,
+
   CONFIG_GET,
   CONFIG_SET,
   CONFIG_GETALL,

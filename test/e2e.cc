@@ -408,6 +408,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset", "mystring"));
   futures.emplace_back(tunnel(leaderID)->exec("exists", "mystring", "myset", "myhash", "adfa", "myhash"));
   futures.emplace_back(tunnel(leaderID)->exec("del", "myhash", "myset"));
+  futures.emplace_back(tunnel(leaderID)->exec("clock-get"));
 
   ASSERT_REPLY(futures[0], "OK");
   ASSERT_REPLY(futures[1], make_vec("myhash", "myset", "mystring"));
@@ -415,6 +416,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[3], 3);
   ASSERT_REPLY(futures[4], 0);
   ASSERT_REPLY(futures[5], 0);
+  qdb_info(qclient::describeRedisReply(futures[6].get()));
 
   futures.clear();
   futures.emplace_back(tunnel(leaderID)->exec("set", "a", "aa"));

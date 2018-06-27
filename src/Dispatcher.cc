@@ -552,6 +552,21 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
 
       return Formatter::vector(reply);
     }
+    case RedisCommand::CLOCK_GET: {
+      if(request.size() != 1) return errArgs(request);
+
+      std::vector<std::string> reply;
+
+      ClockValue staticClock;
+      store.getClock(stagingArea, staticClock);
+
+      ClockValue dynamicClock = store.getDynamicClock();
+
+      reply.emplace_back(SSTR("STATIC-CLOCK: " << staticClock));
+      reply.emplace_back(SSTR("DYNAMIC-CLOCK: " << dynamicClock));
+
+      return Formatter::statusVector(reply);
+    }
     default: {
       return dispatchingError(request, 0);
     }
