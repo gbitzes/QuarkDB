@@ -83,6 +83,7 @@ add_executable(quarkdb-stress-tests
   stress/qclient.cc
   stress/replication.cc
   stress/resilvering.cc
+  stress/timekeeper.cc
   ${COMMON_TEST_SOURCES}
 )
 

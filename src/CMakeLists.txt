@@ -13,23 +13,25 @@ add_definitions(${GCOV_CFLAGS})
 add_library(XrdQuarkDB SHARED
   XrdPlugin.cc
   XrdQuarkDB.cc                       XrdQuarkDB.hh
-  Configuration.cc                    Configuration.hh
   Utils.cc                            Utils.hh
-                                      Common.hh
-  Link.cc                             Link.hh
   BufferedReader.cc                   BufferedReader.hh
   BufferedWriter.cc                   BufferedWriter.hh
+  Commands.cc                         Commands.hh
+                                      Common.hh
+  Configuration.cc                    Configuration.hh
+  Connection.cc                       Connection.hh
+  Dispatcher.cc                       Dispatcher.hh
+                                      EventFD.hh
+  Formatter.cc                        Formatter.hh
+  Link.cc                             Link.hh
+  Poller.cc                           Poller.hh
+  QuarkDBNode.cc                      QuarkDBNode.hh
   RedisParser.cc                      RedisParser.hh
   RedisRequest.cc                     RedisRequest.hh
-  StateMachine.cc                     StateMachine.hh
-  Commands.cc                         Commands.hh
-  Formatter.cc                        Formatter.hh
-  Dispatcher.cc                       Dispatcher.hh
-  Poller.cc                           Poller.hh
-  Connection.cc                       Connection.hh
-  QuarkDBNode.cc                      QuarkDBNode.hh
   Shard.cc                            Shard.hh
   ShardDirectory.cc                   ShardDirectory.hh
+  StateMachine.cc                     StateMachine.hh
+  Timekeeper.cc                       Timekeeper.hh
 
   auth/AuthenticationDispatcher.cc    auth/AuthenticationDispatcher.hh
 
