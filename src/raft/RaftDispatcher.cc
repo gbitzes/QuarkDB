@@ -284,30 +284,43 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
     return conn->moved(0, snapshot->leader);
   }
 
-  // read request: What happens if I was just elected as leader, but my state
-  // machine is behind leadershipMarker?
+  // What happens if I was just elected as leader, but my state machine is
+  // behind leadershipMarker?
+  //
   // It means I have committed entries on the journal, which haven't been applied
   // to the state machine. If I were to service a read, I'd be giving out potentially
   // stale values!
   //
   // Ensure the state machine is all caught-up before servicing reads, in order
   // to prevent a linearizability violation.
-  if(req.getCommandType() == CommandType::READ) {
-    if(stateMachine.getLastApplied() < snapshot->leadershipMarker) {
-
-      // Stall client request until state machine is caught-up, or we lose leadership
-      while(!stateMachine.waitUntilTargetLastApplied(snapshot->leadershipMarker, std::chrono::milliseconds(500))) {
-        if(snapshot->term != state.getCurrentTerm()) {
-          // Ouch, we're no longer a leader.. start from scratch
-          return this->service(conn, req);
-        }
+  //
+  // But we do the same thing for writes:
+  // - Ensures a leader is stable before actually inserting writes into the
+  //   journal.
+  // - Ensures no race conditions exist between committing the leadership marker
+  //   (which causes a hard-synchronization of the dynamic clock to the static
+  //   one), and the time we service lease requests.
+  //
+  // This adds some latency to writes right after a leader is elected, as we
+  // need some extra roundtrips to commit the leadership marker. But since
+  // leaders usually last weeks, who cares.
+  if(stateMachine.getLastApplied() < snapshot->leadershipMarker) {
+    // Stall client request until state machine is caught-up, or we lose leadership
+    while(!stateMachine.waitUntilTargetLastApplied(snapshot->leadershipMarker, std::chrono::milliseconds(500))) {
+      if(snapshot->term != state.getCurrentTerm()) {
+        // Ouch, we're no longer a leader.. start from scratch
+        return this->service(conn, req);
       }
-
-      // If we've made it this far, the state machine should be all caught-up
-      // by now. Proceed to service this request.
-      qdb_assert(snapshot->leadershipMarker <= stateMachine.getLastApplied());
     }
 
+    // If we've made it this far, the state machine should be all caught-up
+    // by now. Proceed to service this request.
+    qdb_assert(snapshot->leadershipMarker <= stateMachine.getLastApplied());
+  }
+
+  if(req.getCommandType() == CommandType::READ) {
+    // Forward request to the state machine, without going through the
+    // raft journal.
     return conn->addPendingRequest(&redisDispatcher, std::move(req));
   }
 
