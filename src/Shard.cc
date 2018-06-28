@@ -26,6 +26,7 @@
 #include "ShardDirectory.hh"
 #include "raft/RaftGroup.hh"
 #include "raft/RaftDispatcher.hh"
+#include "redis/LeaseFilter.hh"
 #include "utils/ScopedAdder.hh"
 
 using namespace quarkdb;
@@ -115,6 +116,21 @@ LinkStatus Shard::dispatch(Connection *conn, Transaction &transaction) {
   if(!registration.ok()) {
     return conn->raw(Formatter::multiply(Formatter::err("unavailable"), transaction.expectedResponses()));
   }
+
+  // If this is standalone mode, do lease timestamp filtering here.
+  // Otherwise, RaftDispatcher will take care of it.
+  if(mode == Mode::standalone) {
+    ClockValue txTimestamp = stateMachine->getDynamicClock();
+
+    for(size_t i = 0; i < transaction.size(); i++) {
+      if(transaction[i].getCommand() == RedisCommand::LEASE_GET || transaction[i].getCommand() == RedisCommand::LEASE_ACQUIRE) {
+        // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
+        // snapshot, but we need to refactor transactions a bit first.
+        LeaseFilter::transform(transaction[i], txTimestamp);
+      }
+    }
+  }
+
 
   return dispatcher->dispatch(conn, transaction);
 }
