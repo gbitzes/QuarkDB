@@ -10,6 +10,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 include(GNUInstallDirs)
 
 #-------------------------------------------------------------------------------
+# Export cmake compile commands by default
+#-------------------------------------------------------------------------------
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+#-------------------------------------------------------------------------------
 # Activate include-what-you-use
 #-------------------------------------------------------------------------------
 option(ENABLE_IWYU "Enable include-what-you-use tool" OFF)
