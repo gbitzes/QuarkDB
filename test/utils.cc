@@ -34,7 +34,10 @@
 #include "utils/Random.hh"
 #include "redis/Transaction.hh"
 #include "redis/Authenticator.hh"
+#include "redis/LeaseFilter.hh"
+#include "redis/RedisEncodedResponse.hh"
 #include "Utils.hh"
+#include "Formatter.hh"
 
 using namespace quarkdb;
 
@@ -437,4 +440,38 @@ TEST(Transaction, Parsing) {
   ASSERT_EQ(tx3.expectedResponses(), 3);
 
   ASSERT_THROW(tx3.emplace_back("asdf", "1234"), FatalException);
+}
+
+TEST(LeaseFilter, BasicSanity) {
+  ClockValue timestamp = 567;
+  RedisRequest req = {"get", "adsf"};
+
+  RedisEncodedResponse resp;
+  ASSERT_THROW(LeaseFilter::transform(req, timestamp, resp), FatalException);
+
+  req = {"lease-acquire", "my-lease", "lease-holder-1234", "10000" };
+  ASSERT_TRUE(LeaseFilter::transform(req, timestamp, resp));
+
+  ASSERT_EQ(req[0], "TIMESTAMPED_LEASE_ACQUIRE");
+  ASSERT_EQ(req[1], "my-lease");
+  ASSERT_EQ(req[2], "lease-holder-1234");
+  ASSERT_EQ(req[3], "10000");
+  ASSERT_EQ(req[4], unsignedIntToBinaryString(567));
+  ASSERT_EQ(req.getCommand(), RedisCommand::TIMESTAMPED_LEASE_ACQUIRE);
+
+  req = {"lease-acquire", "my-lease"};
+  ASSERT_FALSE(LeaseFilter::transform(req, timestamp, resp));
+  ASSERT_EQ(resp, Formatter::errArgs(req[0]));
+
+  req = {"lease-get", "my-lease", "holder-1234", "2000"};
+  ASSERT_FALSE(LeaseFilter::transform(req, timestamp, resp));
+  ASSERT_EQ(resp, Formatter::errArgs(req[0]));
+
+  req = {"lease-get", "my-lease"};
+  ASSERT_TRUE(LeaseFilter::transform(req, timestamp, resp));
+
+  ASSERT_EQ(req[0], "TIMESTAMPED_LEASE_GET");
+  ASSERT_EQ(req[1], "my-lease");
+  ASSERT_EQ(req[2], unsignedIntToBinaryString(567));
+  ASSERT_EQ(req.getCommand(), RedisCommand::TIMESTAMPED_LEASE_GET);
 }

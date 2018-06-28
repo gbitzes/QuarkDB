@@ -60,6 +60,7 @@ add_library(XrdQuarkDB SHARED
   redis/ArrayResponseBuilder.cc       redis/ArrayResponseBuilder.hh
   redis/Authenticator.cc              redis/Authenticator.hh
   redis/CommandMonitor.cc             redis/CommandMonitor.hh
+  redis/LeaseFilter.cc                redis/LeaseFilter.hh
   redis/MultiHandler.cc               redis/MultiHandler.hh
                                       redis/RedisEncodedResponse.hh
   redis/Transaction.cc                redis/Transaction.hh

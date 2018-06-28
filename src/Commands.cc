@@ -89,6 +89,10 @@ struct cmdMapInit {
     redis_cmd_map["lhdel_with_fallback"] = {RedisCommand::LHDEL_WITH_FALLBACK, CommandType::WRITE};
     redis_cmd_map["lhset_and_del_fallback"] = {RedisCommand::LHSET_AND_DEL_FALLBACK, CommandType::WRITE};
     redis_cmd_map["convert_hash_field_to_lhash"] = {RedisCommand::CONVERT_HASH_FIELD_TO_LHASH, CommandType::WRITE};
+    redis_cmd_map["lease_acquire"] = {RedisCommand::LEASE_ACQUIRE, CommandType::WRITE};
+    redis_cmd_map["lease_get"] = {RedisCommand::LEASE_GET, CommandType::WRITE};
+    redis_cmd_map["timestamped_lease_acquire"] = {RedisCommand::TIMESTAMPED_LEASE_ACQUIRE, CommandType::WRITE};
+    redis_cmd_map["timestamped_lease_get"] = {RedisCommand::TIMESTAMPED_LEASE_GET, CommandType::WRITE};
 
     redis_cmd_map["exec"] = {RedisCommand::EXEC, CommandType::CONTROL};
     redis_cmd_map["discard"] = {RedisCommand::DISCARD, CommandType::CONTROL};
