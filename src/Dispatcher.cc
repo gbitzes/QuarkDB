@@ -285,6 +285,28 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
       return Formatter::ok();
     }
+    case RedisCommand::TIMESTAMPED_LEASE_ACQUIRE: {
+      qdb_assert(request.size() == 5); // Internal command, safe to assume this size
+
+      int64_t duration = 0;
+      if(!my_strtoll(request[3], duration) || duration < 1) {
+        return Formatter::err("value is not an integer or out of range");
+      }
+
+      qdb_assert(request[4].size() == 8u);
+
+      bool acquired;
+      rocksdb::Status st = store.lease_acquire(stagingArea, request[1], request[2], binaryStringToUnsignedInt(request[4].c_str()), duration, acquired);
+
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      if(acquired) {
+        return Formatter::ok();
+      }
+      else {
+        return Formatter::err("lease already held");
+      }
+    }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
     }

@@ -30,30 +30,20 @@
 
 using namespace quarkdb;
 
-bool LeaseFilter::transform(RedisRequest &req, ClockValue timestamp, RedisEncodedResponse &err) {
+void LeaseFilter::transform(RedisRequest &req, ClockValue timestamp) {
   qdb_assert(req.getCommand() == RedisCommand::LEASE_GET || req.getCommand() == RedisCommand::LEASE_ACQUIRE);
 
   if(req.getCommand() == RedisCommand::LEASE_GET) {
-    if(req.size() != 2) {
-      err = Formatter::errArgs(req[0]);
-      return false;
-    }
-
     req[0] = "TIMESTAMPED_LEASE_GET";
     req.emplace_back(unsignedIntToBinaryString(timestamp));
     req.parseCommand();
-    return true;
+    return;
   }
   else if(req.getCommand() == RedisCommand::LEASE_ACQUIRE) {
-    if(req.size() != 4) {
-      err = Formatter::errArgs(req[0]);
-      return false;
-    }
-
     req[0] = "TIMESTAMPED_LEASE_ACQUIRE";
     req.emplace_back(unsignedIntToBinaryString(timestamp));
     req.parseCommand();
-    return true;
+    return;
   }
 
   qdb_throw("should never reach here");

@@ -27,6 +27,7 @@
 #include "RaftWriteTracker.hh"
 #include "RaftState.hh"
 #include "RaftReplicator.hh"
+#include "../redis/LeaseFilter.hh"
 #include "../StateMachine.hh"
 #include "../Formatter.hh"
 
@@ -48,6 +49,17 @@ LinkStatus RaftDispatcher::dispatchInfo(Connection *conn, RedisRequest &req) {
 }
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, Transaction &transaction) {
+
+  ClockValue txTimestamp = stateMachine.getDynamicClock();
+
+  for(size_t i = 0; i < transaction.size(); i++) {
+    if(transaction[i].getCommand() == RedisCommand::LEASE_GET || transaction[i].getCommand() == RedisCommand::LEASE_ACQUIRE) {
+      // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
+      // snapshot, but we need to refactor transactions a bit first.
+      LeaseFilter::transform(transaction[i], txTimestamp);
+    }
+  }
+
   RedisRequest req = transaction.toRedisRequest();
   return this->service(conn, req);
 }
@@ -256,6 +268,13 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::ACTIVATE_STALE_READS: {
       conn->raftStaleReads = true;
       return conn->ok();
+    }
+    case RedisCommand::LEASE_GET:
+    case RedisCommand::LEASE_ACQUIRE: {
+      // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
+      // snapshot, but we need to refactor transactions a bit first.
+      LeaseFilter::transform(req, stateMachine.getDynamicClock());
+      return this->service(conn, req);
     }
     default: {
       // Must be either a read, or write at this point.

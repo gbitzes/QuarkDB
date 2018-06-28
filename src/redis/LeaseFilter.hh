@@ -38,7 +38,7 @@ public:
   // Transform LEASE_GET and LEASE_ACQUIRE into TIMESTAMPED_LEASE_GET and
   // TIMESTAMPED_LEASE_ACQUIRE, respectively.
   //----------------------------------------------------------------------------
-  static bool transform(RedisRequest &req, ClockValue timestamp, RedisEncodedResponse &err);
+  static void transform(RedisRequest &req, ClockValue timestamp);
 };
 
 }
