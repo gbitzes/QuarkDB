@@ -81,7 +81,7 @@ public:
   rocksdb::Status rpop(StagingArea &stagingArea, const std::string &key, std::string &item);
 
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
-  rocksdb::Status lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired);
+  rocksdb::Status lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, bool &acquired);
   rocksdb::Status lease_release(StagingArea &stagingArea, const std::string &key);
   rocksdb::Status lease_get(StagingArea &stagingArea, const std::string &key, ClockValue clockUpdate, LeaseInfo &info);
 
@@ -149,7 +149,7 @@ public:
   void advanceClock(ClockValue newValue, LogIndex index = 0);
   void getClock(ClockValue &value);
   rocksdb::Status rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions);
-  rocksdb::Status lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired, LogIndex index = 0);
+  rocksdb::Status lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, bool &acquired, LogIndex index = 0);
   rocksdb::Status lease_release(const std::string &key, LogIndex index = 0);
   rocksdb::Status lease_get(const std::string &key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index = 0);
 
@@ -235,6 +235,7 @@ private:
     bool keyExists();
     bool getField(const std::string &field, std::string &out);
     bool getLocalityIndex(const std::string &field, std::string &out);
+    void cancel();
 
     int64_t keySize();
 

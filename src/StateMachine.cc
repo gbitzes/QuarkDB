@@ -943,6 +943,10 @@ void StateMachine::WriteOperation::writeLocalityIndex(const std::string &field, 
   stagingArea.put(locator.toSlice(), hint);
 }
 
+void StateMachine::WriteOperation::cancel() {
+  finalized = true;
+}
+
 rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize, bool forceUpdate) {
   assertWritable();
 
@@ -1135,11 +1139,15 @@ void StateMachine::getClock(ClockValue &value) {
   getClock(stagingArea, value);
 }
 
-rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired) {
+rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, bool &acquired) {
   qdb_assert(!value.empty());
 
   // First, some timekeeping, update clock time if necessary.
   clockUpdate = maybeAdvanceClock(stagingArea, clockUpdate);
+
+  // Ensure the key pointed to is either a lease, or non-existent.
+  WriteOperation operation(stagingArea, key, KeyType::kLease);
+  if(!operation.valid()) return wrong_type();
 
   // Quick check that no-one else holds the lease right now.
   // Could it be that the lease has actually expired? Not at this point.
@@ -1152,15 +1160,16 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
 
   if(st.ok()) {
     if(oldLeaseHolder != value) {
+      KeyDescriptor &descriptor = operation.descriptor();
       acquired = false;
-      return rocksdb::Status::InvalidArgument(SSTR("lease being currently held by " << oldLeaseHolder));
+      info = LeaseInfo(oldLeaseHolder, descriptor.getStartIndex(), descriptor.getEndIndex());
+      operation.cancel();
+      return rocksdb::Status::InvalidArgument(SSTR("lease being currently held by " << oldLeaseHolder << ", remaining time: " << descriptor.getEndIndex() - clockUpdate << " ms" ));
     }
   }
 
   // Looks good.. Either the lease is held by the same holder, and this is
   // simply an extension request, or this is a new lease altogether.
-  WriteOperation operation(stagingArea, key, KeyType::kLease);
-  if(!operation.valid()) return wrong_type();
 
   KeyDescriptor &descriptor = operation.descriptor();
   if(operation.keyExists()) {
@@ -1182,6 +1191,7 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
   // Update lease value.
   operation.write(value);
   acquired = true;
+  info = LeaseInfo(value, descriptor.getStartIndex(), descriptor.getEndIndex());
   return operation.finalize(value.size(), true);
 }
 
@@ -1710,8 +1720,8 @@ rocksdb::Status StateMachine::lhset(const std::string &key, const std::string &f
   CHAIN(index, lhset, key, field, hint, value, fieldcreated);
 }
 
-rocksdb::Status StateMachine::lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, bool &acquired, LogIndex index) {
-  CHAIN(index, lease_acquire, key, value, clockUpdate, duration, acquired);
+rocksdb::Status StateMachine::lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, bool &acquired, LogIndex index) {
+  CHAIN(index, lease_acquire, key, value, clockUpdate, duration, info, acquired);
 }
 
 rocksdb::Status StateMachine::lease_get(const std::string &key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index) {

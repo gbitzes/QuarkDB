@@ -296,7 +296,8 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       qdb_assert(request[4].size() == 8u);
 
       bool acquired;
-      rocksdb::Status st = store.lease_acquire(stagingArea, request[1], request[2], binaryStringToUnsignedInt(request[4].c_str()), duration, acquired);
+      LeaseInfo leaseInfo;
+      rocksdb::Status st = store.lease_acquire(stagingArea, request[1], request[2], binaryStringToUnsignedInt(request[4].c_str()), duration, leaseInfo, acquired);
 
       if(!st.ok()) return Formatter::fromStatus(st);
 
