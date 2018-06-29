@@ -35,6 +35,7 @@
 #include "redis/Transaction.hh"
 #include "redis/Authenticator.hh"
 #include "redis/LeaseFilter.hh"
+#include "redis/InternalFilter.hh"
 #include "redis/RedisEncodedResponse.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
@@ -465,4 +466,21 @@ TEST(LeaseFilter, BasicSanity) {
   ASSERT_EQ(req[1], "my-lease");
   ASSERT_EQ(req[2], unsignedIntToBinaryString(567));
   ASSERT_EQ(req.getCommand(), RedisCommand::TIMESTAMPED_LEASE_GET);
+}
+
+TEST(InternalFilter, BasicSanity) {
+  RedisRequest req = {"timestamped_lease_get", "asdf" };
+  ASSERT_EQ(req.getCommand(), RedisCommand::TIMESTAMPED_LEASE_GET);
+  InternalFilter::process(req);
+  ASSERT_EQ(req.getCommand(), RedisCommand::INVALID);
+
+  req = {"timestamped_lease_acquire", "asdfas" };
+  ASSERT_EQ(req.getCommand(), RedisCommand::TIMESTAMPED_LEASE_ACQUIRE);
+  InternalFilter::process(req);
+  ASSERT_EQ(req.getCommand(), RedisCommand::INVALID);
+
+  req = {"set", "adsfasf", "qerq"};
+  ASSERT_EQ(req.getCommand(), RedisCommand::SET);
+  InternalFilter::process(req);
+  ASSERT_EQ(req.getCommand(), RedisCommand::SET);
 }

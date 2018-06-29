@@ -328,6 +328,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("scard", "myset"));
   futures.emplace_back(tunnel(leaderID)->exec("smembers", "myset"));
   futures.emplace_back(tunnel(leaderID)->exec("get", "empty_key"));
+  futures.emplace_back(tunnel(leaderID)->exec("timestamped-lease-acquire", "123"));
 
   ASSERT_REPLY(futures[0], 3);
   ASSERT_REPLY(futures[1], 3);
@@ -337,6 +338,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[5], 1);
   ASSERT_REPLY(futures[6], make_vec("c"));
   ASSERT_NIL(futures[7]);
+  ASSERT_REPLY(futures[8], "ERR unknown command 'timestamped-lease-acquire'" );
 
   futures.clear();
 

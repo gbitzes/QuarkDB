@@ -118,6 +118,12 @@ public:
 
   void parseCommand();
   std::string toPrintableString() const;
+
+  void invalidate() {
+    command = RedisCommand::INVALID;
+    commandType = CommandType::INVALID;
+  }
+
 private:
   std::vector<std::string> contents;
   RedisCommand command = RedisCommand::INVALID;

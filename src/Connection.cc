@@ -25,6 +25,7 @@
 #include "Dispatcher.hh"
 #include "Formatter.hh"
 #include "utils/InFlightTracker.hh"
+#include "redis/InternalFilter.hh"
 using namespace quarkdb;
 
 LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
@@ -219,6 +220,7 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
     }
 
     LinkStatus status = parser.fetch(currentRequest);
+    InternalFilter::process(currentRequest);
 
     if(status < 0) {
       return status; // link error
