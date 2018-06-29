@@ -1139,7 +1139,7 @@ void StateMachine::getClock(ClockValue &value) {
   getClock(stagingArea, value);
 }
 
-rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, bool &acquired) {
+LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info) {
   qdb_assert(!value.empty());
 
   // First, some timekeeping, update clock time if necessary.
@@ -1147,7 +1147,7 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
 
   // Ensure the key pointed to is either a lease, or non-existent.
   WriteOperation operation(stagingArea, key, KeyType::kLease);
-  if(!operation.valid()) return wrong_type();
+  if(!operation.valid()) return LeaseAcquisitionStatus::kKeyTypeMismatch;
 
   // Quick check that no-one else holds the lease right now.
   // Could it be that the lease has actually expired? Not at this point.
@@ -1161,10 +1161,9 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
   if(st.ok()) {
     if(oldLeaseHolder != value) {
       KeyDescriptor &descriptor = operation.descriptor();
-      acquired = false;
       info = LeaseInfo(oldLeaseHolder, descriptor.getStartIndex(), descriptor.getEndIndex());
       operation.cancel();
-      return rocksdb::Status::InvalidArgument(SSTR("lease being currently held by " << oldLeaseHolder << ", remaining time: " << descriptor.getEndIndex() - clockUpdate << " ms" ));
+      return LeaseAcquisitionStatus::kFailedDueToOtherOwner;
     }
   }
 
@@ -1172,6 +1171,7 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
   // simply an extension request, or this is a new lease altogether.
 
   KeyDescriptor &descriptor = operation.descriptor();
+  bool extended = operation.keyExists();
   if(operation.keyExists()) {
     // Lease extension.. need to wipe out old pending expiration event
     ExpirationEventLocator oldEvent(descriptor.getEndIndex(), key);
@@ -1190,9 +1190,11 @@ rocksdb::Status StateMachine::lease_acquire(StagingArea &stagingArea, const std:
 
   // Update lease value.
   operation.write(value);
-  acquired = true;
   info = LeaseInfo(value, descriptor.getStartIndex(), descriptor.getEndIndex());
-  return operation.finalize(value.size(), true);
+
+  operation.finalize(value.size(), true);
+  if(extended) return LeaseAcquisitionStatus::kRenewed;
+  return LeaseAcquisitionStatus::kAcquired;
 }
 
 rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std::string &key) {
@@ -1553,7 +1555,7 @@ void StateMachine::commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex 
 
 #define CHAIN(index, func, ...) { \
   StagingArea stagingArea(*this); \
-  rocksdb::Status st = this->func(stagingArea, ## __VA_ARGS__); \
+  auto st = this->func(stagingArea, ## __VA_ARGS__); \
   stagingArea.commit(index); \
   return st; \
 }
@@ -1720,8 +1722,8 @@ rocksdb::Status StateMachine::lhset(const std::string &key, const std::string &f
   CHAIN(index, lhset, key, field, hint, value, fieldcreated);
 }
 
-rocksdb::Status StateMachine::lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, bool &acquired, LogIndex index) {
-  CHAIN(index, lease_acquire, key, value, clockUpdate, duration, info, acquired);
+LeaseAcquisitionStatus StateMachine::lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, LogIndex index) {
+  CHAIN(index, lease_acquire, key, value, clockUpdate, duration, info);
 }
 
 rocksdb::Status StateMachine::lease_get(const std::string &key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index) {

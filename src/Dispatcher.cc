@@ -286,7 +286,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       return Formatter::ok();
     }
     case RedisCommand::TIMESTAMPED_LEASE_ACQUIRE: {
-      qdb_assert(request.size() == 5); // Internal command, safe to assume this size
+      if(request.size() != 5) return Formatter::errArgs("lease_acquire");
 
       int64_t duration = 0;
       if(!my_strtoll(request[3], duration) || duration < 1) {
@@ -295,17 +295,22 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
       qdb_assert(request[4].size() == 8u);
 
-      bool acquired;
+      ClockValue timestamp = binaryStringToUnsignedInt(request[4].c_str());
       LeaseInfo leaseInfo;
-      rocksdb::Status st = store.lease_acquire(stagingArea, request[1], request[2], binaryStringToUnsignedInt(request[4].c_str()), duration, leaseInfo, acquired);
+      LeaseAcquisitionStatus status = store.lease_acquire(stagingArea, request[1], request[2], timestamp, duration, leaseInfo);
 
-      if(!st.ok()) return Formatter::fromStatus(st);
-
-      if(acquired) {
-        return Formatter::ok();
+      if(status == LeaseAcquisitionStatus::kKeyTypeMismatch) {
+        return Formatter::err("Invalid Argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+      }
+      else if(status == LeaseAcquisitionStatus::kAcquired) {
+        return Formatter::status("ACQUIRED");
+      }
+      else if(status == LeaseAcquisitionStatus::kRenewed) {
+        return Formatter::status("RENEWED");
       }
       else {
-        return Formatter::err("lease already held");
+        qdb_assert(status == LeaseAcquisitionStatus::kFailedDueToOtherOwner);
+        return Formatter::err(SSTR("lease held by '" << leaseInfo.getValue() << "', time remaining " << leaseInfo.getDeadline() - timestamp << " ms"));
       }
     }
     default: {

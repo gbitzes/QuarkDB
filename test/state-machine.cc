@@ -707,10 +707,10 @@ TEST_F(State_Machine, Leases) {
   }
 
 
-  bool acquired;
   LeaseInfo info;
-  ASSERT_OK(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(1), 10, info, acquired));
-  ASSERT_TRUE(acquired);
+  ASSERT_EQ(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(1), 10, info),
+    LeaseAcquisitionStatus::kAcquired);
+
   ASSERT_EQ(info.getDeadline(), 11u);
   ASSERT_EQ(info.getLastRenewal(), 1u);
   ASSERT_EQ(info.getValue(), "some-string");
@@ -728,8 +728,10 @@ TEST_F(State_Machine, Leases) {
     ASSERT_FALSE(iterator.valid());
   }
 
-  ASSERT_OK(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(9), 10, info, acquired));
-  ASSERT_TRUE(acquired);
+  ASSERT_EQ(stateMachine()->lease_acquire("my-lease", "some-string", ClockValue(9), 10, info),
+    LeaseAcquisitionStatus::kRenewed
+  );
+
   ASSERT_EQ(info.getDeadline(), 19u);
   ASSERT_EQ(info.getLastRenewal(), 9u);
   ASSERT_EQ(info.getValue(), "some-string");
@@ -747,8 +749,9 @@ TEST_F(State_Machine, Leases) {
     ASSERT_FALSE(iterator.valid());
   }
 
-  stateMachine()->lease_acquire("my-lease", "some-other-string", ClockValue(12), 10, info, acquired);
-  ASSERT_FALSE(acquired);
+  ASSERT_EQ(stateMachine()->lease_acquire("my-lease", "some-other-string", ClockValue(12), 10, info),
+    LeaseAcquisitionStatus::kFailedDueToOtherOwner);
+
   ASSERT_EQ(info.getDeadline(), 19u);
   ASSERT_EQ(info.getLastRenewal(), 9u);
   ASSERT_EQ(info.getValue(), "some-string");
@@ -756,8 +759,9 @@ TEST_F(State_Machine, Leases) {
   stateMachine()->getClock(clk);
   ASSERT_EQ(clk, 12u);
 
-  stateMachine()->lease_acquire("my-lease-2", "some-other-string", ClockValue(13), 10, info, acquired);
-  ASSERT_TRUE(acquired);
+  ASSERT_EQ(stateMachine()->lease_acquire("my-lease-2", "some-other-string", ClockValue(13), 10, info),
+    LeaseAcquisitionStatus::kAcquired);
+
   ASSERT_EQ(info.getDeadline(), 23u);
   ASSERT_EQ(info.getLastRenewal(), 13u);
   ASSERT_EQ(info.getValue(), "some-other-string");
@@ -805,14 +809,16 @@ TEST_F(State_Machine, Leases) {
     ASSERT_FALSE(iterator.valid());
   }
 
-  stateMachine()->lease_acquire("my-lease-3", "some-other-string", ClockValue(18), 10, info, acquired);
-  ASSERT_TRUE(acquired);
+  ASSERT_EQ(stateMachine()->lease_acquire("my-lease-3", "some-other-string", ClockValue(18), 10, info),
+    LeaseAcquisitionStatus::kAcquired);
+
   ASSERT_EQ(info.getDeadline(), 28u);
   ASSERT_EQ(info.getLastRenewal(), 18u);
   ASSERT_EQ(info.getValue(), "some-other-string");
 
-  stateMachine()->lease_acquire("my-lease-4", "some-other-string", ClockValue(18), 10, info, acquired);
-  ASSERT_TRUE(acquired);
+  ASSERT_EQ(stateMachine()->lease_acquire("my-lease-4", "some-other-string", ClockValue(18), 10, info),
+    LeaseAcquisitionStatus::kAcquired);
+
   ASSERT_EQ(info.getDeadline(), 28u);
   ASSERT_EQ(info.getLastRenewal(), 18u);
   ASSERT_EQ(info.getValue(), "some-other-string");
@@ -838,8 +844,8 @@ TEST_F(State_Machine, Leases) {
     ASSERT_FALSE(iterator.valid());
   }
 
-  stateMachine()->lease_acquire("my-lease-4", "some-other-string", ClockValue(25), 10, info, acquired);
-  ASSERT_TRUE(acquired);
+  ASSERT_EQ(stateMachine()->lease_acquire("my-lease-4", "some-other-string", ClockValue(25), 10, info),
+    LeaseAcquisitionStatus::kRenewed);
   ASSERT_EQ(info.getDeadline(), 35u);
   ASSERT_EQ(info.getLastRenewal(), 25u);
   ASSERT_EQ(info.getValue(), "some-other-string");
