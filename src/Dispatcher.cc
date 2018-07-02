@@ -313,6 +313,26 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
         return Formatter::err(SSTR("lease held by '" << leaseInfo.getValue() << "', time remaining " << leaseInfo.getDeadline() - timestamp << " ms"));
       }
     }
+    case RedisCommand::TIMESTAMPED_LEASE_GET: {
+      if(request.size() != 3) return Formatter::errArgs("lease_get");
+
+      qdb_assert(request[2].size() == 8u);
+      ClockValue timestamp = binaryStringToUnsignedInt(request[2].c_str());
+
+      LeaseInfo leaseInfo;
+      rocksdb::Status st = store.lease_get(stagingArea, request[1], timestamp, leaseInfo);
+
+      if(st.IsNotFound()) {
+        return Formatter::null();
+      }
+
+      qdb_assert(st.ok());
+
+      std::vector<std::string> reply;
+      reply.emplace_back(SSTR("HOLDER: " << leaseInfo.getValue()));
+      reply.emplace_back(SSTR("REMAINING: " << leaseInfo.getDeadline() - timestamp << " ms"));
+      return Formatter::statusVector(reply);
+    }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
     }

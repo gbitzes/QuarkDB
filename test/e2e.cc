@@ -574,6 +574,28 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(c4.getFuture(), "OK");
   ASSERT_REPLY(c5.getFuture(), "3");
   ASSERT_REPLY(fut4, "3");
+
+  // Test lease commands.
+  std::future<redisReplyPtr> l0 = tunnel(leaderID)->exec("lease-acquire", "get");
+  std::future<redisReplyPtr> l1 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder1", "10000");
+  std::future<redisReplyPtr> l2 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder2", "10000");
+  std::future<redisReplyPtr> l3 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder1", "10000");
+
+  ASSERT_REPLY(l0, "ERR Invalid Argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(l1, "ACQUIRED");
+
+  redisReplyPtr replyL2 = l2.get();
+  std::string reply = std::string(replyL2->str, replyL2->len);
+  ASSERT_TRUE(StringUtils::startswith(reply, "ERR lease held by 'holder1', time remaining"));
+  ASSERT_REPLY(l3, "RENEWED");
+
+  std::future<redisReplyPtr> l4 = tunnel(leaderID)->exec("lease-get", "mykey");
+  std::future<redisReplyPtr> l5 = tunnel(leaderID)->exec("lease-get", "mykey-2");
+
+  redisReplyPtr replyL4 = l4.get();
+  qdb_info(qclient::describeRedisReply(replyL4));
+  ASSERT_TRUE(StringUtils::startswith(qclient::describeRedisReply(replyL4), "1) HOLDER: holder1\n2) REMAINING: "));
+  ASSERT_NIL(l5);
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
