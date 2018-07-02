@@ -1066,7 +1066,7 @@ void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
   // Clear out any leases past the deadline
   ExpirationEventIterator iter(stagingArea);
   while(iter.valid() && iter.getDeadline() <= newValue) {
-    qdb_assert(lease_release(stagingArea, std::string(iter.getRedisKey())).ok());
+    qdb_assert(lease_release(stagingArea, std::string(iter.getRedisKey()), ClockValue(0)).ok());
     iter.next();
   }
 
@@ -1197,7 +1197,14 @@ LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, con
   return LeaseAcquisitionStatus::kAcquired;
 }
 
-rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std::string &key) {
+rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std::string &key, ClockValue clockUpdate) {
+  // First, some timekeeping, update clock time if necessary.
+  if(clockUpdate != 0u) {
+    // maybeAdvanceClock will also call this function.. Avoid infinite loop
+    // by supplying clockUpdate == 0u.
+    maybeAdvanceClock(stagingArea, clockUpdate);
+  }
+
   WriteOperation operation(stagingArea, key, KeyType::kLease);
   if(!operation.valid()) return wrong_type();
 
@@ -1730,6 +1737,6 @@ rocksdb::Status StateMachine::lease_get(const std::string &key, ClockValue clock
   CHAIN(index, lease_get, key, clockUpdate, info);
 }
 
-rocksdb::Status StateMachine::lease_release(const std::string &key, LogIndex index) {
-  CHAIN(index, lease_release, key);
+rocksdb::Status StateMachine::lease_release(const std::string &key, ClockValue clockUpdate,  LogIndex index) {
+  CHAIN(index, lease_release, key, clockUpdate);
 }

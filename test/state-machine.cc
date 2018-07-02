@@ -780,13 +780,13 @@ TEST_F(State_Machine, Leases) {
     ASSERT_FALSE(iterator.valid());
   }
 
-  ASSERT_OK(stateMachine()->lease_release("my-lease-2"));
+  ASSERT_OK(stateMachine()->lease_release("my-lease-2", ClockValue(13)));
   int64_t count = 0;
   std::vector<std::string> keys = { "my-lease-2" };
   ASSERT_OK(stateMachine()->exists(keys.begin(), keys.end(), count) );
   ASSERT_EQ(count, 0);
 
-  ASSERT_NOTFOUND(stateMachine()->lease_release("not-existing"));
+  ASSERT_NOTFOUND(stateMachine()->lease_release("not-existing", ClockValue(13)));
 
   {
     StagingArea stagingArea(*stateMachine());

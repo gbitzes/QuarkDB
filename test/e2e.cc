@@ -329,6 +329,8 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("smembers", "myset"));
   futures.emplace_back(tunnel(leaderID)->exec("get", "empty_key"));
   futures.emplace_back(tunnel(leaderID)->exec("timestamped-lease-acquire", "123"));
+  futures.emplace_back(tunnel(leaderID)->exec("timestamped-lease-get", "123"));
+  futures.emplace_back(tunnel(leaderID)->exec("timestamped-lease-release", "123"));
 
   ASSERT_REPLY(futures[0], 3);
   ASSERT_REPLY(futures[1], 3);
@@ -339,6 +341,8 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[6], make_vec("c"));
   ASSERT_NIL(futures[7]);
   ASSERT_REPLY(futures[8], "ERR unknown command 'timestamped-lease-acquire'" );
+  ASSERT_REPLY(futures[9], "ERR unknown command 'timestamped-lease-get'" );
+  ASSERT_REPLY(futures[10], "ERR unknown command 'timestamped-lease-release'" );
 
   futures.clear();
 
@@ -576,7 +580,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(fut4, "3");
 
   // Test lease commands.
-  std::future<redisReplyPtr> l0 = tunnel(leaderID)->exec("lease-acquire", "get");
+  std::future<redisReplyPtr> l0 = tunnel(leaderID)->exec("lease-acquire", "qcl-counter", "holder1", "10000");
   std::future<redisReplyPtr> l1 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder1", "10000");
   std::future<redisReplyPtr> l2 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder2", "10000");
   std::future<redisReplyPtr> l3 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder1", "10000");
@@ -596,6 +600,30 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   qdb_info(qclient::describeRedisReply(replyL4));
   ASSERT_TRUE(StringUtils::startswith(qclient::describeRedisReply(replyL4), "1) HOLDER: holder1\n2) REMAINING: "));
   ASSERT_NIL(l5);
+
+  std::future<redisReplyPtr> l6 = tunnel(leaderID)->exec("lease-release", "mykey");
+  std::future<redisReplyPtr> l7 = tunnel(leaderID)->exec("lease-release", "mykey-2");
+  std::future<redisReplyPtr> l8 = tunnel(leaderID)->exec("lease-release", "qcl-counter");
+  std::future<redisReplyPtr> l9 = tunnel(leaderID)->exec("lease-release", "mykey");
+  std::future<redisReplyPtr> l10 = tunnel(leaderID)->exec("lease-get", "mykey");
+
+  ASSERT_REPLY(l6, "OK");
+  ASSERT_NIL(l7);
+  ASSERT_REPLY(l8, "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_NIL(l9);
+  ASSERT_NIL(l10);
+
+  std::future<redisReplyPtr> l11 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder2", "10000");
+  std::future<redisReplyPtr> l12 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder2", "10000");
+  std::future<redisReplyPtr> l13 = tunnel(leaderID)->exec("lease-release", "mykey");
+  std::future<redisReplyPtr> l14 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder2", "10000");
+
+  ASSERT_REPLY(l11, "ACQUIRED");
+  ASSERT_REPLY(l12, "RENEWED");
+  ASSERT_REPLY(l13, "OK");
+  ASSERT_REPLY(l14, "ACQUIRED");
+
+
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {

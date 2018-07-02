@@ -333,6 +333,21 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       reply.emplace_back(SSTR("REMAINING: " << leaseInfo.getDeadline() - timestamp << " ms"));
       return Formatter::statusVector(reply);
     }
+    case RedisCommand::TIMESTAMPED_LEASE_RELEASE: {
+      if(request.size() != 3) return Formatter::errArgs("lease_release");
+
+      qdb_assert(request[2].size() == 8u);
+      ClockValue timestamp = binaryStringToUnsignedInt(request[2].c_str());
+
+      rocksdb::Status st = store.lease_release(stagingArea, request[1], timestamp);
+
+      if(st.IsNotFound()) {
+        return Formatter::null();
+      }
+
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::ok();
+    }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
     }

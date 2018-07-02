@@ -31,7 +31,7 @@
 using namespace quarkdb;
 
 void LeaseFilter::transform(RedisRequest &req, ClockValue timestamp) {
-  qdb_assert(req.getCommand() == RedisCommand::LEASE_GET || req.getCommand() == RedisCommand::LEASE_ACQUIRE);
+  qdb_assert(req.getCommand() == RedisCommand::LEASE_GET || req.getCommand() == RedisCommand::LEASE_ACQUIRE || req.getCommand() == RedisCommand::LEASE_RELEASE);
 
   if(req.getCommand() == RedisCommand::LEASE_GET) {
     req[0] = "TIMESTAMPED_LEASE_GET";
@@ -41,6 +41,12 @@ void LeaseFilter::transform(RedisRequest &req, ClockValue timestamp) {
   }
   else if(req.getCommand() == RedisCommand::LEASE_ACQUIRE) {
     req[0] = "TIMESTAMPED_LEASE_ACQUIRE";
+    req.emplace_back(unsignedIntToBinaryString(timestamp));
+    req.parseCommand();
+    return;
+  }
+  else if(req.getCommand() == RedisCommand::LEASE_RELEASE) {
+    req[0] = "TIMESTAMPED_LEASE_RELEASE";
     req.emplace_back(unsignedIntToBinaryString(timestamp));
     req.parseCommand();
     return;

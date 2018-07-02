@@ -89,7 +89,7 @@ public:
 
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
   LeaseAcquisitionStatus lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info);
-  rocksdb::Status lease_release(StagingArea &stagingArea, const std::string &key);
+  rocksdb::Status lease_release(StagingArea &stagingArea, const std::string &key, ClockValue clockValue);
   rocksdb::Status lease_get(StagingArea &stagingArea, const std::string &key, ClockValue clockUpdate, LeaseInfo &info);
 
   //----------------------------------------------------------------------------
@@ -157,7 +157,7 @@ public:
   void getClock(ClockValue &value);
   rocksdb::Status rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions);
   LeaseAcquisitionStatus lease_acquire(const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, LogIndex index = 0);
-  rocksdb::Status lease_release(const std::string &key, LogIndex index = 0);
+  rocksdb::Status lease_release(const std::string &key, ClockValue clockUpdate, LogIndex index = 0);
   rocksdb::Status lease_get(const std::string &key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index = 0);
 
   //----------------------------------------------------------------------------

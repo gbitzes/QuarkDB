@@ -27,6 +27,7 @@ using namespace quarkdb;
 
 void InternalFilter::process(RedisRequest &req) {
   switch(req.getCommand()) {
+    case RedisCommand::TIMESTAMPED_LEASE_RELEASE:
     case RedisCommand::TIMESTAMPED_LEASE_ACQUIRE:
     case RedisCommand::TIMESTAMPED_LEASE_GET: {
       // Bad client, bad. No cookie for you.
