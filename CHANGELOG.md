@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - A newly elected leader now stalls writers in addition to readers, until its leadership marker entry in the raft journal has been committed and applied.
 
 ### Fixed
+- Sockets and threads from closed connections were not being cleaned due to misunderstanding how XRootD handles connection shutdown. Each connection would hog a socket and a deadlocked thread on the server forever. (oops)
 - A particularly rare race condition was able to trigger an assertion in the Raft subsystem, causing the current cluster leader to crash.
 
 ## 0.2.7 (2018-06-22)

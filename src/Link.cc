@@ -83,6 +83,10 @@ std::string Link::describe() const {
   return SSTR(host << " [" << uuid << "]");
 }
 
+void Link::preventXrdLinkClose() {
+  xrdLinkCloseDisabled = true;
+}
+
 LinkStatus Link::rawRecv(char *buff, int blen, int timeout) {
   if(link) return link->Recv(buff, blen, timeout);
   if(fd >= 0) return fdRecv(buff, blen, timeout);
@@ -100,7 +104,10 @@ LinkStatus Link::Recv(char *buff, int blen, int timeout) {
 
 LinkStatus Link::Close(int defer) {
   if(tlsconfig.active) tlsfilter.close(defer);
-  if(link) return link->Close(defer);
+  if(link) {
+    if(xrdLinkCloseDisabled) return 1;
+    return link->Close(defer);
+  }
   if(fd >= 0) return fdClose(defer);
   return streamClose(defer);
 }

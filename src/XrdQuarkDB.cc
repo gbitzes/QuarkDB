@@ -118,6 +118,7 @@ void XrdQuarkDB::Reset() {
     conn = nullptr;
   }
   if(link) {
+    link->preventXrdLinkClose();
     delete link;
     link = nullptr;
   }

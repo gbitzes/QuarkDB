@@ -67,6 +67,12 @@ public:
 
   // Set global connection logging config
   static void setConnectionLogging(bool val);
+
+  // Prevent closing an underlying XrdLink, if any. Use this if
+  // the xrootd machinery calls XrdProtocol::Reset, which takes care
+  // of closing the link on its own.
+  void preventXrdLinkClose();
+
 private:
   qclient::TlsConfig tlsconfig;
   qclient::TlsFilter tlsfilter;
@@ -75,6 +81,7 @@ private:
   XrdLink *link = nullptr;
   bool dead = false;
   int fd = -1;
+  bool xrdLinkCloseDisabled = false;
 
   std::string uuid;
   std::string host;
