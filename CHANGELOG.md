@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## Unreleased
+
+## 0.2.8 (2018-07-04)
 ### Added
 - Support for leases, which can be used as locks with timeouts, allowing QuarkDB to serve as a distributed lock manager.
 - Commands `lease-acquire`, `lease-get`, `lease-release`.
