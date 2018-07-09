@@ -338,7 +338,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
 
   LogIndex index = journal.getLogSize();
 
-  if(!writeTracker.append(index, RaftEntry(snapshot->term, tx.toRedisRequest()), conn->getQueue(), redisDispatcher)) {
+  if(!writeTracker.append(index, snapshot->term, std::move(tx), conn->getQueue(), redisDispatcher)) {
     // We were most likely hit by the following race:
     // - We retrieved the state snapshot.
     // - The raft term was changed in the meantime, we lost leadership.

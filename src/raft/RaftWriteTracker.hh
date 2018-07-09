@@ -45,7 +45,7 @@ public:
   RaftWriteTracker(RaftJournal &jr, StateMachine &sm);
   ~RaftWriteTracker();
 
-  bool append(LogIndex index, RaftEntry &&entry, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher);
+  bool append(LogIndex index, RaftTerm term, Transaction &&tx, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher);
   void flushQueues(const RedisEncodedResponse &response);
   size_t size() { return blockedWrites.size(); }
 private:
