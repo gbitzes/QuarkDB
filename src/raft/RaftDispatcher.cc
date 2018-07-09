@@ -49,12 +49,6 @@ LinkStatus RaftDispatcher::dispatchInfo(Connection *conn, RedisRequest &req) {
 }
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, Transaction &transaction) {
-
-  ClockValue txTimestamp = stateMachine.getDynamicClock();
-  // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
-  // snapshot, but we need to refactor transactions a bit first.
-  LeaseFilter::transform(transaction, txTimestamp);
-
   return this->service(conn, transaction);
 }
 
@@ -263,15 +257,6 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       conn->raftStaleReads = true;
       return conn->ok();
     }
-    case RedisCommand::LEASE_GET:
-    case RedisCommand::LEASE_ACQUIRE: {
-      // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
-      // snapshot, but we need to refactor transactions a bit first.
-      LeaseFilter::transform(req, stateMachine.getDynamicClock());
-      Transaction tx(std::move(req));
-      tx.setPhantom(true);
-      return this->service(conn, tx);
-    }
     default: {
       // Must be either a read, or write at this point.
       qdb_assert(req.getCommandType() == CommandType::WRITE || req.getCommandType() == CommandType::READ);
@@ -343,6 +328,10 @@ LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
 
   // At this point, the received command *must* be a write - verify!
   qdb_assert(tx.containsWrites());
+
+  // Do lease filtering
+  ClockValue txTimestamp = stateMachine.getDynamicClock();
+  LeaseFilter::transform(tx, txTimestamp);
 
   // send request to the write tracker
   std::lock_guard<std::mutex> lock(raftCommand);
