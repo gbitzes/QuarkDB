@@ -38,6 +38,7 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 class RaftJournal; class RaftState; class RaftClock; class RaftWriteTracker;
 class RaftReplicator;
+class Transaction;
 
 struct RaftStateSnapshot;
 using RaftStateSnapshotPtr = std::shared_ptr<const RaftStateSnapshot>;
@@ -60,7 +61,7 @@ public:
   RaftVoteResponse requestVote(RaftVoteRequest &req);
 private:
   RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req, RaftStateSnapshotPtr &snapshot);
-  LinkStatus service(Connection *conn, RedisRequest &req);
+  LinkStatus service(Connection *conn, Transaction &tx);
 
   //----------------------------------------------------------------------------
   // Raft commands should not be run in parallel, but be serialized

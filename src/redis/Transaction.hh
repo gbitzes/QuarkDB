@@ -33,6 +33,8 @@ public:
   Transaction();
   ~Transaction();
 
+  Transaction(RedisRequest &&req);
+
   void push_back(const RedisRequest &req);
   bool containsWrites() const {
     return hasWrites;

@@ -60,8 +60,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, Transaction &transaction) 
     }
   }
 
-  RedisRequest req = transaction.toRedisRequest();
-  return this->service(conn, req);
+  return this->service(conn, transaction);
 }
 
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
@@ -274,17 +273,21 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
       // snapshot, but we need to refactor transactions a bit first.
       LeaseFilter::transform(req, stateMachine.getDynamicClock());
-      return this->service(conn, req);
+      Transaction tx(std::move(req));
+      tx.setPhantom(true);
+      return this->service(conn, tx);
     }
     default: {
       // Must be either a read, or write at this point.
       qdb_assert(req.getCommandType() == CommandType::WRITE || req.getCommandType() == CommandType::READ);
-      return this->service(conn, req);
+      Transaction tx(std::move(req));
+      tx.setPhantom(true);
+      return this->service(conn, tx);
     }
   }
 }
 
-LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
+LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
 
   // if not leader, redirect... except if this is a read,
   // and stale reads are active!
@@ -294,9 +297,9 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
       return conn->err("unavailable");
     }
 
-    if(conn->raftStaleReads && req.getCommandType() == CommandType::READ) {
+    if(conn->raftStaleReads && !tx.containsWrites()) {
       // Forward directly to the state machine.
-      return redisDispatcher.dispatch(conn, req);
+      return redisDispatcher.dispatch(conn, tx);
     }
 
     // Redirect.
@@ -328,7 +331,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
     while(!stateMachine.waitUntilTargetLastApplied(snapshot->leadershipMarker, std::chrono::milliseconds(500))) {
       if(snapshot->term != state.getCurrentTerm()) {
         // Ouch, we're no longer a leader.. start from scratch
-        return this->service(conn, req);
+        return this->service(conn, tx);
       }
     }
 
@@ -337,27 +340,27 @@ LinkStatus RaftDispatcher::service(Connection *conn, RedisRequest &req) {
     qdb_assert(snapshot->leadershipMarker <= stateMachine.getLastApplied());
   }
 
-  if(req.getCommandType() == CommandType::READ) {
+  if(!tx.containsWrites()) {
     // Forward request to the state machine, without going through the
     // raft journal.
-    return conn->addPendingRequest(&redisDispatcher, std::move(req));
+    return conn->addPendingRequest(&redisDispatcher, tx.toRedisRequest());
   }
 
   // At this point, the received command *must* be a write - verify!
-  qdb_assert(req.getCommandType() == CommandType::WRITE);
+  qdb_assert(tx.containsWrites());
 
   // send request to the write tracker
   std::lock_guard<std::mutex> lock(raftCommand);
 
   LogIndex index = journal.getLogSize();
 
-  if(!writeTracker.append(index, RaftEntry(snapshot->term, std::move(req)), conn->getQueue(), redisDispatcher)) {
+  if(!writeTracker.append(index, RaftEntry(snapshot->term, tx.toRedisRequest()), conn->getQueue(), redisDispatcher)) {
     // We were most likely hit by the following race:
     // - We retrieved the state snapshot.
     // - The raft term was changed in the meantime, we lost leadership.
     // - The journal rejected the entry due to term mismatch.
     // Let's simply retry.
-    return this->service(conn, req);
+    return this->service(conn, tx);
   }
 
   return 1;
