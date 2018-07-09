@@ -51,14 +51,9 @@ LinkStatus RaftDispatcher::dispatchInfo(Connection *conn, RedisRequest &req) {
 LinkStatus RaftDispatcher::dispatch(Connection *conn, Transaction &transaction) {
 
   ClockValue txTimestamp = stateMachine.getDynamicClock();
-
-  for(size_t i = 0; i < transaction.size(); i++) {
-    if(transaction[i].getCommand() == RedisCommand::LEASE_GET || transaction[i].getCommand() == RedisCommand::LEASE_ACQUIRE || transaction[i].getCommand() == RedisCommand::LEASE_RELEASE) {
-      // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
-      // snapshot, but we need to refactor transactions a bit first.
-      LeaseFilter::transform(transaction[i], txTimestamp);
-    }
-  }
+  // TODO(gbitzes): This is racy.. we should timestampt after getting a raft
+  // snapshot, but we need to refactor transactions a bit first.
+  LeaseFilter::transform(transaction, txTimestamp);
 
   return this->service(conn, transaction);
 }

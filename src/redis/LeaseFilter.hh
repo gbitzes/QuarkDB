@@ -28,6 +28,7 @@ namespace quarkdb {
 
 class RedisRequest;
 class RedisEncodedResponse;
+class Transaction;
 
 using ClockValue = uint64_t;
 
@@ -39,6 +40,7 @@ public:
   // TIMESTAMPED_LEASE_ACQUIRE, respectively.
   //----------------------------------------------------------------------------
   static void transform(RedisRequest &req, ClockValue timestamp);
+  static void transform(Transaction &tx, ClockValue timestamp);
 };
 
 }

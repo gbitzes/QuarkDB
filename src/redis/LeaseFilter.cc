@@ -24,11 +24,21 @@
 #include "../RedisRequest.hh"
 #include "LeaseFilter.hh"
 #include "../Commands.hh"
+#include "../redis/Transaction.hh"
 #include "../utils/Macros.hh"
 #include "../utils/IntToBinaryString.hh"
 #include "../Formatter.hh"
 
 using namespace quarkdb;
+
+
+void LeaseFilter::transform(Transaction &tx, ClockValue timestamp) {
+  for(size_t i = 0; i < tx.size(); i++) {
+    if(tx[i].getCommand() == RedisCommand::LEASE_GET || tx[i].getCommand() == RedisCommand::LEASE_ACQUIRE || tx[i].getCommand() == RedisCommand::LEASE_RELEASE) {
+      LeaseFilter::transform(tx[i], timestamp);
+    }
+  }
+}
 
 void LeaseFilter::transform(RedisRequest &req, ClockValue timestamp) {
   qdb_assert(req.getCommand() == RedisCommand::LEASE_GET || req.getCommand() == RedisCommand::LEASE_ACQUIRE || req.getCommand() == RedisCommand::LEASE_RELEASE);
