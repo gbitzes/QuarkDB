@@ -28,6 +28,8 @@ using namespace quarkdb;
 
 Transaction::Transaction(RedisRequest &&req) {
   this->emplace_back(std::move(req));
+  checkLastCommandForWrites();
+  setPhantom(true);
 }
 
 Transaction::Transaction() {}

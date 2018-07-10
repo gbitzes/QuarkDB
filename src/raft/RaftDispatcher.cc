@@ -261,7 +261,6 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       // Must be either a read, or write at this point.
       qdb_assert(req.getCommandType() == CommandType::WRITE || req.getCommandType() == CommandType::READ);
       Transaction tx(std::move(req));
-      tx.setPhantom(true);
       return this->service(conn, tx);
     }
   }
@@ -323,7 +322,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
   if(!tx.containsWrites()) {
     // Forward request to the state machine, without going through the
     // raft journal.
-    return conn->addPendingRequest(&redisDispatcher, tx.toRedisRequest());
+    return conn->addPendingTransaction(&redisDispatcher, std::move(tx));
   }
 
   // At this point, the received command *must* be a write - verify!

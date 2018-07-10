@@ -33,7 +33,7 @@ public:
   Transaction();
   ~Transaction();
 
-  Transaction(RedisRequest &&req);
+  explicit Transaction(RedisRequest &&req);
 
   void push_back(const RedisRequest &req);
   bool containsWrites() const {

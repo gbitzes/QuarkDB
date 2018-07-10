@@ -72,11 +72,16 @@ LinkStatus PendingQueue::appendResponse(RedisEncodedResponse &&raw) {
   return appendResponseNoLock(std::move(raw));
 }
 
-LinkStatus PendingQueue::addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index) {
+LinkStatus PendingQueue::addPendingTransaction(RedisDispatcher *dispatcher, Transaction &&tx, LogIndex index) {
   std::lock_guard<std::mutex> lock(mtx);
-  if(!conn) qdb_throw("attempted to append a pending request to a pendingQueue while being detached from a Connection, command " << req[0] << ", log index: " << index);
+  if(!conn) qdb_throw("attempted to append a pending request to a pendingQueue while being detached from a Connection, command " << tx.toPrintableString() << ", log index: " << index);
 
-  if(pending.empty() && index < 0) return conn->writer.send(dispatcher->dispatch(req, 0).val);
+  if(pending.empty() && index < 0) {
+    // This is a read, and we're not being blocked by any writes. Forward directly
+    // to the state machine, no need to do any queueing.
+    qdb_assert(!tx.containsWrites());
+    return conn->writer.send(dispatcher->dispatch(tx, 0).val);
+  }
 
   if(index > 0) {
     if(index <= lastIndex) {
@@ -87,7 +92,7 @@ LinkStatus PendingQueue::addPendingRequest(RedisDispatcher *dispatcher, RedisReq
   }
 
   PendingRequest penreq;
-  penreq.req = std::move(req);
+  penreq.tx = std::move(tx);
   penreq.index = index;
   pending.push(std::move(penreq));
   return 1;
@@ -117,7 +122,7 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
 
       // we must dispatch the request even if the connection has died, since
       // writes increase lastApplied of the state machine
-      RedisEncodedResponse response = dispatcher->dispatch(req.req, req.index);
+      RedisEncodedResponse response = dispatcher->dispatch(req.tx, req.index);
       if(conn) conn->writer.send(std::move(response.val));
     }
 

@@ -104,6 +104,6 @@ bool RaftWriteTracker::append(LogIndex index, RaftTerm term, Transaction &&tx, c
   }
 
   blockedWrites.insert(index, queue);
-  queue->addPendingRequest(&dispatcher, std::move(entry.request), index);
+  queue->addPendingTransaction(&dispatcher, std::move(tx), index);
   return true;
 }

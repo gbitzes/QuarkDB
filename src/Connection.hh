@@ -62,7 +62,7 @@ public:
 
   LinkStatus flushPending(const RedisEncodedResponse &msg);
   LinkStatus appendResponse(RedisEncodedResponse &&raw);
-  LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1);
+  LinkStatus addPendingTransaction(RedisDispatcher *dispatcher, Transaction &&tx, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
   bool appendIfAttached(RedisEncodedResponse &&raw);
 private:
@@ -90,7 +90,7 @@ private:
   //----------------------------------------------------------------------------
 
   struct PendingRequest {
-    RedisRequest req;
+    Transaction tx;
     RedisEncodedResponse rawResp; // if not empty, we're just storing a raw, pre-formatted response
     LogIndex index = -1; // the corresponding entry in the raft journal - only relevant for write requests
   };
@@ -145,8 +145,8 @@ public:
   void setResponseBuffering(bool value);
   void flush();
 
-  LinkStatus addPendingRequest(RedisDispatcher *dispatcher, RedisRequest &&req, LogIndex index = -1) {
-    return pendingQueue->addPendingRequest(dispatcher, std::move(req), index);
+  LinkStatus addPendingTransaction(RedisDispatcher *dispatcher, Transaction &&tx, LogIndex index = -1) {
+    return pendingQueue->addPendingTransaction(dispatcher, std::move(tx), index);
   }
 
   LinkStatus flushPending(const RedisEncodedResponse &msg) {
