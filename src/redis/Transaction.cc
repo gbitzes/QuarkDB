@@ -67,6 +67,39 @@ void Transaction::checkLastCommandForWrites() {
   }
 }
 
+bool Transaction::deserialize(const RedisRequest &req) {
+  qdb_assert(requests.empty());
+
+  if(req.size() != 3u) return false;
+
+  if(req.getCommand() != RedisCommand::TX_READONLY && req.getCommand() != RedisCommand::TX_READWRITE) {
+    return false;
+  }
+
+  bool phantom;
+  if(req[2] == "phantom") {
+    phantom = true;
+  }
+  else if(req[2] == "real") {
+    phantom = false;
+  }
+  else {
+    return false;
+  }
+
+  if(!this->deserialize(req[1])) return false;
+
+  if(req.getCommand() == RedisCommand::TX_READONLY) {
+    qdb_assert(!this->containsWrites());
+  }
+  else {
+    qdb_assert(this->containsWrites());
+  }
+
+  this->setPhantom(phantom);
+  return true;
+}
+
 bool Transaction::deserialize(const std::string &src) {
   qdb_assert(requests.empty());
   if(src.empty()) return false;

@@ -638,23 +638,7 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
 
 RedisEncodedResponse RedisDispatcher::handleTransaction(RedisRequest &request, LogIndex commit) {
   Transaction transaction;
-  qdb_assert(request.size() == 3);
-  qdb_assert(transaction.deserialize(request[1]));
-  qdb_assert(request.getCommand() == RedisCommand::TX_READONLY || request.getCommand() == RedisCommand::TX_READWRITE);
-
-
-  if(request.getCommand() == RedisCommand::TX_READONLY) {
-    qdb_assert(!transaction.containsWrites());
-  }
-  else {
-    qdb_assert(transaction.containsWrites());
-  }
-
-  qdb_assert(request[2] == "phantom" || request[2] == "real");
-  bool phantom = false;
-  if(request[2] == "phantom") phantom = true;
-  transaction.setPhantom(phantom);
-
+  qdb_assert(transaction.deserialize(request));
   return dispatch(transaction, commit);
 }
 
