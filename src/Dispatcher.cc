@@ -63,20 +63,38 @@ RedisEncodedResponse RedisDispatcher::dispatchingError(RedisRequest &request, Lo
   return Formatter::err(msg);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatch(Transaction &transaction, LogIndex commit) {
-  StagingArea stagingArea(store, !transaction.containsWrites());
+RedisEncodedResponse RedisDispatcher::dispatchReadOnly(StagingArea &stagingArea, Transaction &transaction) {
+  qdb_assert(!transaction.containsWrites());
+  ArrayResponseBuilder builder(transaction.size(), transaction.isPhantom());
+
+  for(size_t i = 0; i < transaction.size(); i++) {
+    builder.push_back(dispatchRead(stagingArea, transaction[i]));
+  }
+
+  return builder.buildResponse();
+}
+
+RedisEncodedResponse RedisDispatcher::dispatch(StagingArea &stagingArea, Transaction &transaction) {
   ArrayResponseBuilder builder(transaction.size(), transaction.isPhantom());
 
   for(size_t i = 0; i < transaction.size(); i++) {
     builder.push_back(dispatchReadWrite(stagingArea, transaction[i]));
   }
 
+  return builder.buildResponse();
+}
+
+RedisEncodedResponse RedisDispatcher::dispatch(Transaction &transaction, LogIndex commit) {
+  StagingArea stagingArea(store, !transaction.containsWrites());
+
+  RedisEncodedResponse resp = dispatch(stagingArea, transaction);
+
   if(transaction.containsWrites()) {
     stagingArea.commit(commit);
   }
 
   store.getRequestCounter().account(transaction);
-  return builder.buildResponse();
+  return resp;
 }
 
 RedisEncodedResponse RedisDispatcher::dispatchLHSET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value) {
@@ -347,6 +365,12 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::ok();
+    }
+    case RedisCommand::TX_READWRITE: {
+      // Unpack transaction and process
+      Transaction transaction;
+      qdb_assert(transaction.deserialize(request));
+      return dispatch(stagingArea, transaction);
     }
     default: {
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
@@ -630,16 +654,16 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
 
       return Formatter::statusVector(reply);
     }
+    case RedisCommand::TX_READONLY: {
+      // Unpack transaction and process
+      Transaction transaction;
+      qdb_assert(transaction.deserialize(request));
+      return dispatchReadOnly(stagingArea, transaction);
+    }
     default: {
       return dispatchingError(request, 0);
     }
   }
-}
-
-RedisEncodedResponse RedisDispatcher::handleTransaction(RedisRequest &request, LogIndex commit) {
-  Transaction transaction;
-  qdb_assert(transaction.deserialize(request));
-  return dispatch(transaction, commit);
 }
 
 RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
@@ -675,11 +699,18 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
     return dispatchingError(request, commit);
   }
 
-  // Transaction, encoded as single RedisRequest?
-  if(request.getCommand() == RedisCommand::TX_READONLY || request.getCommand() == RedisCommand::TX_READWRITE) {
-    return handleTransaction(request, commit);
+  return dispatchReadWriteAndCommit(request, commit);
+}
+
+RedisEncodedResponse RedisDispatcher::dispatchReadWrite(StagingArea &stagingArea, RedisRequest &request) {
+  if(request.getCommandType() == CommandType::WRITE) {
+    return dispatchWrite(stagingArea, request);
   }
 
+  return dispatchRead(stagingArea, request);
+}
+
+RedisEncodedResponse RedisDispatcher::dispatchReadWriteAndCommit(RedisRequest &request, LogIndex commit) {
   StagingArea stagingArea(store, request.getCommandType() == CommandType::READ);
 
   RedisEncodedResponse response = dispatchReadWrite(stagingArea, request);
@@ -691,12 +722,4 @@ RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex c
 
   store.getRequestCounter().account(request);
   return response;
-}
-
-RedisEncodedResponse RedisDispatcher::dispatchReadWrite(StagingArea &stagingArea, RedisRequest &request) {
-  if(request.getCommandType() == CommandType::WRITE) {
-    return dispatchWrite(stagingArea, request);
-  }
-
-  return dispatchRead(stagingArea, request);
 }

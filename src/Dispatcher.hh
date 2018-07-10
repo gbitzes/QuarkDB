@@ -54,8 +54,11 @@ public:
   RedisEncodedResponse dispatch(RedisRequest &req, LogIndex commit);
   RedisEncodedResponse dispatch(Transaction &transaction, LogIndex commit);
 private:
-  RedisEncodedResponse handleTransaction(RedisRequest &req, LogIndex commit);
+  RedisEncodedResponse dispatchReadOnly(StagingArea &stagingArea, Transaction &transaction);
+  RedisEncodedResponse dispatch(StagingArea &stagingArea, Transaction &transaction);
   RedisEncodedResponse dispatchReadWrite(StagingArea &stagingArea, RedisRequest &req);
+  RedisEncodedResponse dispatchReadWriteAndCommit(RedisRequest &req, LogIndex commit);
+
   RedisEncodedResponse dispatchRead(StagingArea &stagingArea, RedisRequest &req);
   RedisEncodedResponse dispatchWrite(StagingArea &stagingArea, RedisRequest &req);
   RedisEncodedResponse errArgs(RedisRequest &request);
