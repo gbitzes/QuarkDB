@@ -36,7 +36,7 @@ LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
         conn->writer.send(std::move(pending.front().rawResp.val));
       }
       else {
-        conn->writer.send(std::string(msg.val));
+        conn->writer.send(Formatter::multiply(msg, pending.front().tx.expectedResponses() ).val);
       }
     }
     pending.pop();

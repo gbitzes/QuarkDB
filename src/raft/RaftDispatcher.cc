@@ -273,7 +273,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
   RaftStateSnapshotPtr snapshot = state.getSnapshot();
   if(snapshot->status != RaftStatus::LEADER) {
     if(snapshot->leader.empty()) {
-      return conn->err("unavailable");
+      return conn->raw(Formatter::multiply(Formatter::err("unavailable"), tx.expectedResponses()));
     }
 
     if(conn->raftStaleReads && !tx.containsWrites()) {
@@ -282,7 +282,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
     }
 
     // Redirect.
-    return conn->moved(0, snapshot->leader);
+    return conn->raw(Formatter::multiply(Formatter::moved(0, snapshot->leader), tx.expectedResponses()));
   }
 
   // What happens if I was just elected as leader, but my state machine is

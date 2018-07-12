@@ -3,6 +3,16 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 
+### Changed
+- Refactoring of transactions, we no longer pack / unpack a transaction into a single request within the same node, saving
+  CPU cycles.
+
+### Fixed
+- In certain cases, such as when redirecting or reporting unavailability for pipelined writes, fewer
+  responses might be provided than expected, causing the client connection to hang. This did not affect
+  QClient when redirects are active, as it would shut the connection down and retry upon reception of
+  the first such response.
+
 ## 0.2.8 (2018-07-04)
 ### Added
 - Support for leases, which can be used as locks with timeouts, allowing QuarkDB to serve as a distributed lock manager.

@@ -623,7 +623,21 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(l13, "OK");
   ASSERT_REPLY(l14, "ACQUIRED");
 
+  // Ensure the followers return the correct number of responses on MOVED for
+  // pipelined writes.
+  int follower1 = (leaderID+1) % 3;
 
+  std::vector<std::future<redisReplyPtr>> moved;
+  for(size_t i = 0; i < 10; i++) {
+    moved.emplace_back(tunnel(follower1)->exec("set", "abc", "123"));
+  }
+
+  for(size_t i = 0; i < 10; i++) {
+    ASSERT_REPLY(moved[i], SSTR("MOVED 0 " << myself(leaderID).toString()));
+  }
+
+  // Make sure the connection did not hang.
+  ASSERT_REPLY(tunnel(follower1)->exec("ping", "zxcvbnm"), "zxcvbnm");
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
