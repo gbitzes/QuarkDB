@@ -33,7 +33,7 @@ RedisParser::RedisParser(Link *l) : reader(l) {
 int RedisParser::purge() {
   request_size = 0;
   current_element = 0;
-  element_size = 0;
+  element_size = -1;
 
   current_integer.clear();
   current_request.clear();
@@ -46,16 +46,15 @@ int RedisParser::purge() {
   }
 }
 
-int RedisParser::fetch(RedisRequest &req) {
+int RedisParser::fetch(RedisRequest &req, bool allowZeroSizedStrings) {
   if(request_size == 0) {
     req.clear();
 
     // new request to process from scratch
-    int reqsize = readInteger('*');
-    if(reqsize <= 0) return reqsize;
+    int retcode = readInteger('*', request_size);
+    if(retcode <= 0) return retcode;
 
-    request_size = reqsize;
-    element_size = 0;
+    element_size = -1;
     current_element = 0;
 
     req.resize(request_size);
@@ -65,7 +64,7 @@ int RedisParser::fetch(RedisRequest &req) {
   for( ; current_element < request_size; current_element++) {
     int rc = readElement(req[current_element]);
     if(rc <= 0) return rc;
-    element_size = 0;
+    element_size = -1;
   }
 
   request_size = 0;
@@ -76,10 +75,16 @@ int RedisParser::fetch(RedisRequest &req) {
   }
 
   req.parseCommand();
+
+  if(encounteredZeroSize) {
+    qdb_warn("Encountered request with zero-sized string - shutting the connection down: " << req.toPrintableString());
+    return -2;
+  }
+
   return 1;
 }
 
-int RedisParser::readInteger(char prefix) {
+int RedisParser::readInteger(char prefix, int &retval) {
   std::string prev;
 
   while(prev[0] != '\n') {
@@ -112,15 +117,16 @@ int RedisParser::readInteger(char prefix) {
   }
 
   current_integer = "";
-  return num;
+  retval = num;
+  return 1; // success
 }
 
 int RedisParser::readElement(std::string &str) {
   qdb_debug("Element size: " << element_size);
-  if(element_size == 0) {
-    int elsize = readInteger('$');
-    if(elsize <= 0) return elsize;
-    element_size = elsize;
+  if(element_size == -1) {
+    int retcode = readInteger('$', element_size);
+    if(retcode <= 0) return retcode;
+    if(element_size == 0) encounteredZeroSize = true;
   }
   return readString(element_size, str);
 }

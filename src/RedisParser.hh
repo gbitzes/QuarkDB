@@ -42,7 +42,7 @@ public:
   // returns negative on error
   //----------------------------------------------------------------------------
 
-  LinkStatus fetch(RedisRequest &req);
+  LinkStatus fetch(RedisRequest &req, bool allowZeroSizedStrings = true);
 
   //----------------------------------------------------------------------------
   // Purge any and all incoming data.
@@ -70,6 +70,7 @@ private:
   int request_size = 0;
   int current_element = 0;
   int element_size = 0;
+  bool encounteredZeroSize = false;
 
   //----------------------------------------------------------------------------
   // Buffers to hold temporary contents.
@@ -82,7 +83,7 @@ private:
   // Helper functions to do parsing
   //----------------------------------------------------------------------------
 
-  int readInteger(char prefix);
+  int readInteger(char prefix, int& retval);
   int readElement(std::string &str);
   int readString(int nbytes, std::string &str);
 

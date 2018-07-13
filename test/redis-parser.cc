@@ -85,6 +85,12 @@ TEST_F(Redis_Parser, T1) {
   ASSERT_EQ(request[2], "hello");
 }
 
+TEST_F(Redis_Parser, ZeroSizedString) {
+  ASSERT_EQ(parser->fetch(request), 0);
+  link.Send("*3\r\n$3\r\nset\r\n$0\r\n\r\n$3\r\nabc\r\n");
+  ASSERT_EQ(parser->fetch(request), -2);
+}
+
 TEST_F(Redis_Parser, T2) {
   std::string str("*2\r\n$3\r\nget\r\n$3\r\nabc\r\n");
   RedisRequest valid = {"get", "abc"};
