@@ -38,6 +38,7 @@ RecoveryEditor::RecoveryEditor(const std::string &path_) : path(path_) {
 
   rocksdb::Options options;
   options.create_if_missing = false;
+  options.disable_auto_compactions = true;
   rocksdb::Status status = rocksdb::DB::Open(options, path, &tmpdb);
 
   if(!status.ok()) qdb_throw("Cannot open " << quotes(path) << ":" << status.ToString());
