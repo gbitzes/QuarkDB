@@ -130,6 +130,16 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
     };
 
     ASSERT_REPLY(qcl.exec("recovery-info"), rep);
+
+    // Test integer <-> binary string conversion functions.
+    redisReplyPtr conv1 = qcl.exec("convert-int-to-string", "999").get();
+    ASSERT_EQ(qclient::describeRedisReply(conv1), "1) \"As int64_t: \\x00\\x00\\x00\\x00\\x00\\x00\\x03\\xE7\"\n2) \"As uint64_t: \\x00\\x00\\x00\\x00\\x00\\x00\\x03\\xE7\"\n");
+
+    ASSERT_REPLY(qcl.exec("convert-int-to-string", "adfs"), "ERR cannot parse integer");
+    ASSERT_REPLY(qcl.exec("convert-string-to-int", "qqqq"), "ERR expected string with 8 characters, was given 4 instead");
+
+    redisReplyPtr conv2 = qcl.exec("convert-string-to-int", unsignedIntToBinaryString(999u)).get();
+    ASSERT_EQ(qclient::describeRedisReply(conv2), "1) Interpreted as int64_t: 999\n2) Interpreted as uint64_t: 999\n");
   }
 
   RaftJournal journal("/tmp/quarkdb-recovery-test");

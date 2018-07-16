@@ -33,6 +33,47 @@
 
 using namespace quarkdb;
 
+RedisEncodedResponse Dispatcher::handleConversion(RedisRequest &request) {
+  // Provide simple commands for conversion between binary-string-encoded
+  // integers and human-readable ASCII representation.
+  //
+  // This is strictly for interactive use, to simplify life when debugging and
+  // dealing with binary-string integers, especially when using the recovery
+  // tool, or inspecting the contents of the raft journal.
+  //
+  // Please don't use this in scripts.. Using QDB as "binary-string conversion"
+  // service would be really silly.
+
+  switch(request.getCommand()) {
+    case RedisCommand::CONVERT_STRING_TO_INT: {
+      if(request.size() != 2u) return Formatter::errArgs(request[0]);
+      if(request[1].size() != 8u) return Formatter::err(SSTR("expected string with 8 characters, was given " << request[1].size() << " instead"));
+
+      std::vector<std::string> reply;
+      reply.emplace_back(SSTR("Interpreted as int64_t: " << binaryStringToInt(request[1].c_str())));
+      reply.emplace_back(SSTR("Interpreted as uint64_t: " << binaryStringToUnsignedInt(request[1].c_str())));
+
+      return Formatter::statusVector(reply);
+    }
+    case RedisCommand::CONVERT_INT_TO_STRING: {
+      if(request.size() != 2u) return Formatter::errArgs(request[0]);
+
+      int64_t value;
+      if(!ParseUtils::parseInt64(request[1], value)) {
+        return Formatter::err("cannot parse integer");
+      }
+
+      std::vector<std::string> reply;
+      reply.emplace_back(SSTR("As int64_t: " << intToBinaryString(value)));
+      reply.emplace_back(SSTR("As uint64_t: " << unsignedIntToBinaryString(value)));
+      return Formatter::vector(reply);
+    }
+    default: {
+      qdb_throw("internal dispatching error for " << request.toPrintableString());
+    }
+  }
+}
+
 RedisEncodedResponse Dispatcher::handlePing(RedisRequest &request) {
   qdb_assert(request.getCommand() == RedisCommand::PING);
 

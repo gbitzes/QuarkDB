@@ -38,6 +38,7 @@ public:
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) = 0;
   virtual LinkStatus dispatch(Connection *conn, Transaction &multiOp) = 0;
   RedisEncodedResponse handlePing(RedisRequest &req);
+  RedisEncodedResponse handleConversion(RedisRequest &req);
   virtual ~Dispatcher() {}
 };
 

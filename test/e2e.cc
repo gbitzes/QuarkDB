@@ -638,6 +638,16 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   // Make sure the connection did not hang.
   ASSERT_REPLY(tunnel(follower1)->exec("ping", "zxcvbnm"), "zxcvbnm");
+
+  // Test integer <-> binary string conversion functions.
+  redisReplyPtr conv1 = tunnel(follower1)->exec("convert-int-to-string", "999").get();
+  ASSERT_EQ(qclient::describeRedisReply(conv1), "1) \"As int64_t: \\x00\\x00\\x00\\x00\\x00\\x00\\x03\\xE7\"\n2) \"As uint64_t: \\x00\\x00\\x00\\x00\\x00\\x00\\x03\\xE7\"\n");
+
+  ASSERT_REPLY(tunnel(follower1)->exec("convert-int-to-string", "adfs"), "ERR cannot parse integer");
+  ASSERT_REPLY(tunnel(follower1)->exec("convert-string-to-int", "qqqq"), "ERR expected string with 8 characters, was given 4 instead");
+
+  redisReplyPtr conv2 = tunnel(follower1)->exec("convert-string-to-int", unsignedIntToBinaryString(999u)).get();
+  ASSERT_EQ(qclient::describeRedisReply(conv2), "1) Interpreted as int64_t: 999\n2) Interpreted as uint64_t: 999\n");
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {

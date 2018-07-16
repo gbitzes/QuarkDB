@@ -130,6 +130,10 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::QUARKDB_INFO: {
       return conn->statusVector(this->info().toVector());
     }
+    case RedisCommand::CONVERT_STRING_TO_INT:
+    case RedisCommand::CONVERT_INT_TO_STRING: {
+      return conn->raw(handleConversion(req));
+    }
     default: {
       return shard->dispatch(conn, req);
     }

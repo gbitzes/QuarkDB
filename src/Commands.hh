@@ -143,7 +143,10 @@ enum class RedisCommand {
   RECOVERY_GET,
   RECOVERY_SET,
   RECOVERY_DEL,
-  RECOVERY_INFO
+  RECOVERY_INFO,
+
+  CONVERT_STRING_TO_INT,
+  CONVERT_INT_TO_STRING,
 };
 
 enum class CommandType {

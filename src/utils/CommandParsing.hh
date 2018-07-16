@@ -38,7 +38,7 @@ struct ScanCommandArguments {
   std::string error;
 };
 
-ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator &begin, const RedisRequest::const_iterator &end) {
+inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator &begin, const RedisRequest::const_iterator &end) {
   qdb_assert(begin != end);
 
   ScanCommandArguments args;

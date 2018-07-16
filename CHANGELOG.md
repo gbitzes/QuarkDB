@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Refactoring of transactions, we no longer pack / unpack a transaction into a single request within the same node, saving
   CPU cycles.
+- Explicitly block zero-sized strings when parsing the redis protocol, print appropriate warning.
 
 ### Fixed
 - In certain cases, such as when redirecting or reporting unavailability for pipelined writes, fewer

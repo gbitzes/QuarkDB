@@ -23,6 +23,7 @@
 
 #include "RecoveryDispatcher.hh"
 #include "../Formatter.hh"
+#include "../utils/CommandParsing.hh"
 using namespace quarkdb;
 
 RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {
@@ -37,6 +38,16 @@ LinkStatus RecoveryDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
+  switch(request.getCommand()) {
+    case RedisCommand::CONVERT_STRING_TO_INT:
+    case RedisCommand::CONVERT_INT_TO_STRING: {
+      return handleConversion(request);
+    }
+    default: {
+      // no-op, continue
+    }
+  }
+
   if(request.getCommandType() != CommandType::RECOVERY) {
     std::string msg = SSTR("unable to dispatch command " << quotes(request[0]) << " - remember we're running in recovery mode, not all operations are available");
     qdb_warn(msg);
