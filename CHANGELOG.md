@@ -1,7 +1,12 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.2.9 (2018-07-16)
+### Added
+- Commands `convert-string-to-int`, `convert-int-to-string` to convert between
+  binary-string-encoded integers and human-readable-ASCII encoding. Meant for
+  interactive use only, to make life easier during low-level debugging when
+  needing to edit low-level rocksdb keys, where binary-encoded integers are used.
 
 ### Changed
 - Refactoring of transactions, we no longer pack / unpack a transaction into a single request within the same node, saving
