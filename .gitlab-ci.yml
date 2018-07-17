@@ -1,4 +1,5 @@
 stages:
+- build-image
 - koji
 - build
 - test
@@ -150,3 +151,17 @@ cc7-koji:
     - koji tag-build quarkdb7-qa ${TAG_NAME}
   only:
     - tags@eos/quarkdb
+
+cc7-image:
+  stage: build-image
+  variables:
+    TO: gitlab-registry.cern.ch/eos/quarkdb/cc7-build-image
+    DOCKER_FILE: ci/cc7/Dockerfile
+    NO_CACHE: "1"
+  script:
+  - ""
+  tags:
+  - docker-image-build
+  only:
+    variables:
+      - $BUILD_IMAGES == "1"
