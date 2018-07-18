@@ -10,7 +10,7 @@ before_script:
 
 cc7:
   stage: build
-  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
   script:
     - packaging/gitlab-build.sh
     - mkdir ${CI_JOB_NAME}
@@ -21,7 +21,7 @@ cc7:
 
 fedora:
   stage: build
-  image: gitlab-registry.cern.ch/eos/quarkdb/fedora-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-fedora
   script:
     - packaging/gitlab-build.sh
     - mkdir ${CI_JOB_NAME}
@@ -32,7 +32,7 @@ fedora:
 
 fedora-tsan:
   stage: build
-  image: gitlab-registry.cern.ch/eos/quarkdb/fedora-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-fedora
   script:
     - CXXFLAGS='-fsanitize=thread' packaging/gitlab-build.sh
     - mkdir ${CI_JOB_NAME}
@@ -43,7 +43,7 @@ fedora-tsan:
 
 ubuntu-asan:
   stage: test
-  image: gitlab-registry.cern.ch/eos/quarkdb/ubuntu-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-ubuntu
   script:
     - ci/ubuntu/asan.sh
   artifacts:
@@ -52,7 +52,7 @@ ubuntu-asan:
 
 cc7-test:
   stage: test
-  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
   dependencies:
   - cc7
   script:
@@ -62,7 +62,7 @@ cc7-test:
 
 fedora-test:
   stage: test
-  image: gitlab-registry.cern.ch/eos/quarkdb/fedora-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-fedora
   dependencies:
   - fedora
   script:
@@ -72,7 +72,7 @@ fedora-test:
 
 fedora-tsan-test:
   stage: test
-  image: gitlab-registry.cern.ch/eos/quarkdb/fedora-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-fedora
   dependencies:
   - fedora-tsan
   script:
@@ -85,7 +85,7 @@ fedora-tsan-test:
 
 rpms:
   stage: publish
-  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
   dependencies:
   - cc7
   - fedora
@@ -100,7 +100,7 @@ rpms:
 
 docs:
   stage: publish
-  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
   script:
     - gitbook build
     - chown -R stci _book
@@ -118,7 +118,7 @@ docs:
 
 coverage:
   stage: publish
-  image: gitlab-registry.cern.ch/eos/quarkdb/cc7-enhanced
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
   dependencies:
   - ubuntu-asan
   script:
