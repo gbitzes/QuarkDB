@@ -2,7 +2,7 @@
 # Significantly improves CI build time, since all packages
 # are already there.
 
-FROM fedora:latest
+FROM fedora:27
 MAINTAINER Georgios Bitzes, georgios.bitzes@cern.ch, CERN 2018
 
 RUN dnf clean all
