@@ -23,10 +23,9 @@ mkdir -p $BASE_PATH
 cd $BASE_PATH
 git clone https://github.com/xrootd/xrootd
 cd xrootd
-git checkout v4.6.0
+git checkout v4.8.4
 mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX="$BASE_PATH/install"
 make
 make install
-

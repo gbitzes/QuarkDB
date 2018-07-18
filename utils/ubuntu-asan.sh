@@ -17,7 +17,7 @@ if [ ! "$(ls -A $XRD_BUILD)" ]; then
   rm -rf xrootd
   git clone https://github.com/xrootd/xrootd
   pushd xrootd
-  git checkout v4.6.0
+  git checkout v4.8.4
   mkdir build && pushd build
 
   XRD_INSTALL=$PWD/install
