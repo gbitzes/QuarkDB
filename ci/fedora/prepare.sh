@@ -13,7 +13,7 @@ dnf install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum
 ##------------------------------------------------------------------------------
 
 ./packaging/make-srpm.sh
-yum-builddep -y build/SRPMS/*
+dnf builddep -y build/SRPMS/*
 
 ##------------------------------------------------------------------------------
 ## Install rocksdb, both with and without tsan

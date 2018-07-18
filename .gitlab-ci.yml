@@ -157,7 +157,7 @@ cc7-image:
   variables:
     TO: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
     DOCKER_FILE: ci/cc7/Dockerfile
-    NO_CACHE: "1"
+    NO_CACHE: 1
   script:
   - ""
   tags:
@@ -171,7 +171,7 @@ fedora-image:
   variables:
     TO: gitlab-registry.cern.ch/eos/quarkdb/build-image-fedora
     DOCKER_FILE: ci/fedora/Dockerfile
-    NO_CACHE: "1"
+    NO_CACHE: 1
   script:
   - ""
   tags:
@@ -185,7 +185,7 @@ ubuntu-image:
   variables:
     TO: gitlab-registry.cern.ch/eos/quarkdb/build-image-ubuntu
     DOCKER_FILE: ci/ubuntu/Dockerfile
-    NO_CACHE: "1"
+    NO_CACHE: 1
   script:
   - ""
   tags:
