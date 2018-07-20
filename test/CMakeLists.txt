@@ -6,13 +6,6 @@ include_directories(
 )
 
 #-------------------------------------------------------------------------------
-# Set-up gtest
-#-------------------------------------------------------------------------------
-set(GTEST "${CMAKE_SOURCE_DIR}/deps/googletest/googletest")
-set(GTEST_BINARY_DIR "${CMAKE_BINARY_DIR}/deps/googletest/googletest")
-add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
-
-#-------------------------------------------------------------------------------
 # Activate test coverage for these source files / binaries
 #-------------------------------------------------------------------------------
 add_definitions(${GCOV_CFLAGS})

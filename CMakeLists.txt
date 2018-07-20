@@ -3,7 +3,6 @@ cmake_minimum_required(VERSION 2.8.11)
 #-------------------------------------------------------------------------------
 # Initialize
 #-------------------------------------------------------------------------------
-
 project(quarkdb)
 set(CMAKE_DISABLE_IN_SOURCE_BUILD ON)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
@@ -13,6 +12,13 @@ include(GNUInstallDirs)
 # Export cmake compile commands by default
 #-------------------------------------------------------------------------------
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+#-------------------------------------------------------------------------------
+# Make gtest / gmock available for all downstream CMakeLists.txt that need it
+#-------------------------------------------------------------------------------
+set(GTEST "${CMAKE_SOURCE_DIR}/deps/googletest/")
+set(GTEST_BINARY_DIR "${CMAKE_BINARY_DIR}/deps/googletest/")
+add_subdirectory("${GTEST}" "${GTEST_BINARY_DIR}")
 
 #-------------------------------------------------------------------------------
 # Activate include-what-you-use
