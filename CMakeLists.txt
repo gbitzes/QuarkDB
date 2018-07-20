@@ -137,7 +137,6 @@ add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++17 -g3 -fPIC
 #-------------------------------------------------------------------------------
 # Build source and tests
 #-------------------------------------------------------------------------------
-
 if(NOT PACKAGEONLY)
   add_subdirectory(deps/backward-cpp)
   add_subdirectory(deps/qclient)
@@ -145,19 +144,3 @@ if(NOT PACKAGEONLY)
   add_subdirectory(src)
   add_subdirectory(tools)
 endif()
-
-#-------------------------------------------------------------------------------
-# Packaging and source rpm
-#-------------------------------------------------------------------------------
-
-add_custom_target(
-  dist
-  COMMAND ./packaging/make-dist.sh
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
-
-add_custom_target(
-  srpm
-  COMMAND ./packaging/make-srpm.sh
-  WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-)
