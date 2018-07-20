@@ -31,6 +31,7 @@
 #include "raft/RaftGroup.hh"
 #include "raft/RaftJournal.hh"
 #include "QuarkDBNode.hh"
+#include "qclient/GlobalInterceptor.hh"
 #include <gtest/gtest.h>
 
 namespace quarkdb {
@@ -92,7 +93,11 @@ RaftServer GlobalEnv::server(int id) {
   srv.hostname = SSTR("server" << id);
   srv.port = 23456 + id;
 
-  qclient::QClient::addIntercept(srv.hostname, srv.port, "127.0.0.1", srv.port);
+  qclient::GlobalInterceptor::addIntercept(
+    qclient::Endpoint(srv.hostname, srv.port),
+    qclient::Endpoint("127.0.0.1", srv.port)
+  );
+
   return srv;
 }
 
