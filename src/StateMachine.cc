@@ -1098,6 +1098,44 @@ rocksdb::Status StateMachine::lease_get(StagingArea &stagingArea, const std::str
   return rocksdb::Status::OK();
 }
 
+rocksdb::Status StateMachine::hclone(StagingArea &stagingArea, const std::string &source, const std::string &target) {
+  WriteOperation operation(stagingArea, target, KeyType::kHash);
+  if(!operation.valid()) return wrong_type();
+  if(operation.keyExists()) {
+    operation.cancel();
+    return rocksdb::Status::InvalidArgument("ERR target key already exists, will not overwrite");
+  }
+
+  KeyDescriptor sourceKeyInfo = getKeyDescriptor(stagingArea, source);
+  if(sourceKeyInfo.empty()) {
+    operation.cancel();
+    return rocksdb::Status::OK(); // source key is empty, do nothing
+  }
+
+  if(sourceKeyInfo.getKeyType() != KeyType::kHash) {
+    operation.cancel();
+    return wrong_type();
+  }
+
+  int64_t newsize = 0;
+  FieldLocator locator(KeyType::kHash, source);
+
+  IteratorPtr iter(stagingArea.getIterator());
+  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
+    std::string tmp = iter->key().ToString();
+    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+
+    operation.writeField(
+      std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()),
+      iter->value().ToString()
+    );
+    newsize++;
+  }
+
+  qdb_assert(newsize == sourceKeyInfo.getSize());
+  return operation.finalize(newsize);
+}
+
 void StateMachine::advanceClock(ClockValue newValue, LogIndex index) {
   StagingArea stagingArea(*this);
   advanceClock(stagingArea, newValue);

@@ -235,6 +235,13 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(request.size() <= 2) return errArgs(request);
       return dispatchHDEL(stagingArea, request[1], request.begin()+2, request.end());
     }
+    case RedisCommand::HCLONE: {
+      if(request.size() != 3) return errArgs(request);
+
+      rocksdb::Status st = store.hclone(stagingArea, request[1], request[2]);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::ok();
+    }
     case RedisCommand::SADD: {
       if(request.size() <= 2) return errArgs(request);
       int64_t count = 0;

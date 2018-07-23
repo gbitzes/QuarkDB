@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+### Added
+- Command `hclone` for creating identical copies of entire hashes.
+
 ## 0.2.9 (2018-07-16)
 ### Added
 - Commands `convert-string-to-int`, `convert-int-to-string` to convert between

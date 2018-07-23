@@ -1354,3 +1354,56 @@ TEST_F(Raft_e2e, InconsistentIteratorsTest) {
 
   ASSERT_REPLY(delReply, 1);
 }
+
+TEST_F(Raft_e2e, CloneHash) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> replies;
+  for(size_t i = 0; i < 10; i++) {
+    replies.emplace_back(tunnel(leaderID)->exec("HSET", "hash", SSTR("f" << i), SSTR("v" << i)));
+  }
+
+  for(size_t i = 0; i < 10; i++) {
+    ASSERT_REPLY(replies[i], 1);
+  }
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "hash", "hash2"), "OK");
+
+  redisReplyPtr hgetall = tunnel(leaderID)->exec("hgetall", "hash2").get();
+
+  ASSERT_EQ(
+    qclient::describeRedisReply(hgetall),
+    "1) \"f0\"\n"
+    "2) \"v0\"\n"
+    "3) \"f1\"\n"
+    "4) \"v1\"\n"
+    "5) \"f2\"\n"
+    "6) \"v2\"\n"
+    "7) \"f3\"\n"
+    "8) \"v3\"\n"
+    "9) \"f4\"\n"
+    "10) \"v4\"\n"
+    "11) \"f5\"\n"
+    "12) \"v5\"\n"
+    "13) \"f6\"\n"
+    "14) \"v6\"\n"
+    "15) \"f7\"\n"
+    "16) \"v7\"\n"
+    "17) \"f8\"\n"
+    "18) \"v8\"\n"
+    "19) \"f9\"\n"
+    "20) \"v9\"\n"
+  );
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "hash", "hash2"), "ERR Invalid argument: ERR target key already exists, will not overwrite");
+  ASSERT_REPLY(tunnel(leaderID)->exec("sadd", "my-set", "s1"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "my-set", "hash3"), "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "hash", "my-set"), "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "not-existing", "hash"), "ERR Invalid argument: ERR target key already exists, will not overwrite");
+  ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "not-existing", "not-existing-2"), "OK");
+  ASSERT_REPLY(tunnel(leaderID)->exec("exists", "not-existing", "not-existing-2"), 0);
+}
