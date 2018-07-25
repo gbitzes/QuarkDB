@@ -132,7 +132,7 @@ endif()
 #-------------------------------------------------------------------------------
 # Compiler options
 #-------------------------------------------------------------------------------
-add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++17 -g3 -fPIC)
+add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++17 -g -fPIC)
 
 #-------------------------------------------------------------------------------
 # Build source and tests
