@@ -648,6 +648,20 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   redisReplyPtr conv2 = tunnel(follower1)->exec("convert-string-to-int", unsignedIntToBinaryString(999u)).get();
   ASSERT_EQ(qclient::describeRedisReply(conv2), "1) Interpreted as int64_t: 999\n2) Interpreted as uint64_t: 999\n");
+
+  std::deque<qclient::EncodedRequest> multi1;
+  multi1.emplace_back(qclient::EncodedRequest::make("set", "my-awesome-counter", "1"));
+  multi1.emplace_back(qclient::EncodedRequest::make("set", "other-counter", "12345"));
+  multi1.emplace_back(qclient::EncodedRequest::make("get", "other-counter"));
+  multi1.emplace_back(qclient::EncodedRequest::make("get", "my-awesome-counter"));
+
+  ASSERT_EQ(
+    qclient::describeRedisReply(tunnel(leaderID)->execute(std::move(multi1)).get()),
+    "1) OK\n"
+    "2) OK\n"
+    "3) \"12345\"\n"
+    "4) \"1\"\n"
+  );
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
