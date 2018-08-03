@@ -117,6 +117,11 @@ TEST_F(Multi, HandlerBasicSanity) {
   ASSERT_REPLY(replies[1], "QUEUED");
   ASSERT_REPLY(replies[2], "OK");
   ASSERT_REPLY(replies[3], "v1");
+
+  // EXEC without MULTI
+  replies.clear();
+  ASSERT_REPLY(tunnel(leaderID)->exec("EXEC"), "ERR EXEC without MULTI");
+  ASSERT_REPLY(tunnel(leaderID)->exec("HGET", "myhash", "f1"), "v1");
 }
 
 TEST_F(Multi, WithRaft) {

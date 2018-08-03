@@ -244,6 +244,12 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
       continue;
     }
 
+    // EXEC without MULTI?
+    if(currentRequest.getCommand() == RedisCommand::EXEC && !multiHandler.active()) {
+      this->err("EXEC without MULTI");
+      continue;
+    }
+
     if(currentRequest.getCommand() == RedisCommand::TX_READWRITE) {
       multiHandler.finalizePhantomTransaction(dispatcher, this);
       dispatcher->dispatch(this, currentRequest);

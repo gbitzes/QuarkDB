@@ -5,6 +5,9 @@ All notable changes to this project will be documented in this file.
 ### Added
 - Command `hclone` for creating identical copies of entire hashes.
 
+### Fixed
+- An `EXEC` when not inside a `MULTI` would cause a crash.
+
 ## 0.2.9 (2018-07-16)
 ### Added
 - Commands `convert-string-to-int`, `convert-int-to-string` to convert between
