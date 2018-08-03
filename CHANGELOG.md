@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.3 (2018-08-03)
 ### Added
 - Command `hclone` for creating identical copies of entire hashes.
 
