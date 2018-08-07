@@ -37,6 +37,7 @@
 #include "redis/LeaseFilter.hh"
 #include "redis/InternalFilter.hh"
 #include "redis/RedisEncodedResponse.hh"
+#include "storage/Randomization.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
 
@@ -483,4 +484,20 @@ TEST(InternalFilter, BasicSanity) {
   ASSERT_EQ(req.getCommand(), RedisCommand::SET);
   InternalFilter::process(req);
   ASSERT_EQ(req.getCommand(), RedisCommand::SET);
+}
+
+TEST(Randomization, BasicSanity) {
+  // We use these tests to anchor the hash function, and make sure that in case
+  // it accidentally changes (due to different platform, or something) we notice
+  // immediatelly when running the tests.
+  ASSERT_EQ(getPseudoRandomTag("123"), 7820675105737894236ull);
+  ASSERT_EQ(getPseudoRandomTag(""), 15559834046206816424ull);
+
+  // Run the function again, just in case..
+  ASSERT_EQ(getPseudoRandomTag("123"), 7820675105737894236ull);
+  ASSERT_EQ(getPseudoRandomTag(""), 15559834046206816424ull);
+
+  ASSERT_EQ(getPseudoRandomTag("asdf"), 7195574813216604082ull);
+  ASSERT_EQ(getPseudoRandomTag("asdf2"), 8551229147753871701ull);
+  ASSERT_EQ(getPseudoRandomTag("test"), 11234724081966486162ull);
 }

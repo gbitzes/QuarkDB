@@ -11,6 +11,8 @@ include_directories(
 #-------------------------------------------------------------------------------
 add_definitions(${GCOV_CFLAGS})
 add_library(XrdQuarkDB SHARED
+  ../deps/xxhash/xxhash.cc             ../deps/xxhash/xxhash.hh
+
   XrdPlugin.cc
   XrdQuarkDB.cc                       XrdQuarkDB.hh
   Utils.cc                            Utils.hh
@@ -74,6 +76,7 @@ add_library(XrdQuarkDB SHARED
                                       storage/KeyLocators.hh
                                       storage/LeaseInfo.hh
                                       storage/PatternMatching.hh
+  storage/Randomization.cc            storage/Randomization.hh
                                       storage/ReverseLocator.hh
                                       storage/StagingArea.hh
 
