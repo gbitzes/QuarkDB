@@ -325,9 +325,9 @@ rocksdb::Status StateMachine::hkeys(StagingArea &stagingArea, const std::string 
   FieldLocator locator(KeyType::kHash, key);
 
   IteratorPtr iter(stagingArea.getIterator());
-  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefixSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    if(!StringUtils::startsWith(tmp, locator.toView())) break;
     keys.push_back(std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()));
   }
   return rocksdb::Status::OK();
@@ -340,9 +340,9 @@ rocksdb::Status StateMachine::hgetall(StagingArea &stagingArea, const std::strin
   FieldLocator locator(KeyType::kHash, key);
 
   IteratorPtr iter(stagingArea.getIterator());
-  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefixSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    if(!StringUtils::startsWith(tmp, locator.toView())) break;
     res.push_back(std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()));
     res.push_back(iter->value().ToString());
   }
@@ -625,7 +625,7 @@ rocksdb::Status StateMachine::hscan(StagingArea &stagingArea, const std::string 
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
-    if(!StringUtils::startswith(tmp, locator.getPrefix())) break;
+    if(!StringUtils::startsWith(tmp, locator.getPrefix())) break;
 
     std::string fieldname = std::string(tmp.begin()+locator.getPrefixSize(), tmp.end());
     if(res.size() >= count*2) {
@@ -651,7 +651,7 @@ rocksdb::Status StateMachine::sscan(StagingArea &stagingArea, const std::string 
   for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
 
-    if(!StringUtils::startswith(tmp, locator.getPrefix())) break;
+    if(!StringUtils::startsWith(tmp, locator.getPrefix())) break;
 
     std::string fieldname = std::string(tmp.begin()+locator.getPrefixSize(), tmp.end());
     if(res.size() >= count) {
@@ -672,9 +672,9 @@ rocksdb::Status StateMachine::hvals(StagingArea &stagingArea, const std::string 
   vals.clear();
 
   IteratorPtr iter(stagingArea.getIterator());
-  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefixSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    if(!StringUtils::startsWith(tmp, locator.toView())) break;
     vals.push_back(iter->value().ToString());
   }
   return rocksdb::Status::OK();
@@ -759,9 +759,9 @@ rocksdb::Status StateMachine::smembers(StagingArea &stagingArea, const std::stri
   members.clear();
 
   IteratorPtr iter(stagingArea.getIterator());
-  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefixSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    if(!StringUtils::startsWith(tmp, locator.toView())) break;
     members.push_back(std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()));
   }
   return rocksdb::Status::OK();
@@ -1121,9 +1121,9 @@ rocksdb::Status StateMachine::hclone(StagingArea &stagingArea, const std::string
   FieldLocator locator(KeyType::kHash, source);
 
   IteratorPtr iter(stagingArea.getIterator());
-  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
+  for(iter->Seek(locator.getPrefixSlice()); iter->Valid(); iter->Next()) {
     std::string tmp = iter->key().ToString();
-    if(!StringUtils::startswith(tmp, locator.toSlice())) break;
+    if(!StringUtils::startsWith(tmp, locator.toView())) break;
 
     operation.writeField(
       std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()),
@@ -1326,8 +1326,8 @@ void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t 
   IteratorPtr iter(stagingArea.getIterator());
 
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
-    std::string key = iter->key().ToString();
-    if(!StringUtils::startswith(key, prefix)) break;
+    rocksdb::Slice key = iter->key();
+    if(!StringUtils::startsWithSlice(key, prefix)) break;
     if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(InternalKeyType::kConfiguration))) continue;
 
     stagingArea.del(key);

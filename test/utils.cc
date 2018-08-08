@@ -500,4 +500,8 @@ TEST(Randomization, BasicSanity) {
   ASSERT_EQ(getPseudoRandomTag("asdf"), 7195574813216604082ull);
   ASSERT_EQ(getPseudoRandomTag("asdf2"), 8551229147753871701ull);
   ASSERT_EQ(getPseudoRandomTag("test"), 11234724081966486162ull);
+
+  ASSERT_EQ(getPseudoRandomTag("chicken"), 2714014276587970443ull);
+  ASSERT_EQ(getPseudoRandomTag("chicken chicken"), 15381190244021194531ull);
+  ASSERT_EQ(getPseudoRandomTag("chicken chicken chicken"), 2103198794047051822ull);
 }

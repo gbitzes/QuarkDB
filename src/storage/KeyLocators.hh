@@ -58,6 +58,10 @@ public:
     return keyBuffer.toSlice();
   }
 
+  std::string_view toView() {
+    return keyBuffer.toView();
+  }
+
   std::string toString() {
     return keyBuffer.toString();
   }
@@ -81,6 +85,11 @@ public:
   rocksdb::Slice toSlice() {
     return keyBuffer.toSlice();
   }
+
+  std::string_view toView() {
+    return keyBuffer.toView();
+  }
+
 private:
   KeyBuffer keyBuffer;
 };
@@ -132,7 +141,11 @@ public:
     memcpy(keyBuffer.data() + keyPrefixSize, field.data(), field.size());
   }
 
-  rocksdb::Slice getPrefix() {
+  std::string_view getPrefix() {
+    return std::string_view(keyBuffer.data(), keyPrefixSize);
+  }
+
+  rocksdb::Slice getPrefixSlice() {
     return rocksdb::Slice(keyBuffer.data(), keyPrefixSize);
   }
 
@@ -142,6 +155,10 @@ public:
 
   rocksdb::Slice toSlice() {
     return keyBuffer.toSlice();
+  }
+
+  std::string_view toView() {
+    return keyBuffer.toView();
   }
 
 private:
@@ -204,6 +221,10 @@ public:
     return keyBuffer.toSlice();
   }
 
+  std::string_view toView() {
+    return keyBuffer.toView();
+  }
+
 private:
   size_t keyPrefixSize = 0;
   size_t localityPrefixSize = 0;
@@ -242,6 +263,10 @@ public:
     return keyBuffer.toSlice();
   }
 
+  std::string_view toView() {
+    return keyBuffer.toView();
+  }
+
 private:
   size_t keyPrefixSize = 0;
   KeyBuffer keyBuffer;
@@ -261,6 +286,10 @@ public:
 
   rocksdb::Slice toSlice() {
     return keyBuffer.toSlice();
+  }
+
+  std::string_view toView() {
+    return keyBuffer.toView();
   }
 private:
   KeyBuffer keyBuffer;
@@ -282,6 +311,10 @@ public:
 
   rocksdb::Slice toSlice() {
     return keyBuffer.toSlice();
+  }
+
+  std::string_view toView() {
+    return keyBuffer.toView();
   }
 
 private:

@@ -80,7 +80,7 @@ KeyDescriptorBuilder::KeyDescriptorBuilder(StateMachine &stateMachine) {
     if(revlocator.getKeyType() == KeyType::kString) {
       appendToWriteBatch(currentPrefix, currentKey, descriptor, descriptorBatch);
 
-      currentKey = revlocator.getOriginalKey().ToString();
+      currentKey = revlocator.getOriginalKey();
       descriptor.setKeyType(KeyType::kString);
       descriptor.setSize(iterator->value().size());
 
@@ -92,8 +92,8 @@ KeyDescriptorBuilder::KeyDescriptorBuilder(StateMachine &stateMachine) {
     if(currentPrefix != revlocator.getRawPrefix()) {
       appendToWriteBatch(currentPrefix, currentKey, descriptor, descriptorBatch);
 
-      currentPrefix = revlocator.getRawPrefix().ToString();
-      currentKey = revlocator.getOriginalKey().ToString();
+      currentPrefix = revlocator.getRawPrefix();
+      currentKey = revlocator.getOriginalKey();
 
       descriptor.setKeyType(revlocator.getKeyType());
       descriptor.setSize(0);

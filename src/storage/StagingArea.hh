@@ -25,6 +25,7 @@
 #define QUARKDB_STAGING_AREA_H
 
 #include <mutex>
+#include <string_view>
 #include "KeyDescriptor.hh"
 #include "../utils/SmartBuffer.hh"
 #include "../StateMachine.hh"

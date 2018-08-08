@@ -590,7 +590,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   redisReplyPtr replyL2 = l2.get();
   std::string reply = std::string(replyL2->str, replyL2->len);
-  ASSERT_TRUE(StringUtils::startswith(reply, "ERR lease held by 'holder1', time remaining"));
+  ASSERT_TRUE(StringUtils::startsWith(reply, "ERR lease held by 'holder1', time remaining"));
   ASSERT_REPLY(l3, "RENEWED");
 
   std::future<redisReplyPtr> l4 = tunnel(leaderID)->exec("lease-get", "mykey");
@@ -598,7 +598,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   redisReplyPtr replyL4 = l4.get();
   qdb_info(qclient::describeRedisReply(replyL4));
-  ASSERT_TRUE(StringUtils::startswith(qclient::describeRedisReply(replyL4), "1) HOLDER: holder1\n2) REMAINING: "));
+  ASSERT_TRUE(StringUtils::startsWith(qclient::describeRedisReply(replyL4), "1) HOLDER: holder1\n2) REMAINING: "));
   ASSERT_NIL(l5);
 
   std::future<redisReplyPtr> l6 = tunnel(leaderID)->exec("lease-release", "mykey");

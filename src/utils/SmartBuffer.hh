@@ -108,6 +108,10 @@ public:
     return std::string(data(), size());
   }
 
+  std::string_view toView() {
+    return std::string_view(data(), size());
+  }
+
   char& operator[](size_t i) {
     return data()[i];
   }

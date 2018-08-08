@@ -93,17 +93,17 @@ public:
     return keyType;
   }
 
-  rocksdb::Slice getOriginalKey() {
+  std::string_view getOriginalKey() {
     qdb_assert(keyType != KeyType::kParseError);
     if(!unescapedKey.empty()) {
-      return rocksdb::Slice(unescapedKey.data(), unescapedKey.size());
+      return std::string_view(unescapedKey.data(), unescapedKey.size());
     }
 
     if(keyType == KeyType::kString) {
-      return rocksdb::Slice(slice.data()+1, slice.size()-1);
+      return std::string_view(slice.data()+1, slice.size()-1);
     }
 
-    return rocksdb::Slice(slice.data()+1, fieldStart-3);
+    return std::string_view(slice.data()+1, fieldStart-3);
   }
 
   rocksdb::Slice getField() {
@@ -111,9 +111,9 @@ public:
     return rocksdb::Slice(slice.data()+fieldStart, slice.size()-fieldStart);
   }
 
-  rocksdb::Slice getRawPrefix() {
+  std::string_view getRawPrefix() {
     qdb_assert(keyType != KeyType::kParseError && keyType != KeyType::kString);
-    return rocksdb::Slice(slice.data(), fieldStart);
+    return std::string_view(slice.data(), fieldStart);
   }
 
   bool isLocalityIndex() {

@@ -47,7 +47,7 @@ inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator 
   if(*begin == "0") {
     args.cursor = "";
   }
-  else if(StringUtils::startswith(*begin, "next:")) {
+  else if(StringUtils::startsWith(*begin, "next:")) {
     args.cursor = std::string(begin->begin() + 5, begin->end());
   }
   else {
@@ -67,7 +67,7 @@ inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator 
     if(caseInsensitiveEquals(*pos, "count")) {
       RedisRequest::const_iterator count = pos+1;
       // Parse integer, only allowing non-zero values.
-      if(StringUtils::startswith(*count, "-") || *count == "0") {
+      if(StringUtils::startsWith(*count, "-") || *count == "0") {
         args.error = "syntax error";
         return args;
       }
