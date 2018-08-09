@@ -1326,7 +1326,8 @@ void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t 
   IteratorPtr iter(stagingArea.getIterator());
 
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
-    rocksdb::Slice key = iter->key();
+    // iter->key() may get deleted from under our feet, better keep a copy
+    std::string key = iter->key().ToString();
     if(!StringUtils::startsWithSlice(key, prefix)) break;
     if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(InternalKeyType::kConfiguration))) continue;
 
