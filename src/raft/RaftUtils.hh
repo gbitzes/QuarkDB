@@ -48,9 +48,16 @@ public:
   static bool fetchLastResponse(const qclient::redisReplyPtr &source, std::vector<RaftEntry> &entries);
 };
 
+
+enum class ElectionOutcome {
+  kElected,
+  kNotElected,
+  kVetoed
+};
+
 class RaftElection {
 public:
-  static bool perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails);
+  static ElectionOutcome perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails);
 };
 
 }

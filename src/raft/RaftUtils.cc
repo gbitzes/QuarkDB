@@ -28,9 +28,10 @@
 #include "RaftLease.hh"
 #include "RaftContactDetails.hh"
 #include "../Utils.hh"
-using namespace quarkdb;
 
-bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails) {
+namespace quarkdb {
+
+ElectionOutcome RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails) {
   if(!votereq.candidate.empty()) {
     qdb_throw("candidate member of votereq must be empty, it is filled out by this function");
   }
@@ -40,17 +41,17 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
 
   if(votereq.term != snapshot->term) {
     qdb_warn("Aborting election, received stale term: " << votereq.term << " vs " << snapshot->term);
-    return false;
+    return ElectionOutcome::kNotElected;
   }
 
   if(!snapshot->leader.empty()) {
     qdb_warn("Aborting election, we already have a recognized leader already for term " << snapshot->term << " which is " << snapshot->leader.toString());
-    return false;
+    return ElectionOutcome::kNotElected;
   }
 
   if(snapshot->status != RaftStatus::CANDIDATE) {
     qdb_warn("Aborting election, I am not a candidate for " << snapshot->term << ", but in status " << statusToString(snapshot->status));
-    return false;
+    return ElectionOutcome::kNotElected;
   }
 
   qdb_info(state.getMyself().toString() << ": Starting election round for term " << votereq.term);
@@ -114,14 +115,24 @@ bool RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease 
   if(granted+1 >= (state.getNodes().size() / 2)+1 ) {
     if(veto > 0) {
       qdb_critical("Election round unsuccessful for term " << votereq.term << " because of vetoes, even though I received a quorum of positive votes. (!!!) " << description);
-      return false;
+      return ElectionOutcome::kVetoed;
     }
     qdb_event("Election round successful for term " << votereq.term << ". " << description);
-    return state.ascend(votereq.term);
+    if(state.ascend(votereq.term)) {
+      return ElectionOutcome::kElected;
+    }
+
+    // Some strange race condition occured, term must have progressed.
+    return ElectionOutcome::kNotElected;
   }
   else {
     qdb_event("Election round unsuccessful for term " << votereq.term << ", did not receive a quorum of votes. " << description);
-    return false;
+
+    if(veto > 0) {
+      return ElectionOutcome::kVetoed;
+    }
+
+    return ElectionOutcome::kNotElected;
   }
 }
 
@@ -310,4 +321,6 @@ bool RaftParser::fetchLastResponse(const qclient::redisReplyPtr &source, std::ve
   }
 
   return true;
+}
+
 }

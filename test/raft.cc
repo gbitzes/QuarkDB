@@ -577,12 +577,15 @@ TEST_F(Raft_Election, basic_sanity) {
   votereq.lastIndex = 1;
   votereq.term = 1;
   votereq.lastTerm = 0;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
+  ASSERT_EQ(ElectionOutcome::kNotElected,
+    RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 
   // we have a leader already, can't do election
   ASSERT_TRUE(state()->observed(2, myself(1)));
   votereq.term = 2;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
+  ASSERT_EQ(
+    ElectionOutcome::kNotElected,
+    RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 
   // votereq.candidate must be empty
   votereq.candidate = myself(1);
@@ -600,7 +603,9 @@ TEST_F(Raft_Election, leader_cannot_call_election) {
   votereq.lastIndex = 5;
   votereq.term = 2;
   votereq.lastTerm = 1;
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
+  ASSERT_EQ(
+    ElectionOutcome::kNotElected,
+    RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 }
 
 TEST_F(Raft_Election, observer_cannot_call_election) {
@@ -617,7 +622,9 @@ TEST_F(Raft_Election, observer_cannot_call_election) {
   votereq.lastTerm = 0;
   votereq.lastIndex = 5;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
+  ASSERT_EQ(
+    ElectionOutcome::kNotElected,
+    RaftElection::perform(votereq, *state(), *lease(), *contactDetails()));
 }
 
 TEST_F(Raft_Election, complete_simple_election) {
@@ -632,7 +639,9 @@ TEST_F(Raft_Election, complete_simple_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
+  ASSERT_EQ(
+    ElectionOutcome::kElected,
+    RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 
   RaftStateSnapshotPtr snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0->term, 2);
@@ -655,7 +664,9 @@ TEST_F(Raft_Election, unsuccessful_election_not_enough_votes) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
+  ASSERT_EQ(
+    ElectionOutcome::kNotElected,
+    RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 }
 
 TEST_F(Raft_Election, split_votes_successful_election) {
@@ -677,7 +688,9 @@ TEST_F(Raft_Election, split_votes_successful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_TRUE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
+  ASSERT_EQ(
+    ElectionOutcome::kElected,
+    RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 
   RaftStateSnapshotPtr snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0->term, 2);
@@ -703,7 +716,9 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
   votereq.lastIndex = 0;
   votereq.lastTerm = 0;
 
-  ASSERT_FALSE(RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
+  ASSERT_EQ(
+    ElectionOutcome::kNotElected,
+    RaftElection::perform(votereq, *state(0), *lease(0), *contactDetails(0)));
 
   RaftStateSnapshotPtr snapshot0 = state(0)->getSnapshot();
   ASSERT_EQ(snapshot0->term, 2);

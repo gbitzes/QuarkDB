@@ -100,7 +100,7 @@ void RaftDirector::runForLeader() {
     return;
   }
 
-  if(!RaftElection::perform(votereq, state, lease, contactDetails)) {
+  if(RaftElection::perform(votereq, state, lease, contactDetails) != ElectionOutcome::kElected) {
     state.dropOut(snapshot->term+1);
   }
 }
