@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 # This step ought to be a no-op usually, thanks to our custom ubuntu image.
 ci/ubuntu/prepare.sh
