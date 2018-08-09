@@ -1,6 +1,17 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+### Added
+- Protection against 1-way network partitions, in which a cluster node
+  is able to establish TCP connections to others, but the rest cannot do the same.
+
+  This resulted in cluster disruption as the affected node would not be receiving
+  heartbeats, but could still repeatedly attempt to get elected.
+
+  From now on, a node which has been vetoed will abstain from starting election
+  rounds until it has received fresh heartbeats since receiving that veto.
+
 ## 0.3.1 (2018-08-03)
 ### Added
 - Command `hclone` for creating identical copies of entire hashes.

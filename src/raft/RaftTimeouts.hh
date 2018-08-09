@@ -72,6 +72,8 @@ public:
   void heartbeat();
   bool timeout();
 
+  std::chrono::steady_clock::time_point getLastHeartbeat();
+
   RaftTimeouts getTimeouts() { return timeouts; }
   milliseconds getRandomTimeout();
   void triggerTimeout();

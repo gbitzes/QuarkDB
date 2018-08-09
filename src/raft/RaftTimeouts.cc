@@ -134,3 +134,8 @@ milliseconds RaftClock::refreshRandomTimeout() {
   randomTimeout = timeouts.getRandom();
   return randomTimeout;
 }
+
+std::chrono::steady_clock::time_point RaftClock::getLastHeartbeat() {
+  std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
+  return lastHeartbeat;
+}

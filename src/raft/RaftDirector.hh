@@ -63,6 +63,7 @@ private:
   RaftReplicator &replicator;
   const RaftContactDetails &contactDetails;
 
+  std::chrono::steady_clock::time_point lastHeartbeatBeforeVeto;
   std::thread mainThread;
 };
 
