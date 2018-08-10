@@ -12,6 +12,9 @@ All notable changes to this project will be documented in this file.
   From now on, a node which has been vetoed will abstain from starting election
   rounds until it has received fresh heartbeats since receiving that veto.
 
+### Fixed
+- A couple of minor memory leaks.
+
 ## 0.3.1 (2018-08-03)
 ### Added
 - Command `hclone` for creating identical copies of entire hashes.

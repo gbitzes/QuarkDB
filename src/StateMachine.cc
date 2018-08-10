@@ -139,9 +139,11 @@ StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk
     options.allow_concurrent_memtable_write = false;
   }
 
-  rocksdb::Status status = rocksdb::DB::Open(options, filename, &db);
+  rocksdb::DB *tmpdb = nullptr;
+  rocksdb::Status status = rocksdb::DB::Open(options, filename, &tmpdb);
   if(!status.ok()) qdb_throw("Cannot open " << quotes(filename) << ":" << status.ToString());
 
+  db.reset(tmpdb);
   ensureCompatibleFormat(!dirExists);
   ensureBulkloadSanity(!dirExists);
   ensureClockSanity(!dirExists);
@@ -182,8 +184,7 @@ StateMachine::~StateMachine() {
 
   if(db) {
     qdb_info("Closing state machine " << quotes(filename));
-    delete db;
-    db = nullptr;
+    db.reset();
   }
 }
 
@@ -594,7 +595,7 @@ rocksdb::Status StateMachine::lhlen(StagingArea &stagingArea, const std::string 
 }
 
 rocksdb::Status StateMachine::rawGetAllVersions(const std::string &key, std::vector<rocksdb::KeyVersion> &versions) {
-  return rocksdb::GetAllKeyVersions(db, key, key, &versions);
+  return rocksdb::GetAllKeyVersions(db.get(), key, key, &versions);
 }
 
 rocksdb::Status StateMachine::rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements) {
@@ -1470,7 +1471,7 @@ rocksdb::Status StateMachine::flushall(StagingArea &stagingArea) {
 
 rocksdb::Status StateMachine::checkpoint(const std::string &path) {
   rocksdb::Checkpoint *checkpoint = nullptr;
-  RETURN_ON_ERROR(rocksdb::Checkpoint::Create(db, &checkpoint));
+  RETURN_ON_ERROR(rocksdb::Checkpoint::Create(db.get(), &checkpoint));
 
   rocksdb::Status st = checkpoint->CreateCheckpoint(path);
   delete checkpoint;

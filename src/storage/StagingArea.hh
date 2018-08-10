@@ -49,7 +49,7 @@ public:
 
     if(readOnly) {
       // Acquire snapshot.
-      snapshot.reset(new StateMachine::Snapshot(sm.db));
+      snapshot.reset(new StateMachine::Snapshot(sm.db.get()));
     }
   }
 
@@ -65,7 +65,8 @@ public:
       return rocksdb::Status::NotFound();
     }
 
-    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db, rocksdb::ReadOptions(), slice, &value);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(),
+      rocksdb::ReadOptions(), slice, &value);
   }
 
   rocksdb::Status exists(const rocksdb::Slice &slice) {
@@ -80,7 +81,7 @@ public:
     }
 
     rocksdb::PinnableSlice ignored;
-    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db, rocksdb::ReadOptions(), slice, &ignored);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), slice, &ignored);
   }
 
   rocksdb::Status get(const rocksdb::Slice &slice, std::string &value) {
@@ -92,7 +93,7 @@ public:
       return stateMachine.db->Get(snapshot->opts(), slice, &value);
     }
 
-    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db, rocksdb::ReadOptions(), slice, &value);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), slice, &value);
   }
 
   void put(const rocksdb::Slice &slice, const rocksdb::Slice &value) {

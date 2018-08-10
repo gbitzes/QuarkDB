@@ -295,7 +295,7 @@ private:
   std::mutex lastAppliedMtx;
 
   std::mutex writeMtx;
-  rocksdb::DB* db = nullptr;
+  std::unique_ptr<rocksdb::DB> db;
 
   std::unique_ptr<ConsistencyScanner> consistencyScanner;
 
