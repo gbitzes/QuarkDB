@@ -9,3 +9,5 @@
 * [Raft basics](RAFT.md)
 * [Write path](WRITEPATH.md)
 * [Membership updates](MEMBERSHIP.md)
+* Advanced topics
+  * [Raft extensions](RAFT-EXTENSIONS.md)
