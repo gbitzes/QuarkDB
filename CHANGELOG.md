@@ -1,7 +1,7 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.3.2 (2018-08-14)
 ### Added
 - Protection against 1-way network partitions, in which a cluster node
   is able to establish TCP connections to others, but the rest cannot do the same.
@@ -10,7 +10,9 @@ All notable changes to this project will be documented in this file.
   heartbeats, but could still repeatedly attempt to get elected.
 
   From now on, a node which has been vetoed will abstain from starting election
-  rounds until it has received fresh heartbeats since receiving that veto.
+  rounds until it has received fresh heartbeats since receiving that veto. This
+  will prevent a 1-way network partitioned node from causing extensive cluster
+  disruption.
 
 ### Fixed
 - A couple of minor memory leaks.
