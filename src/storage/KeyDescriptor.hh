@@ -37,7 +37,7 @@ enum class KeyType : char {
   kString = 'a',
   kHash = 'b',
   kSet = 'c',
-  kList = 'd',
+  kDeque = 'd',
   kLocalityHash = 'e',
   kLease = 'f'
 };
@@ -53,8 +53,8 @@ inline KeyType parseKeyType(char c) {
     case char(KeyType::kSet): {
       return KeyType::kSet;
     }
-    case char(KeyType::kList): {
-      return KeyType::kList;
+    case char(KeyType::kDeque): {
+      return KeyType::kDeque;
     }
     case char(KeyType::kLocalityHash): {
       return KeyType::kLocalityHash;
@@ -108,9 +108,9 @@ public:
         // All done
         return;
       }
-      case KeyType::kList:
+      case KeyType::kDeque:
       case KeyType::kLease: {
-        qdb_assert(str.size() == kListDescriptorSize);
+        qdb_assert(str.size() == kDequeDescriptorSize);
 
         // Parse size.
         sz = binaryStringToInt(str.data() + kOffsetSize);
@@ -143,12 +143,12 @@ public:
   }
 
   uint64_t getStartIndex() const {
-    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
+    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease);
     return startIndex;
   }
 
   uint64_t getEndIndex() const {
-    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
+    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease);
     return endIndex;
   }
 
@@ -162,12 +162,12 @@ public:
   }
 
   void setStartIndex(uint64_t newval) {
-    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
+    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease);
     startIndex = newval;
   }
 
   void setEndIndex(uint64_t newval) {
-    qdb_assert(keyType == KeyType::kList || keyType == KeyType::kLease);
+    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease);
     endIndex = newval;
   }
 
@@ -185,9 +185,9 @@ public:
         intToBinaryString(sz, serializationBuffer.data() + kOffsetSize);
         return serializationBuffer.toSlice();
       }
-      case KeyType::kList:
+      case KeyType::kDeque:
       case KeyType::kLease: {
-        serializationBuffer.shrink(kListDescriptorSize);
+        serializationBuffer.shrink(kDequeDescriptorSize);
 
         // Store the size..
         intToBinaryString(sz, serializationBuffer.data() + kOffsetSize);
@@ -211,7 +211,7 @@ public:
   }
 
   uint64_t getListIndex(Direction direction) {
-    qdb_assert(keyType == KeyType::kList);
+    qdb_assert(keyType == KeyType::kDeque);
     if(direction == Direction::kLeft) {
       return startIndex;
     }
@@ -222,7 +222,7 @@ public:
   }
 
   void setListIndex(Direction direction, uint64_t newindex) {
-    qdb_assert(keyType == KeyType::kList);
+    qdb_assert(keyType == KeyType::kDeque);
     if(direction == Direction::kLeft) {
       startIndex = newindex;
       return;
@@ -242,16 +242,16 @@ private:
 
   static constexpr size_t kStringDescriptorSize = 1 + sizeof(int64_t);
   static constexpr size_t kHashDescriptorSize = 1 + sizeof(int64_t);
-  static constexpr size_t kListDescriptorSize = 1 + sizeof(int64_t) + 2*sizeof(uint64_t);
+  static constexpr size_t kDequeDescriptorSize = 1 + sizeof(int64_t) + 2*sizeof(uint64_t);
 
   static constexpr size_t kOffsetSize = 1;
   static constexpr size_t kOffsetStartIndex = 1 + sizeof(int64_t);
   static constexpr size_t kOffsetEndIndex = 1 + sizeof(int64_t) + sizeof(uint64_t);
 
-  // Only used in hashes, sets, and lists
+  // Only used in hashes, sets, and deques
   int64_t sz = 0;
 
-  // Only used in lists
+  // Only used in deques
   static constexpr uint64_t kIndexInitialValue = std::numeric_limits<uint64_t>::max() / 2;
   uint64_t startIndex = kIndexInitialValue;
   uint64_t endIndex = kIndexInitialValue;

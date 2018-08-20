@@ -918,7 +918,7 @@ void StateMachine::WriteOperation::write(const std::string &value) {
 void StateMachine::WriteOperation::writeField(const std::string &field, const std::string &value) {
   assertWritable();
 
-  if(keyinfo.getKeyType() != KeyType::kHash && keyinfo.getKeyType() != KeyType::kSet && keyinfo.getKeyType() != KeyType::kList) {
+  if(keyinfo.getKeyType() != KeyType::kHash && keyinfo.getKeyType() != KeyType::kSet && keyinfo.getKeyType() != KeyType::kDeque) {
     qdb_throw("writing with a field makes sense only for hashes, sets, or lists");
   }
 
@@ -1018,8 +1018,8 @@ rocksdb::Status StateMachine::set(StagingArea &stagingArea, const std::string& k
   return operation.finalize(value.size());
 }
 
-rocksdb::Status StateMachine::listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
-  WriteOperation operation(stagingArea, key, KeyType::kList);
+rocksdb::Status StateMachine::dequePush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
+  WriteOperation operation(stagingArea, key, KeyType::kDeque);
   if(!operation.valid()) return wrong_type();
 
   KeyDescriptor &descriptor = operation.descriptor();
@@ -1039,20 +1039,20 @@ rocksdb::Status StateMachine::listPush(StagingArea &stagingArea, Direction direc
   return operation.finalize(length);
 }
 
-rocksdb::Status StateMachine::lpush(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
-  return this->listPush(stagingArea, Direction::kLeft, key, start, end, length);
+rocksdb::Status StateMachine::dequePushFront(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
+  return this->dequePush(stagingArea, Direction::kLeft, key, start, end, length);
 }
 
-rocksdb::Status StateMachine::rpush(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
-  return this->listPush(stagingArea, Direction::kRight, key, start, end, length);
+rocksdb::Status StateMachine::dequePushBack(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
+  return this->dequePush(stagingArea, Direction::kRight, key, start, end, length);
 }
 
-rocksdb::Status StateMachine::lpop(StagingArea &stagingArea, const std::string &key, std::string &item) {
-  return this->listPop(stagingArea, Direction::kLeft, key, item);
+rocksdb::Status StateMachine::dequePopFront(StagingArea &stagingArea, const std::string &key, std::string &item) {
+  return this->dequePop(stagingArea, Direction::kLeft, key, item);
 }
 
-rocksdb::Status StateMachine::rpop(StagingArea &stagingArea, const std::string &key, std::string &item) {
-  return this->listPop(stagingArea, Direction::kRight, key, item);
+rocksdb::Status StateMachine::dequePopBack(StagingArea &stagingArea, const std::string &key, std::string &item) {
+  return this->dequePop(stagingArea, Direction::kRight, key, item);
 }
 
 void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
@@ -1265,18 +1265,18 @@ rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std:
   return operation.finalize(0u);
 }
 
-rocksdb::Status StateMachine::llen(StagingArea &stagingArea, const std::string &key, size_t &len) {
+rocksdb::Status StateMachine::dequeLen(StagingArea &stagingArea, const std::string &key, size_t &len) {
   len = 0;
 
   KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
-  if(isWrongType(keyinfo, KeyType::kList)) return wrong_type();
+  if(isWrongType(keyinfo, KeyType::kDeque)) return wrong_type();
 
   len = keyinfo.getSize();
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item) {
-  WriteOperation operation(stagingArea, key, KeyType::kList);
+rocksdb::Status StateMachine::dequePop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item) {
+  WriteOperation operation(stagingArea, key, KeyType::kDeque);
   if(!operation.valid()) return wrong_type();
 
   // nothing to do, return empty string
@@ -1352,7 +1352,7 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const VecIterator &s
       THROW_ON_ERROR(stagingArea.get(slocator.toSlice(), tmp));
       stagingArea.del(slocator.toSlice());
     }
-    else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kList) {
+    else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kDeque) {
       FieldLocator locator(keyInfo.getKeyType(), *it);
       int64_t count = 0;
       remove_all_with_prefix(locator.toSlice(), count, stagingArea);
@@ -1677,8 +1677,8 @@ rocksdb::Status StateMachine::sscan(const std::string &key, const std::string &c
   CHAIN_READ(sscan, key, cursor, count, newCursor, res);
 }
 
-rocksdb::Status StateMachine::llen(const std::string &key, size_t &len) {
-  CHAIN_READ(llen, key, len);
+rocksdb::Status StateMachine::dequeLen(const std::string &key, size_t &len) {
+  CHAIN_READ(dequeLen, key, len);
 }
 
 rocksdb::Status StateMachine::configGet(const std::string &key, std::string &value) {
@@ -1745,20 +1745,20 @@ rocksdb::Status StateMachine::flushall(LogIndex index) {
   CHAIN(index, flushall);
 }
 
-rocksdb::Status StateMachine::lpop(const std::string &key, std::string &item, LogIndex index) {
-  CHAIN(index, lpop, key, item);
+rocksdb::Status StateMachine::dequePopFront(const std::string &key, std::string &item, LogIndex index) {
+  CHAIN(index, dequePopFront, key, item);
 }
 
-rocksdb::Status StateMachine::rpop(const std::string &key, std::string &item, LogIndex index) {
-  CHAIN(index, rpop, key, item);
+rocksdb::Status StateMachine::dequePopBack(const std::string &key, std::string &item, LogIndex index) {
+  CHAIN(index, dequePopBack, key, item);
 }
 
-rocksdb::Status StateMachine::lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
-  CHAIN(index, lpush, key, start, end, length);
+rocksdb::Status StateMachine::dequePushFront(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
+  CHAIN(index, dequePushFront, key, start, end, length);
 }
 
-rocksdb::Status StateMachine::rpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
-  CHAIN(index, rpush, key, start, end, length);
+rocksdb::Status StateMachine::dequePushBack(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index) {
+  CHAIN(index, dequePushBack, key, start, end, length);
 }
 
 rocksdb::Status StateMachine::configSet(const std::string &key, const std::string &value, LogIndex index) {

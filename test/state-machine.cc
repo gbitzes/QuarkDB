@@ -375,74 +375,74 @@ TEST_F(State_Machine, hmset) {
   ASSERT_THROW(stateMachine()->hmset("hash", vec.begin()+1, vec.end()), FatalException);
 }
 
-TEST_F(State_Machine, list_operations) {
+TEST_F(State_Machine, DequeOperations) {
   std::vector<std::string> vec = {"item1", "item2", "item3"};
   int64_t length;
 
-  ASSERT_OK(stateMachine()->lpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_OK(stateMachine()->dequePushFront("my_list", vec.begin(), vec.end(), length));
   ASSERT_EQ(length, 3);
 
   std::string item;
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item3");
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item2");
 
   vec = { "item4" };
-  ASSERT_OK(stateMachine()->lpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_OK(stateMachine()->dequePushFront("my_list", vec.begin(), vec.end(), length));
   ASSERT_EQ(length, 2);
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item4");
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item1");
 
-  ASSERT_NOTFOUND(stateMachine()->lpop("my_list", item));
+  ASSERT_NOTFOUND(stateMachine()->dequePopFront("my_list", item));
 }
 
-TEST_F(State_Machine, list_operations2) {
+TEST_F(State_Machine, DequeOperations2) {
   std::vector<std::string> vec = {"item1", "item2", "item3", "item4"};
   int64_t length;
 
-  ASSERT_OK(stateMachine()->rpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_OK(stateMachine()->dequePushBack("my_list", vec.begin(), vec.end(), length));
   ASSERT_EQ(length, 4);
 
   size_t len;
-  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_OK(stateMachine()->dequeLen("my_list", len));
   ASSERT_EQ(len, 4u);
 
   std::string item;
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item1");
 
-  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_OK(stateMachine()->dequeLen("my_list", len));
   ASSERT_EQ(len, 3u);
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item2");
 
   vec = { "item5" };
-  ASSERT_OK(stateMachine()->lpush("my_list", vec.begin(), vec.end(), length));
+  ASSERT_OK(stateMachine()->dequePushFront("my_list", vec.begin(), vec.end(), length));
   ASSERT_EQ(length, 3);
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item5");
 
-  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_OK(stateMachine()->dequeLen("my_list", len));
   ASSERT_EQ(len, 2u);
 
-  ASSERT_OK(stateMachine()->rpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopBack("my_list", item));
   ASSERT_EQ(item, "item4");
 
-  ASSERT_OK(stateMachine()->lpop("my_list", item));
+  ASSERT_OK(stateMachine()->dequePopFront("my_list", item));
   ASSERT_EQ(item, "item3");
 
-  ASSERT_NOTFOUND(stateMachine()->lpop("my_list", item));
-  ASSERT_NOTFOUND(stateMachine()->rpop("my_list", item));
+  ASSERT_NOTFOUND(stateMachine()->dequePopFront("my_list", item));
+  ASSERT_NOTFOUND(stateMachine()->dequePopBack("my_list", item));
 
-  ASSERT_OK(stateMachine()->llen("my_list", len));
+  ASSERT_OK(stateMachine()->dequeLen("my_list", len));
   ASSERT_EQ(len, 0u);
 }
 
@@ -911,7 +911,7 @@ TEST(KeyDescriptor, BasicSanity) {
   ASSERT_FALSE(stringDesc == hashDesc);
 
   KeyDescriptor listDesc;
-  listDesc.setKeyType(KeyType::kList);
+  listDesc.setKeyType(KeyType::kDeque);
   listDesc.setSize(10);
   listDesc.setStartIndex(1500);
   listDesc.setEndIndex(1000);

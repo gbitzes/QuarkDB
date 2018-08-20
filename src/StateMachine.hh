@@ -83,10 +83,10 @@ public:
   rocksdb::Status srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
   rocksdb::Status smove(StagingArea &stagingArea, const std::string &source, const std::string &destination, const std::string &element, int64_t &outcome);
 
-  rocksdb::Status lpush(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
-  rocksdb::Status rpush(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
-  rocksdb::Status lpop(StagingArea &stagingArea, const std::string &key, std::string &item);
-  rocksdb::Status rpop(StagingArea &stagingArea, const std::string &key, std::string &item);
+  rocksdb::Status dequePushFront(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePushBack(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePopFront(StagingArea &stagingArea, const std::string &key, std::string &item);
+  rocksdb::Status dequePopBack(StagingArea &stagingArea, const std::string &key, std::string &item);
 
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
   LeaseAcquisitionStatus lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info);
@@ -111,7 +111,7 @@ public:
   rocksdb::Status smembers(StagingArea &stagingArea, const std::string &key, std::vector<std::string> &members);
   rocksdb::Status scard(StagingArea &stagingArea, const std::string &key, size_t &count);
   rocksdb::Status sscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
-  rocksdb::Status llen(StagingArea &stagingArea, const std::string &key, size_t &len);
+  rocksdb::Status dequeLen(StagingArea &stagingArea, const std::string &key, size_t &len);
   rocksdb::Status lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value);
   rocksdb::Status lhlen(StagingArea &stagingArea, const std::string &key, size_t &len);
   rocksdb::Status rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements);
@@ -146,11 +146,11 @@ public:
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status scan(const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results);
   rocksdb::Status flushall(LogIndex index = 0);
-  rocksdb::Status lpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
-  rocksdb::Status rpush(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
-  rocksdb::Status lpop(const std::string &key, std::string &item, LogIndex index = 0);
-  rocksdb::Status rpop(const std::string &key, std::string &item, LogIndex index = 0);
-  rocksdb::Status llen(const std::string &key, size_t &len);
+  rocksdb::Status dequePushFront(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
+  rocksdb::Status dequePushBack(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
+  rocksdb::Status dequePopFront(const std::string &key, std::string &item, LogIndex index = 0);
+  rocksdb::Status dequePopBack(const std::string &key, std::string &item, LogIndex index = 0);
+  rocksdb::Status dequeLen(const std::string &key, size_t &len);
   rocksdb::Status lhset(const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated, LogIndex index = 0);
   rocksdb::Status lhlen(const std::string &key, size_t &len);
   rocksdb::Status lhget(const std::string &key, const std::string &field, const std::string &hint, std::string &value);
@@ -231,8 +231,8 @@ private:
 
   void commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index);
   bool assertKeyType(StagingArea &stagingArea, const std::string  &key, KeyType keytype);
-  rocksdb::Status listPop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
-  rocksdb::Status listPush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
+  rocksdb::Status dequePush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
 
   class WriteOperation {
   public:

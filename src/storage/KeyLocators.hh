@@ -128,7 +128,7 @@ public:
   }
 
   void resetKey(const KeyType &keyType, const std::string &redisKey) {
-    qdb_assert(keyType == KeyType::kHash || keyType == KeyType::kSet || keyType == KeyType::kList);
+    qdb_assert(keyType == KeyType::kHash || keyType == KeyType::kSet || keyType == KeyType::kDeque);
     keyBuffer.resize(1 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 2);
 
     keyBuffer[0] = char(keyType);
