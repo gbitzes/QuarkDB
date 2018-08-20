@@ -1,6 +1,17 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Changed
+- Dropped list commands, as the underlying implementation makes it impossible to support all list commands found in official redis. (most notably `linsert`)
+
+  Still, the old implementation makes for an excellent deque. Renamed list commands `lpush`, `lpop`, `rpush`, `rpop`, `rlen` to `deque-push-front`, `deque-pop-front`, `deque-push-back`, `deque-pop-back`, `deque-len`. The underlying data format did not change, only the command names.
+
+  This makes it possible to implement lists properly in the future.
+
+  No-one has been using the list operations, which gives us the opportunity to change the command names.
+
 ## 0.3.2 (2018-08-14)
 ### Added
 - Protection against 1-way network partitions, in which a cluster node

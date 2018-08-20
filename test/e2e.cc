@@ -507,24 +507,24 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[11], 3);
 
   futures.clear();
-  futures.emplace_back(tunnel(leaderID)->exec("lpush", "list_test", "i1", "i2", "i3", "i4"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-push-front", "list_test", "i1", "i2", "i3", "i4"));
   futures.emplace_back(tunnel(leaderID)->exec("exists", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("llen", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("llen", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("rpop", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("llen", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-len", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-front", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-len", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-back", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-len", "list_test"));
   futures.emplace_back(tunnel(leaderID)->exec("del", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("llen", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("rpush", "list_test", "i5", "i6", "i7", "i8"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-len", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-front", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-push-back", "list_test", "i5", "i6", "i7", "i8"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "list_test", "asdf"));
-  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("rpop", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("rpop", "list_test"));
-  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-front", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-back", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-back", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-front", "list_test"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "list_test", "asdf"));
-  futures.emplace_back(tunnel(leaderID)->exec("lpop", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-pop-front", "list_test"));
 
   int i = 0;
   ASSERT_REPLY(futures[i++], 4);

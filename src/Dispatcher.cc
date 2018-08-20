@@ -263,21 +263,21 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(count);
     }
-    case RedisCommand::LPUSH: {
+    case RedisCommand::DEQUE_PUSH_FRONT: {
       if(request.size() < 3) return errArgs(request);
       int64_t length;
       rocksdb::Status st = store.dequePushFront(stagingArea, request[1], request.begin()+2, request.end(), length);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(length);
     }
-    case RedisCommand::RPUSH: {
+    case RedisCommand::DEQUE_PUSH_BACK: {
       if(request.size() < 3) return errArgs(request);
       int64_t length;
       rocksdb::Status st = store.dequePushBack(stagingArea, request[1], request.begin()+2, request.end(), length);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(length);
     }
-    case RedisCommand::LPOP: {
+    case RedisCommand::DEQUE_POP_FRONT: {
       if(request.size() != 2) return errArgs(request);
       std::string item;
       rocksdb::Status st = store.dequePopFront(stagingArea, request[1], item);
@@ -285,7 +285,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::string(item);
     }
-    case RedisCommand::RPOP: {
+    case RedisCommand::DEQUE_POP_BACK: {
       if(request.size() != 2) return errArgs(request);
       std::string item;
       rocksdb::Status st = store.dequePopBack(stagingArea, request[1], item);
@@ -588,7 +588,7 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       else newcursor = "next:" + newcursor;
       return Formatter::scan(newcursor, vec);
     }
-    case RedisCommand::LLEN: {
+    case RedisCommand::DEQUE_LEN: {
       if(request.size() != 2) return errArgs(request);
       size_t len;
       rocksdb::Status st = store.dequeLen(stagingArea, request[1], len);

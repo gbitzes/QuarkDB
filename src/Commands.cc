@@ -55,7 +55,7 @@ struct cmdMapInit {
     redis_cmd_map["smembers"] = {RedisCommand::SMEMBERS, CommandType::READ};
     redis_cmd_map["scard"] = {RedisCommand::SCARD, CommandType::READ};
     redis_cmd_map["sscan"] = {RedisCommand::SSCAN, CommandType::READ};
-    redis_cmd_map["llen"] = {RedisCommand::LLEN, CommandType::READ};
+    redis_cmd_map["deque_len"] = {RedisCommand::DEQUE_LEN, CommandType::READ};
     redis_cmd_map["config_get"] = {RedisCommand::CONFIG_GET, CommandType::READ};
     redis_cmd_map["config_getall"] = {RedisCommand::CONFIG_GETALL, CommandType::READ};
     redis_cmd_map["lhget"] = {RedisCommand::LHGET, CommandType::READ};
@@ -79,10 +79,10 @@ struct cmdMapInit {
     redis_cmd_map["sadd"] = {RedisCommand::SADD, CommandType::WRITE};
     redis_cmd_map["srem"] = {RedisCommand::SREM, CommandType::WRITE};
     redis_cmd_map["smove"] = {RedisCommand::SMOVE, CommandType::WRITE};
-    redis_cmd_map["lpush"] = {RedisCommand::LPUSH, CommandType::WRITE};
-    redis_cmd_map["lpop"] = {RedisCommand::LPOP, CommandType::WRITE};
-    redis_cmd_map["rpush"] = {RedisCommand::RPUSH, CommandType::WRITE};
-    redis_cmd_map["rpop"] = {RedisCommand::RPOP, CommandType::WRITE};
+    redis_cmd_map["deque_push_front"] = {RedisCommand::DEQUE_PUSH_FRONT, CommandType::WRITE};
+    redis_cmd_map["deque_pop_front"] = {RedisCommand::DEQUE_POP_FRONT, CommandType::WRITE};
+    redis_cmd_map["deque_push_back"] = {RedisCommand::DEQUE_PUSH_BACK, CommandType::WRITE};
+    redis_cmd_map["deque_pop_back"] = {RedisCommand::DEQUE_POP_BACK, CommandType::WRITE};
     redis_cmd_map["config_set"] = {RedisCommand::CONFIG_SET, CommandType::WRITE};
     redis_cmd_map["lhset"] = {RedisCommand::LHSET, CommandType::WRITE};
     redis_cmd_map["lhdel"] = {RedisCommand::LHDEL, CommandType::WRITE};
