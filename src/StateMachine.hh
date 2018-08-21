@@ -236,7 +236,7 @@ private:
 
   class WriteOperation {
   public:
-    WriteOperation(StagingArea &stagingArea, const std::string &key, const KeyType &type);
+    WriteOperation(StagingArea &stagingArea, std::string_view key, const KeyType &type);
     ~WriteOperation();
 
     bool valid();
@@ -268,7 +268,7 @@ private:
     }
   private:
     StagingArea &stagingArea;
-    const std::string &redisKey;
+    std::string_view redisKey;
 
     KeyType expectedType;
     KeyDescriptor keyinfo;

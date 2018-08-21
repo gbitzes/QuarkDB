@@ -820,7 +820,7 @@ StateMachine::WriteOperation::~WriteOperation() {
   }
 }
 
-StateMachine::WriteOperation::WriteOperation(StagingArea &staging, const std::string &key, const KeyType &type)
+StateMachine::WriteOperation::WriteOperation(StagingArea &staging, std::string_view key, const KeyType &type)
 : stagingArea(staging), redisKey(key), expectedType(type) {
 
   std::string tmp;

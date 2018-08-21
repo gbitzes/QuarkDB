@@ -44,11 +44,11 @@ class DescriptorLocator {
 public:
   DescriptorLocator() {}
 
-  DescriptorLocator(const std::string &redisKey) {
+  DescriptorLocator(std::string_view redisKey) {
     reset(redisKey);
   }
 
-  void reset(const std::string &redisKey) {
+  void reset(std::string_view redisKey) {
     keyBuffer.resize(redisKey.size() + 1);
     keyBuffer[0] = char(InternalKeyType::kDescriptor);
     memcpy(keyBuffer.data()+1, redisKey.data(), redisKey.size());
@@ -72,11 +72,11 @@ private:
 
 class StringLocator {
 public:
-  StringLocator(const std::string &redisKey) {
+  StringLocator(std::string_view redisKey) {
     reset(redisKey);
   }
 
-  void reset(const std::string &redisKey) {
+  void reset(std::string_view redisKey) {
     keyBuffer.resize(redisKey.size() + 1);
     keyBuffer[0] = char(KeyType::kString);
     memcpy(keyBuffer.data()+1, redisKey.data(), redisKey.size());
@@ -97,7 +97,7 @@ private:
 // Append hash-escaped string into KeyBuffer. Assumption: KeyBuffer has enough
 // space!
 QDB_ALWAYS_INLINE
-inline size_t appendEscapedString(KeyBuffer &keyBuffer, size_t targetIndex, const std::string &str) {
+inline size_t appendEscapedString(KeyBuffer &keyBuffer, size_t targetIndex, std::string_view str) {
   for(size_t i = 0; i < str.size(); i++) {
     if(str[i] != '#') {
       keyBuffer[targetIndex] = str[i];
@@ -118,16 +118,16 @@ inline size_t appendEscapedString(KeyBuffer &keyBuffer, size_t targetIndex, cons
 
 class FieldLocator {
 public:
-  FieldLocator(const KeyType &keyType, const std::string &redisKey) {
+  FieldLocator(const KeyType &keyType, std::string_view redisKey) {
     resetKey(keyType, redisKey);
   }
 
-  FieldLocator(const KeyType &keyType, const std::string &redisKey, const std::string &field) {
+  FieldLocator(const KeyType &keyType, std::string_view redisKey, std::string_view field) {
     resetKey(keyType, redisKey);
     resetField(field);
   }
 
-  void resetKey(const KeyType &keyType, const std::string &redisKey) {
+  void resetKey(const KeyType &keyType, std::string_view redisKey) {
     qdb_assert(keyType == KeyType::kHash || keyType == KeyType::kSet || keyType == KeyType::kDeque);
     keyBuffer.resize(1 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 2);
 
@@ -135,7 +135,7 @@ public:
     keyPrefixSize = appendEscapedString(keyBuffer, 1, redisKey);
   }
 
-  void resetField(const std::string &field) {
+  void resetField(std::string_view field) {
     keyBuffer.shrink(keyPrefixSize);
     keyBuffer.expand(keyPrefixSize + field.size());
     memcpy(keyBuffer.data() + keyPrefixSize, field.data(), field.size());
@@ -173,22 +173,22 @@ enum class InternalLocalityFieldType : char {
 
 class LocalityFieldLocator {
 public:
-  LocalityFieldLocator(const std::string &redisKey, const std::string &hint, const std::string &field) {
+  LocalityFieldLocator(std::string_view redisKey, std::string_view hint, std::string_view field) {
     resetKey(redisKey);
     resetHint(hint);
     resetField(field);
   }
 
-  LocalityFieldLocator(const std::string &redisKey, const std::string &hint) {
+  LocalityFieldLocator(std::string_view redisKey, std::string_view hint) {
     resetKey(redisKey);
     resetHint(hint);
   }
 
-  LocalityFieldLocator(const std::string &redisKey) {
+  LocalityFieldLocator(std::string_view redisKey) {
     resetKey(redisKey);
   }
 
-  void resetKey(const std::string &redisKey) {
+  void resetKey(std::string_view redisKey) {
     qdb_assert(!redisKey.empty());
 
     keyBuffer.resize(2 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 2);
@@ -199,7 +199,7 @@ public:
     localityPrefixSize = 0;
   }
 
-  void resetHint(const std::string &hint) {
+  void resetHint(std::string_view hint) {
     qdb_assert(!hint.empty());
     qdb_assert(keyPrefixSize != 0);
 
@@ -208,7 +208,7 @@ public:
     localityPrefixSize = appendEscapedString(keyBuffer, keyPrefixSize, hint);
   }
 
-  void resetField(const std::string &field) {
+  void resetField(std::string_view field) {
     qdb_assert(!field.empty());
     qdb_assert(localityPrefixSize != 0);
 
@@ -233,16 +233,16 @@ private:
 
 class LocalityIndexLocator {
 public:
-  LocalityIndexLocator(const std::string &redisKey, const std::string &field) {
+  LocalityIndexLocator(std::string_view redisKey, std::string_view field) {
     resetKey(redisKey);
     resetField(field);
   }
 
-  LocalityIndexLocator(const std::string &redisKey) {
+  LocalityIndexLocator(std::string_view redisKey) {
     resetKey(redisKey);
   }
 
-  void resetKey(const std::string &redisKey) {
+  void resetKey(std::string_view redisKey) {
     qdb_assert(!redisKey.empty());
 
     keyBuffer.resize(2 + redisKey.size() + StringUtils::countOccurences(redisKey, '#') + 2);
@@ -251,7 +251,7 @@ public:
     keyBuffer[keyPrefixSize++] = char(InternalLocalityFieldType::kIndex);
   }
 
-  void resetField(const std::string &field) {
+  void resetField(std::string_view field) {
     qdb_assert(!field.empty());
 
     keyBuffer.shrink(keyPrefixSize);
@@ -274,11 +274,11 @@ private:
 
 class LeaseLocator {
 public:
-  LeaseLocator(const std::string &redisKey) {
+  LeaseLocator(std::string_view redisKey) {
     reset(redisKey);
   }
 
-  void reset(const std::string &redisKey) {
+  void reset(std::string_view redisKey) {
     keyBuffer.resize(redisKey.size() + 1);
     keyBuffer[0] = char(KeyType::kLease);
     memcpy(keyBuffer.data()+1, redisKey.data(), redisKey.size());
@@ -297,11 +297,11 @@ private:
 
 class ExpirationEventLocator {
 public:
-  ExpirationEventLocator(ClockValue deadline, const std::string &redisKey) {
+  ExpirationEventLocator(ClockValue deadline, std::string_view redisKey) {
     reset(deadline, redisKey);
   }
 
-  void reset(ClockValue deadline, const std::string &redisKey) {
+  void reset(ClockValue deadline, std::string_view redisKey) {
     keyBuffer.resize(1 + sizeof(ClockValue) + redisKey.size());
     keyBuffer[0] = char(InternalKeyType::kExpirationEvent);
 

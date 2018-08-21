@@ -30,7 +30,7 @@
 
 namespace quarkdb { namespace StringUtils {
 
-inline size_t countOccurences(const std::string &key, char c) {
+inline size_t countOccurences(std::string_view key, char c) {
   size_t ret = 0;
   for(size_t i = 0; i < key.size(); i++) {
     if(key[i] == c) {
@@ -86,7 +86,7 @@ inline bool isPrintable(const std::string &str) {
   return true;
 }
 
-inline std::string escapeNonPrintable(const std::string &str) {
+inline std::string escapeNonPrintable(std::string_view str) {
   std::stringstream ss;
 
   for(size_t i = 0; i < str.size(); i++) {
@@ -105,7 +105,7 @@ inline std::string escapeNonPrintable(const std::string &str) {
   return ss.str();
 }
 
-std::string base16Encode(const std::string &source);
+std::string base16Encode(std::string_view source);
 
 } }
 
