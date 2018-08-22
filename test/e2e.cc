@@ -238,17 +238,52 @@ TEST_F(Raft_e2e, scan) {
 
   QScanner scanner(*tunnel(leaderID), "f*", 3);
 
-  std::vector<std::string> ret;
-  ASSERT_TRUE(scanner.next(ret));
-  ASSERT_EQ(ret, make_vec("f1", "f2", "f3"));
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 1u);
+  ASSERT_EQ(scanner.getValue(), "f1");
+  scanner.next();
 
-  ASSERT_TRUE(scanner.next(ret));
-  ASSERT_EQ(ret, make_vec("f4", "f5", "f6"));
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 1u);
+  ASSERT_EQ(scanner.getValue(), "f2");
+  scanner.next();
 
-  ASSERT_TRUE(scanner.next(ret));
-  ASSERT_EQ(ret, make_vec("f7", "f8", "f9"));
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 1u);
+  ASSERT_EQ(scanner.getValue(), "f3");
+  scanner.next();
 
-  ASSERT_FALSE(scanner.next(ret));
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 2u);
+  ASSERT_EQ(scanner.getValue(), "f4");
+  scanner.next();
+
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 2u);
+  ASSERT_EQ(scanner.getValue(), "f5");
+  scanner.next();
+
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 2u);
+  ASSERT_EQ(scanner.getValue(), "f6");
+  scanner.next();
+
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 3u);
+  ASSERT_EQ(scanner.getValue(), "f7");
+  scanner.next();
+
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 3u);
+  ASSERT_EQ(scanner.getValue(), "f8");
+  scanner.next();
+
+  ASSERT_TRUE(scanner.valid());
+  ASSERT_EQ(scanner.requestsSoFar(), 3u);
+  ASSERT_EQ(scanner.getValue(), "f9");
+  scanner.next();
+
+  ASSERT_FALSE(scanner.valid());
 }
 
 TEST_F(Raft_e2e, test_qclient_convenience_classes) {
