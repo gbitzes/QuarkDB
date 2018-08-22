@@ -1055,7 +1055,12 @@ rocksdb::Status StateMachine::dequePopBack(StagingArea &stagingArea, const std::
   return this->dequePop(stagingArea, Direction::kRight, key, item);
 }
 
-rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, const std::string &key, uint64_t maxToKeep, int64_t &itemsRemoved) {
+rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, const std::string &key, const std::string &maxToKeepStr, int64_t &itemsRemoved) {
+  int64_t maxToKeep;
+  if(!my_strtoll(maxToKeepStr, maxToKeep) || maxToKeep < 0) {
+    return malformed("value is not an integer or out of range");
+  }
+
   WriteOperation operation(stagingArea, key, KeyType::kDeque);
   if(!operation.valid()) return wrong_type();
 
@@ -1068,15 +1073,18 @@ rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, const std
     return rocksdb::Status::OK();
   }
 
+  int64_t eliminated = 0;
   for(uint64_t nextToEliminate = descriptor.getStartIndex()+1; nextToEliminate <=
     descriptor.getStartIndex() + toRemove; nextToEliminate++) {
+    eliminated++;
     qdb_assert(operation.deleteField(unsignedIntToBinaryString(nextToEliminate)));
   }
 
+  qdb_assert(eliminated == toRemove);
   itemsRemoved = toRemove;
   descriptor.setStartIndex(descriptor.getStartIndex() + toRemove);
 
-  qdb_assert(descriptor.getEndIndex() - descriptor.getStartIndex() - 1 == maxToKeep);
+  qdb_assert(descriptor.getEndIndex() - descriptor.getStartIndex() - 1 == (uint64_t) maxToKeep);
   return operation.finalize(descriptor.getEndIndex() - descriptor.getStartIndex() - 1);
 }
 
@@ -1806,6 +1814,6 @@ rocksdb::Status StateMachine::lease_release(const std::string &key, ClockValue c
   CHAIN(index, lease_release, key, clockUpdate);
 }
 
-rocksdb::Status StateMachine::dequeTrimFront(const std::string &key, uint64_t maxToKeep, int64_t &itemsRemoved, LogIndex index) {
+rocksdb::Status StateMachine::dequeTrimFront(const std::string &key, const std::string &maxToKeep, int64_t &itemsRemoved, LogIndex index) {
   CHAIN(index, dequeTrimFront, key, maxToKeep, itemsRemoved);
 }

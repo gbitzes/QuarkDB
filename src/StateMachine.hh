@@ -87,7 +87,7 @@ public:
   rocksdb::Status dequePushBack(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
   rocksdb::Status dequePopFront(StagingArea &stagingArea, const std::string &key, std::string &item);
   rocksdb::Status dequePopBack(StagingArea &stagingArea, const std::string &key, std::string &item);
-  rocksdb::Status dequeTrimFront(StagingArea &stagingArea, const std::string &key, uint64_t maxToKeep, int64_t &itemsRemoved);
+  rocksdb::Status dequeTrimFront(StagingArea &stagingArea, const std::string &key, const std::string &maxToKeep, int64_t &itemsRemoved);
 
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
   LeaseAcquisitionStatus lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info);
@@ -151,7 +151,7 @@ public:
   rocksdb::Status dequePushBack(const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
   rocksdb::Status dequePopFront(const std::string &key, std::string &item, LogIndex index = 0);
   rocksdb::Status dequePopBack(const std::string &key, std::string &item, LogIndex index = 0);
-  rocksdb::Status dequeTrimFront(const std::string &key, uint64_t maxToKeep, int64_t &itemsRemoved, LogIndex index = 0);
+  rocksdb::Status dequeTrimFront(const std::string &key, const std::string &maxToKeep, int64_t &itemsRemoved, LogIndex index = 0);
   rocksdb::Status dequeLen(const std::string &key, size_t &len);
   rocksdb::Status lhset(const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated, LogIndex index = 0);
   rocksdb::Status lhlen(const std::string &key, size_t &len);

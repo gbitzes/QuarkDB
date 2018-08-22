@@ -699,6 +699,29 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   );
 }
 
+TEST_F(Raft_e2e, DequeTrimming) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-push-back", "dq", "1", "2", "3", "4", "5", "6"), 6);
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-len", "dq"), 6);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("set", "test", "abc"), "OK");
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-trim-front", "test", "1"), "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-trim-front", "dq", "chicken"), "ERR Invalid argument: value is not an integer or out of range");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-trim-front", "dq", "3"), 3);
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-pop-front", "dq"), "4");
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-pop-front", "dq"), "5");
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-trim-front", "dq", "1"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-trim-front", "dq", "0"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("set", "dq", "abc"), "OK");
+  ASSERT_REPLY(tunnel(leaderID)->exec("del", "dq", "test"), 2);
+}
+
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));

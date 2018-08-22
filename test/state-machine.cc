@@ -409,14 +409,14 @@ TEST_F(State_Machine, DequeTrimming) {
   ASSERT_OK(stateMachine()->dequePushBack("my-deque", vec.begin(), vec.end(), length));
   ASSERT_EQ(length, 7);
 
-  ASSERT_OK(stateMachine()->dequeTrimFront("my-deque", 50, length));
+  ASSERT_OK(stateMachine()->dequeTrimFront("my-deque", "50", length));
   ASSERT_EQ(length, 0);
 
   size_t len;
   ASSERT_OK(stateMachine()->dequeLen("my-deque", len));
   ASSERT_EQ(len, 7u);
 
-  ASSERT_OK(stateMachine()->dequeTrimFront("my-deque", 5, length));
+  ASSERT_OK(stateMachine()->dequeTrimFront("my-deque", "5", length));
   ASSERT_EQ(length, 2);
 
   ASSERT_OK(stateMachine()->dequeLen("my-deque", len));
