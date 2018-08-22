@@ -402,6 +402,45 @@ TEST_F(State_Machine, DequeOperations) {
   ASSERT_NOTFOUND(stateMachine()->dequePopFront("my_list", item));
 }
 
+TEST_F(State_Machine, DequeTrimming) {
+  std::vector<std::string> vec = {"1", "2", "3", "4", "5", "6", "7"};
+  int64_t length;
+
+  ASSERT_OK(stateMachine()->dequePushBack("my-deque", vec.begin(), vec.end(), length));
+  ASSERT_EQ(length, 7);
+
+  ASSERT_OK(stateMachine()->dequeTrimFront("my-deque", 50, length));
+  ASSERT_EQ(length, 0);
+
+  size_t len;
+  ASSERT_OK(stateMachine()->dequeLen("my-deque", len));
+  ASSERT_EQ(len, 7u);
+
+  ASSERT_OK(stateMachine()->dequeTrimFront("my-deque", 5, length));
+  ASSERT_EQ(length, 2);
+
+  ASSERT_OK(stateMachine()->dequeLen("my-deque", len));
+  ASSERT_EQ(len, 5u);
+
+  std::string item;
+  ASSERT_OK(stateMachine()->dequePopFront("my-deque", item));
+  ASSERT_EQ(item, "3");
+
+  ASSERT_OK(stateMachine()->dequePopFront("my-deque", item));
+  ASSERT_EQ(item, "4");
+
+  ASSERT_OK(stateMachine()->dequePopFront("my-deque", item));
+  ASSERT_EQ(item, "5");
+
+  ASSERT_OK(stateMachine()->dequePopFront("my-deque", item));
+  ASSERT_EQ(item, "6");
+
+  ASSERT_OK(stateMachine()->dequePopFront("my-deque", item));
+  ASSERT_EQ(item, "7");
+
+  ASSERT_NOTFOUND(stateMachine()->dequePopFront("my-deque", item));
+}
+
 TEST_F(State_Machine, DequeOperations2) {
   std::vector<std::string> vec = {"item1", "item2", "item3", "item4"};
   int64_t length;

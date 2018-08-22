@@ -83,6 +83,7 @@ struct cmdMapInit {
     redis_cmd_map["deque_pop_front"] = {RedisCommand::DEQUE_POP_FRONT, CommandType::WRITE};
     redis_cmd_map["deque_push_back"] = {RedisCommand::DEQUE_PUSH_BACK, CommandType::WRITE};
     redis_cmd_map["deque_pop_back"] = {RedisCommand::DEQUE_POP_BACK, CommandType::WRITE};
+    redis_cmd_map["deque_trim_front"] = {RedisCommand::DEQUE_TRIM_FRONT, CommandType::WRITE};
     redis_cmd_map["config_set"] = {RedisCommand::CONFIG_SET, CommandType::WRITE};
     redis_cmd_map["lhset"] = {RedisCommand::LHSET, CommandType::WRITE};
     redis_cmd_map["lhdel"] = {RedisCommand::LHDEL, CommandType::WRITE};

@@ -1055,6 +1055,31 @@ rocksdb::Status StateMachine::dequePopBack(StagingArea &stagingArea, const std::
   return this->dequePop(stagingArea, Direction::kRight, key, item);
 }
 
+rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, const std::string &key, uint64_t maxToKeep, int64_t &itemsRemoved) {
+  WriteOperation operation(stagingArea, key, KeyType::kDeque);
+  if(!operation.valid()) return wrong_type();
+
+  KeyDescriptor &descriptor = operation.descriptor();
+
+  int64_t toRemove = descriptor.getSize() - maxToKeep;
+  if(toRemove <= 0) {
+    operation.cancel();
+    itemsRemoved = 0;
+    return rocksdb::Status::OK();
+  }
+
+  for(uint64_t nextToEliminate = descriptor.getStartIndex()+1; nextToEliminate <=
+    descriptor.getStartIndex() + toRemove; nextToEliminate++) {
+    qdb_assert(operation.deleteField(unsignedIntToBinaryString(nextToEliminate)));
+  }
+
+  itemsRemoved = toRemove;
+  descriptor.setStartIndex(descriptor.getStartIndex() + toRemove);
+
+  qdb_assert(descriptor.getEndIndex() - descriptor.getStartIndex() - 1 == maxToKeep);
+  return operation.finalize(descriptor.getEndIndex() - descriptor.getStartIndex() - 1);
+}
+
 void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
   // Assert we're not setting the clock back..
   ClockValue prevValue;
@@ -1779,4 +1804,8 @@ rocksdb::Status StateMachine::lease_get(const std::string &key, ClockValue clock
 
 rocksdb::Status StateMachine::lease_release(const std::string &key, ClockValue clockUpdate,  LogIndex index) {
   CHAIN(index, lease_release, key, clockUpdate);
+}
+
+rocksdb::Status StateMachine::dequeTrimFront(const std::string &key, uint64_t maxToKeep, int64_t &itemsRemoved, LogIndex index) {
+  CHAIN(index, dequeTrimFront, key, maxToKeep, itemsRemoved);
 }

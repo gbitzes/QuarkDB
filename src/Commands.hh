@@ -88,6 +88,7 @@ enum class RedisCommand {
   DEQUE_POP_FRONT,
   DEQUE_PUSH_BACK,
   DEQUE_POP_BACK,
+  DEQUE_TRIM_FRONT,
   DEQUE_LEN,
 
   RAW_SCAN,
