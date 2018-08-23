@@ -576,6 +576,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x06", "COUNT", "3"));
   futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x08", "COUNT", "3"));
   futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x09", "COUNT", "3"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "not-existing", "next:\x80\x00\x00\x00\x00\x00\x00\x09", "COUNT", "3"));
 
   int i = 0;
   ASSERT_REPLY(futures[i++], 4);
@@ -681,6 +682,10 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
     "2) 1) \"7\"\n"
     "   2) \"8\"\n"
     "   3) \"9\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) (empty list or set)\n");
 
   // Now test qclient callbacks, ensure things stay reasonable when we mix them
   // with futures.

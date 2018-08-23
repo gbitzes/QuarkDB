@@ -670,6 +670,11 @@ rocksdb::Status StateMachine::dequeScanBack(StagingArea &stagingArea, std::strin
   KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   if(isWrongType(keyinfo, KeyType::kDeque)) return wrong_type();
 
+  if(keyinfo.getSize() == 0) {
+    newCursor = "0";
+    return rocksdb::Status::OK();
+  }
+
   uint64_t cursorMarker;
   if(cursor.size() == 0u) {
     cursorMarker = keyinfo.getEndIndex();
