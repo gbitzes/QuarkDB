@@ -28,7 +28,17 @@
 #include <string>
 #include <string_view>
 
-namespace quarkdb { namespace StringUtils {
+namespace quarkdb {
+
+inline std::string_view toView(rocksdb::Slice slice) {
+  return std::string_view(slice.data(), slice.size());
+}
+
+inline rocksdb::Slice toSlice(std::string_view sv) {
+  return rocksdb::Slice(sv.data(), sv.size());
+}
+
+namespace StringUtils {
 
 inline size_t countOccurences(std::string_view key, char c) {
   size_t ret = 0;
@@ -42,14 +52,6 @@ inline size_t countOccurences(std::string_view key, char c) {
 }
 
 
-inline std::string_view sliceToView(rocksdb::Slice slice) {
-  return std::string_view(slice.data(), slice.size());
-}
-
-inline rocksdb::Slice viewToSlice(std::string_view sv) {
-  return rocksdb::Slice(sv.data(), sv.size());
-}
-
 inline bool startsWith(std::string_view str, std::string_view prefix) {
   if(prefix.size() > str.size()) return false;
 
@@ -57,10 +59,6 @@ inline bool startsWith(std::string_view str, std::string_view prefix) {
     if(str[i] != prefix[i]) return false;
   }
   return true;
-}
-
-inline bool startsWithSlice(rocksdb::Slice str, rocksdb::Slice prefix) {
-  return startsWith(sliceToView(str), sliceToView(prefix));
 }
 
 inline bool isPrefix(const std::string &prefix, const char *buff, size_t n) {

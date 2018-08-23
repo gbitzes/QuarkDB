@@ -56,6 +56,7 @@ struct cmdMapInit {
     redis_cmd_map["scard"] = {RedisCommand::SCARD, CommandType::READ};
     redis_cmd_map["sscan"] = {RedisCommand::SSCAN, CommandType::READ};
     redis_cmd_map["deque_len"] = {RedisCommand::DEQUE_LEN, CommandType::READ};
+    redis_cmd_map["deque_scan_back"] = {RedisCommand::DEQUE_SCAN_BACK, CommandType::READ};
     redis_cmd_map["config_get"] = {RedisCommand::CONFIG_GET, CommandType::READ};
     redis_cmd_map["config_getall"] = {RedisCommand::CONFIG_GETALL, CommandType::READ};
     redis_cmd_map["lhget"] = {RedisCommand::LHGET, CommandType::READ};

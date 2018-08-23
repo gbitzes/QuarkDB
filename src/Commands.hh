@@ -90,6 +90,7 @@ enum class RedisCommand {
   DEQUE_POP_BACK,
   DEQUE_TRIM_FRONT,
   DEQUE_LEN,
+  DEQUE_SCAN_BACK,
 
   RAW_SCAN,
   RAW_GET_ALL_VERSIONS,

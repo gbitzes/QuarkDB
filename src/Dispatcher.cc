@@ -602,6 +602,28 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(len);
     }
+    case RedisCommand::DEQUE_SCAN_BACK: {
+      if(request.size() < 3) return errArgs(request);
+
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      if(!args.error.empty()) {
+        return Formatter::err(args.error);
+      }
+
+      // No support for MATCH here, maybe add later
+      if(!args.match.empty()) {
+        return Formatter::err("syntax error");
+      }
+
+      std::string newcursor;
+      std::vector<std::string> vec;
+      rocksdb::Status st = store.dequeScanBack(stagingArea, request[1], args.cursor, args.count, newcursor, vec);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      if(newcursor == "") newcursor = "0";
+      else newcursor = "next:" + newcursor;
+      return Formatter::scan(newcursor, vec);
+    }
     case RedisCommand::CONFIG_GET: {
       if(request.size() != 2) return errArgs(request);
 

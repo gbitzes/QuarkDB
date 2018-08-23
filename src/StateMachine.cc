@@ -288,7 +288,7 @@ static KeyDescriptor constructDescriptor(rocksdb::Status &st, const std::string 
   return KeyDescriptor(serialization);
 }
 
-KeyDescriptor StateMachine::getKeyDescriptor(StagingArea &stagingArea, const std::string &redisKey) {
+KeyDescriptor StateMachine::getKeyDescriptor(StagingArea &stagingArea, std::string_view redisKey) {
   std::string tmp;
   DescriptorLocator dlocator(redisKey);
   rocksdb::Status st = stagingArea.get(dlocator.toSlice(), tmp);
@@ -661,6 +661,52 @@ rocksdb::Status StateMachine::sscan(StagingArea &stagingArea, const std::string 
     }
 
     res.push_back(fieldname);
+  }
+
+  return rocksdb::Status::OK();
+}
+
+rocksdb::Status StateMachine::dequeScanBack(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
+  if(isWrongType(keyinfo, KeyType::kDeque)) return wrong_type();
+
+  uint64_t cursorMarker;
+  if(cursor.size() == 0u) {
+    cursorMarker = keyinfo.getEndIndex();
+  }
+  else if(cursor.size() == 8u) {
+    cursorMarker = binaryStringToUnsignedInt(cursor.data());
+    if(cursorMarker > keyinfo.getEndIndex()) {
+      cursorMarker = keyinfo.getEndIndex();
+    }
+  }
+  else {
+    return malformed("invalid cursor");
+  }
+
+  uint64_t startingMarker = cursorMarker - count;
+
+  if(startingMarker <= keyinfo.getStartIndex() + 1) {
+    newCursor = "0";
+    startingMarker = keyinfo.getStartIndex() + 1;
+  }
+  else {
+    newCursor = unsignedIntToBinaryString(startingMarker);
+  }
+
+  FieldLocator locator(KeyType::kDeque, key, unsignedIntToBinaryString(startingMarker));
+
+  IteratorPtr iter(stagingArea.getIterator());
+  iter->Seek(locator.toSlice());
+
+  for(uint64_t i = startingMarker; i < cursorMarker; i++) {
+    qdb_assert(iter->Valid());
+
+    locator.resetField(unsignedIntToBinaryString(i));
+    qdb_assert(locator.toView() == toView(iter->key()));
+    res.emplace_back(toView(iter->value()));
+
+    iter->Next();
   }
 
   return rocksdb::Status::OK();
@@ -1362,7 +1408,7 @@ void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t 
   for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
     // iter->key() may get deleted from under our feet, better keep a copy
     std::string key = iter->key().ToString();
-    if(!StringUtils::startsWithSlice(key, prefix)) break;
+    if(!StringUtils::startsWith(key, toView(prefix))) break;
     if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(InternalKeyType::kConfiguration))) continue;
 
     stagingArea.del(key);

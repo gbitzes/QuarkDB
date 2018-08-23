@@ -560,6 +560,22 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("deque-pop-front", "list_test"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "list_test", "asdf"));
   futures.emplace_back(tunnel(leaderID)->exec("deque-pop-front", "list_test"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-push-back", "my-deque", "1", "2", "3", "4", "5", "6", "7", "8", "9" ));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "0", "COUNT", "3"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "0", "COUNT", "3000"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x05", "COUNT", "3"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x02", "COUNT", "3"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x02", "COUNT", "4"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x02", "COUNT", "2"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x00", "COUNT", "2"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x00", "COUNT", "1"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x70\x00\x00\x00\x00\x00\x00\x00", "COUNT", "1"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x7f\xff\xff\xff\xff\xff\xff\xff", "COUNT", "1"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x7f\xff\xff\xfd\xf3\xff\x1f\x0f", "COUNT", "1"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x7f\xff\xff\xfd\xf3\xff\x1f\x0f", "COUNT", "100"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x06", "COUNT", "3"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x08", "COUNT", "3"));
+  futures.emplace_back(tunnel(leaderID)->exec("deque-scan-back", "my-deque", "next:\x80\x00\x00\x00\x00\x00\x00\x09", "COUNT", "3"));
 
   int i = 0;
   ASSERT_REPLY(futures[i++], 4);
@@ -580,6 +596,91 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   ASSERT_REPLY(futures[i++], "i6");
   ASSERT_REPLY(futures[i++], "OK");
   ASSERT_REPLY(futures[i++], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(futures[i++], 9);
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:\\x80\\x00\\x00\\x00\\x00\\x00\\x00\\x05\"\n"
+    "2) 1) \"7\"\n"
+    "   2) \"8\"\n"
+    "   3) \"9\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) 1) \"1\"\n"
+    "   2) \"2\"\n"
+    "   3) \"3\"\n"
+    "   4) \"4\"\n"
+    "   5) \"5\"\n"
+    "   6) \"6\"\n"
+    "   7) \"7\"\n"
+    "   8) \"8\"\n"
+    "   9) \"9\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:\\x80\\x00\\x00\\x00\\x00\\x00\\x00\\x02\"\n"
+    "2) 1) \"4\"\n"
+    "   2) \"5\"\n"
+    "   3) \"6\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) 1) \"1\"\n"
+    "   2) \"2\"\n"
+    "   3) \"3\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) 1) \"1\"\n"
+    "   2) \"2\"\n"
+    "   3) \"3\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:\\x80\\x00\\x00\\x00\\x00\\x00\\x00\\x00\"\n"
+    "2) 1) \"2\"\n"
+    "   2) \"3\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) 1) \"1\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) 1) \"1\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) (empty list or set)\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) (empty list or set)\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) (empty list or set)\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:0\"\n"
+    "2) (empty list or set)\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:\\x80\\x00\\x00\\x00\\x00\\x00\\x00\\x03\"\n"
+    "2) 1) \"5\"\n"
+    "   2) \"6\"\n"
+    "   3) \"7\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:\\x80\\x00\\x00\\x00\\x00\\x00\\x00\\x05\"\n"
+    "2) 1) \"7\"\n"
+    "   2) \"8\"\n"
+    "   3) \"9\"\n");
+
+  ASSERT_REPLY_DESCRIBE(futures[i++],
+    "1) \"next:\\x80\\x00\\x00\\x00\\x00\\x00\\x00\\x05\"\n"
+    "2) 1) \"7\"\n"
+    "   2) \"8\"\n"
+    "   3) \"9\"\n");
 
   // Now test qclient callbacks, ensure things stay reasonable when we mix them
   // with futures.

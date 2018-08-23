@@ -116,6 +116,7 @@ public:
   rocksdb::Status lhget(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, std::string &value);
   rocksdb::Status lhlen(StagingArea &stagingArea, const std::string &key, size_t &len);
   rocksdb::Status rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements);
+  rocksdb::Status dequeScanBack(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &results);
   void getClock(StagingArea &stagingArea, ClockValue &value);
 
   //----------------------------------------------------------------------------
@@ -282,7 +283,7 @@ private:
   };
   friend class WriteOperation;
 
-  KeyDescriptor getKeyDescriptor(StagingArea &stagingArea, const std::string &redisKey);
+  KeyDescriptor getKeyDescriptor(StagingArea &stagingArea, std::string_view redisKey);
   KeyDescriptor lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator);
 
   void retrieveLastApplied();
