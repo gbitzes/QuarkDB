@@ -5,11 +5,16 @@ If running CentOS 7, store the following in `/etc/yum.repos.d/quarkdb.repo`:
 
 ```
 [quarkdb-stable]
-name=QuarkDB stable repository
-baseurl=https://linuxsoft.cern.ch/repos/quarkdb7-stable/x86_64/os/
+name=QuarkDB repository [stable]
+baseurl=http://linuxsoft.cern.ch/repos/quarkdb7-stable/x86_64/os
 enabled=1
-gpgcheck=0
-protect=1
+gpgcheck=False
+
+[quarkdb-stable-debug]
+name=QuarkDB repository [stable debug]
+baseurl=http://linuxsoft.cern.ch/repos/quarkdb7-stable/x86_64/debug
+enabled=1
+gpgcheck=False
 ```
 
 Then, run `yum install quarkdb quarkdb-debuginfo`, and you're done.
