@@ -6,7 +6,7 @@ If running CentOS 7, store the following in `/etc/yum.repos.d/quarkdb.repo`:
 ```
 [quarkdb-stable]
 name=QuarkDB stable repository
-baseurl=https://storage-ci.web.cern.ch/storage-ci/quarkdb/tag/el7/$basearch
+baseurl=https://linuxsoft.cern.ch/repos/quarkdb7-stable/x86_64/os/
 enabled=1
 gpgcheck=0
 protect=1
