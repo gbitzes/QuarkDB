@@ -44,7 +44,7 @@ void Shard::attach() {
     dispatcher = new RedisDispatcher(*stateMachine);
   }
   else if(mode == Mode::raft) {
-    raftGroup = new RaftGroup(*shardDirectory, myself, timeouts, password);
+    raftGroup.reset(new RaftGroup(*shardDirectory, myself, timeouts, password));
     dispatcher = static_cast<Dispatcher*>(raftGroup->dispatcher());
     stateMachine = shardDirectory->getStateMachine();
   }
@@ -77,8 +77,7 @@ void Shard::detach() {
 
   if(raftGroup) {
     qdb_info("Shutting down the raft machinery.");
-    delete raftGroup;
-    raftGroup = nullptr;
+    raftGroup.reset();
   }
   else if(stateMachine) {
     // The state machine is owned by ShardDirectory, so, don't delete it
@@ -97,12 +96,11 @@ Shard::~Shard() {
 
 RaftGroup* Shard::getRaftGroup() {
   std::lock_guard<std::mutex> lock(raftGroupMtx);
-  return raftGroup;
+  return raftGroup.get();
 }
 
 void Shard::spinup() {
   raftGroup->spinup();
-  dispatcher = static_cast<Dispatcher*>(raftGroup->dispatcher());
 }
 
 void Shard::spindown() {

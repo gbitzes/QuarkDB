@@ -54,7 +54,7 @@ private:
   CommandMonitor commandMonitor;
   ShardDirectory *shardDirectory;
 
-  RaftGroup *raftGroup = nullptr;
+  std::unique_ptr<RaftGroup> raftGroup;
   StateMachine *stateMachine = nullptr;
   Dispatcher *dispatcher = nullptr;
 
