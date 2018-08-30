@@ -101,6 +101,7 @@ RaftGroup* Shard::getRaftGroup() {
 
 void Shard::spinup() {
   raftGroup->spinup();
+  dispatcher = static_cast<Dispatcher*>(raftGroup->dispatcher());
 }
 
 void Shard::spindown() {
