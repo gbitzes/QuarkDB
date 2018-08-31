@@ -23,6 +23,8 @@
 
 #include "StandaloneGroup.hh"
 #include "ShardDirectory.hh"
+#include "StateMachine.hh"
+#include "redis/LeaseFilter.hh"
 #include "Dispatcher.hh"
 using namespace quarkdb;
 
@@ -36,7 +38,7 @@ StandaloneGroup::StandaloneGroup(ShardDirectory& dir, bool bulk)
       stateMachine = shardDirectory.getStateMachine();
   }
 
-  redisDispatcher.reset(new RedisDispatcher(*stateMachine));
+  dispatcher.reset(new StandaloneDispatcher(*stateMachine));
 }
 
 StateMachine* StandaloneGroup::getStateMachine() {
@@ -44,5 +46,28 @@ StateMachine* StandaloneGroup::getStateMachine() {
 }
 
 Dispatcher* StandaloneGroup::getDispatcher() {
-  return redisDispatcher.get();
+  return dispatcher.get();
+}
+
+StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm)
+: stateMachine(&sm), dispatcher(sm) {}
+
+LinkStatus StandaloneDispatcher::dispatch(Connection *conn, RedisRequest &req) {
+  // Show a user-friendly error message for raft-info, instead of
+  // "internal dispatching error" less scary message for "raft-info"
+
+  if(req.getCommandType() == CommandType::RAFT) {
+    qdb_warn("Received command " << req[0] << ", even though raft is not active");
+    return conn->err(SSTR("raft not enabled, " << req[0] << " is unavailable, try quarkdb-info for general information"));
+  }
+
+  return dispatcher.dispatch(conn, req);
+}
+
+LinkStatus StandaloneDispatcher::dispatch(Connection *conn, Transaction &tx) {
+  // Do lease filtering.
+  ClockValue txTimestamp = stateMachine->getDynamicClock();
+  LeaseFilter::transform(tx, txTimestamp);
+
+  return dispatcher.dispatch(conn, tx);
 }

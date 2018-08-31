@@ -238,10 +238,6 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err("unavailable");
       }
 
-      if(req.getCommand() == RedisCommand::RAFT_INFO && mode != Mode::raft) {
-        return conn->err(SSTR("instance running in " << modeToString(mode) << " mode, " << req[0] << " is unavailable. Try quarkdb-info for general information"));
-      }
-
       LinkStatus ret = dispatcher->dispatch(conn, req);
       return ret;
     }

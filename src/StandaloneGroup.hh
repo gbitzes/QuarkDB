@@ -25,6 +25,7 @@
 #define QUARKDB_STANDALONE_GROUP_H
 
 #include <memory>
+#include "Dispatcher.hh"
 
 namespace quarkdb {
 
@@ -32,6 +33,17 @@ class ShardDirectory;
 class RedisDispatcher;
 class StateMachine;
 class Dispatcher;
+
+class StandaloneDispatcher : public Dispatcher {
+public:
+  StandaloneDispatcher(StateMachine &sm);
+  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  virtual LinkStatus dispatch(Connection *conn, Transaction &req) override final;
+
+private:
+  StateMachine* stateMachine;
+  RedisDispatcher dispatcher;
+};
 
 class StandaloneGroup {
 public:
@@ -44,7 +56,7 @@ private:
   ShardDirectory &shardDirectory;
   bool bulkload;
 
-  std::unique_ptr<RedisDispatcher> redisDispatcher;
+  std::unique_ptr<StandaloneDispatcher> dispatcher;
   StateMachine* stateMachine;
 };
 
