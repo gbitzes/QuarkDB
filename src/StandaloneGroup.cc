@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: StandaloneGroup.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,55 +21,28 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_SHARD_H
-#define QUARKDB_SHARD_H
-
-#include "raft/RaftTimeouts.hh"
+#include "StandaloneGroup.hh"
+#include "ShardDirectory.hh"
 #include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "redis/CommandMonitor.hh"
-#include "utils/InFlightTracker.hh"
+using namespace quarkdb;
 
-namespace quarkdb {
+StandaloneGroup::StandaloneGroup(ShardDirectory& dir, bool bulk)
+: shardDirectory(dir), bulkload(bulk) {
 
-class RaftGroup; class ShardDirectory; class StandaloneGroup;
+  if(bulkload) {
+      stateMachine = shardDirectory.getStateMachineForBulkload();
+  }
+  else {
+      stateMachine = shardDirectory.getStateMachine();
+  }
 
-class Shard : public Dispatcher {
-public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t, const std::string &password);
-  ~Shard();
-
-  RaftGroup* getRaftGroup();
-  void spinup();
-  void spindown();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
-  size_t monitors() { return commandMonitor.size(); }
-
-private:
-  void detach();
-  void attach();
-  void start();
-  void stopAcceptingRequests();
-
-  CommandMonitor commandMonitor;
-  ShardDirectory *shardDirectory;
-
-  std::unique_ptr<RaftGroup> raftGroup;
-  std::unique_ptr<StandaloneGroup> standaloneGroup;
-
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-  std::string password;
-
-  InFlightTracker inFlightTracker;
-  std::mutex raftGroupMtx;
-};
-
+  redisDispatcher.reset(new RedisDispatcher(*stateMachine));
 }
 
-#endif
+StateMachine* StandaloneGroup::getStateMachine() {
+  return stateMachine;
+}
+
+Dispatcher* StandaloneGroup::getDispatcher() {
+  return redisDispatcher.get();
+}

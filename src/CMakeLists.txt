@@ -32,6 +32,7 @@ add_library(XrdQuarkDB SHARED
   RedisRequest.cc                     RedisRequest.hh
   Shard.cc                            Shard.hh
   ShardDirectory.cc                   ShardDirectory.hh
+  StandaloneGroup.cc                  StandaloneGroup.hh
   StateMachine.cc                     StateMachine.hh
   Timekeeper.cc                       Timekeeper.hh
 

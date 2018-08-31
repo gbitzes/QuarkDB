@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: Shard.hh
+// File: StandaloneGroup.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,53 +21,31 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_SHARD_H
-#define QUARKDB_SHARD_H
+#ifndef QUARKDB_STANDALONE_GROUP_H
+#define QUARKDB_STANDALONE_GROUP_H
 
-#include "raft/RaftTimeouts.hh"
-#include "Dispatcher.hh"
-#include "Configuration.hh"
-#include "redis/CommandMonitor.hh"
-#include "utils/InFlightTracker.hh"
+#include <memory>
 
 namespace quarkdb {
 
-class RaftGroup; class ShardDirectory; class StandaloneGroup;
+class ShardDirectory;
+class RedisDispatcher;
+class StateMachine;
+class Dispatcher;
 
-class Shard : public Dispatcher {
+class StandaloneGroup {
 public:
-  Shard(ShardDirectory *shardDir, const RaftServer &me, Mode mode, const RaftTimeouts &t, const std::string &password);
-  ~Shard();
+  StandaloneGroup(ShardDirectory& shardDirectory, bool bulkload);
 
-  RaftGroup* getRaftGroup();
-  void spinup();
-  void spindown();
-  virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
-  virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
-  size_t monitors() { return commandMonitor.size(); }
+  StateMachine* getStateMachine();
+  Dispatcher* getDispatcher();
 
 private:
-  void detach();
-  void attach();
-  void start();
-  void stopAcceptingRequests();
+  ShardDirectory &shardDirectory;
+  bool bulkload;
 
-  CommandMonitor commandMonitor;
-  ShardDirectory *shardDirectory;
-
-  std::unique_ptr<RaftGroup> raftGroup;
-  std::unique_ptr<StandaloneGroup> standaloneGroup;
-
-  StateMachine *stateMachine = nullptr;
-  Dispatcher *dispatcher = nullptr;
-
-  RaftServer myself;
-  Mode mode;
-  RaftTimeouts timeouts;
-  std::string password;
-
-  InFlightTracker inFlightTracker;
-  std::mutex raftGroupMtx;
+  std::unique_ptr<RedisDispatcher> redisDispatcher;
+  StateMachine* stateMachine;
 };
 
 }

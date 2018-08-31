@@ -24,6 +24,7 @@
 #include "StateMachine.hh"
 #include "Shard.hh"
 #include "ShardDirectory.hh"
+#include "StandaloneGroup.hh"
 #include "raft/RaftGroup.hh"
 #include "raft/RaftDispatcher.hh"
 #include "redis/LeaseFilter.hh"
@@ -40,8 +41,9 @@ void Shard::attach() {
   qdb_assert(!inFlightTracker.isAcceptingRequests());
 
   if(mode == Mode::standalone) {
-    stateMachine = shardDirectory->getStateMachine();
-    dispatcher = new RedisDispatcher(*stateMachine);
+    standaloneGroup.reset(new StandaloneGroup(*shardDirectory, false));
+    dispatcher = standaloneGroup->getDispatcher();
+    stateMachine = standaloneGroup->getStateMachine();
   }
   else if(mode == Mode::raft) {
     raftGroup.reset(new RaftGroup(*shardDirectory, myself, timeouts, password));
@@ -49,8 +51,9 @@ void Shard::attach() {
     stateMachine = shardDirectory->getStateMachine();
   }
   else if(mode == Mode::bulkload) {
-    stateMachine = shardDirectory->getStateMachineForBulkload();
-    dispatcher = new RedisDispatcher(*stateMachine);
+    standaloneGroup.reset(new StandaloneGroup(*shardDirectory, true));
+    dispatcher = standaloneGroup->getDispatcher();
+    stateMachine = standaloneGroup->getStateMachine();
   }
   else {
     qdb_throw("cannot determine configuration mode"); // should never happen
@@ -75,17 +78,11 @@ void Shard::detach() {
   stopAcceptingRequests();
   qdb_info("All requests processed, detaching.");
 
-  if(raftGroup) {
-    qdb_info("Shutting down the raft machinery.");
-    raftGroup.reset();
-  }
-  else if(stateMachine) {
-    // The state machine is owned by ShardDirectory, so, don't delete it
-    stateMachine = nullptr;
+  stateMachine = nullptr;
+  dispatcher = nullptr;
 
-    delete dispatcher;
-    dispatcher = nullptr;
-  }
+  raftGroup.reset();
+  standaloneGroup.reset();
 
   qdb_info("Backend has been detached from this quarkdb shard.");
 }
