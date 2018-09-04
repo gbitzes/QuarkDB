@@ -1,3 +1,4 @@
+build/
 deps/rocksdb/
 deps/backward-cpp/
 deps/googletest/
