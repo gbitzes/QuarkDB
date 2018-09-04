@@ -113,13 +113,6 @@ LinkStatus Shard::dispatch(Connection *conn, Transaction &transaction) {
     return conn->raw(Formatter::multiply(Formatter::err("unavailable"), transaction.expectedResponses()));
   }
 
-  // If this is standalone mode, do lease timestamp filtering here.
-  // Otherwise, RaftDispatcher will take care of it.
-  if(mode == Mode::standalone) {
-    ClockValue txTimestamp = stateMachine->getDynamicClock();
-    LeaseFilter::transform(transaction, txTimestamp);
-  }
-
   return dispatcher->dispatch(conn, transaction);
 }
 
