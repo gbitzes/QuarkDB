@@ -38,6 +38,8 @@ add_library(XrdQuarkDB SHARED
 
   auth/AuthenticationDispatcher.cc    auth/AuthenticationDispatcher.hh
 
+                                      health/HealthIndicator.hh
+
   raft/RaftBlockedWrites.cc           raft/RaftBlockedWrites.hh
   raft/RaftConfig.cc                  raft/RaftConfig.hh
   raft/RaftJournal.cc                 raft/RaftJournal.hh

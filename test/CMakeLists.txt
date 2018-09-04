@@ -29,6 +29,7 @@ add_executable(quarkdb-tests
   dispatcher.cc
   e2e.cc
   formatter.cc
+  health.cc
   link.cc
   main.cc
   multi.cc
