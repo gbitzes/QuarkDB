@@ -334,7 +334,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
   const int64_t payloadLimit = 512;
   LogIndex nextIndex = firstNextIndex;
 
-  while(shutdown == 0 && snapshot->term == state.getCurrentTerm() && !state.inShutdown()) {
+  while(shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
     if(!streamingUpdates) {
       // Something went wrong while streaming, return to parent to stabilize
       return nextIndex;
@@ -392,7 +392,7 @@ ReplicaStatus RaftReplicaTracker::getStatus() {
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
   RaftTalker talker(target, contactDetails);
 
-  while(!assistant.terminationRequested() && shutdown == 0 && snapshot->term == state.getCurrentTerm() && !state.inShutdown()) {
+  while(!assistant.terminationRequested() && shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
     std::future<redisReplyPtr> fut = talker.heartbeat(snapshot->term, state.getMyself());
     RaftHeartbeatResponse resp;
@@ -449,7 +449,7 @@ void RaftReplicaTracker::main() {
 
   bool warnStreamingHiccup = false;
   bool needResilvering = false;
-  while(shutdown == 0 && snapshot->term == state.getCurrentTerm() && !state.inShutdown()) {
+  while(shutdown == 0 && state.isSnapshotCurrent(snapshot.get()) && !state.inShutdown()) {
 
     if(warnStreamingHiccup) {
       qdb_warn("Hiccup during streaming replication of " << target.toString() << ", switching back to conservative replication.");

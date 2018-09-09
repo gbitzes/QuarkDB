@@ -95,6 +95,13 @@ public:
   std::vector<RaftServer> getNodes();
   RaftClusterID getClusterID();
 
+  //------------------------------------------------------------------------------
+  // Test if the given snapshot is the same as the current one.
+  //------------------------------------------------------------------------------
+  bool isSnapshotCurrent(const RaftStateSnapshot *ptr) const {
+    return ptr == currentSnapshot.get();
+  }
+
   static RaftServer BLOCKED_VOTE;
 private:
   RaftJournal &journal;

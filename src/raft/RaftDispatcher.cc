@@ -308,7 +308,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
   if(stateMachine.getLastApplied() < snapshot->leadershipMarker) {
     // Stall client request until state machine is caught-up, or we lose leadership
     while(!stateMachine.waitUntilTargetLastApplied(snapshot->leadershipMarker, std::chrono::milliseconds(500))) {
-      if(snapshot->term != state.getCurrentTerm()) {
+      if(state.isSnapshotCurrent(snapshot.get())) {
         // Ouch, we're no longer a leader.. start from scratch
         return this->service(conn, tx);
       }

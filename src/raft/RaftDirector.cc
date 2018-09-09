@@ -66,8 +66,7 @@ void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
   stateMachine.getRequestCounter().setReportingStatus(true);
 
   replicator.activate(snapshot);
-  while(snapshot->term == state.getCurrentTerm() &&
-        state.getSnapshot()->status == RaftStatus::LEADER) {
+  while(state.isSnapshotCurrent(snapshot.get())) {
 
     std::chrono::steady_clock::time_point deadline = lease.getDeadline();
     if(deadline < std::chrono::steady_clock::now()) {
