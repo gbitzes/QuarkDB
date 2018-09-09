@@ -77,6 +77,9 @@ extern std::mutex logMutex;
 #define qdb_throw(message) throw FatalException(SSTR(message << quarkdb::errorStacktrace(true)))
 #define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition << quarkdb::errorStacktrace(true)))
 
+// Always inline this function.
+#define QDB_ALWAYS_INLINE __attribute__((always_inline))
+
 }
 
 #endif

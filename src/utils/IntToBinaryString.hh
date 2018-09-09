@@ -24,6 +24,8 @@
 #ifndef __QUARKDB_UTILS_INT_TO_BINARY_STRING_H__
 #define __QUARKDB_UTILS_INT_TO_BINARY_STRING_H__
 
+#include "Macros.hh"
+
 #include <endian.h>
 #include <memory.h>
 #include <stdint.h>
@@ -33,8 +35,6 @@
 // Big endian encoding.
 
 namespace quarkdb {
-
-#define QDB_ALWAYS_INLINE __attribute__((always_inline))
 
 QDB_ALWAYS_INLINE
 inline int64_t binaryStringToInt(const char* buff) {

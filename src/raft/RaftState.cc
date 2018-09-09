@@ -38,21 +38,6 @@ RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
   updateSnapshot();
 }
 
-//------------------------------------------------------------------------------
-// This is for cases where we NEED a full, consistent state free of potential
-// races.
-//
-// This is needed because this would not be safe:
-// state.getCurrentTerm()
-// state.getCurrentStatus()
-//
-// The state could have changed in-between, leading to horrible bugs.
-//------------------------------------------------------------------------------
-
-RaftStateSnapshotPtr RaftState::getSnapshot() {
-  return std::atomic_load(&currentSnapshot);
-}
-
 RaftServer RaftState::getMyself() {
   return myself;
 }

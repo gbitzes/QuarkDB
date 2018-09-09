@@ -88,14 +88,28 @@ public:
   void wait(const std::chrono::milliseconds &t);
   void wait_until(const std::chrono::steady_clock::time_point &t);
 
-  RaftStateSnapshotPtr getSnapshot();
   RaftServer getMyself();
   std::vector<RaftServer> getNodes();
   RaftClusterID getClusterID();
 
+  //----------------------------------------------------------------------------
+  // Get a full, consistent and immutable snapshot of the current raft state.
+  //
+  // This is needed because this would not be safe:
+  // state.getCurrentTerm()
+  // state.getCurrentStatus()
+  //
+  // The state could have changed in-between, leading to horrible bugs.
+  //----------------------------------------------------------------------------
+  QDB_ALWAYS_INLINE
+  RaftStateSnapshotPtr getSnapshot() const {
+    return std::atomic_load(&currentSnapshot);
+  }
+
   //------------------------------------------------------------------------------
   // Test if the given snapshot is the same as the current one.
   //------------------------------------------------------------------------------
+  QDB_ALWAYS_INLINE
   bool isSnapshotCurrent(const RaftStateSnapshot *ptr) const {
     return ptr == std::atomic_load(&currentSnapshot).get();
   }
