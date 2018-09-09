@@ -85,7 +85,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
   // add an inconsistent journal entry to #1, just for fun
   ASSERT_TRUE(journal(1)->append(1, RaftEntry(0, "supposed", "to", "be", "removed")));
 
-  ASSERT_EQ(state(1)->getCurrentTerm(), 0);
+  ASSERT_EQ(state(1)->getSnapshot()->term, 0);
 
   // activate poller for #1
   poller(1);
@@ -154,7 +154,7 @@ TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
   ASSERT_TRUE(journal(1)->append(2, RaftEntry(0, "supposed", "to", "be", "removed2")));
   ASSERT_TRUE(journal(1)->append(3, RaftEntry(0, "supposed", "to", "be", "removed3")));
 
-  ASSERT_EQ(state(1)->getCurrentTerm(), 0);
+  ASSERT_EQ(state(1)->getSnapshot()->term, 0);
 
   // activate poller for #1
   poller(1);

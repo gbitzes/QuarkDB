@@ -380,7 +380,7 @@ RaftHeartbeatResponse RaftDispatcher::heartbeat(const RaftHeartbeatRequest &req,
   state.observed(req.term, req.leader);
   snapshot = state.getSnapshot();
 
-  if(state.inShutdown()) {
+  if(snapshot->status == RaftStatus::SHUTDOWN) {
     return {snapshot->term, false, "in shutdown"};
   }
 

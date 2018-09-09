@@ -56,7 +56,7 @@ TEST_F(Raft_State, T1) {
   RaftJournal journal(dbpath);
 
   RaftState state(journal, myself);
-  ASSERT_EQ(state.getCurrentTerm(), 0);
+  ASSERT_EQ(state.getSnapshot()->term, 0);
   ASSERT_TRUE(state.observed(1, {}));
   ASSERT_FALSE(state.observed(0, {}));
   ASSERT_EQ(myself, state.getMyself());
@@ -119,10 +119,10 @@ TEST_F(Raft_State, T1) {
   snapshot = {6, RaftStatus::FOLLOWER, nodes[0], RaftState::BLOCKED_VOTE, -1};
   ASSERT_TRUE(snapshot.equals(state.getSnapshot()));
 
-  ASSERT_FALSE(state.inShutdown());
+  ASSERT_NE(state.getSnapshot()->status, RaftStatus::SHUTDOWN);
   state.shutdown();
   ASSERT_FALSE(state.observed(200, nodes[0]));
-  ASSERT_TRUE(state.inShutdown());
+  ASSERT_EQ(state.getSnapshot()->status, RaftStatus::SHUTDOWN);
 }
 
 {

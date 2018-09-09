@@ -39,14 +39,6 @@ RaftState::RaftState(RaftJournal &jr, const RaftServer &me)
 }
 
 //------------------------------------------------------------------------------
-// Term is atomic, so this function is for cases where we can tolerate race
-// conditions. (for example, when observed() has entered but hasn't completed)
-//------------------------------------------------------------------------------
-RaftTerm RaftState::getCurrentTerm() {
-  return term;
-}
-
-//------------------------------------------------------------------------------
 // This is for cases where we NEED a full, consistent state free of potential
 // races.
 //
@@ -230,10 +222,6 @@ bool RaftState::grantVote(RaftTerm forTerm, const RaftServer &vote) {
   this->updateJournal();
   updateSnapshot();
   return true;
-}
-
-bool RaftState::inShutdown() {
-  return status == RaftStatus::SHUTDOWN;
 }
 
 void RaftState::shutdown() {

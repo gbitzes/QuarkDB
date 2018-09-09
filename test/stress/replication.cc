@@ -271,13 +271,13 @@ TEST_F(Replication, linearizability_during_transition) {
   AssistedThread reader1(obsessiveReader, tunnel(node1), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
   AssistedThread reader2(obsessiveReader, tunnel(node2), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
 
-  RaftTerm firstTerm = state(leaderID)->getCurrentTerm();
+  RaftTerm firstTerm = state(leaderID)->getSnapshot()->term;
 
   // stop the leader
   spindown(leaderID);
 
   // Ensure failover happens..
-  RETRY_ASSERT_TRUE(state(node1)->getCurrentTerm() != firstTerm);
+  RETRY_ASSERT_TRUE(state(node1)->getSnapshot()->term != firstTerm);
   RETRY_ASSERT_TRUE(checkStateConsensus(node1, node2));
   int newLeaderID = getLeaderID();
   ASSERT_NE(leaderID, newLeaderID);
@@ -318,11 +318,11 @@ TEST_F(Replication, several_transitions) {
     int follower1 = (getLeaderID() + 1) % 3;
     int follower2 =  (getLeaderID() + 2) % 3;
 
-    RaftTerm oldTerm = state(leaderID)->getCurrentTerm();
+    RaftTerm oldTerm = state(leaderID)->getSnapshot()->term;
     spindown(leaderID);
 
-    RETRY_ASSERT_TRUE(oldTerm < state(follower1)->getCurrentTerm());
-    RETRY_ASSERT_TRUE(oldTerm < state(follower2)->getCurrentTerm());
+    RETRY_ASSERT_TRUE(oldTerm < state(follower1)->getSnapshot()->term);
+    RETRY_ASSERT_TRUE(oldTerm < state(follower2)->getSnapshot()->term);
     RETRY_ASSERT_TRUE(checkStateConsensus(follower1, follower2));
     spinup(leaderID);
   }

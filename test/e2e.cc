@@ -56,9 +56,9 @@ TEST_F(Raft_e2e, coup) {
 
   int instigator = (leaderID+1)%3;
   for(int i = 1; i < 10; i++) {
-    RaftTerm term = state(instigator)->getCurrentTerm();
+    RaftTerm term = state(instigator)->getSnapshot()->term;
     ASSERT_REPLY(tunnel(instigator)->exec("RAFT_ATTEMPT_COUP"), "vive la revolution");
-    RETRY_ASSERT_TRUE(state(instigator)->getCurrentTerm() > term);
+    RETRY_ASSERT_TRUE(state(instigator)->getSnapshot()->term > term);
     RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
     if(instigator == getLeaderID()) {
@@ -94,7 +94,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
 
   RaftEntry entry;
   ASSERT_TRUE(RaftParser::fetchResponse(futures[4].get().get(), entry));
-  ASSERT_EQ(entry.term, state(0)->getCurrentTerm());
+  ASSERT_EQ(entry.term, state(0)->getSnapshot()->term);
   ASSERT_EQ(entry.request, make_req("set", "asdf", "1234"));
 
   futures.clear();
@@ -1006,13 +1006,13 @@ TEST_F(Raft_e2e, leader_steps_down_after_follower_loss) {
   ASSERT_GE(leaderID, 0);
   ASSERT_LE(leaderID, 1);
 
-  RaftTerm term = state(leaderID)->getCurrentTerm();
+  RaftTerm term = state(leaderID)->getSnapshot()->term;
 
   int followerID = (leaderID + 1)%2;
   spindown(followerID);
 
-  RETRY_ASSERT_TRUE(term < state(leaderID)->getCurrentTerm());
-  RETRY_ASSERT_TRUE(state(leaderID)->getSnapshot()->leader.empty());
+  RETRY_ASSERT_TRUE(term < state(leaderID)->getSnapshot()->term);
+  ASSERT_TRUE(state(leaderID)->getSnapshot()->leader.empty());
 }
 
 TEST_F(Raft_e2e, stale_reads) {

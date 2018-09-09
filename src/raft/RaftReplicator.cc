@@ -449,7 +449,7 @@ void RaftReplicaTracker::main() {
 
   bool warnStreamingHiccup = false;
   bool needResilvering = false;
-  while(shutdown == 0 && state.isSnapshotCurrent(snapshot.get()) && !state.inShutdown()) {
+  while(shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
 
     if(warnStreamingHiccup) {
       qdb_warn("Hiccup during streaming replication of " << target.toString() << ", switching back to conservative replication.");

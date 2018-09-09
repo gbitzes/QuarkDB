@@ -84,12 +84,10 @@ public:
   bool dropOut(RaftTerm term);
 
   void shutdown();
-  bool inShutdown();
 
   void wait(const std::chrono::milliseconds &t);
   void wait_until(const std::chrono::steady_clock::time_point &t);
 
-  RaftTerm getCurrentTerm();
   RaftStateSnapshotPtr getSnapshot();
   RaftServer getMyself();
   std::vector<RaftServer> getNodes();
@@ -99,7 +97,7 @@ public:
   // Test if the given snapshot is the same as the current one.
   //------------------------------------------------------------------------------
   bool isSnapshotCurrent(const RaftStateSnapshot *ptr) const {
-    return ptr == currentSnapshot.get();
+    return ptr == std::atomic_load(&currentSnapshot).get();
   }
 
   static RaftServer BLOCKED_VOTE;
@@ -109,8 +107,8 @@ private:
   std::mutex update;
   std::condition_variable notifier;
 
-  std::atomic<RaftTerm> term;
-  std::atomic<RaftStatus> status;
+  RaftTerm term;
+  RaftStatus status;
   RaftServer leader;
   RaftServer votedFor;
   LogIndex leadershipMarker;
