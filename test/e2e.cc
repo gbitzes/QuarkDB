@@ -1012,7 +1012,7 @@ TEST_F(Raft_e2e, leader_steps_down_after_follower_loss) {
   spindown(followerID);
 
   RETRY_ASSERT_TRUE(term < state(leaderID)->getCurrentTerm());
-  ASSERT_TRUE(state(leaderID)->getSnapshot()->leader.empty());
+  RETRY_ASSERT_TRUE(state(leaderID)->getSnapshot()->leader.empty());
 }
 
 TEST_F(Raft_e2e, stale_reads) {
