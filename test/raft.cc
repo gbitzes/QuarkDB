@@ -911,6 +911,18 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
   ASSERT_EQ(journal(0)->getCommitIndex(), 15);
 }
 
+TEST_F(Raft_CommitTracker, AutoCommit) {
+  std::vector<RaftServer> members;
+  commitTracker()->updateTargets(members);
+  ASSERT_EQ(journal()->getCommitIndex(), 0);
+
+  // Ensure commitIndex is auto-updated
+  for(size_t i = 0; i < testreqs.size(); i++) {
+    ASSERT_TRUE(journal()->append(i+1, RaftEntry(0, testreqs[i])));
+    RETRY_ASSERT_TRUE(journal()->getCommitIndex() == (int) i+1);
+  }
+}
+
 TEST(RaftMembers, basic_sanity) {
   std::vector<RaftServer> nodes = {
     {"server1", 245},
