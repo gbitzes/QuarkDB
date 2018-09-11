@@ -166,7 +166,8 @@ private:
 // Everything is initialized lazily, including the nodes of the cluster themselves.
 class TestCluster {
 public:
-  TestCluster(RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  TestCluster(RaftClusterID clusterID, const std::vector<RaftServer> &nodes,
+    int initialActiveNodes = -1);
   ~TestCluster();
 
   ShardDirectory* shardDirectory(int id = 0);
@@ -319,7 +320,12 @@ private:
   std::string rocksdbPath(int id = 0);
 
   RaftClusterID clusterid;
+
+  // The list of nodes which are initially part of the cluster.
   std::vector<RaftServer> initialNodes;
+  // The complete list of nodes we're playing with. Not all of them may be
+  // officially part of the cluster, at first.
+  std::vector<RaftServer> allNodes;
 
   std::map<int, TestNode*> testnodes;
 };
@@ -346,8 +352,27 @@ public:
   }) { };
 };
 
+// A fixture which provides up to 10 raft nodes, but is initialized with
+// just a single one.
+class TestCluster10Nodes1Initial : public TestCluster {
+public:
+  TestCluster10Nodes1Initial() : TestCluster("a9b9e979-5428-42e9-8a52-f675c39fdf80", {
+    GlobalEnv::server(0),
+    GlobalEnv::server(1),
+    GlobalEnv::server(2),
+    GlobalEnv::server(3),
+    GlobalEnv::server(4),
+    GlobalEnv::server(5),
+    GlobalEnv::server(6),
+    GlobalEnv::server(7),
+    GlobalEnv::server(8),
+    GlobalEnv::server(9)
+  }, 1) { };
+};
+
 class TestCluster3NodesFixture : public TestCluster3Nodes, public ::testing::Test {};
 class TestCluster5NodesFixture : public TestCluster5Nodes, public ::testing::Test {};
+class TestCluster10Nodes1InitialFixture : public TestCluster10Nodes1Initial, public ::testing::Test {};
 
 class SocketListener {
 private:

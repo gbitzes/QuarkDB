@@ -104,8 +104,17 @@ RaftServer GlobalEnv::server(int id) {
 ::testing::Environment* const commonStatePtr = ::testing::AddGlobalTestEnvironment(new GlobalEnv);
 GlobalEnv &commonState(*(GlobalEnv*)commonStatePtr);
 
-TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd)
-: clusterid(clust), initialNodes(nd) {
+TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd,
+  int initialActiveNodes)
+: clusterid(clust), allNodes(nd) {
+
+  if(initialActiveNodes < 0) {
+    initialNodes = allNodes;
+  }
+
+  for(int i = 0; i < initialActiveNodes; i++) {
+    initialNodes.emplace_back(allNodes[i]);
+  }
 
   Connection::setPhantomBatchLimit(100);
 }

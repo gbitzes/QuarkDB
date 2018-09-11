@@ -92,6 +92,12 @@ RaftLastContact& RaftLease::getHandler(const RaftServer &srv) {
 //------------------------------------------------------------------------------
 std::chrono::steady_clock::time_point RaftLease::getDeadline() {
   std::lock_guard<std::mutex> lock(mtx);
+
+  if(quorumSize == 1) {
+    // Special case: There's only a single node in our raft "cluster" - us.
+    return std::chrono::steady_clock::now() + leaseDuration;
+  }
+
   std::vector<std::chrono::steady_clock::time_point> leases;
 
   for(auto it = targets.begin(); it != targets.end(); it++) {

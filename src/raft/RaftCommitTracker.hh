@@ -25,6 +25,7 @@
 #define __QUARKDB_RAFT_COMMIT_TRACKER_H__
 
 #include <mutex>
+#include "../utils/AssistedThread.hh"
 #include "../Common.hh"
 
 namespace quarkdb {
@@ -59,7 +60,13 @@ public:
 
   // Assumption: No references to index trackers are held when calling this
   void reset();
+
+  // This thread only runs if there's just a single node in the "cluster".
+  // In such case, replicator will not drive the process of updating
+  // commitIndex, we do it ourselves.
+  void runAutoCommit(ThreadAssistant &assistant);
 private:
+  AssistedThread autoCommitter;
   std::mutex mtx;
 
   RaftJournal &journal;

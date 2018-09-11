@@ -42,6 +42,7 @@
 using namespace quarkdb;
 class Replication : public TestCluster3NodesFixture {};
 class Membership : public TestCluster5NodesFixture {};
+class SingleNodeInitially : public TestCluster10Nodes1InitialFixture {};
 
 TEST_F(Replication, entries_50k_with_follower_loss) {
   Connection::setPhantomBatchLimit(1);
@@ -537,3 +538,55 @@ TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
 
   ASSERT_FALSE(trimmer(leaderID)->canTrimUntil(10001));
 }
+
+TEST_F(SingleNodeInitially, SingleNodeRaftMode) {
+  spinup(0);
+  RETRY_ASSERT_TRUE(state(0)->getSnapshot()->status == RaftStatus::LEADER);
+
+  std::vector<std::future<redisReplyPtr>> replies;
+  for(size_t i = 0; i < 100; i++) {
+    replies.emplace_back(tunnel(0)->exec("set", SSTR("entry-" << i), SSTR("contents-" << i)));
+  }
+
+  for(size_t i = 0; i < 100; i++) {
+    replies.emplace_back(tunnel(0)->exec("get", SSTR("entry-" << i)));
+  }
+
+  for(size_t i = 0; i < 100; i++) {
+    ASSERT_REPLY(replies[i], "OK");
+  }
+
+  for(size_t i = 100; i < 200; i++) {
+    ASSERT_REPLY(replies[i], SSTR("contents-" << i-100));
+  }
+}
+
+// TEST_F(SingleNodeInitially, Build2NodeClusterFromSingle) {
+//   spinup(0);
+//   RETRY_ASSERT_TRUE(state(0)->getSnapshot()->status == RaftStatus::LEADER);
+
+//   DBG(".");
+//   std::vector<std::future<redisReplyPtr>> replies;
+//   DBG(".");
+//   for(size_t i = 0; i < 100; i++) {
+//     replies.emplace_back(tunnel(0)->exec("set", SSTR("entry-" << i), SSTR("contents-" << i)));
+//   }
+//   DBG(".");
+
+//   DBG(".");
+//   for(size_t i = 0; i < 100; i++) {
+//     DBG(i);
+//     ASSERT_REPLY(replies[i], "OK");
+//   }
+//   DBG(".");
+
+//   // spinup node #1, add to cluster
+//   spinup(1);
+
+//   ASSERT_REPLY(tunnel(0)->exec("RAFT_ADD_OBSERVER", myself(1).toString()), "OK");
+//   RETRY_ASSERT_TRUE(journal(0)->getEpoch() <= journal(0)->getCommitIndex());
+
+
+
+
+// }

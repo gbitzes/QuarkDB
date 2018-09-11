@@ -859,7 +859,6 @@ TEST_F(Raft_Director, election_with_different_journals) {
 
 TEST_F(Raft_CommitTracker, basic_sanity) {
   std::vector<RaftServer> members;
-  ASSERT_THROW(commitTracker()->updateTargets(members), FatalException);
 
   members.push_back(myself(1));
   members.push_back(myself(2));

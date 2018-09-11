@@ -73,15 +73,38 @@ RaftMatchIndexTracker& RaftCommitTracker::getHandlerInternal(const RaftServer &s
 void RaftCommitTracker::updateTargets(const std::vector<RaftServer> &trgt) {
   std::lock_guard<std::mutex> lock(mtx);
 
+  // shut autoCommitter down, if running
+  autoCommitter.join();
+
   // clear the map of the old targets
   targets.clear();
 
   // update to new targets - the matchIndex is NOT lost
   // for servers which exist in both sets!
   quorumSize = calculateQuorumSize(trgt.size() + 1);
-  if(quorumSize < 2) qdb_throw("quorum size cannot be smaller than 2");
+  qdb_assert(quorumSize > 0);
+  if(quorumSize == 1) {
+    qdb_assert(trgt.empty());
+    autoCommitter.reset(&RaftCommitTracker::runAutoCommit, this);
+  }
   for(const RaftServer& target : trgt) {
     targets[target] = &this->getHandlerInternal(target);
+  }
+}
+
+void RaftCommitTracker::runAutoCommit(ThreadAssistant &assistant) {
+  qdb_assert(quorumSize == 1);
+
+  LogIndex commitIndex = journal.getCommitIndex();
+  while(true) {
+    journal.waitForUpdates(commitIndex+1, std::chrono::milliseconds(500));
+    if(assistant.terminationRequested()) return;
+
+    // Progress commit index?
+    commitIndex = journal.getCommitIndex();
+    if(journal.getLogSize()-1 != commitIndex) {
+      qdb_assert(journal.setCommitIndex(journal.getLogSize() - 1));
+    }
   }
 }
 
