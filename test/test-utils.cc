@@ -216,7 +216,7 @@ TestNode* TestCluster::node(int id, const RaftServer &srv) {
   }
 
   RaftServer newserver = srv;
-  if(newserver.empty()) newserver = initialNodes[id];
+  if(newserver.empty()) newserver = allNodes[id];
   TestNode *ret = new TestNode(newserver, clusterID(), initialNodes);
   testnodes[id] = ret;
   return ret;
@@ -239,7 +239,7 @@ void TestCluster::prepare(int id) {
 }
 
 int TestCluster::getServerID(const RaftServer &srv) {
-  for(size_t i = 0; i < initialNodes.size(); i++) {
+  for(size_t i = 0; i < allNodes.size(); i++) {
     if(myself(i) == srv) return i;
   }
   return -1;

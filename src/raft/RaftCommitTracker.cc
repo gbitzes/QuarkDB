@@ -125,6 +125,10 @@ void RaftCommitTracker::updateCommitIndex(LogIndex newCommitIndex) {
 }
 
 void RaftCommitTracker::recalculateCommitIndex() {
+  // If targets are empty, auto-committer is active and we don't need to
+  // recalculate the commit index.
+  if(targets.empty()) return;
+
   // remember, we also take into account the current node, which is a leader.
   // (otherwise we wouldn't be running the commit tracker)
   // The leader is by definition always up-to-date, so we don't run

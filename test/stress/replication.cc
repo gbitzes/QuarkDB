@@ -561,32 +561,50 @@ TEST_F(SingleNodeInitially, SingleNodeRaftMode) {
   }
 }
 
-// TEST_F(SingleNodeInitially, Build2NodeClusterFromSingle) {
-//   spinup(0);
-//   RETRY_ASSERT_TRUE(state(0)->getSnapshot()->status == RaftStatus::LEADER);
+TEST_F(SingleNodeInitially, BuildClusterFromSingle) {
+  spinup(0);
+  RETRY_ASSERT_TRUE(state(0)->getSnapshot()->status == RaftStatus::LEADER);
 
-//   DBG(".");
-//   std::vector<std::future<redisReplyPtr>> replies;
-//   DBG(".");
-//   for(size_t i = 0; i < 100; i++) {
-//     replies.emplace_back(tunnel(0)->exec("set", SSTR("entry-" << i), SSTR("contents-" << i)));
-//   }
-//   DBG(".");
+  std::vector<std::future<redisReplyPtr>> replies;
+  for(size_t i = 0; i < 100; i++) {
+    replies.emplace_back(tunnel(0)->exec("set", SSTR("entry-" << i), SSTR("contents-" << i)));
+  }
 
-//   DBG(".");
-//   for(size_t i = 0; i < 100; i++) {
-//     DBG(i);
-//     ASSERT_REPLY(replies[i], "OK");
-//   }
-//   DBG(".");
+  for(size_t i = 0; i < 100; i++) {
+    ASSERT_REPLY(replies[i], "OK");
+  }
 
-//   // spinup node #1, add to cluster
-//   spinup(1);
+  // spinup node #1, add to cluster
+  spinup(1);
 
-//   ASSERT_REPLY(tunnel(0)->exec("RAFT_ADD_OBSERVER", myself(1).toString()), "OK");
-//   RETRY_ASSERT_TRUE(journal(0)->getEpoch() <= journal(0)->getCommitIndex());
+  ASSERT_REPLY(tunnel(0)->exec("RAFT_ADD_OBSERVER", myself(1).toString()), "OK");
+  RETRY_ASSERT_TRUE(journal(0)->getEpoch() <= journal(0)->getCommitIndex());
 
+  // promote
+  ASSERT_REPLY(tunnel(0)->exec("RAFT_PROMOTE_OBSERVER", myself(1).toString()), "OK");
 
+  // More writes
+  replies.clear();
+  for(size_t i = 100; i < 200; i++) {
+    replies.emplace_back(tunnel(0)->exec("set", SSTR("entry-" << i), SSTR("contents-" << i)));
+  }
 
+  for(size_t i = 0; i < 100; i++) {
+    ASSERT_REPLY(replies[i], "OK");
+  }
 
-// }
+  // Switch over leadership to #1
+  while(true) {
+    RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+    int leaderID = getLeaderID();
+    if(leaderID == 1) break;
+    tunnel(1)->exec("raft-attempt-coup").get();
+  }
+
+  // commit a write
+  ASSERT_REPLY(tunnel(1)->exec("set", "aaa", "123"), "OK");
+
+  // get a previous read
+  ASSERT_REPLY(tunnel(1)->exec("get", "entry-100"), "contents-100");
+}
+
