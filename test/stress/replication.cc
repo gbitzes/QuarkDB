@@ -599,6 +599,8 @@ TEST_F(SingleNodeInitially, BuildClusterFromSingle) {
     int leaderID = getLeaderID();
     if(leaderID == 1) break;
     tunnel(1)->exec("raft-attempt-coup").get();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
   }
 
   // commit a write
@@ -606,5 +608,13 @@ TEST_F(SingleNodeInitially, BuildClusterFromSingle) {
 
   // get a previous read
   ASSERT_REPLY(tunnel(1)->exec("get", "entry-100"), "contents-100");
-}
 
+  // remove #0
+  ASSERT_REPLY(tunnel(1)->exec("raft-remove-member", myself(0).toString()), "OK");
+
+  // commit one more write
+  ASSERT_REPLY(tunnel(1)->exec("set", "bbb", "123"), "OK");
+
+  // read
+  ASSERT_REPLY(tunnel(1)->exec("get", "entry-5"), "contents-5");
+}

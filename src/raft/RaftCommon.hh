@@ -247,7 +247,7 @@ struct ReplicationStatus {
   }
 
   bool quorumUpToDate(LogIndex leaderLogSize) {
-    if(replicas.size() == 1) return false;
+    if(replicas.size() == 1) return true;
     return calculateQuorumSize(replicas.size()) <= replicasUpToDate(leaderLogSize);
   }
 
