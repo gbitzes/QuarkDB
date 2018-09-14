@@ -149,6 +149,7 @@ cc7-koji:
     - cd build/SRPMS
     - TAG_NAME=$(echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
     - koji tag-build quarkdb7-qa ${TAG_NAME}
+    - koji tag-build quarkdb7-stable ${TAG_NAME}
   only:
     - tags@eos/quarkdb
 
