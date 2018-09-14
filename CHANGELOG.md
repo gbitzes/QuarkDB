@@ -1,7 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.3.3 (2018-09-14)
+
+### Added
+- Ability to run QuarkDB in raft mode with only a single node. This allows starting
+with a single node, and growing the cluster in the future if needed, which is
+cumbersome to do in standalone mode.
+- Added `quarkdb-version` command, which simply returns the current quarkdb version.
+- Commands `deque-scan-back`, `deque-trim-front`.
 
 ### Changed
 - Dropped list commands, as the underlying implementation makes it impossible to support all list commands found in official redis. (most notably `linsert`)
@@ -11,6 +18,7 @@ All notable changes to this project will be documented in this file.
   This makes it possible to implement lists properly in the future.
 
   No-one has been using the list operations, which gives us the opportunity to change the command names.
+- Minor code and performance improvements.
 
 ## 0.3.2 (2018-08-14)
 ### Added
