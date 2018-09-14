@@ -332,6 +332,7 @@ struct RaftInfo {
     ret.push_back(SSTR("MEMBERSHIP-EPOCH " << membershipEpoch));
     ret.push_back(SSTR("NODES " << serializeNodes(nodes)));
     ret.push_back(SSTR("OBSERVERS " << serializeNodes(observers)));
+    ret.push_back(SSTR("QUORUM-SIZE " << calculateQuorumSize(nodes.size())));
 
     if(!replicationStatus.replicas.empty()) {
       ret.push_back("----------");
