@@ -581,7 +581,10 @@ TEST_F(SingleNodeInitially, BuildClusterFromSingle) {
   RETRY_ASSERT_TRUE(journal(0)->getEpoch() <= journal(0)->getCommitIndex());
 
   // promote
-  ASSERT_REPLY(tunnel(0)->exec("RAFT_PROMOTE_OBSERVER", myself(1).toString()), "OK");
+  RETRY_ASSERT_TRUE(
+    qclient::describeRedisReply(tunnel(0)->exec("RAFT_PROMOTE_OBSERVER", myself(1).toString()).get())
+    == "OK"
+  );
 
   // More writes
   replies.clear();
@@ -600,7 +603,7 @@ TEST_F(SingleNodeInitially, BuildClusterFromSingle) {
     if(leaderID == 1) break;
     tunnel(1)->exec("raft-attempt-coup").get();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    std::this_thread::sleep_for(testconfig.raftTimeouts->getLow());
   }
 
   // commit a write
