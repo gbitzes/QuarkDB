@@ -983,6 +983,16 @@ TEST(KeyDescriptor, BasicSanity) {
   ASSERT_EQ(leaseDescr.getEndIndex(), 15u);
 }
 
+TEST(KeyType, AsString) {
+  ASSERT_THROW(keyTypeAsString(KeyType::kParseError), FatalException);
+  ASSERT_EQ(keyTypeAsString(KeyType::kLease), "lease");
+  ASSERT_EQ(keyTypeAsString(KeyType::kString), "string");
+  ASSERT_EQ(keyTypeAsString(KeyType::kSet), "set");
+  ASSERT_EQ(keyTypeAsString(KeyType::kHash), "hash");
+  ASSERT_EQ(keyTypeAsString(KeyType::kLocalityHash), "locality hash");
+  ASSERT_EQ(keyTypeAsString(KeyType::kDeque), "deque");
+}
+
 TEST(FieldLocator, BasicSanity) {
   FieldLocator locator1(KeyType::kHash, "some_key");
   locator1.resetField("my_field");

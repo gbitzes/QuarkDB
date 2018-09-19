@@ -95,6 +95,8 @@ enum class RedisCommand {
   RAW_SCAN,
   RAW_GET_ALL_VERSIONS,
 
+  TYPE,
+
   EXEC,
   DISCARD,
   MULTI,

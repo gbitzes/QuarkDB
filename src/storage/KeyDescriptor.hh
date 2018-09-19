@@ -68,6 +68,37 @@ inline KeyType parseKeyType(char c) {
   }
 }
 
+inline std::string keyTypeAsString(KeyType key) {
+  switch(key) {
+    case KeyType::kNull: {
+      return "none";
+    }
+    case KeyType::kParseError: {
+      qdb_throw("given KeyType == kParseError, not representable as string");
+    }
+    case KeyType::kString: {
+      return "string";
+    }
+    case KeyType::kSet: {
+      return "set";
+    }
+    case KeyType::kHash: {
+      return "hash";
+    }
+    case KeyType::kDeque: {
+      return "deque";
+    }
+    case KeyType::kLocalityHash: {
+      return "locality hash";
+    }
+    case KeyType::kLease: {
+      return "lease";
+    }
+  }
+
+  qdb_throw("should never reach here");
+}
+
 // Helper enum for selecting which of startIndex, endIndex to pick
 enum class Direction : int {
   kLeft = -1,

@@ -118,6 +118,7 @@ public:
   rocksdb::Status rawScan(StagingArea &stagingArea, const std::string &key, size_t count, std::vector<std::string> &elements);
   rocksdb::Status dequeScanBack(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &results);
   void getClock(StagingArea &stagingArea, ClockValue &value);
+  void getType(StagingArea &stagingArea, std::string_view key, std::string& keyType);
 
   //----------------------------------------------------------------------------
   // Simple API

@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 - Updated rocksdb dependency to v5.15.10.
+- Added `TYPE` command.
 
 ## 0.3.3 (2018-09-14)
 

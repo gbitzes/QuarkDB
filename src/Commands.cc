@@ -65,6 +65,7 @@ struct cmdMapInit {
     redis_cmd_map["raw_scan"] = {RedisCommand::RAW_SCAN, CommandType::READ};
     redis_cmd_map["raw_get_all_versions"] = {RedisCommand::RAW_GET_ALL_VERSIONS, CommandType::READ};
     redis_cmd_map["clock_get"] = {RedisCommand::CLOCK_GET, CommandType::READ};
+    redis_cmd_map["type"] = {RedisCommand::TYPE, CommandType::READ};
 
     redis_cmd_map["flushall"] = {RedisCommand::FLUSHALL, CommandType::WRITE};
     redis_cmd_map["set"] = {RedisCommand::SET, CommandType::WRITE};

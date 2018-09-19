@@ -357,6 +357,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
   std::vector<std::future<redisReplyPtr>> futures;
   futures.emplace_back(tunnel(leaderID)->exec("SADD", "myset", "a", "b", "c"));
+  futures.emplace_back(tunnel(leaderID)->exec("TYPE", "myset"));
   futures.emplace_back(tunnel(leaderID)->exec("SCARD", "myset"));
   futures.emplace_back(tunnel(leaderID)->exec("Smembers", "myset"));
   futures.emplace_back(tunnel(leaderID)->exec("srem", "myset", "a", "b"));
@@ -368,17 +369,19 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("timestamped-lease-get", "123"));
   futures.emplace_back(tunnel(leaderID)->exec("timestamped-lease-release", "123"));
 
-  ASSERT_REPLY(futures[0], 3);
-  ASSERT_REPLY(futures[1], 3);
-  ASSERT_REPLY(futures[2], make_vec("a", "b", "c"));
-  ASSERT_REPLY(futures[3], 2);
-  ASSERT_REPLY(futures[4], 0);
-  ASSERT_REPLY(futures[5], 1);
-  ASSERT_REPLY(futures[6], make_vec("c"));
-  ASSERT_NIL(futures[7]);
-  ASSERT_REPLY(futures[8], "ERR unknown command 'timestamped-lease-acquire'" );
-  ASSERT_REPLY(futures[9], "ERR unknown command 'timestamped-lease-get'" );
-  ASSERT_REPLY(futures[10], "ERR unknown command 'timestamped-lease-release'" );
+  size_t count = 0;
+  ASSERT_REPLY(futures[count++], 3);
+  ASSERT_REPLY(futures[count++], "set");
+  ASSERT_REPLY(futures[count++], 3);
+  ASSERT_REPLY(futures[count++], make_vec("a", "b", "c"));
+  ASSERT_REPLY(futures[count++], 2);
+  ASSERT_REPLY(futures[count++], 0);
+  ASSERT_REPLY(futures[count++], 1);
+  ASSERT_REPLY(futures[count++], make_vec("c"));
+  ASSERT_NIL(futures[count++]);
+  ASSERT_REPLY(futures[count++], "ERR unknown command 'timestamped-lease-acquire'" );
+  ASSERT_REPLY(futures[count++], "ERR unknown command 'timestamped-lease-get'" );
+  ASSERT_REPLY(futures[count++], "ERR unknown command 'timestamped-lease-release'" );
 
   futures.clear();
 
@@ -407,7 +410,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   futures.emplace_back(tunnel(leaderID)->exec("quarkdb_invalid_command"));
   futures.emplace_back(tunnel(leaderID)->exec("raft-fetch-last", "7", "raw"));
 
-  size_t count = 0;
+  count = 0;
   ASSERT_REPLY(futures[count++], 1);
   ASSERT_REPLY(futures[count++], 1);
   ASSERT_REPLY(futures[count++], 1);

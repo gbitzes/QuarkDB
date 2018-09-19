@@ -452,6 +452,13 @@ RedisEncodedResponse RedisDispatcher::dispatchLHGET(StagingArea &stagingArea, co
 
 RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, RedisRequest &request) {
   switch(request.getCommand()) {
+    case RedisCommand::TYPE: {
+      if(request.size() != 2) return errArgs(request);
+
+      std::string retval;
+      store.getType(stagingArea, request[1], retval);
+      return Formatter::status(retval);
+    }
     case RedisCommand::GET: {
       if(request.size() != 2) return errArgs(request);
 

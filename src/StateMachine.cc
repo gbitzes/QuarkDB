@@ -1257,6 +1257,11 @@ void StateMachine::getClock(StagingArea &stagingArea, ClockValue &value) {
   value = binaryStringToUnsignedInt(prevValue.c_str());
 }
 
+void StateMachine::getType(StagingArea &stagingArea, std::string_view key, std::string &keyType) {
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
+  keyType = keyTypeAsString(keyinfo.getKeyType());
+}
+
 void StateMachine::getClock(ClockValue &value) {
   StagingArea stagingArea(*this, true);
   getClock(stagingArea, value);
