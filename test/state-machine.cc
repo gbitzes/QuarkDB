@@ -985,6 +985,7 @@ TEST(KeyDescriptor, BasicSanity) {
 
 TEST(KeyType, AsString) {
   ASSERT_THROW(keyTypeAsString(KeyType::kParseError), FatalException);
+  ASSERT_EQ(keyTypeAsString(KeyType::kNull), "none");
   ASSERT_EQ(keyTypeAsString(KeyType::kLease), "lease");
   ASSERT_EQ(keyTypeAsString(KeyType::kString), "string");
   ASSERT_EQ(keyTypeAsString(KeyType::kSet), "set");
