@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 - Updated rocksdb dependency to v5.15.10.
 - Added `TYPE` command.
+- A read-only MULTI immediatelly after a read-write MULTI could
+  cause the cluster to crash.
 
 ## 0.3.3 (2018-09-14)
 

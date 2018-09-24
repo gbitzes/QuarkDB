@@ -131,6 +131,8 @@ bool Transaction::deserialize(const std::string &src) {
 
 void Transaction::clear() {
   requests.clear();
+  phantom = false;
+  hasWrites = false;
 }
 
 std::string Transaction::getFusedCommand() const {

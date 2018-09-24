@@ -122,6 +122,25 @@ TEST_F(Multi, HandlerBasicSanity) {
   replies.clear();
   ASSERT_REPLY(tunnel(leaderID)->exec("EXEC"), "ERR EXEC without MULTI");
   ASSERT_REPLY(tunnel(leaderID)->exec("HGET", "myhash", "f1"), "v1");
+
+  // Read MULTI-EXEC right after a write
+  replies.clear();
+  replies.push_back(tunnel(leaderID)->exec("MULTI"));
+  replies.push_back(tunnel(leaderID)->exec("SET", "abc", "123"));
+  replies.push_back(tunnel(leaderID)->exec("EXEC"));
+
+  ASSERT_REPLY(replies[0], "OK");
+  ASSERT_REPLY(replies[1], "QUEUED");
+  ASSERT_REPLY_DESCRIBE(replies[2], "1) OK\n");
+
+  replies.clear();
+  replies.push_back(tunnel(leaderID)->exec("MULTI"));
+  replies.push_back(tunnel(leaderID)->exec("GET", "abc"));
+  replies.push_back(tunnel(leaderID)->exec("EXEC"));
+
+  ASSERT_REPLY(replies[0], "OK");
+  ASSERT_REPLY(replies[1], "QUEUED");
+  ASSERT_REPLY_DESCRIBE(replies[2], "1) \"123\"\n");
 }
 
 TEST_F(Multi, WithRaft) {
