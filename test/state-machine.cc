@@ -1139,26 +1139,37 @@ TEST(EscapedPrefixExtractor, BasicSanity) {
   EscapedPrefixExtractor ex1;
   ASSERT_TRUE(ex1.parse("my##key"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "my");
+  ASSERT_EQ(ex1.getRawPrefix(), "my");
+  ASSERT_EQ(ex1.getRawSuffix(), "key");
   ASSERT_EQ(ex1.getBoundary(), 4u);
 
   ASSERT_TRUE(ex1.parse("aaaaaaaa##bbbb"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "aaaaaaaa");
+  ASSERT_EQ(ex1.getRawPrefix(), "aaaaaaaa");
+  ASSERT_EQ(ex1.getRawSuffix(), "bbbb");
   ASSERT_EQ(ex1.getBoundary(), 10u);
 
   ASSERT_TRUE(ex1.parse("adsfas|#aaaaa##bbbb"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "adsfas#aaaaa");
+  ASSERT_EQ(ex1.getRawPrefix(), "adsfas|#aaaaa");
+  ASSERT_EQ(ex1.getRawSuffix(), "bbbb");
   ASSERT_EQ(ex1.getBoundary(), 15u);
 
   ASSERT_TRUE(ex1.parse("##"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "");
+  ASSERT_EQ(ex1.getRawPrefix(), "");
+  ASSERT_EQ(ex1.getRawSuffix(), "");
   ASSERT_EQ(ex1.getBoundary(), 2u);
 
   ASSERT_TRUE(ex1.parse("q##"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "q");
+  ASSERT_EQ(ex1.getRawPrefix(), "q");
   ASSERT_EQ(ex1.getBoundary(), 3u);
 
   ASSERT_TRUE(ex1.parse("##qqqq"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "");
+  ASSERT_EQ(ex1.getRawPrefix(), "");
+  ASSERT_EQ(ex1.getRawSuffix(), "qqqq");
   ASSERT_EQ(ex1.getBoundary(), 2u);
 
   ASSERT_FALSE(ex1.parse("#"));
@@ -1166,5 +1177,13 @@ TEST(EscapedPrefixExtractor, BasicSanity) {
 
   ASSERT_TRUE(ex1.parse("###"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "");
+  ASSERT_EQ(ex1.getRawPrefix(), "");
+  ASSERT_EQ(ex1.getRawSuffix(), "#");
   ASSERT_EQ(ex1.getBoundary(), 2u);
+
+  ASSERT_TRUE(ex1.parse("test|#bb##aa##bb"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "test#bb");
+  ASSERT_EQ(ex1.getRawPrefix(), "test|#bb");
+  ASSERT_EQ(ex1.getRawSuffix(), "aa##bb");
+  ASSERT_EQ(ex1.getBoundary(), 10u);
 }

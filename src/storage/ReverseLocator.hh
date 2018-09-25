@@ -101,6 +101,15 @@ public:
     return std::string_view(slice.data(), boundary-2);
   }
 
+
+  std::string_view getRawPrefix() const {
+    return std::string_view(slice.data(), boundary-2);
+  }
+
+  std::string_view getRawSuffix() const {
+    return std::string_view(slice.data()+boundary, slice.size()-boundary);
+  }
+
   size_t getBoundary() const {
     qdb_assert(parsingOk);
     return boundary;
