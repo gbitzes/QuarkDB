@@ -29,7 +29,7 @@
 
 namespace quarkdb {
 
-inline size_t extractKey(const rocksdb::Slice &dkey, std::string &key) {
+inline size_t extractKey(std::string_view dkey, std::string &key) {
   key.clear();
   key.reserve(dkey.size());
 
@@ -52,7 +52,7 @@ inline size_t extractKey(const rocksdb::Slice &dkey, std::string &key) {
     }
   }
 
-  qdb_critical("Parse error, unable to extract original redis key from '" << dkey.ToString() << "'");
+  qdb_critical("Parse error, unable to extract original redis key from '" << dkey << "'");
   return 0;
 }
 
@@ -63,7 +63,7 @@ class ReverseLocator {
 public:
   ReverseLocator() {}
 
-  ReverseLocator(const rocksdb::Slice sl) : slice(sl) {
+  ReverseLocator(std::string_view sl) : slice(sl) {
     keyType = parseKeyType(sl.data()[0]);
     if(keyType == KeyType::kParseError || keyType == KeyType::kString) {
       return;
@@ -125,7 +125,7 @@ public:
   }
 
 private:
-  rocksdb::Slice slice;
+  std::string_view slice;
 
   KeyType keyType = KeyType::kParseError;
   std::string unescapedKey;

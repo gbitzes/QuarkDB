@@ -70,7 +70,7 @@ KeyDescriptorBuilder::KeyDescriptorBuilder(StateMachine &stateMachine) {
       continue;
     }
 
-    ReverseLocator revlocator(iterator->key());
+    ReverseLocator revlocator(toView(iterator->key()));
 
     if(revlocator.getKeyType() == KeyType::kParseError) {
       qdb_critical("Unable to parse key when rebuilding key descriptors: " << iterator->key().ToString());

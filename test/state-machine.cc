@@ -1014,7 +1014,7 @@ TEST(ReverseLocator, BasicSanity) {
   FieldLocator locator1(KeyType::kHash, "some_key");
   locator1.resetField("some_field");
 
-  ReverseLocator revlocator(locator1.toSlice());
+  ReverseLocator revlocator(locator1.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kHash);
   ASSERT_EQ(revlocator.getOriginalKey(), "some_key");
   ASSERT_EQ(revlocator.getField(), "some_field");
@@ -1024,14 +1024,14 @@ TEST(ReverseLocator, BasicSanity) {
   FieldLocator locator2(KeyType::kSet, evilkey);
   locator2.resetField("field#with#hashes");
 
-  revlocator = ReverseLocator(locator2.toSlice());
+  revlocator = ReverseLocator(locator2.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kSet);
   ASSERT_EQ(revlocator.getOriginalKey(), evilkey);
   ASSERT_EQ(revlocator.getRawPrefix(), locator2.getPrefix());
   ASSERT_EQ(revlocator.getField(), "field#with#hashes");
 
   StringLocator locator3("random_string###|###");
-  revlocator = ReverseLocator(locator3.toSlice());
+  revlocator = ReverseLocator(locator3.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kString);
   ASSERT_EQ(revlocator.getOriginalKey(), "random_string###|###");
   ASSERT_THROW(revlocator.getRawPrefix(), FatalException);
@@ -1048,7 +1048,7 @@ TEST(LocalityFieldLocator, BasicSanity) {
   LocalityFieldLocator locator1("some_key");
   ASSERT_EQ(locator1.toSlice(), "esome_key##d");
 
-  ReverseLocator revlocator(locator1.toSlice());
+  ReverseLocator revlocator(locator1.toView());
   ASSERT_EQ(revlocator.getOriginalKey(), "some_key");
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
@@ -1057,20 +1057,20 @@ TEST(LocalityFieldLocator, BasicSanity) {
 
   locator1.resetHint("my-locality-hint");
   ASSERT_EQ(locator1.toSlice(), "esome_key##dmy-locality-hint##");
-  revlocator = ReverseLocator(locator1.toSlice());
+  revlocator = ReverseLocator(locator1.toView());
   ASSERT_EQ(revlocator.getOriginalKey(), "some_key");
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
   locator1.resetField("field##with##hashes");
   ASSERT_EQ(locator1.toSlice(), "esome_key##dmy-locality-hint##field##with##hashes");
-  revlocator = ReverseLocator(locator1.toSlice());
+  revlocator = ReverseLocator(locator1.toView());
   ASSERT_EQ(revlocator.getOriginalKey(), "some_key");
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
   locator1.resetHint("evil-hint##with##hashes");
   locator1.resetField("a-field");
   ASSERT_EQ(locator1.toSlice(), "esome_key##devil-hint|#|#with|#|#hashes##a-field");
-  revlocator = ReverseLocator(locator1.toSlice());
+  revlocator = ReverseLocator(locator1.toView());
   ASSERT_EQ(revlocator.getOriginalKey(), "some_key");
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
@@ -1078,7 +1078,7 @@ TEST(LocalityFieldLocator, BasicSanity) {
   locator1.resetHint("#evil#hint#");
   locator1.resetField("#evil#field#");
   ASSERT_EQ(locator1.toSlice(), "e|#evil|#key|###d|#evil|#hint|####evil#field#");
-  revlocator = ReverseLocator(locator1.toSlice());
+  revlocator = ReverseLocator(locator1.toView());
   ASSERT_EQ(revlocator.getOriginalKey(), "#evil#key#");
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 
@@ -1086,7 +1086,7 @@ TEST(LocalityFieldLocator, BasicSanity) {
   locator1.resetHint("my-hint");
   locator1.resetField("my-field");
   ASSERT_EQ(locator1.toSlice(), "emy-key##dmy-hint##my-field");
-  revlocator = ReverseLocator(locator1.toSlice());
+  revlocator = ReverseLocator(locator1.toView());
   ASSERT_EQ(revlocator.getOriginalKey(), "my-key");
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
 }
@@ -1095,19 +1095,19 @@ TEST(LocalityIndexLocator, BasicSanity) {
   LocalityIndexLocator locator1("my-key", "my-field");
   ASSERT_EQ(locator1.toSlice(), "emy-key##imy-field");
 
-  ReverseLocator revlocator(locator1.toSlice());
+  ReverseLocator revlocator(locator1.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
   ASSERT_EQ(revlocator.getOriginalKey(), "my-key");
 
   locator1.resetKey("key##with##hashes");
   ASSERT_EQ(locator1.toSlice(), "ekey|#|#with|#|#hashes##i");
-  revlocator = ReverseLocator(locator1.toSlice());
+  revlocator = ReverseLocator(locator1.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
   ASSERT_EQ(revlocator.getOriginalKey(), "key##with##hashes");
 
   locator1.resetField("aaaaa");
   ASSERT_EQ(locator1.toSlice(), "ekey|#|#with|#|#hashes##iaaaaa");
-  revlocator = ReverseLocator(locator1.toSlice());
+  revlocator = ReverseLocator(locator1.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kLocalityHash);
   ASSERT_EQ(revlocator.getOriginalKey(), "key##with##hashes");
 }
