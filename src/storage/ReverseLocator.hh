@@ -29,11 +29,11 @@
 
 namespace quarkdb {
 
-inline size_t extractKey(std::string_view dkey, std::string &key) {
+inline size_t extractPrefix(std::string_view dkey, std::string &key) {
   key.clear();
   key.reserve(dkey.size());
 
-  for(size_t i = 1; i < dkey.size(); i++) {
+  for(size_t i = 0; i < dkey.size(); i++) {
     // Hash?
     if(dkey[i] == '#') {
       // Is this the boundary?
@@ -56,6 +56,64 @@ inline size_t extractKey(std::string_view dkey, std::string &key) {
   return 0;
 }
 
+// Given a slice containing an escaped prefix, extract the original, unescaped
+// value and the boundary.
+class EscapedPrefixExtractor {
+public:
+  EscapedPrefixExtractor() {}
+
+  bool parse(std::string_view sl) {
+    parsingOk = false;
+    slice = sl;
+    unescaped.clear();
+    boundary = 0;
+
+    for(size_t i = 1; i < slice.size(); i++) {
+      if(slice.data()[i] == '#' && slice.data()[i-1] == '|') {
+        // Original prefix contains escaped hashes, do heavyweight parsing.
+        boundary = extractPrefix(slice, unescaped);
+        if(boundary == 0) return false; // parse error
+
+        parsingOk = true;
+        return true;
+      }
+
+      if(slice.data()[i] == '#' && slice.data()[i-1] == '#') {
+        // No escaped hashes, yay. Zero-copy case.
+        boundary = i+1;
+
+        parsingOk = true;
+        return true;
+      }
+    }
+
+    // We shouldn't normally reach here.. parse error
+    return false;
+  }
+
+  std::string_view getOriginalPrefix() const {
+    qdb_assert(parsingOk);
+
+    if(!unescaped.empty()) {
+      return unescaped;
+    }
+
+    return std::string_view(slice.data(), boundary-2);
+  }
+
+  size_t getBoundary() const {
+    qdb_assert(parsingOk);
+    return boundary;
+  }
+
+private:
+  bool parsingOk;
+  std::string_view slice;
+
+  std::string unescaped;
+  size_t boundary;
+};
+
 // Given an encoded rocksdb key, extract original key (and field, if available)
 // The underlying memory of given slice must remain alive while this object is
 // being accessed.
@@ -72,9 +130,11 @@ public:
     // This is a key + field then.. Need to tell them apart.
     for(size_t i = 0; i < slice.size(); i++) {
       if(slice.data()[i] == '#' && slice.data()[i-1] == '|') {
-        // Oriignal key contains escaped hashes, do heavyweight parsing.
-        fieldStart = extractKey(slice, unescapedKey);
-        if(fieldStart == 0) keyType = KeyType::kParseError;
+        // Original key contains escaped hashes, do heavyweight parsing.
+        std::string_view withoutKeyType = slice;
+        withoutKeyType.remove_prefix(1);
+        fieldStart = extractPrefix(withoutKeyType, unescapedKey) + 1;
+        if(fieldStart == 1u) keyType = KeyType::kParseError;
         return;
       }
 

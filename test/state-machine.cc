@@ -1132,3 +1132,39 @@ TEST(PatternMatching, BasicSanity) {
   ASSERT_EQ(extractPatternPrefix("1234[a-z]*134"), "1234");
   ASSERT_EQ(extractPatternPrefix("?134"), "");
 }
+
+TEST(EscapedPrefixExtractor, BasicSanity) {
+  using namespace std::literals;
+
+  EscapedPrefixExtractor ex1;
+  ASSERT_TRUE(ex1.parse("my##key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "my");
+  ASSERT_EQ(ex1.getBoundary(), 4u);
+
+  ASSERT_TRUE(ex1.parse("aaaaaaaa##bbbb"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "aaaaaaaa");
+  ASSERT_EQ(ex1.getBoundary(), 10u);
+
+  ASSERT_TRUE(ex1.parse("adsfas|#aaaaa##bbbb"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "adsfas#aaaaa");
+  ASSERT_EQ(ex1.getBoundary(), 15u);
+
+  ASSERT_TRUE(ex1.parse("##"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "");
+  ASSERT_EQ(ex1.getBoundary(), 2u);
+
+  ASSERT_TRUE(ex1.parse("q##"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "q");
+  ASSERT_EQ(ex1.getBoundary(), 3u);
+
+  ASSERT_TRUE(ex1.parse("##qqqq"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "");
+  ASSERT_EQ(ex1.getBoundary(), 2u);
+
+  ASSERT_FALSE(ex1.parse("#"));
+  ASSERT_FALSE(ex1.parse("asd"));
+
+  ASSERT_TRUE(ex1.parse("###"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "");
+  ASSERT_EQ(ex1.getBoundary(), 2u);
+}

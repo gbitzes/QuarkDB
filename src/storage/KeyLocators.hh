@@ -225,6 +225,10 @@ public:
     return keyBuffer.toView();
   }
 
+  std::string_view getPrefix() {
+    return std::string_view(keyBuffer.data(), keyPrefixSize + localityPrefixSize);
+  }
+
 private:
   size_t keyPrefixSize = 0;
   size_t localityPrefixSize = 0;
