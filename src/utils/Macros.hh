@@ -73,9 +73,12 @@ extern std::mutex logMutex;
 #define qdb_info(message) ___log("INFO: " << message)
 #define qdb_debug(message) if(false) { ___log(message); }
 
+#define QDB_LIKELY(x)       __builtin_expect((x),1)
+#define QDB_UNLIKELY(x)     __builtin_expect((x),0)
+
 // a serious error has occured signifying a bug in the program logic
 #define qdb_throw(message) throw FatalException(SSTR(message << quarkdb::errorStacktrace(true)))
-#define qdb_assert(condition) if(!((condition))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition << quarkdb::errorStacktrace(true)))
+#define qdb_assert(condition) if(QDB_UNLIKELY(!((condition)))) throw FatalException(SSTR("assertion violation, condition is not true: " << #condition << quarkdb::errorStacktrace(true)))
 
 // Always inline this function.
 #define QDB_ALWAYS_INLINE __attribute__((always_inline))
