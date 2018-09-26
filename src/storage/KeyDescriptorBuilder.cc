@@ -89,10 +89,10 @@ KeyDescriptorBuilder::KeyDescriptorBuilder(StateMachine &stateMachine) {
     }
 
     // We're dealing with a key that has prefix ..
-    if(currentPrefix != revlocator.getRawPrefix()) {
+    if(currentPrefix != revlocator.getRawPrefixUntilBoundary()) {
       appendToWriteBatch(currentPrefix, currentKey, descriptor, descriptorBatch);
 
-      currentPrefix = revlocator.getRawPrefix();
+      currentPrefix = revlocator.getRawPrefixUntilBoundary();
       currentKey = revlocator.getOriginalKey();
 
       descriptor.setKeyType(revlocator.getKeyType());

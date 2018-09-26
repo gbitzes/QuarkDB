@@ -103,10 +103,12 @@ public:
 
 
   std::string_view getRawPrefix() const {
+    qdb_assert(parsingOk);
     return std::string_view(slice.data(), boundary-2);
   }
 
   std::string_view getRawSuffix() const {
+    qdb_assert(parsingOk);
     return std::string_view(slice.data()+boundary, slice.size()-boundary);
   }
 
@@ -136,26 +138,14 @@ public:
       return;
     }
 
-    // This is a key + field then.. Need to tell them apart.
-    for(size_t i = 0; i < slice.size(); i++) {
-      if(slice.data()[i] == '#' && slice.data()[i-1] == '|') {
-        // Original key contains escaped hashes, do heavyweight parsing.
-        std::string_view withoutKeyType = slice;
-        withoutKeyType.remove_prefix(1);
-        fieldStart = extractPrefix(withoutKeyType, unescapedKey) + 1;
-        if(fieldStart == 1u) keyType = KeyType::kParseError;
-        return;
-      }
+    std::string_view withoutKeyType = slice;
+    withoutKeyType.remove_prefix(1);
 
-      if(slice.data()[i] == '#' && slice.data()[i+1] == '#') {
-        // No escaped hashes, yay
-        fieldStart = i+2;
-        return;
-      }
+    // Extract first chunk.
+    if(!firstChunk.parse(withoutKeyType) || firstChunk.getBoundary() == 0u) {
+      keyType = KeyType::kParseError;
+      return;
     }
-
-    // This shouldn't happen.. flag parse error
-    keyType = KeyType::kParseError;
   }
 
   KeyType getKeyType() {
@@ -164,31 +154,28 @@ public:
 
   std::string_view getOriginalKey() {
     qdb_assert(keyType != KeyType::kParseError);
-    if(!unescapedKey.empty()) {
-      return std::string_view(unescapedKey.data(), unescapedKey.size());
-    }
 
     if(keyType == KeyType::kString) {
       return std::string_view(slice.data()+1, slice.size()-1);
     }
 
-    return std::string_view(slice.data()+1, fieldStart-3);
+    return firstChunk.getOriginalPrefix();
   }
 
-  rocksdb::Slice getField() {
+  std::string_view getField() {
     qdb_assert(keyType != KeyType::kParseError && keyType != KeyType::kString);
-    return rocksdb::Slice(slice.data()+fieldStart, slice.size()-fieldStart);
+    return firstChunk.getRawSuffix();
   }
 
-  std::string_view getRawPrefix() {
+  std::string_view getRawPrefixUntilBoundary() {
     qdb_assert(keyType != KeyType::kParseError && keyType != KeyType::kString);
-    return std::string_view(slice.data(), fieldStart);
+    return std::string_view(slice.data(), firstChunk.getBoundary()+1);
   }
 
   bool isLocalityIndex() {
     if(keyType != KeyType::kLocalityHash) return false;
 
-    rocksdb::Slice field = getField();
+    std::string_view field = getField();
     qdb_assert(field.size() != 0u);
     return *(field.data()) == char(InternalLocalityFieldType::kIndex);
   }
@@ -197,8 +184,7 @@ private:
   std::string_view slice;
 
   KeyType keyType = KeyType::kParseError;
-  std::string unescapedKey;
-  size_t fieldStart;
+  EscapedPrefixExtractor firstChunk;
 };
 
 }

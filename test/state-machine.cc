@@ -1018,7 +1018,7 @@ TEST(ReverseLocator, BasicSanity) {
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kHash);
   ASSERT_EQ(revlocator.getOriginalKey(), "some_key");
   ASSERT_EQ(revlocator.getField(), "some_field");
-  ASSERT_EQ(revlocator.getRawPrefix(), locator1.getPrefix());
+  ASSERT_EQ(revlocator.getRawPrefixUntilBoundary(), locator1.getPrefix());
 
   const std::string evilkey("evil#key#with|#hashes#|###");
   FieldLocator locator2(KeyType::kSet, evilkey);
@@ -1027,14 +1027,14 @@ TEST(ReverseLocator, BasicSanity) {
   revlocator = ReverseLocator(locator2.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kSet);
   ASSERT_EQ(revlocator.getOriginalKey(), evilkey);
-  ASSERT_EQ(revlocator.getRawPrefix(), locator2.getPrefix());
+  ASSERT_EQ(revlocator.getRawPrefixUntilBoundary(), locator2.getPrefix());
   ASSERT_EQ(revlocator.getField(), "field#with#hashes");
 
   StringLocator locator3("random_string###|###");
   revlocator = ReverseLocator(locator3.toView());
   ASSERT_EQ(revlocator.getKeyType(), KeyType::kString);
   ASSERT_EQ(revlocator.getOriginalKey(), "random_string###|###");
-  ASSERT_THROW(revlocator.getRawPrefix(), FatalException);
+  ASSERT_THROW(revlocator.getRawPrefixUntilBoundary(), FatalException);
   ASSERT_THROW(revlocator.getField(), FatalException);
 
   revlocator = ReverseLocator("zdfdas");
