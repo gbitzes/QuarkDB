@@ -1493,6 +1493,72 @@ TEST_F(Raft_e2e, LocalityHash) {
     "   2) \"f1\"\n"
     "   3) \"v3\"\n"
   );
+
+  // Now test with evil characters, too
+  replies.clear();
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "my#key", "f#1", "hint#1", "v1"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "my#key", "f2", "hint2", "v2"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "my#key", "f#3", "hint3", "v3"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "my#key", "f#4", "hint#4", "v#4"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "my#key", "f#5##", "##hint5##", "v5"));
+
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "my#key", "0"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "my#key", "0", "COUNT", "2"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "my#key", "next:hint|#1##f#1", "COUNT", "2"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "my#key", "next:|#|#hint5|#|###f#5##"));
+
+  size_t count = 0;
+  ASSERT_REPLY(replies[count++], 1);
+  ASSERT_REPLY(replies[count++], 1);
+  ASSERT_REPLY(replies[count++], 1);
+  ASSERT_REPLY(replies[count++], 1);
+  ASSERT_REPLY(replies[count++], 1);
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"0\"\n"
+    "2) 1) \"hint2\"\n"
+    "   2) \"f2\"\n"
+    "   3) \"v2\"\n"
+    "   4) \"hint3\"\n"
+    "   5) \"f#3\"\n"
+    "   6) \"v3\"\n"
+    "   7) \"hint#1\"\n"
+    "   8) \"f#1\"\n"
+    "   9) \"v1\"\n"
+    "   10) \"hint#4\"\n"
+    "   11) \"f#4\"\n"
+    "   12) \"v#4\"\n"
+    "   13) \"##hint5##\"\n"
+    "   14) \"f#5##\"\n"
+    "   15) \"v5\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"next:hint|#1##f#1\"\n"
+    "2) 1) \"hint2\"\n"
+    "   2) \"f2\"\n"
+    "   3) \"v2\"\n"
+    "   4) \"hint3\"\n"
+    "   5) \"f#3\"\n"
+    "   6) \"v3\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"next:|#|#hint5|#|###f#5##\"\n"
+    "2) 1) \"hint#1\"\n"
+    "   2) \"f#1\"\n"
+    "   3) \"v1\"\n"
+    "   4) \"hint#4\"\n"
+    "   5) \"f#4\"\n"
+    "   6) \"v#4\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"0\"\n"
+    "2) 1) \"##hint5##\"\n"
+    "   2) \"f#5##\"\n"
+    "   3) \"v5\"\n"
+  );
 }
 
 TEST_F(Raft_e2e, RawGetAllVersions) {
