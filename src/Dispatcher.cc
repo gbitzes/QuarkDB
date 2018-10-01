@@ -658,6 +658,28 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
 
       return errArgs(request);
     }
+    case RedisCommand::LHSCAN: {
+      if(request.size() < 3) return errArgs(request);
+
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      if(!args.error.empty()) {
+        return Formatter::err(args.error);
+      }
+
+      // No support for MATCH here, maybe add later
+      if(!args.match.empty()) {
+        return Formatter::err("syntax error");
+      }
+
+      std::string newcursor;
+      std::vector<std::string> vec;
+      rocksdb::Status st = store.lhscan(stagingArea, request[1], args.cursor, args.count, newcursor, vec);
+      if(!st.ok()) return Formatter::fromStatus(st);
+
+      if(newcursor == "") newcursor = "0";
+      else newcursor = "next:" + newcursor;
+      return Formatter::scan(newcursor, vec);
+    }
     case RedisCommand::LHGET_WITH_FALLBACK: {
       // First, try LHGET...
       RedisEncodedResponse resp;

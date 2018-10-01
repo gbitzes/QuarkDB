@@ -30,6 +30,7 @@
 #include "storage/KeyDescriptorBuilder.hh"
 #include "storage/PatternMatching.hh"
 #include "storage/ExpirationEventIterator.hh"
+#include "storage/ReverseLocator.hh"
 #include "utils/IntToBinaryString.hh"
 #include "utils/TimeFormatting.hh"
 #include <sys/stat.h>
@@ -279,6 +280,8 @@ static rocksdb::Status wrong_type() {
   return rocksdb::Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
 }
 
+
+
 static KeyDescriptor constructDescriptor(rocksdb::Status &st, const std::string &serialization) {
   if(st.IsNotFound()) {
     return KeyDescriptor();
@@ -301,7 +304,7 @@ KeyDescriptor StateMachine::lockKeyDescriptor(StagingArea &stagingArea, Descript
   return constructDescriptor(st, tmp);
 }
 
-bool StateMachine::assertKeyType(StagingArea &stagingArea, const std::string &key, KeyType keytype) {
+bool StateMachine::assertKeyType(StagingArea &stagingArea, std::string_view key, KeyType keytype) {
   KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   if(!keyinfo.empty() && keyinfo.getKeyType() != keytype) return false;
   return true;
@@ -640,6 +643,66 @@ rocksdb::Status StateMachine::hscan(StagingArea &stagingArea, const std::string 
 
   return rocksdb::Status::OK();
 }
+
+rocksdb::Status StateMachine::lhscan(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &results) {
+  if(!assertKeyType(stagingArea, key, KeyType::kLocalityHash)) return wrong_type();
+
+  std::string_view cursorHint;
+  std::string_view cursorField;
+
+  LocalityFieldLocator locator(key);
+  results.clear();
+
+  // Any rocksdb keys we touch must have this prefix.
+  std::string requiredPrefix(locator.toView());
+
+  if(!cursor.empty()) {
+    // Decompose cursor into hint + field.
+    EscapedPrefixExtractor extractor;
+    if(!extractor.parse(cursor)) {
+      return malformed("invalid cursor");
+    }
+
+    cursorHint = extractor.getOriginalPrefix();
+    cursorField = extractor.getRawSuffix();
+
+    // We start from the given hint + field.
+    locator.resetHint(cursorHint);
+    locator.resetField(cursorField);
+  }
+
+  newCursor = "";
+  IteratorPtr iter(stagingArea.getIterator());
+  for(iter->Seek(locator.toSlice()); iter->Valid(); iter->Next()) {
+    std::string_view rocksdbKey = toView(iter->key());
+
+    if(!StringUtils::startsWith(rocksdbKey, requiredPrefix)) {
+      // It's over, we've iterated through the entire locality hash
+      break;
+    }
+
+    // Split hint + field
+    std::string_view hintPlusField = rocksdbKey;
+    hintPlusField.remove_prefix(requiredPrefix.size());
+
+    EscapedPrefixExtractor splitter;
+    qdb_assert(splitter.parse(hintPlusField));
+
+    if(results.size() >= count*3) {
+      // We've hit result sizelimit, calculate new cursor and break
+      newCursor = hintPlusField;
+      break;
+    }
+
+    // Populate new entry consisting of three items
+    results.emplace_back(splitter.getOriginalPrefix());
+    results.emplace_back(splitter.getRawSuffix());
+    results.emplace_back(toView(iter->value()));
+  }
+
+  return rocksdb::Status::OK();
+}
+
 
 rocksdb::Status StateMachine::sscan(StagingArea &stagingArea, const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res) {
   if(!assertKeyType(stagingArea, key, KeyType::kSet)) return wrong_type();

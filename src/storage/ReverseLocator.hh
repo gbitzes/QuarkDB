@@ -148,11 +148,11 @@ public:
     }
   }
 
-  KeyType getKeyType() {
+  KeyType getKeyType() const {
     return keyType;
   }
 
-  std::string_view getOriginalKey() {
+  std::string_view getOriginalKey() const {
     qdb_assert(keyType != KeyType::kParseError);
 
     if(keyType == KeyType::kString) {
@@ -162,20 +162,20 @@ public:
     return firstChunk.getOriginalPrefix();
   }
 
-  std::string_view getField() {
+  std::string_view getField() const {
     qdb_assert(keyType != KeyType::kParseError && keyType != KeyType::kString);
     return firstChunk.getRawSuffix();
   }
 
-  std::string_view getRawPrefixUntilBoundary() {
+  std::string_view getRawPrefixUntilBoundary() const {
     qdb_assert(keyType != KeyType::kParseError && keyType != KeyType::kString);
     return std::string_view(slice.data(), firstChunk.getBoundary()+1);
   }
 
-  bool isLocalityIndex() {
+  bool isLocalityIndex() const {
     if(keyType != KeyType::kLocalityHash) return false;
 
-    std::string_view field = getField();
+    std::string_view field = firstChunk.getRawSuffix();
     qdb_assert(field.size() != 0u);
     return *(field.data()) == char(InternalLocalityFieldType::kIndex);
   }

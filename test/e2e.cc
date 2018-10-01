@@ -1458,6 +1458,41 @@ TEST_F(Raft_e2e, LocalityHash) {
   );
 
   qdb_info(qclient::describeRedisReply(reply));
+
+  std::vector<std::future<redisReplyPtr>> replies;
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0" ));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0", "COUNT", "2" ));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "next:hint3##f1", "COUNT", "2" ));
+
+  ASSERT_REPLY_DESCRIBE(replies[0],
+    "1) \"0\"\n"
+    "2) 1) \"hint1\"\n"
+    "   2) \"f3\"\n"
+    "   3) \"v6\"\n"
+    "   4) \"hint2\"\n"
+    "   5) \"f2\"\n"
+    "   6) \"v5\"\n"
+    "   7) \"hint3\"\n"
+    "   8) \"f1\"\n"
+    "   9) \"v3\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[1],
+    "1) \"next:hint3##f1\"\n"
+    "2) 1) \"hint1\"\n"
+    "   2) \"f3\"\n"
+    "   3) \"v6\"\n"
+    "   4) \"hint2\"\n"
+    "   5) \"f2\"\n"
+    "   6) \"v5\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[2],
+    "1) \"0\"\n"
+    "2) 1) \"hint3\"\n"
+    "   2) \"f1\"\n"
+    "   3) \"v3\"\n"
+  );
 }
 
 TEST_F(Raft_e2e, RawGetAllVersions) {
