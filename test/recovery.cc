@@ -42,35 +42,40 @@ TEST(Recovery, BasicSanity) {
     ASSERT_OK(sm.set("abc", "234", 2));
   }
 
-  RecoveryEditor recovery("/tmp/quarkdb-recovery-test");
+  {
+    RecoveryEditor recovery("/tmp/quarkdb-recovery-test");
 
-  std::string val;
-  ASSERT_OK(recovery.get(DescriptorLocator("abc").toString(), val));
-  KeyDescriptor descr(val);
-  ASSERT_EQ(descr.getKeyType(), KeyType::kString);
+    std::string val;
+    ASSERT_OK(recovery.get(DescriptorLocator("abc").toString(), val));
+    KeyDescriptor descr(val);
+    ASSERT_EQ(descr.getKeyType(), KeyType::kString);
 
-  std::vector<std::string> magicValues = recovery.retrieveMagicValues();
+    std::vector<std::string> magicValues = recovery.retrieveMagicValues();
 
-  ASSERT_EQ(magicValues.size(), 18u);
+    ASSERT_EQ(magicValues.size(), 18u);
 
-  ASSERT_EQ(magicValues[0], "RAFT_CURRENT_TERM: NotFound: ");
-  ASSERT_EQ(magicValues[1], "RAFT_LOG_SIZE: NotFound: ");
-  ASSERT_EQ(magicValues[2], "RAFT_LOG_START: NotFound: ");
-  ASSERT_EQ(magicValues[3], "RAFT_CLUSTER_ID: NotFound: ");
-  ASSERT_EQ(magicValues[4], "RAFT_VOTED_FOR: NotFound: ");
-  ASSERT_EQ(magicValues[5], "RAFT_COMMIT_INDEX: NotFound: ");
-  ASSERT_EQ(magicValues[6], "RAFT_MEMBERS: NotFound: ");
-  ASSERT_EQ(magicValues[7], "RAFT_MEMBERSHIP_EPOCH: NotFound: ");
-  ASSERT_EQ(magicValues[8], "RAFT_PREVIOUS_MEMBERS: NotFound: ");
-  ASSERT_EQ(magicValues[9], "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ");
-  ASSERT_EQ(magicValues[10], "__format");
-  ASSERT_EQ(magicValues[11], "0");
-  ASSERT_EQ(magicValues[12], "__last-applied");
-  ASSERT_EQ(magicValues[13], intToBinaryString(2));
-  ASSERT_EQ(magicValues[14], "__in-bulkload");
-  ASSERT_EQ(magicValues[15], boolToString(false));
-  ASSERT_EQ(magicValues[16], "__clock");
-  ASSERT_EQ(magicValues[17], unsignedIntToBinaryString(0u));
+    ASSERT_EQ(magicValues[0], "RAFT_CURRENT_TERM: NotFound: ");
+    ASSERT_EQ(magicValues[1], "RAFT_LOG_SIZE: NotFound: ");
+    ASSERT_EQ(magicValues[2], "RAFT_LOG_START: NotFound: ");
+    ASSERT_EQ(magicValues[3], "RAFT_CLUSTER_ID: NotFound: ");
+    ASSERT_EQ(magicValues[4], "RAFT_VOTED_FOR: NotFound: ");
+    ASSERT_EQ(magicValues[5], "RAFT_COMMIT_INDEX: NotFound: ");
+    ASSERT_EQ(magicValues[6], "RAFT_MEMBERS: NotFound: ");
+    ASSERT_EQ(magicValues[7], "RAFT_MEMBERSHIP_EPOCH: NotFound: ");
+    ASSERT_EQ(magicValues[8], "RAFT_PREVIOUS_MEMBERS: NotFound: ");
+    ASSERT_EQ(magicValues[9], "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ");
+    ASSERT_EQ(magicValues[10], "__format");
+    ASSERT_EQ(magicValues[11], "0");
+    ASSERT_EQ(magicValues[12], "__last-applied");
+    ASSERT_EQ(magicValues[13], intToBinaryString(2));
+    ASSERT_EQ(magicValues[14], "__in-bulkload");
+    ASSERT_EQ(magicValues[15], boolToString(false));
+    ASSERT_EQ(magicValues[16], "__clock");
+    ASSERT_EQ(magicValues[17], unsignedIntToBinaryString(0u));
+  }
+
+  RedisRequest req {"recovery-get", "__last-applied"};
+  ASSERT_EQ(Formatter::string(intToBinaryString(2)), RecoveryRunner::issueOneOffCommand("/tmp/quarkdb-recovery-test", req));
 }
 
 TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {

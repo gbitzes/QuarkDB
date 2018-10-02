@@ -36,6 +36,7 @@ namespace quarkdb {
 class RecoveryRunner {
 public:
   RecoveryRunner(const std::string &path, int port);
+  static RedisEncodedResponse issueOneOffCommand(const std::string &path, RedisRequest &req);
 
 private:
   RecoveryEditor editor;

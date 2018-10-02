@@ -41,3 +41,9 @@ RecoveryRunner::RecoveryRunner(const std::string &path, int port)
 
   qdb_info("Issue requests to port " << port << " through redis-cli.");
 }
+
+RedisEncodedResponse RecoveryRunner::issueOneOffCommand(const std::string &path, RedisRequest &req) {
+  RecoveryEditor editor(path);
+  RecoveryDispatcher dispatcher(editor);
+  return dispatcher.dispatch(req);
+}
