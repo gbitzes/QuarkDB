@@ -136,6 +136,9 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
 
     ASSERT_REPLY(qcl.exec("recovery-info"), rep);
 
+    ASSERT_REPLY(qcl.exec("recovery-force-reconfigure-journal", "test", "123"), "ERR cannot parse new members");
+    ASSERT_REPLY(qcl.exec("recovery-force-reconfigure-journal", "example.com:99|", "awesome-cluster-id"), "OK");
+
     // Test integer <-> binary string conversion functions.
     redisReplyPtr conv1 = qcl.exec("convert-int-to-string", "999").get();
     ASSERT_EQ(qclient::describeRedisReply(conv1), "1) \"As int64_t: \\x00\\x00\\x00\\x00\\x00\\x00\\x03\\xE7\"\n2) \"As uint64_t: \\x00\\x00\\x00\\x00\\x00\\x00\\x03\\xE7\"\n");
@@ -145,10 +148,37 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
 
     redisReplyPtr conv2 = qcl.exec("convert-string-to-int", unsignedIntToBinaryString(999u)).get();
     ASSERT_EQ(qclient::describeRedisReply(conv2), "1) Interpreted as int64_t: 999\n2) Interpreted as uint64_t: 999\n");
+
+    rep = {
+      "RAFT_CURRENT_TERM",
+      intToBinaryString(4),
+      "RAFT_LOG_SIZE",
+      intToBinaryString(2),
+      "RAFT_LOG_START",
+      intToBinaryString(0),
+      "RAFT_CLUSTER_ID",
+      "awesome-cluster-id",
+      "RAFT_VOTED_FOR",
+      "",
+      "RAFT_COMMIT_INDEX",
+      intToBinaryString(0),
+      "RAFT_MEMBERS",
+      "example.com:99|",
+      "RAFT_MEMBERSHIP_EPOCH",
+      intToBinaryString(0),
+      "RAFT_PREVIOUS_MEMBERS: NotFound: ",
+      "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ",
+      "__format: NotFound: ",
+      "__last-applied: NotFound: ",
+      "__in-bulkload: NotFound: ",
+      "__clock: NotFound: "
+    };
+
+    ASSERT_REPLY(qcl.exec("recovery-info"), rep);
   }
 
   RaftJournal journal("/tmp/quarkdb-recovery-test");
-  ASSERT_EQ(journal.getClusterID(), "different-cluster-id");
+  ASSERT_EQ(journal.getClusterID(), "awesome-cluster-id");
   ASSERT_EQ(journal.getLogSize(), 2);
 
   RaftEntry entry;

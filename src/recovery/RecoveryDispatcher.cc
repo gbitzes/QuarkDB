@@ -24,6 +24,9 @@
 #include "RecoveryDispatcher.hh"
 #include "../Formatter.hh"
 #include "../utils/CommandParsing.hh"
+#include "../utils/IntToBinaryString.hh"
+#include "../storage/KeyConstants.hh"
+#include "../raft/RaftMembers.hh"
 using namespace quarkdb;
 
 RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {
@@ -74,6 +77,36 @@ RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
     case RedisCommand::RECOVERY_INFO: {
       if(request.size() != 1) return Formatter::errArgs(request[0]);
       return Formatter::vector(editor.retrieveMagicValues());
+    }
+    case RedisCommand::RECOVERY_FORCE_RECONFIGURE_JOURNAL: {
+      if(request.size() != 3) return Formatter::errArgs(request[0]);
+
+      RaftMembers members;
+      if(!members.parse(request[1])) {
+        return Formatter::err("cannot parse new members");
+      }
+
+      std::string clusterID;
+      rocksdb::Status st = editor.get(KeyConstants::kJournal_ClusterID, clusterID);
+
+      if(!st.ok()) {
+        return Formatter::err(SSTR("unable to retrieve clusterID, status " << st.ToString() << " - are you sure this is a journal?"));
+      }
+
+      if(clusterID == request[2]) {
+        return Formatter::err("when force reconfiguring, new clusterID must be different than old one");
+      }
+
+      // All checks are clear, proceed
+      qdb_assert(editor.set(KeyConstants::kJournal_ClusterID, request[2]).ok());
+
+      qdb_assert(editor.set(KeyConstants::kJournal_Members, request[1]).ok());
+      qdb_assert(editor.set(KeyConstants::kJournal_MembershipEpoch, intToBinaryString(0)).ok());
+
+      editor.del(KeyConstants::kJournal_PreviousMembers);
+      editor.del(KeyConstants::kJournal_PreviousMembershipEpoch);
+
+      return Formatter::ok();
     }
     default: {
       qdb_throw("should never reach here");
