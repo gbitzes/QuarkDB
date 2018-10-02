@@ -29,9 +29,11 @@
 #include "Common.hh"
 #include "OptionUtils.hh"
 #include "utils/ParseUtils.hh"
+#include "Utils.hh"
+#include "qclient/QClient.hh"
 
 namespace Opt {
-enum  Type { UNKNOWN, HELP, PATH, PORT };
+enum  Type { UNKNOWN, HELP, PATH, PORT, COMMAND };
 }
 
 bool verify_options_sane(option::Parser &parse, std::vector<option::Option> &options) {
@@ -49,8 +51,8 @@ bool verify_options_sane(option::Parser &parse, std::vector<option::Option> &opt
     return false;
   }
 
-  if(!options[Opt::PORT]) {
-    std::cout << "--port is required." << std::endl;
+  if(!options[Opt::PORT] && !options[Opt::COMMAND]) {
+    std::cout << "either --port or --command is required." << std::endl;
     return false;
   }
 
@@ -75,6 +77,7 @@ std::vector<option::Option> parse_args(int argc, char** argv) {
     {Opt::HELP, 0, "", "help", option::Arg::None, " --help \tPrint usage and exit." },
     {Opt::PATH, 0, "", "path", Opt::nonempty, " --path \tthe directory where the state-machine or journal lives in."},
     {Opt::PORT, 0, "", "port", Opt::numeric, " --port \tthe port to listen to."},
+    {Opt::COMMAND, 0, "", "command", Opt::nonempty, " --command \tone-off command to run"},
 
     {0,0,0,0,0,0}
   };
@@ -105,17 +108,42 @@ static void handle_sigint(int sig) {
   th.stop();
 }
 
+void oneOffCommand(const std::string &path, const std::string &cmd) {
+  std::vector<std::string> command = quarkdb::split(cmd, " ");
+
+  quarkdb::RedisRequest req;
+  for(auto it = command.begin(); it != command.end(); it++) {
+    req.push_back(*it);
+  }
+
+  quarkdb::RedisEncodedResponse response = quarkdb::RecoveryRunner::issueOneOffCommand(path, req);
+
+  qclient::ResponseBuilder builder;
+  builder.feed(response.val);
+
+  qclient::redisReplyPtr reply;
+  qdb_assert(builder.pull(reply) == qclient::ResponseBuilder::Status::kOk);
+  std::cout << qclient::describeRedisReply(reply) << std::endl;
+}
+
 int main(int argc, char** argv) {
   std::vector<option::Option> opts = parse_args(argc-1, argv+1);
-
   std::string path = opts[Opt::PATH].arg;
-  int64_t port = 0;
-  quarkdb::ParseUtils::parseInt64(opts[Opt::PORT].arg, port);
 
-  th.reset(run, path, port);
+  if(opts[Opt::PORT]) {
+    int64_t port = 0;
+    quarkdb::ParseUtils::parseInt64(opts[Opt::PORT].arg, port);
 
-  signal(SIGINT, handle_sigint);
-  signal(SIGTERM, handle_sigint);
+    th.reset(run, path, port);
 
-  th.blockUntilThreadJoins();
+    signal(SIGINT, handle_sigint);
+    signal(SIGTERM, handle_sigint);
+
+    th.blockUntilThreadJoins();
+  }
+  else {
+    oneOffCommand(path, opts[Opt::COMMAND].arg);
+  }
+
+  return 0;
 }
