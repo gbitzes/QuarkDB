@@ -46,7 +46,9 @@ static std::string str_from_reply(redisReplyPtr &reply) {
 }
 
 TEST(Tunnel, T1) {
-  QClient tunnel("localhost", 1234, {} );
+  qclient::Options opts;
+  opts.ensureConnectionIsPrimed = false;
+  QClient tunnel("localhost", 1234, std::move(opts) );
 
   RedisRequest req { "set", "abc", "123" };
   std::future<redisReplyPtr> fut = tunnel.execute(req);
