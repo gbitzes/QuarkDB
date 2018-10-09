@@ -2,3 +2,5 @@ src/Version.hh
 packaging/quarkdb.spec
 _book/
 .vscode
+*.sublime-project
+*.sublime-workspace
