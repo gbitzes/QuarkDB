@@ -51,7 +51,7 @@ class StagingArea;
 
 class StateMachine {
 public:
-  StateMachine(const std::string &filename, bool write_ahead_log = true, bool bulkLoad = false);
+  StateMachine(std::string_view filename, bool write_ahead_log = true, bool bulkLoad = false);
   virtual ~StateMachine();
   DISALLOW_COPY_AND_ASSIGN(StateMachine);
   void reset();
@@ -76,18 +76,18 @@ public:
   rocksdb::Status hclone(StagingArea &stagingArea, std::string_view source, std::string_view target);
 
   rocksdb::Status lhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated);
-  rocksdb::Status lhdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
-  rocksdb::Status lhmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
+  rocksdb::Status lhdel(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status lhmset(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end);
 
-  rocksdb::Status sadd(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added);
-  rocksdb::Status srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
-  rocksdb::Status smove(StagingArea &stagingArea, const std::string &source, const std::string &destination, const std::string &element, int64_t &outcome);
+  rocksdb::Status sadd(StagingArea &stagingArea, std::string_view key,  const VecIterator &start, const VecIterator &end, int64_t &added);
+  rocksdb::Status srem(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status smove(StagingArea &stagingArea, std::string_view source, std::string_view destination, std::string_view element, int64_t &outcome);
 
-  rocksdb::Status dequePushFront(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
-  rocksdb::Status dequePushBack(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
-  rocksdb::Status dequePopFront(StagingArea &stagingArea, const std::string &key, std::string &item);
-  rocksdb::Status dequePopBack(StagingArea &stagingArea, const std::string &key, std::string &item);
-  rocksdb::Status dequeTrimFront(StagingArea &stagingArea, const std::string &key, const std::string &maxToKeep, int64_t &itemsRemoved);
+  rocksdb::Status dequePushFront(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePushBack(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePopFront(StagingArea &stagingArea, std::string_view key, std::string &item);
+  rocksdb::Status dequePopBack(StagingArea &stagingArea, std::string_view key, std::string &item);
+  rocksdb::Status dequeTrimFront(StagingArea &stagingArea, std::string_view key, std::string_view maxToKeep, int64_t &itemsRemoved);
 
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
   LeaseAcquisitionStatus lease_acquire(StagingArea &stagingArea, const std::string &key, const std::string &value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info);
@@ -236,8 +236,8 @@ private:
 
   void commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index);
   bool assertKeyType(StagingArea &stagingArea, std::string_view key, KeyType keytype);
-  rocksdb::Status dequePop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item);
-  rocksdb::Status dequePush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePop(StagingArea &stagingArea, Direction direction, std::string_view key, std::string &item);
+  rocksdb::Status dequePush(StagingArea &stagingArea, Direction direction, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length);
 
   class WriteOperation {
   public:
@@ -292,7 +292,7 @@ private:
   void ensureCompatibleFormat(bool justCreated);
   void ensureBulkloadSanity(bool justCreated);
   void ensureClockSanity(bool justCreated);
-  void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea);
+  void remove_all_with_prefix(std::string_view prefix, int64_t &removed, StagingArea &stagingArea);
   void lhsetInternal(WriteOperation &operation, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated);
 
   std::atomic<LogIndex> lastApplied;

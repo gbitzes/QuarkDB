@@ -61,7 +61,7 @@ static rocksdb::Status malformed(const std::string &message) {
   return rocksdb::Status::InvalidArgument(message);
 }
 
-StateMachine::StateMachine(const std::string &f, bool write_ahead_log, bool bulk_load)
+StateMachine::StateMachine(std::string_view f, bool write_ahead_log, bool bulk_load)
 : filename(f), writeAheadLog(write_ahead_log), bulkLoad(bulk_load), timeKeeper(0u),
  requestCounter(std::chrono::seconds(10)) {
 
@@ -388,7 +388,7 @@ void StateMachine::lhsetInternal(WriteOperation &operation, std::string_view key
   return;
 }
 
-rocksdb::Status StateMachine::lhmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end) {
+rocksdb::Status StateMachine::lhmset(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end) {
   if((end - start) % 3 != 0) qdb_throw("lhmset: distance between start and end iterators must be a multiple of three");
 
   WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
@@ -413,7 +413,7 @@ rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, std::string_view k
   return operation.finalize(operation.keySize() + fieldcreated);
 }
 
-rocksdb::Status StateMachine::lhdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
+rocksdb::Status StateMachine::lhdel(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
   removed = 0;
 
   WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
@@ -796,7 +796,7 @@ rocksdb::Status StateMachine::hvals(StagingArea &stagingArea, const std::string 
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::sadd(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &added) {
+rocksdb::Status StateMachine::sadd(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &added) {
   added = 0;
 
   WriteOperation operation(stagingArea, key, KeyType::kSet);
@@ -821,7 +821,7 @@ rocksdb::Status StateMachine::sismember(StagingArea &stagingArea, const std::str
   return db->Get(stagingArea.snapshot->opts(), locator.toSlice(), &tmp);
 }
 
-rocksdb::Status StateMachine::srem(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
+rocksdb::Status StateMachine::srem(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
   removed = 0;
 
   WriteOperation operation(stagingArea, key, KeyType::kSet);
@@ -834,7 +834,7 @@ rocksdb::Status StateMachine::srem(StagingArea &stagingArea, const std::string &
   return operation.finalize(operation.keySize() - removed);
 }
 
-rocksdb::Status StateMachine::smove(StagingArea &stagingArea, const std::string &source, const std::string &destination, const std::string &element, int64_t &outcome) {
+rocksdb::Status StateMachine::smove(StagingArea &stagingArea, std::string_view source, std::string_view destination, std::string_view element, int64_t &outcome) {
   WriteOperation operation1(stagingArea, source, KeyType::kSet);
   if(!operation1.valid()) return wrong_type();
 
@@ -1133,7 +1133,7 @@ rocksdb::Status StateMachine::set(StagingArea &stagingArea, std::string_view key
   return operation.finalize(value.size());
 }
 
-rocksdb::Status StateMachine::dequePush(StagingArea &stagingArea, Direction direction, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
+rocksdb::Status StateMachine::dequePush(StagingArea &stagingArea, Direction direction, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length) {
   WriteOperation operation(stagingArea, key, KeyType::kDeque);
   if(!operation.valid()) return wrong_type();
 
@@ -1154,23 +1154,23 @@ rocksdb::Status StateMachine::dequePush(StagingArea &stagingArea, Direction dire
   return operation.finalize(length);
 }
 
-rocksdb::Status StateMachine::dequePushFront(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
+rocksdb::Status StateMachine::dequePushFront(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length) {
   return this->dequePush(stagingArea, Direction::kLeft, key, start, end, length);
 }
 
-rocksdb::Status StateMachine::dequePushBack(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &length) {
+rocksdb::Status StateMachine::dequePushBack(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length) {
   return this->dequePush(stagingArea, Direction::kRight, key, start, end, length);
 }
 
-rocksdb::Status StateMachine::dequePopFront(StagingArea &stagingArea, const std::string &key, std::string &item) {
+rocksdb::Status StateMachine::dequePopFront(StagingArea &stagingArea, std::string_view key, std::string &item) {
   return this->dequePop(stagingArea, Direction::kLeft, key, item);
 }
 
-rocksdb::Status StateMachine::dequePopBack(StagingArea &stagingArea, const std::string &key, std::string &item) {
+rocksdb::Status StateMachine::dequePopBack(StagingArea &stagingArea, std::string_view key, std::string &item) {
   return this->dequePop(stagingArea, Direction::kRight, key, item);
 }
 
-rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, const std::string &key, const std::string &maxToKeepStr, int64_t &itemsRemoved) {
+rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, std::string_view key, std::string_view maxToKeepStr, int64_t &itemsRemoved) {
   int64_t maxToKeep;
   if(!ParseUtils::parseInt64(maxToKeepStr, maxToKeep) || maxToKeep < 0) {
     return malformed("value is not an integer or out of range");
@@ -1428,7 +1428,7 @@ rocksdb::Status StateMachine::dequeLen(StagingArea &stagingArea, const std::stri
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::dequePop(StagingArea &stagingArea, Direction direction, const std::string &key, std::string &item) {
+rocksdb::Status StateMachine::dequePop(StagingArea &stagingArea, Direction direction, std::string_view key, std::string &item) {
   WriteOperation operation(stagingArea, key, KeyType::kDeque);
   if(!operation.valid()) return wrong_type();
 
@@ -1473,16 +1473,16 @@ rocksdb::Status StateMachine::get(StagingArea &stagingArea, std::string_view key
   return stagingArea.get(slocator.toView(), value);
 }
 
-void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea) {
+void StateMachine::remove_all_with_prefix(std::string_view prefix, int64_t &removed, StagingArea &stagingArea) {
   removed = 0;
 
   std::string tmp;
   IteratorPtr iter(stagingArea.getIterator());
 
-  for(iter->Seek(prefix); iter->Valid(); iter->Next()) {
+  for(iter->Seek(toSlice(prefix)); iter->Valid(); iter->Next()) {
     // iter->key() may get deleted from under our feet, better keep a copy
     std::string key = iter->key().ToString();
-    if(!StringUtils::startsWith(key, toView(prefix))) break;
+    if(!StringUtils::startsWith(key, prefix)) break;
     if(key.size() > 0 && (key[0] == char(InternalKeyType::kInternal) || key[0] == char(InternalKeyType::kConfiguration))) continue;
 
     stagingArea.del(key);
@@ -1508,20 +1508,20 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const VecIterator &s
     else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kDeque) {
       FieldLocator locator(keyInfo.getKeyType(), *it);
       int64_t count = 0;
-      remove_all_with_prefix(locator.toSlice(), count, stagingArea);
+      remove_all_with_prefix(locator.toView(), count, stagingArea);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
     else if(keyInfo.getKeyType() == KeyType::kLocalityHash) {
       // wipe out fields
       LocalityFieldLocator fieldLocator(*it);
       int64_t count = 0;
-      remove_all_with_prefix(fieldLocator.toSlice(), count, stagingArea);
+      remove_all_with_prefix(fieldLocator.toView(), count, stagingArea);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
 
       // wipe out indexes
       LocalityIndexLocator indexLocator(*it);
       count = 0;
-      remove_all_with_prefix(indexLocator.toSlice(), count, stagingArea);
+      remove_all_with_prefix(indexLocator.toView(), count, stagingArea);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
     else {
