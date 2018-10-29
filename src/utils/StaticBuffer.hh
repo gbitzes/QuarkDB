@@ -46,6 +46,10 @@ public:
     return rocksdb::Slice(data(), size());
   }
 
+  std::string_view toView() {
+    return std::string_view(data(), size());
+  }
+
   void shrink(size_t newsize) {
     qdb_assert(newsize <= static_size);
     runtime_size = newsize;

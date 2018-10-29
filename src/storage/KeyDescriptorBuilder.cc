@@ -31,7 +31,7 @@ using namespace quarkdb;
 static void appendToWriteBatch(std::string &prefix, std::string &key, KeyDescriptor &descriptor, rocksdb::WriteBatch &wb) {
   if(!key.empty()) {
     DescriptorLocator dlocator(key);
-    wb.Put(dlocator.toSlice(), descriptor.serialize());
+    wb.Put(dlocator.toSlice(), toSlice(descriptor.serialize()));
   }
 
   prefix.clear();

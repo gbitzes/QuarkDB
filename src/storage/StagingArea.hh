@@ -59,17 +59,17 @@ public:
     }
   }
 
-  rocksdb::Status getForUpdate(const rocksdb::Slice &slice, std::string &value) {
+  rocksdb::Status getForUpdate(std::string_view slice, std::string &value) {
     if(readOnly) qdb_throw("cannot call getForUpdate() on a readonly staging area");
     if(bulkLoad) {
       return rocksdb::Status::NotFound();
     }
 
     return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(),
-      rocksdb::ReadOptions(), slice, &value);
+      rocksdb::ReadOptions(), toSlice(slice), &value);
   }
 
-  rocksdb::Status exists(const rocksdb::Slice &slice) {
+  rocksdb::Status exists(std::string_view slice) {
     if(bulkLoad) {
       // No reads during bulkload mode.
       return rocksdb::Status::NotFound();
@@ -77,26 +77,26 @@ public:
 
     if(readOnly) {
       std::string ignore;
-      return stateMachine.db->Get(snapshot->opts(), slice, &ignore);
+      return stateMachine.db->Get(snapshot->opts(), toSlice(slice), &ignore);
     }
 
     rocksdb::PinnableSlice ignored;
-    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), slice, &ignored);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), toSlice(slice), &ignored);
   }
 
-  rocksdb::Status get(const rocksdb::Slice &slice, std::string &value) {
+  rocksdb::Status get(std::string_view slice, std::string &value) {
     if(bulkLoad) {
       return rocksdb::Status::NotFound();
     }
 
     if(readOnly) {
-      return stateMachine.db->Get(snapshot->opts(), slice, &value);
+      return stateMachine.db->Get(snapshot->opts(), toSlice(slice), &value);
     }
 
-    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), slice, &value);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), toSlice(slice), &value);
   }
 
-  void put(const rocksdb::Slice &slice, const rocksdb::Slice &value) {
+  void put(std::string_view slice, std::string_view value) {
     if(readOnly) qdb_throw("cannot call put() on a readonly staging area");
     if(bulkLoad) {
       if(slice[0] == char(InternalKeyType::kDescriptor)) {
@@ -107,17 +107,17 @@ public:
       // rocksdb transactions have to build an internal index to implement
       // repeatable reads on the same tx. In bulkload mode we don't allow reads,
       // so let's use the much faster write batch.
-      writeBatch.Put(slice, value);
+      writeBatch.Put(toSlice(slice), toSlice(value));
       return;
     }
 
-    THROW_ON_ERROR(writeBatchWithIndex.Put(slice, value));
+    THROW_ON_ERROR(writeBatchWithIndex.Put(toSlice(slice), toSlice(value)));
   }
 
-  void del(const rocksdb::Slice &slice) {
+  void del(std::string_view slice) {
     if(readOnly) qdb_throw("cannot call del() on a readonly staging area");
     if(bulkLoad) qdb_throw("no deletions allowed during bulk load");
-    THROW_ON_ERROR(writeBatchWithIndex.Delete(slice));
+    THROW_ON_ERROR(writeBatchWithIndex.Delete(toSlice(slice)));
   }
 
   rocksdb::Status commit(LogIndex index) {

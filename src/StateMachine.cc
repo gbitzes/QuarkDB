@@ -295,13 +295,13 @@ static KeyDescriptor constructDescriptor(rocksdb::Status &st, const std::string 
 KeyDescriptor StateMachine::getKeyDescriptor(StagingArea &stagingArea, std::string_view redisKey) {
   std::string tmp;
   DescriptorLocator dlocator(redisKey);
-  rocksdb::Status st = stagingArea.get(dlocator.toSlice(), tmp);
+  rocksdb::Status st = stagingArea.get(dlocator.toView(), tmp);
   return constructDescriptor(st, tmp);
 }
 
 KeyDescriptor StateMachine::lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator) {
   std::string tmp;
-  rocksdb::Status st = stagingArea.getForUpdate(dlocator.toSlice(), tmp);
+  rocksdb::Status st = stagingArea.getForUpdate(dlocator.toView(), tmp);
   return constructDescriptor(st, tmp);
 }
 
@@ -315,7 +315,7 @@ rocksdb::Status StateMachine::hget(StagingArea &stagingArea, const std::string &
   if(!assertKeyType(stagingArea, key, KeyType::kHash)) return wrong_type();
 
   FieldLocator locator(KeyType::kHash, key, field);
-  return stagingArea.get(locator.toSlice(), value);
+  return stagingArea.get(locator.toView(), value);
 }
 
 rocksdb::Status StateMachine::hexists(StagingArea &stagingArea, const std::string &key, const std::string &field) {
@@ -439,7 +439,7 @@ rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string 
     // We were given a hint, whooo. Fast path.
     LocalityFieldLocator locator(key, hint, field);
 
-    rocksdb::Status st = stagingArea.get(locator.toSlice(), value);
+    rocksdb::Status st = stagingArea.get(locator.toView(), value);
     ASSERT_OK_OR_NOTFOUND(st);
 
     if(st.ok()) {
@@ -454,7 +454,7 @@ rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string 
   std::string correctHint;
 
   LocalityIndexLocator indexLocator(key, field);
-  rocksdb::Status st = stagingArea.get(indexLocator.toSlice(), correctHint);
+  rocksdb::Status st = stagingArea.get(indexLocator.toView(), correctHint);
   ASSERT_OK_OR_NOTFOUND(st);
 
   if(st.IsNotFound()) return st;
@@ -467,7 +467,7 @@ rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string 
 
   // Fetch correct hint.
   LocalityFieldLocator fieldLocator(key, correctHint, field);
-  THROW_ON_ERROR(stagingArea.get(fieldLocator.toSlice(), value));
+  THROW_ON_ERROR(stagingArea.get(fieldLocator.toView(), value));
   return rocksdb::Status::OK();
 }
 
@@ -941,7 +941,7 @@ StateMachine::WriteOperation::WriteOperation(StagingArea &staging, std::string_v
   std::string tmp;
 
   dlocator.reset(redisKey);
-  rocksdb::Status st = stagingArea.getForUpdate(dlocator.toSlice(), tmp);
+  rocksdb::Status st = stagingArea.getForUpdate(dlocator.toView(), tmp);
 
   if(st.IsNotFound()) {
     keyinfo = KeyDescriptor();
@@ -975,7 +975,7 @@ bool StateMachine::WriteOperation::getField(const std::string &field, std::strin
   assertWritable();
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = stagingArea.get(locator.toSlice(), out);
+  rocksdb::Status st = stagingArea.get(locator.toView(), out);
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
@@ -985,7 +985,7 @@ bool StateMachine::WriteOperation::getLocalityIndex(const std::string &field, st
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
   LocalityIndexLocator locator(redisKey, field);
-  rocksdb::Status st = stagingArea.get(locator.toSlice(), out);
+  rocksdb::Status st = stagingArea.get(locator.toView(), out);
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
@@ -995,11 +995,11 @@ bool StateMachine::WriteOperation::getAndDeleteLocalityIndex(const std::string &
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
   LocalityIndexLocator locator(redisKey, field);
-  rocksdb::Status st = stagingArea.get(locator.toSlice(), out);
+  rocksdb::Status st = stagingArea.get(locator.toView(), out);
   ASSERT_OK_OR_NOTFOUND(st);
 
   if(st.ok()) {
-    stagingArea.del(locator.toSlice());
+    stagingArea.del(locator.toView());
   }
 
   return st.ok();
@@ -1019,11 +1019,11 @@ void StateMachine::WriteOperation::write(const std::string &value) {
 
   if(keyinfo.getKeyType() == KeyType::kString) {
     StringLocator locator(redisKey);
-    stagingArea.put(locator.toSlice(), value);
+    stagingArea.put(locator.toView(), value);
   }
   else if(keyinfo.getKeyType() == KeyType::kLease) {
     LeaseLocator locator(redisKey);
-    stagingArea.put(locator.toSlice(), value);
+    stagingArea.put(locator.toView(), value);
   }
   else {
     qdb_throw("writing without a field makes sense only for strings and leases");
@@ -1038,7 +1038,7 @@ void StateMachine::WriteOperation::writeField(const std::string &field, const st
   }
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  stagingArea.put(locator.toSlice(), value);
+  stagingArea.put(locator.toView(), value);
 }
 
 void StateMachine::WriteOperation::writeLocalityField(const std::string &hint, const std::string &field, const std::string &value) {
@@ -1047,7 +1047,7 @@ void StateMachine::WriteOperation::writeLocalityField(const std::string &hint, c
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
   LocalityFieldLocator locator(redisKey, hint, field);
-  stagingArea.put(locator.toSlice(), value);
+  stagingArea.put(locator.toView(), value);
 }
 
 void StateMachine::WriteOperation::writeLocalityIndex(const std::string &field, const std::string &hint) {
@@ -1056,7 +1056,7 @@ void StateMachine::WriteOperation::writeLocalityIndex(const std::string &field, 
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
   LocalityIndexLocator locator(redisKey, field);
-  stagingArea.put(locator.toSlice(), hint);
+  stagingArea.put(locator.toView(), hint);
 }
 
 void StateMachine::WriteOperation::cancel() {
@@ -1069,11 +1069,11 @@ rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize, bool for
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
 
   if(newsize == 0) {
-    stagingArea.del(dlocator.toSlice());
+    stagingArea.del(dlocator.toView());
   }
   else if(keyinfo.getSize() != newsize || forceUpdate) {
     keyinfo.setSize(newsize);
-    stagingArea.put(dlocator.toSlice(), keyinfo.serialize());
+    stagingArea.put(dlocator.toView(), keyinfo.serialize());
   }
 
   finalized = true;
@@ -1084,7 +1084,7 @@ bool StateMachine::WriteOperation::fieldExists(const std::string &field) {
   assertWritable();
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = stagingArea.exists(locator.toSlice());
+  rocksdb::Status st = stagingArea.exists(locator.toView());
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
@@ -1094,7 +1094,7 @@ bool StateMachine::WriteOperation::localityFieldExists(const std::string &hint, 
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
   LocalityFieldLocator locator(redisKey, hint, field);
-  rocksdb::Status st = stagingArea.exists(locator.toSlice());
+  rocksdb::Status st = stagingArea.exists(locator.toView());
   ASSERT_OK_OR_NOTFOUND(st);
   return st.ok();
 }
@@ -1105,10 +1105,10 @@ bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   std::string tmp;
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
-  rocksdb::Status st = stagingArea.get(locator.toSlice(), tmp);
+  rocksdb::Status st = stagingArea.get(locator.toView(), tmp);
   ASSERT_OK_OR_NOTFOUND(st);
 
-  if(st.ok()) stagingArea.del(locator.toSlice());
+  if(st.ok()) stagingArea.del(locator.toView());
   return st.ok();
 }
 
@@ -1118,10 +1118,10 @@ bool StateMachine::WriteOperation::deleteLocalityField(const std::string &hint, 
 
   std::string tmp;
   LocalityFieldLocator locator(redisKey, hint, field);
-  rocksdb::Status st = stagingArea.get(locator.toSlice(), tmp);
+  rocksdb::Status st = stagingArea.get(locator.toView(), tmp);
   ASSERT_OK_OR_NOTFOUND(st);
 
-  if(st.ok()) stagingArea.del(locator.toSlice());
+  if(st.ok()) stagingArea.del(locator.toView());
   return st.ok();
 }
 
@@ -1241,7 +1241,7 @@ rocksdb::Status StateMachine::lease_get(StagingArea &stagingArea, const std::str
   LeaseLocator locator(key);
 
   std::string value;
-  THROW_ON_ERROR(stagingArea.get(locator.toSlice(), value));
+  THROW_ON_ERROR(stagingArea.get(locator.toView(), value));
 
   info = LeaseInfo(value, keyinfo.getStartIndex(), keyinfo.getEndIndex());
   return rocksdb::Status::OK();
@@ -1347,7 +1347,7 @@ LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, con
 
   LeaseLocator locator(key);
   std::string oldLeaseHolder;
-  rocksdb::Status st = stagingArea.get(locator.toSlice(), oldLeaseHolder);
+  rocksdb::Status st = stagingArea.get(locator.toView(), oldLeaseHolder);
   ASSERT_OK_OR_NOTFOUND(st);
 
   if(st.ok()) {
@@ -1367,8 +1367,8 @@ LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, con
   if(operation.keyExists()) {
     // Lease extension.. need to wipe out old pending expiration event
     ExpirationEventLocator oldEvent(descriptor.getEndIndex(), key);
-    THROW_ON_ERROR(stagingArea.exists(oldEvent.toSlice()));
-    stagingArea.del(oldEvent.toSlice());
+    THROW_ON_ERROR(stagingArea.exists(oldEvent.toView()));
+    stagingArea.del(oldEvent.toView());
   }
 
   // Anchor expiration timestamp based on clockUpdate.
@@ -1378,7 +1378,7 @@ LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, con
 
   // Store expiration event.
   ExpirationEventLocator newEvent(expirationTimestamp, key);
-  stagingArea.put(newEvent.toSlice(), "1");
+  stagingArea.put(newEvent.toView(), "1");
 
   // Update lease value.
   operation.write(value);
@@ -1408,12 +1408,12 @@ rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, const std:
   KeyDescriptor &descriptor = operation.descriptor();
 
   ExpirationEventLocator event(descriptor.getEndIndex(), key);
-  THROW_ON_ERROR(stagingArea.exists(event.toSlice()));
-  stagingArea.del(event.toSlice());
+  THROW_ON_ERROR(stagingArea.exists(event.toView()));
+  stagingArea.del(event.toView());
 
   LeaseLocator leaseLocator(key);
-  THROW_ON_ERROR(stagingArea.exists(leaseLocator.toSlice()));
-  stagingArea.del(leaseLocator.toSlice());
+  THROW_ON_ERROR(stagingArea.exists(leaseLocator.toView()));
+  stagingArea.del(leaseLocator.toView());
 
   return operation.finalize(0u);
 }
@@ -1470,7 +1470,7 @@ rocksdb::Status StateMachine::get(StagingArea &stagingArea, const std::string &k
   if(!assertKeyType(stagingArea, key, KeyType::kString)) return wrong_type();
 
   StringLocator slocator(key);
-  return stagingArea.get(slocator.toSlice(), value);
+  return stagingArea.get(slocator.toView(), value);
 }
 
 void StateMachine::remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea) {
@@ -1502,8 +1502,8 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const VecIterator &s
 
     if(keyInfo.getKeyType() == KeyType::kString) {
       StringLocator slocator(*it);
-      THROW_ON_ERROR(stagingArea.get(slocator.toSlice(), tmp));
-      stagingArea.del(slocator.toSlice());
+      THROW_ON_ERROR(stagingArea.get(slocator.toView(), tmp));
+      stagingArea.del(slocator.toView());
     }
     else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kDeque) {
       FieldLocator locator(keyInfo.getKeyType(), *it);
@@ -1529,7 +1529,7 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const VecIterator &s
     }
 
     removed++;
-    stagingArea.del(dlocator.toSlice());
+    stagingArea.del(dlocator.toView());
   }
 
   return rocksdb::Status::OK();

@@ -202,7 +202,7 @@ public:
     endIndex = newval;
   }
 
-  rocksdb::Slice serialize() {
+  std::string_view serialize() {
     serializationBuffer[0] = char(keyType);
 
     switch(keyType) {
@@ -214,7 +214,7 @@ public:
 
         // Store the size..
         intToBinaryString(sz, serializationBuffer.data() + kOffsetSize);
-        return serializationBuffer.toSlice();
+        return serializationBuffer.toView();
       }
       case KeyType::kDeque:
       case KeyType::kLease: {
@@ -228,7 +228,7 @@ public:
         intToBinaryString(endIndex, serializationBuffer.data() + kOffsetEndIndex);
 
         qdb_assert(startIndex <= endIndex);
-        return serializationBuffer.toSlice();
+        return serializationBuffer.toView();
       }
       default: {
         qdb_throw("attempted to serialize invalid key descriptor");

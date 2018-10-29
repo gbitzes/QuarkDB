@@ -831,7 +831,7 @@ TEST_F(State_Machine, Leases) {
     StagingArea stagingArea(*stateMachine());
     DescriptorLocator locator("my-lease");
     std::string tmp;
-    ASSERT_OK(stagingArea.get(locator.toSlice(), tmp));
+    ASSERT_OK(stagingArea.get(locator.toView(), tmp));
     KeyDescriptor descr(tmp);
     ASSERT_EQ(descr.getSize(), 11u);
     ASSERT_EQ(descr.getStartIndex(), 9u);
@@ -911,7 +911,7 @@ TEST_F(State_Machine, Leases) {
   ASSERT_NOTFOUND(stateMachine()->lease_get("does-not-exist", ClockValue(25), info));
 }
 
-static std::string sliceToString(const rocksdb::Slice &slice) {
+static std::string sliceToString(const std::string_view &slice) {
   return std::string(slice.data(), slice.size());
 }
 
@@ -919,7 +919,7 @@ void assertEqualDescriptors(KeyDescriptor &desc, KeyDescriptor &desc2) {
   ASSERT_EQ(desc.getKeyType(), desc2.getKeyType());
   ASSERT_EQ(desc, desc2);
   ASSERT_EQ(desc2, desc);
-  ASSERT_EQ(sliceToString(desc.serialize()), sliceToString(desc2.serialize()));
+  ASSERT_EQ(desc.serialize(), desc2.serialize());
 }
 
 TEST(KeyDescriptor, BasicSanity) {
