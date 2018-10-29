@@ -45,7 +45,7 @@ namespace quarkdb {
 // unreadable.
 void setStacktraceOnError(bool val);
 
-bool my_strtod(const std::string &str, double &ret);
+bool my_strtod(std::string_view str, double &ret);
 std::vector<std::string> split(std::string data, std::string token);
 bool startswith(const std::string &str, const std::string &prefix);
 bool parseServer(const std::string &str, RaftServer &srv);

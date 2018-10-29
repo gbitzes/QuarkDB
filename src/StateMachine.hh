@@ -63,19 +63,19 @@ public:
   // API for transactional writes - in this case, lastApplied increments once
   // per batch, not per individual operation.
   //----------------------------------------------------------------------------
-  rocksdb::Status set(StagingArea &stagingArea, const std::string& key, const std::string& value);
+  rocksdb::Status set(StagingArea &stagingArea, std::string_view key, std::string_view value);
   rocksdb::Status del(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &removed);
   rocksdb::Status flushall(StagingArea &stagingArea);
 
-  rocksdb::Status hset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated);
-  rocksdb::Status hmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
-  rocksdb::Status hsetnx(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated);
-  rocksdb::Status hincrby(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, int64_t &result);
-  rocksdb::Status hincrbyfloat(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, double &result);
-  rocksdb::Status hdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
-  rocksdb::Status hclone(StagingArea &stagingArea, const std::string &source, const std::string &target);
+  rocksdb::Status hset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
+  rocksdb::Status hmset(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end);
+  rocksdb::Status hsetnx(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
+  rocksdb::Status hincrby(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view incrby, int64_t &result);
+  rocksdb::Status hincrbyfloat(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view incrby, double &result);
+  rocksdb::Status hdel(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status hclone(StagingArea &stagingArea, std::string_view source, std::string_view target);
 
-  rocksdb::Status lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated);
+  rocksdb::Status lhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated);
   rocksdb::Status lhdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed);
   rocksdb::Status lhmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
 
@@ -97,7 +97,7 @@ public:
   //----------------------------------------------------------------------------
   // API for transactional reads. Can be part of a mixed read-write transaction.
   //----------------------------------------------------------------------------
-  rocksdb::Status get(StagingArea &stagingArea, const std::string &key, std::string &value);
+  rocksdb::Status get(StagingArea &stagingArea, std::string_view key, std::string &value);
   rocksdb::Status exists(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &count);
   rocksdb::Status keys(StagingArea &stagingArea, const std::string &pattern, std::vector<std::string> &result);
   rocksdb::Status scan(StagingArea &stagingArea, const std::string &cursor, const std::string &pattern, size_t count, std::string &newcursor, std::vector<std::string> &results);
@@ -129,7 +129,7 @@ public:
   rocksdb::Status hkeys(const std::string &key, std::vector<std::string> &keys);
   rocksdb::Status hgetall(const std::string &key, std::vector<std::string> &res);
   rocksdb::Status hset(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index = 0);
-  rocksdb::Status hmset(const std::string &key, const VecIterator &start, const VecIterator &end, LogIndex index = 0);
+  rocksdb::Status hmset(std::string_view key, const VecIterator &start, const VecIterator &end, LogIndex index = 0);
   rocksdb::Status hsetnx(const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated, LogIndex index = 0);
   rocksdb::Status hincrby(const std::string &key, const std::string &field, const std::string &incrby, int64_t &result, LogIndex index = 0);
   rocksdb::Status hincrbyfloat(const std::string &key, const std::string &field, const std::string &incrby, double &result, LogIndex index = 0);
@@ -144,7 +144,7 @@ public:
   rocksdb::Status scard(const std::string &key, size_t &count);
   rocksdb::Status sscan(const std::string &key, const std::string &cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
   rocksdb::Status set(const std::string& key, const std::string& value, LogIndex index = 0);
-  rocksdb::Status get(const std::string &key, std::string &value);
+  rocksdb::Status get(std::string_view key, std::string &value);
   rocksdb::Status del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status exists(const VecIterator &start, const VecIterator &end, int64_t &count);
   rocksdb::Status keys(const std::string &pattern, std::vector<std::string> &result);
@@ -246,25 +246,25 @@ private:
 
     bool valid();
     bool keyExists();
-    bool getField(const std::string &field, std::string &out);
-    bool getLocalityIndex(const std::string &field, std::string &out);
+    bool getField(std::string_view field, std::string &out);
+    bool getLocalityIndex(std::string_view field, std::string &out);
     void cancel();
 
     int64_t keySize();
 
     void assertWritable();
 
-    void write(const std::string &value);
-    void writeField(const std::string &field, const std::string &value);
-    void writeLocalityField(const std::string &hint, const std::string &field, const std::string &value);
-    void writeLocalityIndex(const std::string &field, const std::string &hint);
+    void write(std::string_view value);
+    void writeField(std::string_view field, std::string_view value);
+    void writeLocalityField(std::string_view hint, std::string_view field, std::string_view value);
+    void writeLocalityIndex(std::string_view field, std::string_view hint);
 
-    bool fieldExists(const std::string &field);
-    bool localityFieldExists(const std::string &hint, const std::string &field);
+    bool fieldExists(std::string_view field);
+    bool localityFieldExists(std::string_view hint, std::string_view field);
 
-    bool deleteField(const std::string &field);
-    bool deleteLocalityField(const std::string &hint, const std::string &field);
-    bool getAndDeleteLocalityIndex(const std::string &field, std::string &hint);
+    bool deleteField(std::string_view field);
+    bool deleteLocalityField(std::string_view hint, std::string_view field);
+    bool getAndDeleteLocalityIndex(std::string_view field, std::string &hint);
 
     rocksdb::Status finalize(int64_t newsize, bool forceUpdate = false);
 
@@ -293,7 +293,7 @@ private:
   void ensureBulkloadSanity(bool justCreated);
   void ensureClockSanity(bool justCreated);
   void remove_all_with_prefix(const rocksdb::Slice &prefix, int64_t &removed, StagingArea &stagingArea);
-  void lhsetInternal(WriteOperation &operation, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated);
+  void lhsetInternal(WriteOperation &operation, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated);
 
   std::atomic<LogIndex> lastApplied;
   std::condition_variable lastAppliedCV;

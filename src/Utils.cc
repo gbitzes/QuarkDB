@@ -61,10 +61,10 @@ bool caseInsensitiveEquals(const std::string &str1, const std::string &str2) {
   return true;
 }
 
-bool my_strtod(const std::string &str, double &ret) {
+bool my_strtod(std::string_view str, double &ret) {
   char *endptr = NULL;
-  ret = strtod(str.c_str(), &endptr);
-  if(endptr != str.c_str() + str.size() || ret == HUGE_VAL || ret == -HUGE_VAL) {
+  ret = strtod(str.data(), &endptr);
+  if(endptr != str.data() + str.size() || ret == HUGE_VAL || ret == -HUGE_VAL) {
     return false;
   }
   return true;

@@ -354,7 +354,7 @@ rocksdb::Status StateMachine::hgetall(StagingArea &stagingArea, const std::strin
   return rocksdb::Status::OK();
 }
 
-void StateMachine::lhsetInternal(WriteOperation &operation, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated) {
+void StateMachine::lhsetInternal(WriteOperation &operation, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated) {
   fieldcreated = false;
 
   if(operation.localityFieldExists(hint, field)) {
@@ -404,7 +404,7 @@ rocksdb::Status StateMachine::lhmset(StagingArea &stagingArea, const std::string
   return operation.finalize(operation.keySize() + created);
 }
 
-rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value, bool &fieldcreated) {
+rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated) {
   WriteOperation operation(stagingArea, key, KeyType::kLocalityHash);
   if(!operation.valid()) return wrong_type();
 
@@ -471,7 +471,7 @@ rocksdb::Status StateMachine::lhget(StagingArea &stagingArea, const std::string 
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::hset(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated) {
+rocksdb::Status StateMachine::hset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated) {
   WriteOperation operation(stagingArea, key, KeyType::kHash);
   if(!operation.valid()) return wrong_type();
 
@@ -482,7 +482,7 @@ rocksdb::Status StateMachine::hset(StagingArea &stagingArea, const std::string &
   return operation.finalize(newsize);
 }
 
-rocksdb::Status StateMachine::hmset(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end) {
+rocksdb::Status StateMachine::hmset(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end) {
   if((end - start) % 2 != 0) qdb_throw("hmset: distance between start and end iterators must be an even number");
 
   WriteOperation operation(stagingArea, key, KeyType::kHash);
@@ -497,7 +497,7 @@ rocksdb::Status StateMachine::hmset(StagingArea &stagingArea, const std::string 
   return operation.finalize(newsize);
 }
 
-rocksdb::Status StateMachine::hsetnx(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &value, bool &fieldcreated) {
+rocksdb::Status StateMachine::hsetnx(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated) {
   WriteOperation operation(stagingArea, key, KeyType::kHash);
   if(!operation.valid()) return wrong_type();
 
@@ -511,7 +511,7 @@ rocksdb::Status StateMachine::hsetnx(StagingArea &stagingArea, const std::string
   return operation.finalize(newsize);
 }
 
-rocksdb::Status StateMachine::hincrby(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, int64_t &result) {
+rocksdb::Status StateMachine::hincrby(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view incrby, int64_t &result) {
   int64_t incrbyInt64;
   if(!ParseUtils::parseInt64(incrby, incrbyInt64)) {
     return malformed("value is not an integer or out of range");
@@ -535,7 +535,7 @@ rocksdb::Status StateMachine::hincrby(StagingArea &stagingArea, const std::strin
   return operation.finalize(operation.keySize() + !exists);
 }
 
-rocksdb::Status StateMachine::hincrbyfloat(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, double &result) {
+rocksdb::Status StateMachine::hincrbyfloat(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view incrby, double &result) {
   double incrByDouble;
   if(!my_strtod(incrby, incrByDouble)) {
     return malformed("value is not a float or out of range");
@@ -559,7 +559,7 @@ rocksdb::Status StateMachine::hincrbyfloat(StagingArea &stagingArea, const std::
   return operation.finalize(operation.keySize() + !exists);
 }
 
-rocksdb::Status StateMachine::hdel(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
+rocksdb::Status StateMachine::hdel(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed) {
   removed = 0;
 
   WriteOperation operation(stagingArea, key, KeyType::kHash);
@@ -971,7 +971,7 @@ bool StateMachine::WriteOperation::keyExists() {
   return redisKeyExists;
 }
 
-bool StateMachine::WriteOperation::getField(const std::string &field, std::string &out) {
+bool StateMachine::WriteOperation::getField(std::string_view field, std::string &out) {
   assertWritable();
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
@@ -980,7 +980,7 @@ bool StateMachine::WriteOperation::getField(const std::string &field, std::strin
   return st.ok();
 }
 
-bool StateMachine::WriteOperation::getLocalityIndex(const std::string &field, std::string &out) {
+bool StateMachine::WriteOperation::getLocalityIndex(std::string_view field, std::string &out) {
   assertWritable();
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
@@ -990,7 +990,7 @@ bool StateMachine::WriteOperation::getLocalityIndex(const std::string &field, st
   return st.ok();
 }
 
-bool StateMachine::WriteOperation::getAndDeleteLocalityIndex(const std::string &field, std::string &out) {
+bool StateMachine::WriteOperation::getAndDeleteLocalityIndex(std::string_view field, std::string &out) {
   assertWritable();
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
@@ -1014,7 +1014,7 @@ void StateMachine::WriteOperation::assertWritable() {
   if(finalized) qdb_throw("WriteOperation already finalized!");
 }
 
-void StateMachine::WriteOperation::write(const std::string &value) {
+void StateMachine::WriteOperation::write(std::string_view value) {
   assertWritable();
 
   if(keyinfo.getKeyType() == KeyType::kString) {
@@ -1030,7 +1030,7 @@ void StateMachine::WriteOperation::write(const std::string &value) {
   }
 }
 
-void StateMachine::WriteOperation::writeField(const std::string &field, const std::string &value) {
+void StateMachine::WriteOperation::writeField(std::string_view field, std::string_view value) {
   assertWritable();
 
   if(keyinfo.getKeyType() != KeyType::kHash && keyinfo.getKeyType() != KeyType::kSet && keyinfo.getKeyType() != KeyType::kDeque) {
@@ -1041,7 +1041,7 @@ void StateMachine::WriteOperation::writeField(const std::string &field, const st
   stagingArea.put(locator.toView(), value);
 }
 
-void StateMachine::WriteOperation::writeLocalityField(const std::string &hint, const std::string &field, const std::string &value) {
+void StateMachine::WriteOperation::writeLocalityField(std::string_view hint, std::string_view field, std::string_view value) {
   assertWritable();
 
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
@@ -1050,7 +1050,7 @@ void StateMachine::WriteOperation::writeLocalityField(const std::string &hint, c
   stagingArea.put(locator.toView(), value);
 }
 
-void StateMachine::WriteOperation::writeLocalityIndex(const std::string &field, const std::string &hint) {
+void StateMachine::WriteOperation::writeLocalityIndex(std::string_view field, std::string_view hint) {
   assertWritable();
 
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
@@ -1080,7 +1080,7 @@ rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize, bool for
   return rocksdb::Status::OK(); // OK if return value is ignored
 }
 
-bool StateMachine::WriteOperation::fieldExists(const std::string &field) {
+bool StateMachine::WriteOperation::fieldExists(std::string_view field) {
   assertWritable();
 
   FieldLocator locator(keyinfo.getKeyType(), redisKey, field);
@@ -1089,7 +1089,7 @@ bool StateMachine::WriteOperation::fieldExists(const std::string &field) {
   return st.ok();
 }
 
-bool StateMachine::WriteOperation::localityFieldExists(const std::string &hint, const std::string &field) {
+bool StateMachine::WriteOperation::localityFieldExists(std::string_view hint, std::string_view field) {
   assertWritable();
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
@@ -1099,7 +1099,7 @@ bool StateMachine::WriteOperation::localityFieldExists(const std::string &hint, 
   return st.ok();
 }
 
-bool StateMachine::WriteOperation::deleteField(const std::string &field) {
+bool StateMachine::WriteOperation::deleteField(std::string_view field) {
   assertWritable();
 
   std::string tmp;
@@ -1112,7 +1112,7 @@ bool StateMachine::WriteOperation::deleteField(const std::string &field) {
   return st.ok();
 }
 
-bool StateMachine::WriteOperation::deleteLocalityField(const std::string &hint, const std::string &field) {
+bool StateMachine::WriteOperation::deleteLocalityField(std::string_view hint, std::string_view field) {
   assertWritable();
   qdb_assert(keyinfo.getKeyType() == KeyType::kLocalityHash);
 
@@ -1125,7 +1125,7 @@ bool StateMachine::WriteOperation::deleteLocalityField(const std::string &hint, 
   return st.ok();
 }
 
-rocksdb::Status StateMachine::set(StagingArea &stagingArea, const std::string& key, const std::string& value) {
+rocksdb::Status StateMachine::set(StagingArea &stagingArea, std::string_view key, std::string_view value) {
   WriteOperation operation(stagingArea, key, KeyType::kString);
   if(!operation.valid()) return wrong_type();
 
@@ -1247,7 +1247,7 @@ rocksdb::Status StateMachine::lease_get(StagingArea &stagingArea, const std::str
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::hclone(StagingArea &stagingArea, const std::string &source, const std::string &target) {
+rocksdb::Status StateMachine::hclone(StagingArea &stagingArea, std::string_view source, std::string_view target) {
   WriteOperation operation(stagingArea, target, KeyType::kHash);
   if(!operation.valid()) return wrong_type();
   if(operation.keyExists()) {
@@ -1466,7 +1466,7 @@ rocksdb::ReadOptions& StateMachine::Snapshot::opts() {
   return options;
 }
 
-rocksdb::Status StateMachine::get(StagingArea &stagingArea, const std::string &key, std::string &value) {
+rocksdb::Status StateMachine::get(StagingArea &stagingArea, std::string_view key, std::string &value) {
   if(!assertKeyType(stagingArea, key, KeyType::kString)) return wrong_type();
 
   StringLocator slocator(key);
@@ -1770,7 +1770,7 @@ void StateMachine::commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex 
 // Reads:
 //------------------------------------------------------------------------------
 
-rocksdb::Status StateMachine::get(const std::string &key, std::string &value) {
+rocksdb::Status StateMachine::get(std::string_view key, std::string &value) {
   CHAIN_READ(get, key, value);
 }
 
@@ -1858,7 +1858,7 @@ rocksdb::Status StateMachine::hset(const std::string &key, const std::string &fi
   CHAIN(index, hset, key, field, value, fieldcreated);
 }
 
-rocksdb::Status StateMachine::hmset(const std::string &key, const VecIterator &start, const VecIterator &end, LogIndex index) {
+rocksdb::Status StateMachine::hmset(std::string_view key, const VecIterator &start, const VecIterator &end, LogIndex index) {
   CHAIN(index, hmset, key, start, end);
 }
 
