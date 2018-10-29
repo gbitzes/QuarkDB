@@ -184,7 +184,7 @@ bool RaftParser::appendEntriesResponse(const redisReplyPtr &source, RaftAppendEn
   tmp = std::string_view(source->element[1]->str, source->element[1]->len);
   if(!ParseUtils::parseInt64(tmp, dest.logSize)) return false;
 
-  tmp = std::string(source->element[2]->str, source->element[2]->len);
+  tmp = std::string_view(source->element[2]->str, source->element[2]->len);
   if(tmp == "0") dest.outcome = false;
   else if(tmp == "1") dest.outcome = true;
   else return false;
@@ -220,7 +220,7 @@ bool RaftParser::heartbeatResponse(const qclient::redisReplyPtr &source, RaftHea
   std::string_view tmp(source->element[0]->str, source->element[0]->len);
   if(!ParseUtils::parseInt64(tmp, dest.term)) return false;
 
-  tmp = std::string(source->element[1]->str, source->element[1]->len);
+  tmp = std::string_view(source->element[1]->str, source->element[1]->len);
   if(tmp == "0") dest.nodeRecognizedAsLeader = false;
   else if(tmp == "1") dest.nodeRecognizedAsLeader = true;
   else return false;
@@ -257,7 +257,7 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
   std::string_view tmp(source->element[0]->str, source->element[0]->len);
   if(!ParseUtils::parseInt64(tmp, dest.term)) return false;
 
-  tmp = std::string(source->element[1]->str, source->element[1]->len);
+  tmp = std::string_view(source->element[1]->str, source->element[1]->len);
   if(tmp == "granted") {
     dest.vote = RaftVote::GRANTED;
   }
