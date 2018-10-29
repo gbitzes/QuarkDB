@@ -24,6 +24,7 @@
 #include "../Utils.hh"
 #include "Resilvering.hh"
 #include "VectorUtils.hh"
+#include "ParseUtils.hh"
 using namespace quarkdb;
 
 ResilveringEvent::ResilveringEvent()
@@ -47,7 +48,7 @@ bool ResilveringEvent::deserialize(const std::string &str, ResilveringEvent &ret
 
   // Parse time
   int64_t t;
-  if(!my_strtoll(parts[1], t)) return false;
+  if(!ParseUtils::parseInt64(parts[1], t)) return false;
   ret.startTime = (time_t) t;
 
   return true;

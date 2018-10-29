@@ -27,6 +27,7 @@
 #include "raft/RaftJournal.hh"
 #include "raft/RaftTalker.hh"
 #include "raft/RaftUtils.hh"
+#include "utils/ParseUtils.hh"
 
 #include "Common.hh"
 #include "OptionUtils.hh"
@@ -158,8 +159,8 @@ int main(int argc, char** argv) {
   std::vector<option::Option> opts = parse_args(argc-1, argv+1);
 
   LogIndex start, end;
-  quarkdb::my_strtoll(opts[Opt::START].arg, start);
-  quarkdb::my_strtoll(opts[Opt::END].arg, end);
+  quarkdb::ParseUtils::parseInt64(opts[Opt::START].arg, start);
+  quarkdb::ParseUtils::parseInt64(opts[Opt::END].arg, end);
 
   std::vector<RaftServer> nodes;
   parseServers(opts[Opt::NODES].arg, nodes);
@@ -169,7 +170,7 @@ int main(int argc, char** argv) {
 
   int64_t pipelineLength = PIPELINE_LENGTH;
   if(opts[Opt::PIPELINE]) {
-    quarkdb::my_strtoll(opts[Opt::PIPELINE].arg, pipelineLength);
+    quarkdb::ParseUtils::parseInt64(opts[Opt::PIPELINE].arg, pipelineLength);
   }
 
   std::queue<ReplyRound> pendingReplies;

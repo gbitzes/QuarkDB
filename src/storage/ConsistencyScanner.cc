@@ -23,6 +23,7 @@
 
 #include "ConsistencyScanner.hh"
 #include "../StateMachine.hh"
+#include "../utils/ParseUtils.hh"
 
 using namespace quarkdb;
 
@@ -55,7 +56,7 @@ std::chrono::seconds ConsistencyScanner::obtainScanPeriod(StateMachine &stateMac
   }
 
   int64_t period;
-  if(!my_strtoll(value, period) || period < 0) {
+  if(!ParseUtils::parseInt64(value, period) || period < 0) {
     qdb_critical("Unable to parse " << kConfigurationKey << ": " << value << ", possible misconfiguration.");
     return kDefaultPeriod;
   }

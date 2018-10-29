@@ -362,7 +362,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(request.size() != 5) return Formatter::errArgs("lease_acquire");
 
       int64_t duration = 0;
-      if(!my_strtoll(request[3], duration) || duration < 1) {
+      if(!ParseUtils::parseInt64(request[3], duration) || duration < 1) {
         return Formatter::err("value is not an integer or out of range");
       }
 

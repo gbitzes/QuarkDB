@@ -30,6 +30,7 @@
 #include "../redis/LeaseFilter.hh"
 #include "../StateMachine.hh"
 #include "../Formatter.hh"
+#include "../utils/ParseUtils.hh"
 
 #include <random>
 #include <sys/stat.h>
@@ -74,7 +75,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       if(req.size() != 2 && req.size() != 3) return conn->errArgs(req[0]);
 
       int64_t nentries;
-      if(!my_strtoll(req[1], nentries) || nentries <= 0) return conn->err(SSTR("could not parse " << req[1]));
+      if(!ParseUtils::parseInt64(req[1], nentries) || nentries <= 0) return conn->err(SSTR("could not parse " << req[1]));
 
       bool raw = false;
       if(req.size() == 3) {
@@ -96,7 +97,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       if(req.size() != 2 && req.size() != 3) return conn->errArgs(req[0]);
 
       LogIndex index;
-      if(!my_strtoll(req[1], index)) return conn->err(SSTR("could not parse " << req[1]));
+    if(!ParseUtils::parseInt64(req[1], index)) return conn->err(SSTR("could not parse " << req[1]));
 
       bool raw = false;
       if(req.size() == 3) {

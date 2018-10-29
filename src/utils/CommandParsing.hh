@@ -28,6 +28,7 @@
 #include <string>
 #include "StringUtils.hh"
 #include "../RedisRequest.hh"
+#include "../utils/ParseUtils.hh"
 
 namespace quarkdb {
 
@@ -72,7 +73,7 @@ inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator 
         return args;
       }
 
-      if(!my_strtoll(*count, args.count)) {
+      if(!ParseUtils::parseInt64(*count, args.count)) {
         args.error = "value is not an integer or out of range";
         return args;
       }

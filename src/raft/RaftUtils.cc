@@ -27,7 +27,7 @@
 #include "RaftState.hh"
 #include "RaftLease.hh"
 #include "RaftContactDetails.hh"
-#include "../Utils.hh"
+#include "../utils/ParseUtils.hh"
 
 namespace quarkdb {
 
@@ -178,11 +178,11 @@ bool RaftParser::appendEntriesResponse(const redisReplyPtr &source, RaftAppendEn
     }
   }
 
-  std::string tmp(source->element[0]->str, source->element[0]->len);
-  if(!my_strtoll(tmp, dest.term)) return false;
+  std::string_view tmp(source->element[0]->str, source->element[0]->len);
+  if(!ParseUtils::parseInt64(tmp, dest.term)) return false;
 
-  tmp = std::string(source->element[1]->str, source->element[1]->len);
-  if(!my_strtoll(tmp, dest.logSize)) return false;
+  tmp = std::string_view(source->element[1]->str, source->element[1]->len);
+  if(!ParseUtils::parseInt64(tmp, dest.logSize)) return false;
 
   tmp = std::string(source->element[2]->str, source->element[2]->len);
   if(tmp == "0") dest.outcome = false;
@@ -200,7 +200,7 @@ bool RaftParser::heartbeat(const RedisRequest &source, RaftHeartbeatRequest &des
 
   if(source.size() != 3) return false;
 
-  if(!my_strtoll(source[1], dest.term)) return false;
+  if(!ParseUtils::parseInt64(source[1], dest.term)) return false;
   if(!parseServer(source[2], dest.leader)) return false;
 
   return true;
@@ -217,8 +217,8 @@ bool RaftParser::heartbeatResponse(const qclient::redisReplyPtr &source, RaftHea
     }
   }
 
-  std::string tmp(source->element[0]->str, source->element[0]->len);
-  if(!my_strtoll(tmp, dest.term)) return false;
+  std::string_view tmp(source->element[0]->str, source->element[0]->len);
+  if(!ParseUtils::parseInt64(tmp, dest.term)) return false;
 
   tmp = std::string(source->element[1]->str, source->element[1]->len);
   if(tmp == "0") dest.nodeRecognizedAsLeader = false;
@@ -236,10 +236,10 @@ bool RaftParser::voteRequest(RedisRequest &source, RaftVoteRequest &dest) {
 
   if(source.size() != 5) return false;
 
-  if(!my_strtoll(source[1], dest.term)) return false;
+  if(!ParseUtils::parseInt64(source[1], dest.term)) return false;
   if(!parseServer(source[2], dest.candidate)) return false;
-  if(!my_strtoll(source[3], dest.lastIndex)) return false;
-  if(!my_strtoll(source[4], dest.lastTerm)) return false;
+  if(!ParseUtils::parseInt64(source[3], dest.lastIndex)) return false;
+  if(!ParseUtils::parseInt64(source[4], dest.lastTerm)) return false;
   return true;
 }
 
@@ -254,8 +254,8 @@ bool RaftParser::voteResponse(const redisReplyPtr &source, RaftVoteResponse &des
     }
   }
 
-  std::string tmp(source->element[0]->str, source->element[0]->len);
-  if(!my_strtoll(tmp, dest.term)) return false;
+  std::string_view tmp(source->element[0]->str, source->element[0]->len);
+  if(!ParseUtils::parseInt64(tmp, dest.term)) return false;
 
   tmp = std::string(source->element[1]->str, source->element[1]->len);
   if(tmp == "granted") {
@@ -295,8 +295,8 @@ bool RaftParser::fetchResponse(redisReply *source, RaftEntry &entry) {
     }
   }
 
-  std::string tmp(source->element[0]->str, source->element[0]->len);
-  if(!my_strtoll(tmp, entry.term)) return false;
+  std::string_view tmp(source->element[0]->str, source->element[0]->len);
+  if(!ParseUtils::parseInt64(tmp, entry.term)) return false;
 
   entry.request.clear();
   for(size_t i = 0; i < req->elements; i++) {

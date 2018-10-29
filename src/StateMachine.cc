@@ -24,6 +24,7 @@
 #include "StateMachine.hh"
 #include "Utils.hh"
 #include "../deps/StringMatchLen.h"
+#include "utils/ParseUtils.hh"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
 #include "storage/StagingArea.hh"
@@ -512,7 +513,7 @@ rocksdb::Status StateMachine::hsetnx(StagingArea &stagingArea, const std::string
 
 rocksdb::Status StateMachine::hincrby(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &incrby, int64_t &result) {
   int64_t incrbyInt64;
-  if(!my_strtoll(incrby, incrbyInt64)) {
+  if(!ParseUtils::parseInt64(incrby, incrbyInt64)) {
     return malformed("value is not an integer or out of range");
   }
 
@@ -523,7 +524,7 @@ rocksdb::Status StateMachine::hincrby(StagingArea &stagingArea, const std::strin
   bool exists = operation.getField(field, value);
 
   result = 0;
-  if(exists && !my_strtoll(value, result)) {
+  if(exists && !ParseUtils::parseInt64(value, result)) {
     operation.finalize(operation.keySize());
     return malformed("hash value is not an integer");
   }
@@ -1171,7 +1172,7 @@ rocksdb::Status StateMachine::dequePopBack(StagingArea &stagingArea, const std::
 
 rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, const std::string &key, const std::string &maxToKeepStr, int64_t &itemsRemoved) {
   int64_t maxToKeep;
-  if(!my_strtoll(maxToKeepStr, maxToKeep) || maxToKeep < 0) {
+  if(!ParseUtils::parseInt64(maxToKeepStr, maxToKeep) || maxToKeep < 0) {
     return malformed("value is not an integer or out of range");
   }
 

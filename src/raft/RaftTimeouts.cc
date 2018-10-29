@@ -23,6 +23,7 @@
 
 #include "RaftTimeouts.hh"
 #include "../Utils.hh"
+#include "../utils/ParseUtils.hh"
 #include <random>
 
 using namespace quarkdb;
@@ -82,15 +83,15 @@ bool RaftTimeouts::fromString(RaftTimeouts &ret, const std::string &str) {
 
   int64_t low, high, heartbeat;
 
-  if(!my_strtoll(parts[0], low)) {
+  if(!ParseUtils::parseInt64(parts[0], low)) {
     return parseError(str);
   }
 
-  if(!my_strtoll(parts[1], high)) {
+  if(!ParseUtils::parseInt64(parts[1], high)) {
     return parseError(str);
   }
 
-  if(!my_strtoll(parts[2], heartbeat)) {
+  if(!ParseUtils::parseInt64(parts[2], heartbeat)) {
     return parseError(str);
   }
 

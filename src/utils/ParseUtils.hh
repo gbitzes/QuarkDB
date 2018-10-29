@@ -43,10 +43,10 @@ inline std::vector<std::string> split(std::string data, const std::string &token
   return output;
 }
 
-inline bool parseInt64(const std::string &str, int64_t &ret) {
+inline bool parseInt64(std::string_view str, int64_t &ret) {
   char *endptr = NULL;
-  ret = strtoll(str.c_str(), &endptr, 10);
-  if(endptr != str.c_str() + str.size() || ret == LLONG_MIN || ret == LONG_LONG_MAX) {
+  ret = strtoll(str.data(), &endptr, 10);
+  if(endptr != str.data() + str.size() || ret == LLONG_MIN || ret == LONG_LONG_MAX) {
     return false;
   }
   return true;

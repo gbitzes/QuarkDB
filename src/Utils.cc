@@ -21,9 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include <climits>
 #include "utils/Stacktrace.hh"
 #include "Utils.hh"
+#include "utils/ParseUtils.hh"
+
+#include <climits>
 #include <memory.h>
 #include <math.h>
 #include <sys/stat.h>
@@ -55,15 +57,6 @@ bool caseInsensitiveEquals(const std::string &str1, const std::string &str2) {
   if(str1.size() != str2.size()) return false;
   for(size_t i = 0; i < str1.size(); i++) {
     if(tolower(str1[i]) != tolower(str2[i])) return false;
-  }
-  return true;
-}
-
-bool my_strtoll(const std::string &str, int64_t &ret) {
-  char *endptr = NULL;
-  ret = strtoll(str.c_str(), &endptr, 10);
-  if(endptr != str.c_str() + str.size() || ret == LLONG_MIN || ret == LONG_LONG_MAX) {
-    return false;
   }
   return true;
 }
@@ -104,7 +97,7 @@ bool parseServer(const std::string &str, RaftServer &srv) {
   if(parts.size() != 2) return false;
 
   int64_t port;
-  if(!my_strtoll(parts[1], port)) return false;
+  if(!ParseUtils::parseInt64(parts[1], port)) return false;
 
   srv = RaftServer{ parts[0], (int) port };
   return true;
