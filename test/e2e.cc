@@ -1431,8 +1431,14 @@ TEST_F(Raft_e2e, LocalityHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("hget", "fb", "f8"), "");
 
   redisReplyPtr reply = tunnel(leaderID)->exec("raw-scan", "\x01", "count", "2000").get();
+  qdb_info(qclient::describeRedisReply(reply));
+
+  LogIndex lastApplied = stateMachine(leaderID)->getLastApplied();
+  std::string lastAppliedStr = qclient::describeRedisReply(qclient::ResponseBuilder::makeStr(intToBinaryString(lastApplied)));
+
   ASSERT_EQ(
     qclient::describeRedisReply(reply),
+    SSTR(
     "1) \"!mykey\"\n"
     "2) \"e\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x03\"\n"
     "3) \"__clock\"\n"
@@ -1442,7 +1448,7 @@ TEST_F(Raft_e2e, LocalityHash) {
     "7) \"__in-bulkload\"\n"
     "8) \"FALSE\"\n"
     "9) \"__last-applied\"\n"
-    "10) \"\\x00\\x00\\x00\\x00\\x00\\x00\\x00\"\"\n"
+    "10) " << lastAppliedStr << "\n"
     "11) \"emykey##dhint1##f3\"\n"
     "12) \"v6\"\n"
     "13) \"emykey##dhint2##f2\"\n"
@@ -1455,9 +1461,8 @@ TEST_F(Raft_e2e, LocalityHash) {
     "20) \"hint2\"\n"
     "21) \"emykey##if3\"\n"
     "22) \"hint1\"\n"
+    )
   );
-
-  qdb_info(qclient::describeRedisReply(reply));
 
   std::vector<std::future<redisReplyPtr>> replies;
   replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0" ));
