@@ -1125,6 +1125,11 @@ TEST(ExpirationEventLocator, BasicSanity) {
   ASSERT_EQ(locator1.toSlice(), SSTR("@" << unsignedIntToBinaryString(123u) << "some-key"));
 }
 
+TEST(ConfigurationLocator, BasicSanity) {
+  ConfigurationLocator locator("test-test-##-test");
+  ASSERT_EQ(locator.toView(), "~test-test-##-test");
+}
+
 TEST(PatternMatching, BasicSanity) {
   ASSERT_EQ(extractPatternPrefix("abc*"), "abc");
   ASSERT_EQ(extractPatternPrefix("abc"), "abc");

@@ -273,15 +273,9 @@ LogIndex StateMachine::getLastApplied() {
   return lastApplied;
 }
 
-static std::string translate_key(const InternalKeyType type, const std::string &key) {
-  return std::string(1, char(type)) + key;
-}
-
 static rocksdb::Status wrong_type() {
   return rocksdb::Status::InvalidArgument("WRONGTYPE Operation against a key holding the wrong kind of value");
 }
-
-
 
 static KeyDescriptor constructDescriptor(rocksdb::Status &st, const std::string &serialization) {
   if(st.IsNotFound()) {
@@ -894,8 +888,8 @@ rocksdb::Status StateMachine::scard(StagingArea &stagingArea, std::string_view k
 }
 
 rocksdb::Status StateMachine::configGet(StagingArea &stagingArea, const std::string &key, std::string &value) {
-  std::string tkey = translate_key(InternalKeyType::kConfiguration, key);
-  return db->Get(stagingArea.snapshot->opts(), tkey, &value);
+  ConfigurationLocator locator(key);
+  return stagingArea.get(locator.toView(), value);
 }
 
 rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::string &key, const std::string &value) {
@@ -907,8 +901,8 @@ rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::str
   if(st.ok()) oldvalue = SSTR("'" << oldvalue << "'");
   qdb_info("Applying configuration update: Key " << key << " changes from " << oldvalue << " into '" << value << "'");
 
-  std::string tkey = translate_key(InternalKeyType::kConfiguration, key);
-  stagingArea.put(tkey, value);
+  ConfigurationLocator locator(key);
+  stagingArea.put(locator.toView(), value);
   return rocksdb::Status::OK();
 }
 

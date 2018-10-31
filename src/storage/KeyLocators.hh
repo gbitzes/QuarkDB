@@ -325,6 +325,31 @@ private:
   KeyBuffer keyBuffer;
 };
 
+class ConfigurationLocator {
+public:
+  ConfigurationLocator(std::string_view key) {
+    reset(key);
+  }
+
+  void reset(std::string_view key) {
+    keyBuffer.resize(1 + key.size());
+    keyBuffer[0] = char(InternalKeyType::kConfiguration);
+
+    memcpy(keyBuffer.data()+1, key.data(), key.size());
+  }
+
+  std::string_view toView() {
+    return keyBuffer.toView();
+  }
+
+  rocksdb::Slice toSlice() {
+    return keyBuffer.toSlice();
+  }
+
+private:
+  KeyBuffer keyBuffer;
+};
+
 }
 
 #endif
