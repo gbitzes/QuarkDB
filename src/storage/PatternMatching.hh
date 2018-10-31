@@ -31,7 +31,7 @@ namespace quarkdb {
 // efficiently rule out all keys inside RocksDB which don't start with this
 // prefix.
 
-inline std::string extractPatternPrefix(const std::string &pattern) {
+inline std::string extractPatternPrefix(std::string_view pattern) {
   for(size_t i = 0; i < pattern.size(); i++) {
     char c = pattern[i];
 
@@ -42,7 +42,7 @@ inline std::string extractPatternPrefix(const std::string &pattern) {
 
   // The entire thing doesn't contain special characters.
   // Kinda weird, as it can only match a single key, but possible
-  return pattern;
+  return std::string(pattern);
 }
 
 }

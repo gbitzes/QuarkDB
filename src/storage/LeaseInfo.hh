@@ -34,7 +34,7 @@ class LeaseInfo {
 public:
   LeaseInfo() {}
 
-  LeaseInfo(const std::string& val, ClockValue ren, ClockValue dl) :
+  LeaseInfo(std::string_view val, ClockValue ren, ClockValue dl) :
     value(val), lastRenewal(ren), deadline(dl) {}
 
   ClockValue getLastRenewal() const {
