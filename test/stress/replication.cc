@@ -159,7 +159,7 @@ TEST_F(Replication, connection_shuts_down_before_all_replies_arrive) {
 }
 
 // blindly generate load, ignore any errors
-static void generateLoad(qclient::QClient *qcl, std::string prefix, ThreadAssistant &assistant) {
+static void generateLoad(qclient::QClient *qcl, std::string prefix, quarkdb::ThreadAssistant &assistant) {
   int counter = 0;
   while(!assistant.terminationRequested()) {
     qcl->exec("set", SSTR(prefix <<  "-key-" << counter), SSTR(prefix << "value-" << counter));
@@ -187,9 +187,9 @@ TEST_F(Replication, load_during_election) {
   qclient::QClient qcl2(myself(2).hostname, myself(2).port, std::move(opts2));
 
   // let's be extra evil and start generating load even before the nodes start up
-  AssistedThread t1(generateLoad, &qcl0, "node0");
-  AssistedThread t2(generateLoad, &qcl1, "node1");
-  AssistedThread t3(generateLoad, &qcl2, "node2");
+  quarkdb::AssistedThread t1(generateLoad, &qcl0, "node0");
+  quarkdb::AssistedThread t2(generateLoad, &qcl1, "node1");
+  quarkdb::AssistedThread t3(generateLoad, &qcl2, "node2");
 
   // start the cluster
   spinup(0); spinup(1); spinup(2);
@@ -220,7 +220,7 @@ static void assert_linearizability(std::future<redisReplyPtr> &future, std::stri
 // Given an endpoint, try to read a key again and again and again.
 // If we get ERR or MOVED, no problem.
 // If we get a response other than expectedValue, linearizability has been violated.
-static void obsessiveReader(qclient::QClient *qcl, std::string key, std::string expectedValue, std::atomic<int64_t> &responses, std::atomic<int64_t> &violations, ThreadAssistant &assistant) {
+static void obsessiveReader(qclient::QClient *qcl, std::string key, std::string expectedValue, std::atomic<int64_t> &responses, std::atomic<int64_t> &violations, quarkdb::ThreadAssistant &assistant) {
   std::list<std::future<redisReplyPtr>> futures;
 
   qdb_info("Issuing a flood of reads for key " << quotes(key));
@@ -269,8 +269,8 @@ TEST_F(Replication, linearizability_during_transition) {
   // start reading "key"
   std::atomic<int64_t> responses(0), violations(0);
 
-  AssistedThread reader1(obsessiveReader, tunnel(node1), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
-  AssistedThread reader2(obsessiveReader, tunnel(node2), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
+  quarkdb::AssistedThread reader1(obsessiveReader, tunnel(node1), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
+  quarkdb::AssistedThread reader2(obsessiveReader, tunnel(node2), "key", SSTR("value-" << nWrites), std::ref(responses), std::ref(violations));
 
   RaftTerm firstTerm = state(leaderID)->getSnapshot()->term;
 
@@ -300,9 +300,9 @@ TEST_F(Replication, several_transitions) {
   Connection::setPhantomBatchLimit(1);
 
   // Start load generation..
-  AssistedThread t1(generateLoad, tunnel(0), "node0");
-  AssistedThread t2(generateLoad, tunnel(1), "node1");
-  AssistedThread t3(generateLoad, tunnel(2), "node2");
+  quarkdb::AssistedThread t1(generateLoad, tunnel(0), "node0");
+  quarkdb::AssistedThread t2(generateLoad, tunnel(1), "node1");
+  quarkdb::AssistedThread t3(generateLoad, tunnel(2), "node2");
 
   // start the cluster
   spinup(0); spinup(1); spinup(2);

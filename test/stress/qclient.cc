@@ -208,3 +208,33 @@ TEST_F(QClientTests, MultipleWriterThreads) {
     threads[i].join();
   }
 }
+
+TEST_F(QClientTests, Partitions) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("PING", "pickles"), "pickles");
+  qclient::FaultInjector &faultInjector = tunnel(leaderID)->getFaultInjector();
+
+  for(size_t i = 0; i < 10; i++) {
+    faultInjector.enforceTotalBlackout();
+    std::cout << "1" << std::endl;
+
+    redisReplyPtr reply = tunnel(leaderID)->exec("PING", "pickles-2").get();
+    std::cout << reply << std::endl;
+    ASSERT_EQ(reply, nullptr);
+    std::cout << "2" << std::endl;
+    faultInjector.liftTotalBlackout();
+
+    redisReplyPtr reply2;
+    int attempts = 0;
+    while(attempts++ < 10 && !reply2) {
+      reply2 = tunnel(leaderID)->exec("PING", "pickles-3").get();
+    }
+
+    ASSERT_TRUE(reply2 != nullptr);
+    ASSERT_REPLY(reply2, "pickles-3");
+  }
+
+}
