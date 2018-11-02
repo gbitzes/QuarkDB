@@ -219,16 +219,18 @@ TEST_F(QClientTests, Partitions) {
 
   for(size_t i = 0; i < 10; i++) {
     faultInjector.enforceTotalBlackout();
-    std::cout << "1" << std::endl;
 
-    redisReplyPtr reply = tunnel(leaderID)->exec("PING", "pickles-2").get();
-    std::cout << reply << std::endl;
+    redisReplyPtr reply;
+    int attempts = 0;
+    while(attempts++ < 10 && reply) {
+      reply = tunnel(leaderID)->exec("PING", "pickles-3").get();
+    }
+
     ASSERT_EQ(reply, nullptr);
-    std::cout << "2" << std::endl;
     faultInjector.liftTotalBlackout();
 
     redisReplyPtr reply2;
-    int attempts = 0;
+    attempts = 0;
     while(attempts++ < 10 && !reply2) {
       reply2 = tunnel(leaderID)->exec("PING", "pickles-3").get();
     }
