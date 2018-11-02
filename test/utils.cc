@@ -513,6 +513,28 @@ void changeString(std::string &str) {
 
 void nullThread(ThreadAssistant &assistant) {}
 
+void busyWaiting(ThreadAssistant &assistant) {
+  while(!assistant.terminationRequested()) {
+    // wheeeeeee
+  }
+}
+
+void coordinator(ThreadAssistant &assistant) {
+  AssistedThread t1(busyWaiting);
+  AssistedThread t2(busyWaiting);
+  AssistedThread t3(busyWaiting);
+
+  // Without the following three lines, we'd block forever waiting for
+  // t1 to stop, ignoring our own termination signal.
+  assistant.propagateTerminationSignal(t1);
+  assistant.propagateTerminationSignal(t2);
+  assistant.propagateTerminationSignal(t3);
+
+  t1.blockUntilThreadJoins();
+  t2.blockUntilThreadJoins();
+  t3.blockUntilThreadJoins();
+}
+
 TEST(AssistedThread, CallbackAfterStop) {
   std::string test;
 
@@ -522,5 +544,10 @@ TEST(AssistedThread, CallbackAfterStop) {
   thread.join();
 
   ASSERT_EQ(test, "pickles");
+}
+
+TEST(AssistedThread, CoordinatorThread) {
+  AssistedThread coord(coordinator);
+  coord.join();
 }
 

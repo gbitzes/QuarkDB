@@ -38,6 +38,7 @@ class ThreadAssistant {
 public:
   void reset() {
     stopFlag = false;
+    terminationCallbacks.clear();
   }
 
   void requestTermination() {
@@ -55,6 +56,17 @@ public:
   void registerCallback(std::function<void()> callable) {
     std::lock_guard<std::mutex> lock(mtx);
     terminationCallbacks.emplace_back(std::move(callable));
+
+    if(stopFlag) {
+      //------------------------------------------------------------------------
+      // Careful here.. This is a race condition where thread termination has
+      // already been requested, even though we're not done yet registering
+      // callbacks, apparently.
+      //
+      // Let's simply call the callback ourselves.
+      //------------------------------------------------------------------------
+      (terminationCallbacks.back())();
+    }
   }
 
   void dropCallbacks() {
@@ -81,6 +93,36 @@ public:
     if(stopFlag) return;
     notifier.wait_until(lock, duration);
   }
+
+  //----------------------------------------------------------------------------
+  // Ok, this is a bit weird: Consider an AssistedThread which "owns" or
+  // coordinates a bunch of other threads:
+  //
+  // void Coordinator(ThreadAssistant &assistant) {
+  //   AssistedThread worker1( ... );
+  //   AssistedThread worker2( ... );
+  //   AssistedThread worker3( ... );
+  //
+  //   worker1.blockUntilThreadJoins();
+  //   worker2.blockUntilThreadJoins();
+  //   worker3.blockUntilThreadJoins();
+  // }
+  //
+  // We would like that any requests to shut down Coordinator propagate to all
+  // workers. Otherwise, since Coordinator blocks waiting for the workers to
+  // terminate, its own early termination signal would get ignored.
+  //
+  // propagateTerminationSignal does just this. In the above example, call:
+  // assistant.propagateTerminationSignal(worker1);
+  // assistant.propagateTerminationSignal(worker2);
+  // assistant.propagateTerminationSignal(worker3);
+  //
+  // And the moment Coordinator is asked to terminate, all registered threads
+  // will, too.
+  //
+  // NOTE: assistant object must belong to a different thread!
+  //----------------------------------------------------------------------------
+  void propagateTerminationSignal(AssistedThread &thread);
 
 private:
   // Private constructor - only AssistedThread can create such an object.
@@ -163,6 +205,10 @@ private:
   bool joined;
   std::thread th;
 };
+
+inline void ThreadAssistant::propagateTerminationSignal(AssistedThread &thread) {
+  registerCallback(std::bind(&AssistedThread::stop, &thread));
+}
 
 }
 
