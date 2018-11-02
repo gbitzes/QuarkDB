@@ -32,6 +32,7 @@
 #include "utils/CommandParsing.hh"
 #include "utils/TimeFormatting.hh"
 #include "utils/Random.hh"
+#include "utils/AssistedThread.hh"
 #include "redis/Transaction.hh"
 #include "redis/Authenticator.hh"
 #include "redis/LeaseFilter.hh"
@@ -505,3 +506,21 @@ TEST(Randomization, BasicSanity) {
   ASSERT_EQ(getPseudoRandomTag("chicken chicken"), 15381190244021194531ull);
   ASSERT_EQ(getPseudoRandomTag("chicken chicken chicken"), 2103198794047051822ull);
 }
+
+void changeString(std::string &str) {
+  str = "pickles";
+}
+
+void nullThread(ThreadAssistant &assistant) {}
+
+TEST(AssistedThread, CallbackAfterStop) {
+  std::string test;
+
+  AssistedThread thread;
+  thread.registerCallback(std::bind(changeString, std::ref(test)));
+  thread.reset(nullThread);
+  thread.join();
+
+  ASSERT_EQ(test, "pickles");
+}
+

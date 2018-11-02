@@ -28,6 +28,7 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <functional>
 
 namespace quarkdb {
 
@@ -41,8 +42,24 @@ public:
 
   void requestTermination() {
     std::lock_guard<std::mutex> lock(mtx);
-    stopFlag = true;
-    notifier.notify_all();
+    if(!stopFlag) {
+      stopFlag = true;
+      notifier.notify_all();
+
+      for(size_t i = 0; i < terminationCallbacks.size(); i++) {
+        terminationCallbacks[i]();
+      }
+    }
+  }
+
+  void registerCallback(std::function<void()> callable) {
+    std::lock_guard<std::mutex> lock(mtx);
+    terminationCallbacks.emplace_back(std::move(callable));
+  }
+
+  void dropCallbacks() {
+    std::lock_guard<std::mutex> lock(mtx);
+    terminationCallbacks.clear();
   }
 
   bool terminationRequested() {
@@ -73,6 +90,8 @@ private:
   std::atomic<bool> stopFlag;
   std::mutex mtx;
   std::condition_variable notifier;
+
+  std::vector<std::function<void()>> terminationCallbacks;
 };
 
 class AssistedThread {
@@ -129,6 +148,14 @@ public:
 
     th.join();
     joined = true;
+  }
+
+  void registerCallback(std::function<void()> callable) {
+    assistant->registerCallback(std::move(callable));
+  }
+
+  void dropCallbacks() {
+    assistant->dropCallbacks();
   }
 
 private:
