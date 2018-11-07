@@ -171,11 +171,11 @@ public:
   // Has completely its own key namespace and does not interact in any way
   // with the other redis commands.
   //----------------------------------------------------------------------------
-  rocksdb::Status configGet(const std::string &key, std::string &value);
-  rocksdb::Status configGet(StagingArea &stagingArea, const std::string &key, std::string &value);
+  rocksdb::Status configGet(std::string_view key, std::string &value);
+  rocksdb::Status configGet(StagingArea &stagingArea, std::string_view key, std::string &value);
 
-  rocksdb::Status configSet(const std::string &key, const std::string &value, LogIndex index = 0);
-  rocksdb::Status configSet(StagingArea &stagingArea, const std::string &key, const std::string &value);
+  rocksdb::Status configSet(std::string_view key, std::string_view value, LogIndex index = 0);
+  rocksdb::Status configSet(StagingArea &stagingArea, std::string_view key, std::string_view value);
 
   rocksdb::Status configGetall(std::vector<std::string> &res);
   rocksdb::Status configGetall(StagingArea &stagingArea, std::vector<std::string> &res);

@@ -887,12 +887,12 @@ rocksdb::Status StateMachine::scard(StagingArea &stagingArea, std::string_view k
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::configGet(StagingArea &stagingArea, const std::string &key, std::string &value) {
+rocksdb::Status StateMachine::configGet(StagingArea &stagingArea, std::string_view key,  std::string &value) {
   ConfigurationLocator locator(key);
   return stagingArea.get(locator.toView(), value);
 }
 
-rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, const std::string &key, const std::string &value) {
+rocksdb::Status StateMachine::configSet(StagingArea &stagingArea, std::string_view key, std::string_view value) {
   // We don't use WriteOperation or key descriptors here,
   // since kConfiguration is special.
 
@@ -1828,7 +1828,7 @@ rocksdb::Status StateMachine::dequeLen(std::string_view key, size_t &len) {
   CHAIN_READ(dequeLen, key, len);
 }
 
-rocksdb::Status StateMachine::configGet(const std::string &key, std::string &value) {
+rocksdb::Status StateMachine::configGet(std::string_view key, std::string &value) {
   CHAIN_READ(configGet, key, value);
 }
 
@@ -1908,7 +1908,7 @@ rocksdb::Status StateMachine::dequePushBack(std::string_view key, const VecItera
   CHAIN(index, dequePushBack, key, start, end, length);
 }
 
-rocksdb::Status StateMachine::configSet(const std::string &key, const std::string &value, LogIndex index) {
+rocksdb::Status StateMachine::configSet(std::string_view key, std::string_view value, LogIndex index) {
   CHAIN(index, configSet, key, value);
 }
 

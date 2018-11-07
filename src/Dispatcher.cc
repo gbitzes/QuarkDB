@@ -138,21 +138,21 @@ RedisEncodedResponse RedisDispatcher::dispatch(Transaction &transaction, LogInde
   return resp;
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchLHSET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value) {
+RedisEncodedResponse RedisDispatcher::dispatchLHSET(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value) {
   bool fieldcreated;
   rocksdb::Status st = store.lhset(stagingArea, key, field, hint, value, fieldcreated);
   if(!st.ok()) return Formatter::fromStatus(st);
   return Formatter::integer(fieldcreated);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end) {
+RedisEncodedResponse RedisDispatcher::dispatchHDEL(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end) {
   int64_t count = 0;
   rocksdb::Status st = store.hdel(stagingArea, key, start, end, count);
   if(!st.ok()) return Formatter::fromStatus(st);
   return Formatter::integer(count);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchLHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end) {
+RedisEncodedResponse RedisDispatcher::dispatchLHDEL(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end) {
   int64_t count = 0;
   rocksdb::Status st = store.lhdel(stagingArea, key, start, end, count);
   if(!st.ok()) return Formatter::fromStatus(st);
@@ -434,7 +434,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchHGET(StagingArea &stagingArea, const std::string &key, const std::string &field) {
+RedisEncodedResponse RedisDispatcher::dispatchHGET(StagingArea &stagingArea, std::string_view key, std::string_view field) {
   std::string value;
   rocksdb::Status st = store.hget(stagingArea, key, field, value);
   if(st.IsNotFound()) return Formatter::null();
@@ -442,7 +442,7 @@ RedisEncodedResponse RedisDispatcher::dispatchHGET(StagingArea &stagingArea, con
   return Formatter::string(value);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchLHGET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint) {
+RedisEncodedResponse RedisDispatcher::dispatchLHGET(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint) {
   std::string value;
   rocksdb::Status st = store.lhget(stagingArea, key, field, hint, value);
   if(st.IsNotFound()) return Formatter::null();
@@ -774,7 +774,7 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
 
 RedisEncodedResponse RedisDispatcher::dispatch(RedisRequest &request, LogIndex commit) {
   if(request.getCommand() == RedisCommand::INVALID) {
-    if(startswith(request[0], "JOURNAL_")) {
+    if(StringUtils::startsWith(request[0], "JOURNAL_")) {
 
       if(request[0] == "JOURNAL_LEADERSHIP_MARKER") {
         // Hard-synchronize our dynamic clock to the static one. The dynamic

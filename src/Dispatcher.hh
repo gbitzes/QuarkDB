@@ -67,11 +67,11 @@ private:
 
   StateMachine &store;
 
-  RedisEncodedResponse dispatchHGET(StagingArea &stagingArea, const std::string &key, const std::string &field);
-  RedisEncodedResponse dispatchLHGET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint);
-  RedisEncodedResponse dispatchLHSET(StagingArea &stagingArea, const std::string &key, const std::string &field, const std::string &hint, const std::string &value);
-  RedisEncodedResponse dispatchHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
-  RedisEncodedResponse dispatchLHDEL(StagingArea &stagingArea, const std::string &key, const VecIterator &start, const VecIterator &end);
+  RedisEncodedResponse dispatchHGET(StagingArea &stagingArea, std::string_view key, std::string_view field);
+  RedisEncodedResponse dispatchLHGET(StagingArea &stagingArea, std::string_view key,  std::string_view field, std::string_view hint);
+  RedisEncodedResponse dispatchLHSET(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value);
+  RedisEncodedResponse dispatchHDEL(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end);
+  RedisEncodedResponse dispatchLHDEL(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end);
 };
 
 }
