@@ -27,6 +27,9 @@
 
 using namespace quarkdb;
 
+//------------------------------------------------------------------------------
+// Construct iterator object on the given path - must be a directory.
+//------------------------------------------------------------------------------
 DirectoryIterator::DirectoryIterator(const std::string &mypath)
 : path(mypath), reachedEnd(false), dir(nullptr) {
 
@@ -37,6 +40,9 @@ DirectoryIterator::DirectoryIterator(const std::string &mypath)
   }
 }
 
+//------------------------------------------------------------------------------
+// Destructor
+//------------------------------------------------------------------------------
 DirectoryIterator::~DirectoryIterator() {
   if(dir) {
     if(closedir(dir) != 0) {
@@ -46,6 +52,12 @@ DirectoryIterator::~DirectoryIterator() {
   }
 }
 
+//------------------------------------------------------------------------------
+// Retrieve next directory entry.
+// This object retains ownership on the given pointer, never call free on it.
+//
+// If the iterator is in an error state, next() will only ever return nullptr.
+//------------------------------------------------------------------------------
 struct dirent* DirectoryIterator::next() {
   if(!ok()) return nullptr;
   if(reachedEnd) return nullptr;
@@ -63,14 +75,24 @@ struct dirent* DirectoryIterator::next() {
   return nextEntry;
 }
 
+//------------------------------------------------------------------------------
+// Checks if the iterator is in an error state. EOF is not an error state!
+//------------------------------------------------------------------------------
 bool DirectoryIterator::ok() {
   return error.empty();
 }
 
+//------------------------------------------------------------------------------
+// Checks whether we have reached the end.
+//------------------------------------------------------------------------------
 bool DirectoryIterator::eof() {
   return reachedEnd;
 }
 
+//------------------------------------------------------------------------------
+// Retrieve the error message if the iterator object is in an error state.
+// If no error state, returns an empty string.
+//------------------------------------------------------------------------------
 std::string DirectoryIterator::err() {
   return error;
 }

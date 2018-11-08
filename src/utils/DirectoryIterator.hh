@@ -31,14 +31,41 @@ namespace quarkdb {
 
 class DirectoryIterator {
 public:
+
+  //----------------------------------------------------------------------------
+  // Construct iterator object on the given path - must be a directory.
+  //----------------------------------------------------------------------------
   DirectoryIterator(const std::string &path);
+
+  //----------------------------------------------------------------------------
+  // Destructor
+  //----------------------------------------------------------------------------
   ~DirectoryIterator();
 
+  //----------------------------------------------------------------------------
+  // Checks if the iterator is in an error state. EOF is not an error state!
+  //----------------------------------------------------------------------------
   bool ok();
+
+  //----------------------------------------------------------------------------
+  // Retrieve the error message if the iterator object is in an error state.
+  // If no error state, returns an empty string.
+  //----------------------------------------------------------------------------
   std::string err();
+
+  //----------------------------------------------------------------------------
+  // Checks whether we have reached the end.
+  //----------------------------------------------------------------------------
   bool eof();
 
+  //----------------------------------------------------------------------------
+  // Retrieve next directory entry.
+  // This object retains ownership on the given pointer, never call free on it.
+  //
+  // If the iterator is in an error state, next() will only ever return nullptr.
+  //----------------------------------------------------------------------------
   struct dirent* next();
+
 private:
   std::string error;
   std::string path;
