@@ -36,21 +36,21 @@ class RedisRequest;
 class Formatter {
 public:
   static RedisEncodedResponse moved(int64_t shardId, const RaftServer &srv);
-  static RedisEncodedResponse err(const std::string &msg);
-  static RedisEncodedResponse errArgs(const std::string &cmd);
+  static RedisEncodedResponse err(std::string_view msg);
+  static RedisEncodedResponse errArgs(std::string_view cmd);
   static RedisEncodedResponse pong();
-  static RedisEncodedResponse string(const std::string &str);
+  static RedisEncodedResponse string(std::string_view str);
   static RedisEncodedResponse fromStatus(const rocksdb::Status &status);
-  static RedisEncodedResponse status(const std::string &str);
+  static RedisEncodedResponse status(std::string_view str);
   static RedisEncodedResponse ok();
   static RedisEncodedResponse null();
   static RedisEncodedResponse integer(int64_t number);
   static RedisEncodedResponse vector(const std::vector<std::string> &vec);
   static RedisEncodedResponse statusVector(const std::vector<std::string> &vec);
-  static RedisEncodedResponse scan(const std::string &marker, const std::vector<std::string> &vec);
+  static RedisEncodedResponse scan(std::string_view marker,  const std::vector<std::string> &vec);
   static RedisEncodedResponse raftEntry(const RaftEntry &entry, bool raw);
   static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries, bool raw);
-  static RedisEncodedResponse noauth(const std::string &str);
+  static RedisEncodedResponse noauth(std::string_view str);
 
   static RedisEncodedResponse simpleRedisRequest(const RedisRequest &req);
   static RedisEncodedResponse redisRequest(const RedisRequest &req);

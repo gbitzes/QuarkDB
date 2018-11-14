@@ -115,19 +115,19 @@ public:
 
   LinkStatus raw(RedisEncodedResponse &&encoded);
   LinkStatus moved(int64_t shardId, const RaftServer &location);
-  LinkStatus err(const std::string &msg);
-  LinkStatus errArgs(const std::string &cmd);
+  LinkStatus err(std::string_view msg);
+  LinkStatus errArgs(std::string_view cmd);
   LinkStatus pong();
-  LinkStatus string(const std::string &str);
+  LinkStatus string(std::string_view str);
   LinkStatus fromStatus(const rocksdb::Status &status);
-  LinkStatus status(const std::string &msg);
+  LinkStatus status(std::string_view msg);
   LinkStatus ok();
   LinkStatus null();
   LinkStatus integer(int64_t number);
   LinkStatus vector(const std::vector<std::string> &vec);
   LinkStatus statusVector(const std::vector<std::string> &vec);
-  LinkStatus scan(const std::string &marker, const std::vector<std::string> &vec);
-  LinkStatus noauth(const std::string &msg);
+  LinkStatus scan(std::string_view marker, const std::vector<std::string> &vec);
+  LinkStatus noauth(std::string_view msg);
 
   bool monitor = false;
   void setMonitor() {

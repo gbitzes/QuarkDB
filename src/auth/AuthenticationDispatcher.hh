@@ -33,7 +33,7 @@ class QuarkDBNode;
 class AuthenticationDispatcher {
 public:
 
-  AuthenticationDispatcher(const std::string &secret);
+  AuthenticationDispatcher(std::string_view secret);
   LinkStatus dispatch(Connection *conn, RedisRequest &req);
   RedisEncodedResponse dispatch(const RedisRequest &req, bool &authorized, std::unique_ptr<Authenticator> &authenticator);
 

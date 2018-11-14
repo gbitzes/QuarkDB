@@ -50,8 +50,8 @@ RedisEncodedResponse Dispatcher::handleConversion(RedisRequest &request) {
       if(request[1].size() != 8u) return Formatter::err(SSTR("expected string with 8 characters, was given " << request[1].size() << " instead"));
 
       std::vector<std::string> reply;
-      reply.emplace_back(SSTR("Interpreted as int64_t: " << binaryStringToInt(request[1].c_str())));
-      reply.emplace_back(SSTR("Interpreted as uint64_t: " << binaryStringToUnsignedInt(request[1].c_str())));
+      reply.emplace_back(SSTR("Interpreted as int64_t: " << binaryStringToInt(request[1])));
+      reply.emplace_back(SSTR("Interpreted as uint64_t: " << binaryStringToUnsignedInt(request[1])));
 
       return Formatter::statusVector(reply);
     }
@@ -368,7 +368,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
 
       qdb_assert(request[4].size() == 8u);
 
-      ClockValue timestamp = binaryStringToUnsignedInt(request[4].c_str());
+      ClockValue timestamp = binaryStringToUnsignedInt(request[4]);
       LeaseInfo leaseInfo;
       LeaseAcquisitionStatus status = store.lease_acquire(stagingArea, request[1], request[2], timestamp, duration, leaseInfo);
 
@@ -390,7 +390,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(request.size() != 3) return Formatter::errArgs("lease_get");
 
       qdb_assert(request[2].size() == 8u);
-      ClockValue timestamp = binaryStringToUnsignedInt(request[2].c_str());
+      ClockValue timestamp = binaryStringToUnsignedInt(request[2]);
 
       LeaseInfo leaseInfo;
       rocksdb::Status st = store.lease_get(stagingArea, request[1], timestamp, leaseInfo);
@@ -410,7 +410,7 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(request.size() != 3) return Formatter::errArgs("lease_release");
 
       qdb_assert(request[2].size() == 8u);
-      ClockValue timestamp = binaryStringToUnsignedInt(request[2].c_str());
+      ClockValue timestamp = binaryStringToUnsignedInt(request[2]);
 
       rocksdb::Status st = store.lease_release(stagingArea, request[1], timestamp);
 

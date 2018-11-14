@@ -53,7 +53,7 @@ std::string errorStacktrace(bool crash) {
 
 std::mutex logMutex;
 
-bool caseInsensitiveEquals(const std::string &str1, const std::string &str2) {
+bool caseInsensitiveEquals(std::string_view str1, std::string_view str2) {
   if(str1.size() != str2.size()) return false;
   for(size_t i = 0; i < str1.size(); i++) {
     if(tolower(str1[i]) != tolower(str2[i])) return false;
@@ -70,7 +70,8 @@ bool my_strtod(std::string_view str, double &ret) {
   return true;
 }
 
-std::vector<std::string> split(std::string data, std::string token) {
+std::vector<std::string> split(std::string_view dataView, std::string token) {
+    std::string data(dataView);
     std::vector<std::string> output;
     size_t pos = std::string::npos;
     do {
@@ -91,7 +92,7 @@ bool startswith(const std::string &str, const std::string &prefix) {
   return true;
 }
 
-bool parseServer(const std::string &str, RaftServer &srv) {
+bool parseServer(std::string_view str, RaftServer &srv) {
   std::vector<std::string> parts = split(str, ":");
 
   if(parts.size() != 2) return false;
@@ -103,7 +104,7 @@ bool parseServer(const std::string &str, RaftServer &srv) {
   return true;
 }
 
-bool parseServers(const std::string &str, std::vector<RaftServer> &servers) {
+bool parseServers(std::string_view str, std::vector<RaftServer> &servers) {
   servers = {};
   std::vector<std::string> parts = split(str, ",");
 

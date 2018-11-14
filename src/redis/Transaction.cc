@@ -45,7 +45,7 @@ void serializeRequestToString(std::stringstream &ss, const RedisRequest &req) {
   ss << intToBinaryString(req.size());
   for(size_t i = 0; i < req.size(); i++) {
     ss << intToBinaryString(req[i].size());
-    ss.write(req[i].c_str(), req[i].size());
+    ss.write(req[i].data(), req[i].size());
   }
 }
 
@@ -102,11 +102,11 @@ bool Transaction::deserialize(const RedisRequest &req) {
   return true;
 }
 
-bool Transaction::deserialize(const std::string &src) {
+bool Transaction::deserialize(std::string_view src) {
   qdb_assert(requests.empty());
   if(src.empty()) return false;
 
-  const char *pos = src.c_str();
+  const char *pos = src.data();
   int64_t totalRequests = binaryStringToInt(pos);
   pos += sizeof(int64_t);
 

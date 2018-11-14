@@ -30,7 +30,7 @@ CommandMonitor::CommandMonitor() {
 
 }
 
-void CommandMonitor::broadcast(const std::string& linkDescription, const std::string& printableString) {
+void CommandMonitor::broadcast(std::string_view linkDescription, std::string_view printableString) {
   if(!active) return;
 
   std::lock_guard<std::mutex> lock(mtx);
@@ -50,12 +50,12 @@ void CommandMonitor::broadcast(const std::string& linkDescription, const std::st
   if(monitors.size() == 0) active = false;
 }
 
-void CommandMonitor::broadcast(const std::string& linkDescription, const RedisRequest& req) {
+void CommandMonitor::broadcast(std::string_view linkDescription, const RedisRequest& req) {
   if(!active) return;
   return broadcast(linkDescription, req.toPrintableString());
 }
 
-void CommandMonitor::broadcast(const std::string& linkDescription, const Transaction& transaction) {
+void CommandMonitor::broadcast(std::string_view linkDescription, const Transaction& transaction) {
   if(!active) return;
   if(transaction.size() == 1u) return broadcast(linkDescription, transaction[0].toPrintableString());
   return broadcast(linkDescription, transaction.toPrintableString());

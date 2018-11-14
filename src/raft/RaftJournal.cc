@@ -29,6 +29,7 @@
 #include "../Utils.hh"
 #include "../utils/IntToBinaryString.hh"
 #include "../utils/StaticBuffer.hh"
+#include "../utils/StringUtils.hh"
 #include "RaftState.hh"
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>
@@ -284,7 +285,7 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
     //--------------------------------------------------------------------------
 
     if(entry.request[2] == clusterID) {
-      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_Members, entry.request[1]));
+      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_Members, toSlice(entry.request[1])));
       THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_MembershipEpoch, intToBinaryString(index)));
 
       THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_PreviousMembers, members.toString()));

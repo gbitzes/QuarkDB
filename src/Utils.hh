@@ -46,12 +46,12 @@ namespace quarkdb {
 void setStacktraceOnError(bool val);
 
 bool my_strtod(std::string_view str, double &ret);
-std::vector<std::string> split(std::string data, std::string token);
+std::vector<std::string> split(std::string_view data, std::string token);
 bool startswith(const std::string &str, const std::string &prefix);
-bool parseServer(const std::string &str, RaftServer &srv);
-bool parseServers(const std::string &str, std::vector<RaftServer> &servers);
+bool parseServer(std::string_view str, RaftServer &srv);
+bool parseServers(std::string_view str, std::vector<RaftServer> &servers);
 std::string serializeNodes(const std::vector<RaftServer> &nodes);
-bool caseInsensitiveEquals(const std::string &str1, const std::string &str2);
+bool caseInsensitiveEquals(std::string_view str1, std::string_view str2);
 
 inline std::string boolToString(bool b) {
   if(b) return "TRUE";

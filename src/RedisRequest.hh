@@ -51,16 +51,11 @@ public:
     return contents.size();
   }
 
-  std::string&& move(size_t i) {
-    invalidateCommand();
-    return std::move(contents[i]);
-  }
-
   std::string& operator[](size_t i) {
     return contents[i];
   }
 
-  const std::string& operator[](size_t i) const {
+  std::string_view operator[](size_t i) const {
     return contents[i];
   }
 
@@ -73,11 +68,11 @@ public:
   }
 
   void clear() {
-    invalidateCommand();
+    invalidate();
     contents.clear();
   }
 
-  void push_back(const std::string &str) {
+  void push_back(std::string_view str) {
     contents.emplace_back(str);
     if(contents.size() == 1) parseCommand();
   }
@@ -128,12 +123,6 @@ private:
   std::vector<std::string> contents;
   RedisCommand command = RedisCommand::INVALID;
   CommandType commandType = CommandType::INVALID;
-
-  void invalidateCommand() {
-    command = RedisCommand::INVALID;
-    commandType = CommandType::INVALID;
-  }
-
 };
 
 std::ostream& operator<<(std::ostream& out, const RedisRequest& req);

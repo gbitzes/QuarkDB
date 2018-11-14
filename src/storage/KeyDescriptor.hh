@@ -119,7 +119,7 @@ inline Direction flipDirection(Direction direction) {
 class KeyDescriptor {
 public:
   KeyDescriptor() {}
-  KeyDescriptor(const std::string& str) {
+  KeyDescriptor(std::string_view str) {
     qdb_assert(str.size() != 0);
 
     // Determine key type.

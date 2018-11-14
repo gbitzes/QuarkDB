@@ -24,6 +24,7 @@
 #include "../storage/KeyConstants.hh"
 #include "RecoveryEditor.hh"
 #include "../Utils.hh"
+#include "../utils/StringUtils.hh"
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/utilities/checkpoint.h>
@@ -32,7 +33,7 @@
 
 using namespace quarkdb;
 
-RecoveryEditor::RecoveryEditor(const std::string &path_) : path(path_) {
+RecoveryEditor::RecoveryEditor(std::string_view path_) : path(path_) {
   qdb_event("RECOVERY EDITOR: Opening rocksdb database at " << quotes(path));
   rocksdb::DB *tmpdb;
 
@@ -71,21 +72,21 @@ std::vector<std::string> RecoveryEditor::retrieveMagicValues() {
   return results;
 }
 
-rocksdb::Status RecoveryEditor::get(const std::string &key, std::string &value) {
-  return db->Get(rocksdb::ReadOptions(), key, &value);
+rocksdb::Status RecoveryEditor::get(std::string_view key, std::string &value) {
+  return db->Get(rocksdb::ReadOptions(), toSlice(key), &value);
 }
 
-rocksdb::Status RecoveryEditor::set(const std::string &key, const std::string &value) {
-  return db->Put(rocksdb::WriteOptions(), key, value);
+rocksdb::Status RecoveryEditor::set(std::string_view key, std::string_view value) {
+  return db->Put(rocksdb::WriteOptions(), toSlice(key), toSlice(value));
 }
 
-rocksdb::Status RecoveryEditor::del(const std::string &key) {
+rocksdb::Status RecoveryEditor::del(std::string_view key) {
   std::string tmp;
 
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), key, &tmp);
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), toSlice(key), &tmp);
 
   if(st.IsNotFound()) {
-    rocksdb::Status st2 = db->Delete(rocksdb::WriteOptions(), key);
+    rocksdb::Status st2 = db->Delete(rocksdb::WriteOptions(), toSlice(key));
     return rocksdb::Status::InvalidArgument("key not found, but I inserted a tombstone anyway. Deletion status: " + st2.ToString());
   }
 
@@ -93,5 +94,5 @@ rocksdb::Status RecoveryEditor::del(const std::string &key) {
     return st;
   }
 
-  return db->Delete(rocksdb::WriteOptions(), key);
+  return db->Delete(rocksdb::WriteOptions(), toSlice(key));
 }

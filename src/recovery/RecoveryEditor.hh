@@ -35,13 +35,13 @@ namespace quarkdb {
 
 class RecoveryEditor {
 public:
-  RecoveryEditor(const std::string &path);
+  RecoveryEditor(std::string_view path);
   ~RecoveryEditor();
 
   std::vector<std::string> retrieveMagicValues();
-  rocksdb::Status get(const std::string &key, std::string &value);
-  rocksdb::Status set(const std::string &key, const std::string &value);
-  rocksdb::Status del(const std::string &key);
+  rocksdb::Status get(std::string_view key, std::string &value);
+  rocksdb::Status set(std::string_view key, std::string_view value);
+  rocksdb::Status del(std::string_view key);
 
 private:
   std::string path;

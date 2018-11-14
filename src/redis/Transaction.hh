@@ -41,7 +41,7 @@ public:
   }
 
   std::string serialize() const;
-  bool deserialize(const std::string &src);
+  bool deserialize(std::string_view src);
   bool deserialize(const RedisRequest &req);
 
   RedisRequest& operator[](size_t i) {

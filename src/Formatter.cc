@@ -33,11 +33,11 @@ RedisEncodedResponse Formatter::moved(int64_t shardId, const RaftServer &locatio
   return RedisEncodedResponse(SSTR("-MOVED " << shardId << " " << location.toString() << "\r\n"));
 }
 
-RedisEncodedResponse Formatter::err(const std::string &err) {
+RedisEncodedResponse Formatter::err(std::string_view err) {
   return RedisEncodedResponse(SSTR("-ERR " << err << "\r\n"));
 }
 
-RedisEncodedResponse Formatter::errArgs(const std::string &cmd) {
+RedisEncodedResponse Formatter::errArgs(std::string_view cmd) {
   qdb_warn("Received malformed " << quotes(cmd) << " command - wrong number of arguments");
   return RedisEncodedResponse(SSTR("-ERR wrong number of arguments for '" << cmd << "' command\r\n"));
 }
@@ -46,11 +46,11 @@ RedisEncodedResponse Formatter::pong() {
   return RedisEncodedResponse(SSTR("+PONG\r\n"));
 }
 
-RedisEncodedResponse Formatter::string(const std::string &str) {
+RedisEncodedResponse Formatter::string(std::string_view str) {
   return RedisEncodedResponse(SSTR("$" << str.length() << "\r\n" << str << "\r\n"));
 }
 
-RedisEncodedResponse Formatter::status(const std::string &str) {
+RedisEncodedResponse Formatter::status(std::string_view str) {
   return RedisEncodedResponse(SSTR("+" << str << "\r\n"));
 }
 
@@ -90,7 +90,7 @@ RedisEncodedResponse Formatter::statusVector(const std::vector<std::string> &vec
   return RedisEncodedResponse(ss.str());
 }
 
-RedisEncodedResponse Formatter::scan(const std::string &marker, const std::vector<std::string> &vec) {
+RedisEncodedResponse Formatter::scan(std::string_view marker, const std::vector<std::string> &vec) {
   std::stringstream ss;
   ss << "*2\r\n";
   ss << "$" << marker.length() << "\r\n";
@@ -162,7 +162,7 @@ RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entrie
   return RedisEncodedResponse(ss.str());
 }
 
-RedisEncodedResponse Formatter::noauth(const std::string &str) {
+RedisEncodedResponse Formatter::noauth(std::string_view str) {
   return RedisEncodedResponse(SSTR("-NOAUTH " << str << "\r\n"));
 }
 

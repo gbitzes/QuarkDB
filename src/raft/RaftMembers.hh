@@ -57,11 +57,11 @@ struct RaftMembers {
   RaftMembers(const std::vector<RaftServer> &_nodes, const std::vector<RaftServer> &_obs)
   : nodes(_nodes), observers(_obs) {}
 
-  bool parse(const std::string &serialized) {
+  bool parse(std::string_view serialized) {
     nodes.clear();
     observers.clear();
 
-    std::vector<std::string> parts = split(serialized, "|");
+    std::vector<std::string> parts = split(std::string(serialized), "|");
     if(parts.size() != 2) return false;
 
     if(!parseServers(parts[0], nodes)) {
@@ -75,7 +75,7 @@ struct RaftMembers {
     return true;
   }
 
-  RaftMembers(const std::string &serialized) {
+  RaftMembers(std::string_view serialized) {
     if(!parse(serialized)) {
       qdb_throw("corruption, cannot parse members: " << serialized);
     }

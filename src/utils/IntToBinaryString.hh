@@ -37,6 +37,13 @@
 namespace quarkdb {
 
 QDB_ALWAYS_INLINE
+inline int64_t binaryStringToInt(std::string_view buff) {
+  int64_t result;
+  memcpy(&result, buff.data(), sizeof(result));
+  return be64toh(result);
+}
+
+QDB_ALWAYS_INLINE
 inline int64_t binaryStringToInt(const char* buff) {
   int64_t result;
   memcpy(&result, buff, sizeof(result));
@@ -54,6 +61,13 @@ inline std::string intToBinaryString(int64_t num) {
   char buff[sizeof(num)];
   intToBinaryString(num, buff);
   return std::string(buff, sizeof(num));
+}
+
+QDB_ALWAYS_INLINE
+inline uint64_t binaryStringToUnsignedInt(std::string_view buff) {
+  uint64_t result;
+  memcpy(&result, buff.data(), sizeof(result));
+  return be64toh(result);
 }
 
 QDB_ALWAYS_INLINE

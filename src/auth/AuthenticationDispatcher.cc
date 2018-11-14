@@ -26,7 +26,7 @@
 #include "../Formatter.hh"
 using namespace quarkdb;
 
-AuthenticationDispatcher::AuthenticationDispatcher(const std::string &secr)
+AuthenticationDispatcher::AuthenticationDispatcher(std::string_view secr)
 : secret(secr) {
   if(secret.size() < 32u && !secret.empty()) {
     qdb_throw("Password is too small, minimum length is 32");

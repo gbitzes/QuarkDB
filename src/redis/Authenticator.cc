@@ -32,13 +32,13 @@
 
 namespace quarkdb {
 
-Authenticator::Authenticator(const std::string &secret) : secretKey(secret) {
+Authenticator::Authenticator(std::string_view secret) : secretKey(secret) {
   if(!secret.empty() && secret.size() < 32) {
     qdb_throw("Secret key is too small! Minimum size: 32");
   }
 }
 
-std::string Authenticator::generateChallenge(const std::string &opponentRandomBytes, const std::chrono::system_clock::time_point &timestamp, const std::string &myRandomBytes) {
+std::string Authenticator::generateChallenge(std::string_view opponentRandomBytes, std::chrono::system_clock::time_point timestamp, std::string_view myRandomBytes) {
   qdb_assert(opponentRandomBytes != myRandomBytes);
 
   // Calculate the deadline - responses will not be accepted after this much time
@@ -57,7 +57,7 @@ std::string Authenticator::generateChallenge(const std::string &opponentRandomBy
   return challengeString;
 }
 
-std::string Authenticator::generateChallenge(const std::string &opponentRandomBytes) {
+std::string Authenticator::generateChallenge(std::string_view opponentRandomBytes) {
   qdb_assert(opponentRandomBytes.size() == 64);
 
   // Calculate a timepoint based on system_clock to make the challenge more difficult.
@@ -71,19 +71,19 @@ std::string Authenticator::generateChallenge(const std::string &opponentRandomBy
   );
 }
 
-std::string Authenticator::generateSignature(const std::string &stringToSign, const std::string &key) {
+std::string Authenticator::generateSignature(std::string_view stringToSign, std::string_view key) {
   std::string ret;
   ret.resize(SHA256_DIGEST_LENGTH);
 
   unsigned int bufferLen = SHA256_DIGEST_LENGTH;
 
-  HMAC(EVP_sha256(), (const unsigned char*) key.c_str(), key.size(),
-    (const unsigned char*) stringToSign.c_str(), stringToSign.size(), (unsigned char*) ret.data(), &bufferLen);
+  HMAC(EVP_sha256(), (const unsigned char*) key.data(), key.size(),
+    (const unsigned char*) stringToSign.data(), stringToSign.size(), (unsigned char*) ret.data(), &bufferLen);
 
   return ret;
 }
 
-Authenticator::ValidationStatus Authenticator::validateSignature(const std::string &signature) {
+Authenticator::ValidationStatus Authenticator::validateSignature(std::string_view signature) {
   std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
   auto deadline = challengeDeadline;
   resetDeadline();

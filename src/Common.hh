@@ -37,59 +37,12 @@ enum class TraceLevel {
   debug = 4
 };
 
-class Status {
-public:
-  // up to kTryAgain we are compatible to rocksdb error codes
-  enum Code {
-    kOk = 0,
-    kNotFound = 1,
-    kCorruption = 2,
-    kNotSupported = 3,
-    kInvalidArgument = 4,
-    kIOError = 5,
-    kMergeInProgress = 6,
-    kIncomplete = 7,
-    kShutdownInProgress = 8,
-    kTimedOut = 9,
-    kAborted = 10,
-    kBusy = 11,
-    kExpired = 12,
-    kTryAgain = 13
-  };
-
-  Status(int code, const std::string &err) : code_(code), error_(err) {
-  }
-
-  Status(int code) : code_(code) {}
-  Status() {}
-
-  std::string toString() const {
-    return error_;
-  }
-
-  int code() const {
-    return code_;
-  }
-
-  bool ok() const {
-    return code_ == Status::kOk;
-  }
-
-  bool IsNotFound() const {
-    return code_ == Status::kNotFound;
-  }
-
-private:
-  int code_;
-  std::string error_;
-};
-
 struct RaftServer {
   std::string hostname;
   int port = 0;
 
   RaftServer() {}
-  RaftServer(const std::string &h, int p) : hostname(h), port(p) {}
+  RaftServer(std::string_view h, int p) : hostname(h), port(p) {}
 
   bool operator==(const RaftServer& rhs) const {
     return hostname == rhs.hostname && port == rhs.port;

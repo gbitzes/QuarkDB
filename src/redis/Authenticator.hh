@@ -38,18 +38,18 @@ public:
     kInvalidSignature
   };
 
-  Authenticator(const std::string &secret);
-  std::string generateChallenge(const std::string &opponentRandomBytes, const std::chrono::system_clock::time_point &timestamp, const std::string &myRandomBytes);
-  std::string generateChallenge(const std::string &opponentRandomBytes);
-  ValidationStatus validateSignature(const std::string &signature);
+  Authenticator(std::string_view secret);
+  std::string generateChallenge(std::string_view opponentRandomBytes, std::chrono::system_clock::time_point timestamp, std::string_view myRandomBytes);
+  std::string generateChallenge(std::string_view opponentRandomBytes);
+  ValidationStatus validateSignature(std::string_view signature);
   void resetDeadline();
   ~Authenticator() {}
 
-  static std::string generateSignature(const std::string &stringToSign, const std::string &key);
-  ValidationStatus validateSignatureNoDeadline(const std::string &stringToSign);
+  static std::string generateSignature(std::string_view stringToSign, std::string_view key);
+  ValidationStatus validateSignatureNoDeadline(std::string_view stringToSign);
 
 private:
-  const std::string &secretKey;
+  std::string_view secretKey;
 
   std::string challengeString;
   std::chrono::steady_clock::time_point challengeDeadline;

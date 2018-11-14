@@ -158,11 +158,11 @@ LinkStatus Connection::moved(int64_t shardId, const RaftServer &location) {
   return pendingQueue->appendResponse(Formatter::moved(shardId, location));
 }
 
-LinkStatus Connection::err(const std::string &msg) {
+LinkStatus Connection::err(std::string_view msg) {
   return pendingQueue->appendResponse(Formatter::err(msg));
 }
 
-LinkStatus Connection::errArgs(const std::string &cmd) {
+LinkStatus Connection::errArgs(std::string_view cmd) {
   return pendingQueue->appendResponse(Formatter::errArgs(cmd));
 }
 
@@ -170,7 +170,7 @@ LinkStatus Connection::pong() {
   return pendingQueue->appendResponse(Formatter::pong());
 }
 
-LinkStatus Connection::string(const std::string &str) {
+LinkStatus Connection::string(std::string_view str) {
   return pendingQueue->appendResponse(Formatter::string(str));
 }
 
@@ -178,7 +178,7 @@ LinkStatus Connection::fromStatus(const rocksdb::Status &status) {
   return pendingQueue->appendResponse(Formatter::fromStatus(status));
 }
 
-LinkStatus Connection::status(const std::string &msg) {
+LinkStatus Connection::status(std::string_view msg) {
   return pendingQueue->appendResponse(Formatter::status(msg));
 }
 
@@ -202,11 +202,11 @@ LinkStatus Connection::statusVector(const std::vector<std::string> &vec) {
   return pendingQueue->appendResponse(Formatter::statusVector(vec));
 }
 
-LinkStatus Connection::scan(const std::string &marker, const std::vector<std::string> &vec) {
+LinkStatus Connection::scan(std::string_view marker, const std::vector<std::string> &vec) {
   return pendingQueue->appendResponse(Formatter::scan(marker, vec));
 }
 
-LinkStatus Connection::noauth(const std::string &msg) {
+LinkStatus Connection::noauth(std::string_view msg) {
   return pendingQueue->appendResponse(Formatter::noauth(msg));
 }
 
