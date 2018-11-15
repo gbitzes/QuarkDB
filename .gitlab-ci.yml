@@ -49,8 +49,8 @@ ubuntu-asan:
   artifacts:
     paths:
     - build/coverage-report
-  tags:
-    - docker-privileged
+#  tags:
+#    - docker-privileged
 
 cc7-test:
   stage: test
