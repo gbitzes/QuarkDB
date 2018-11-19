@@ -73,20 +73,20 @@ std::vector<std::string> RecoveryEditor::retrieveMagicValues() {
 }
 
 rocksdb::Status RecoveryEditor::get(std::string_view key, std::string &value) {
-  return db->Get(rocksdb::ReadOptions(), toSlice(key), &value);
+  return db->Get(rocksdb::ReadOptions(), key, &value);
 }
 
 rocksdb::Status RecoveryEditor::set(std::string_view key, std::string_view value) {
-  return db->Put(rocksdb::WriteOptions(), toSlice(key), toSlice(value));
+  return db->Put(rocksdb::WriteOptions(), key, value);
 }
 
 rocksdb::Status RecoveryEditor::del(std::string_view key) {
   std::string tmp;
 
-  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), toSlice(key), &tmp);
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), key, &tmp);
 
   if(st.IsNotFound()) {
-    rocksdb::Status st2 = db->Delete(rocksdb::WriteOptions(), toSlice(key));
+    rocksdb::Status st2 = db->Delete(rocksdb::WriteOptions(), key);
     return rocksdb::Status::InvalidArgument("key not found, but I inserted a tombstone anyway. Deletion status: " + st2.ToString());
   }
 
@@ -94,5 +94,5 @@ rocksdb::Status RecoveryEditor::del(std::string_view key) {
     return st;
   }
 
-  return db->Delete(rocksdb::WriteOptions(), toSlice(key));
+  return db->Delete(rocksdb::WriteOptions(), key);
 }

@@ -66,7 +66,7 @@ public:
     }
 
     return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(),
-      rocksdb::ReadOptions(), toSlice(slice), &value);
+      rocksdb::ReadOptions(), slice, &value);
   }
 
   rocksdb::Status exists(std::string_view slice) {
@@ -77,11 +77,11 @@ public:
 
     if(readOnly) {
       std::string ignore;
-      return stateMachine.db->Get(snapshot->opts(), toSlice(slice), &ignore);
+      return stateMachine.db->Get(snapshot->opts(), slice, &ignore);
     }
 
     rocksdb::PinnableSlice ignored;
-    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), toSlice(slice), &ignored);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), slice, &ignored);
   }
 
   rocksdb::Status get(std::string_view slice, std::string &value) {
@@ -90,10 +90,10 @@ public:
     }
 
     if(readOnly) {
-      return stateMachine.db->Get(snapshot->opts(), toSlice(slice), &value);
+      return stateMachine.db->Get(snapshot->opts(), slice, &value);
     }
 
-    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), toSlice(slice), &value);
+    return writeBatchWithIndex.GetFromBatchAndDB(stateMachine.db.get(), rocksdb::ReadOptions(), slice, &value);
   }
 
   void put(std::string_view slice, std::string_view value) {
@@ -107,17 +107,17 @@ public:
       // rocksdb transactions have to build an internal index to implement
       // repeatable reads on the same tx. In bulkload mode we don't allow reads,
       // so let's use the much faster write batch.
-      writeBatch.Put(toSlice(slice), toSlice(value));
+      writeBatch.Put(slice, value);
       return;
     }
 
-    THROW_ON_ERROR(writeBatchWithIndex.Put(toSlice(slice), toSlice(value)));
+    THROW_ON_ERROR(writeBatchWithIndex.Put(slice, value));
   }
 
   void del(std::string_view slice) {
     if(readOnly) qdb_throw("cannot call del() on a readonly staging area");
     if(bulkLoad) qdb_throw("no deletions allowed during bulk load");
-    THROW_ON_ERROR(writeBatchWithIndex.Delete(toSlice(slice)));
+    THROW_ON_ERROR(writeBatchWithIndex.Delete(slice));
   }
 
   rocksdb::Status commit(LogIndex index) {

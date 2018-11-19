@@ -31,7 +31,7 @@ using namespace quarkdb;
 static void appendToWriteBatch(std::string &prefix, std::string &key, KeyDescriptor &descriptor, rocksdb::WriteBatch &wb) {
   if(!key.empty()) {
     DescriptorLocator dlocator(key);
-    wb.Put(dlocator.toSlice(), toSlice(descriptor.serialize()));
+    wb.Put(dlocator.toView(), descriptor.serialize());
   }
 
   prefix.clear();
@@ -70,7 +70,7 @@ KeyDescriptorBuilder::KeyDescriptorBuilder(StateMachine &stateMachine) {
       continue;
     }
 
-    ReverseLocator revlocator(toView(iterator->key()));
+    ReverseLocator revlocator(iterator->key().ToStringView());
 
     if(revlocator.getKeyType() == KeyType::kParseError) {
       qdb_critical("Unable to parse key when rebuilding key descriptors: " << iterator->key().ToString());

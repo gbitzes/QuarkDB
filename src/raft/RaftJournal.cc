@@ -285,7 +285,7 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
     //--------------------------------------------------------------------------
 
     if(entry.request[2] == clusterID) {
-      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_Members, toSlice(entry.request[1])));
+      THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_Members, entry.request[1]));
       THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_MembershipEpoch, intToBinaryString(index)));
 
       THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_PreviousMembers, members.toString()));
@@ -307,7 +307,7 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
 
   KeyBuffer keyBuffer;
   encodeEntryKey(index, keyBuffer);
-  THROW_ON_ERROR(batch.Put(keyBuffer.toSlice(), entry.serialize()));
+  THROW_ON_ERROR(batch.Put(keyBuffer.toView(), entry.serialize()));
 
   commitBatch(batch, index+1);
 

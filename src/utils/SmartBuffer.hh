@@ -100,10 +100,6 @@ public:
     return realSize;
   }
 
-  rocksdb::Slice toSlice() {
-    return rocksdb::Slice(data(), size());
-  }
-
   std::string toString() {
     return std::string(data(), size());
   }

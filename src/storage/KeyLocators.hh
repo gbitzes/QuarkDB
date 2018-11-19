@@ -54,10 +54,6 @@ public:
     memcpy(keyBuffer.data()+1, redisKey.data(), redisKey.size());
   }
 
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
-  }
-
   std::string_view toView() {
     return keyBuffer.toView();
   }
@@ -80,10 +76,6 @@ public:
     keyBuffer.resize(redisKey.size() + 1);
     keyBuffer[0] = char(KeyType::kString);
     memcpy(keyBuffer.data()+1, redisKey.data(), redisKey.size());
-  }
-
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
   }
 
   std::string_view toView() {
@@ -145,16 +137,8 @@ public:
     return std::string_view(keyBuffer.data(), keyPrefixSize);
   }
 
-  rocksdb::Slice getPrefixSlice() {
-    return rocksdb::Slice(keyBuffer.data(), keyPrefixSize);
-  }
-
   size_t getPrefixSize() {
     return keyPrefixSize;
-  }
-
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
   }
 
   std::string_view toView() {
@@ -217,10 +201,6 @@ public:
     memcpy(keyBuffer.data() + localityPrefixSize, field.data(), field.size());
   }
 
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
-  }
-
   std::string_view toView() {
     return keyBuffer.toView();
   }
@@ -263,10 +243,6 @@ public:
     memcpy(keyBuffer.data() + keyPrefixSize, field.data(), field.size());
   }
 
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
-  }
-
   std::string_view toView() {
     return keyBuffer.toView();
   }
@@ -288,10 +264,6 @@ public:
     memcpy(keyBuffer.data()+1, redisKey.data(), redisKey.size());
   }
 
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
-  }
-
   std::string_view toView() {
     return keyBuffer.toView();
   }
@@ -311,10 +283,6 @@ public:
 
     unsignedIntToBinaryString(deadline, keyBuffer.data() + 1);
     memcpy(keyBuffer.data()+1+sizeof(ClockValue), redisKey.data(), redisKey.size());
-  }
-
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
   }
 
   std::string_view toView() {
@@ -340,10 +308,6 @@ public:
 
   std::string_view toView() {
     return keyBuffer.toView();
-  }
-
-  rocksdb::Slice toSlice() {
-    return keyBuffer.toSlice();
   }
 
 private:

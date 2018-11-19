@@ -42,10 +42,6 @@ public:
     return runtime_size;
   }
 
-  rocksdb::Slice toSlice() {
-    return rocksdb::Slice(data(), size());
-  }
-
   std::string_view toView() {
     return std::string_view(data(), size());
   }

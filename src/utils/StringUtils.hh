@@ -24,19 +24,10 @@
 #ifndef __QUARKDB_UTILS_STRING_UTILS_H__
 #define __QUARKDB_UTILS_STRING_UTILS_H__
 
-#include <rocksdb/slice.h>
 #include <string>
 #include <string_view>
 
 namespace quarkdb {
-
-inline std::string_view toView(rocksdb::Slice slice) {
-  return std::string_view(slice.data(), slice.size());
-}
-
-inline rocksdb::Slice toSlice(std::string_view sv) {
-  return rocksdb::Slice(sv.data(), sv.size());
-}
 
 namespace StringUtils {
 
