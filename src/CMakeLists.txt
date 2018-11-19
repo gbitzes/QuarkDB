@@ -102,6 +102,12 @@ add_library(XrdQuarkDB SHARED
   ${BACKWARD_ENABLE}
 )
 
+if(BUILDING_WITH_TSAN)
+    set(JEMALLOC_LIBS "")
+else()
+    set(JEMALLOC_LIBS jemalloc)
+endif()
+
 target_link_libraries(
   XrdQuarkDB PUBLIC
   qclient
@@ -109,7 +115,7 @@ target_link_libraries(
   z
   rocksdb
   ssl
-  jemalloc
+  ${JEMALLOC_LIBS}
   lz4
   zstd
   ${XROOTD_CL_LIBRARY}

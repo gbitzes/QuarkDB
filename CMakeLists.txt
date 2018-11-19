@@ -38,13 +38,22 @@ endif()
 #-------------------------------------------------------------------------------
 # Regenerate Version.hh
 #-------------------------------------------------------------------------------
-
 add_custom_target(GenerateVersionInfo ALL DEPENDS Version)
 add_custom_command(
   OUTPUT Version
   COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/genversion.py --template src/Version.hh.in --out src/Version.hh
   WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
 )
+
+#-------------------------------------------------------------------------------
+# Are we building with ThreadSanitizer?
+#-------------------------------------------------------------------------------
+message("${CMAKE_CXX_FLAGS}")
+if("${CMAKE_CXX_FLAGS}" MATCHES -fsanitize=thread)
+    set(BUILDING_WITH_TSAN TRUE)
+else()
+    set(BUILDING_WITH_TSAN FALSE)
+endif()
 
 #-------------------------------------------------------------------------------
 # Look inside the rocksdb cache, which is used to greatly reduce compilation
@@ -83,7 +92,6 @@ endif()
 #-------------------------------------------------------------------------------
 # Search for dependencies
 #-------------------------------------------------------------------------------
-
 option(PACKAGEONLY "Build without dependencies" OFF)
 
 if(NOT PACKAGEONLY)
@@ -122,7 +130,6 @@ endif()
 #-------------------------------------------------------------------------------
 # Use ccache, if available
 #-------------------------------------------------------------------------------
-
 find_program(CCACHE_PROGRAM ccache)
 if(CCACHE_PROGRAM)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
