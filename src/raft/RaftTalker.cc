@@ -26,6 +26,7 @@
 #include "RaftContactDetails.hh"
 #include "RaftTimeouts.hh"
 #include "../Version.hh"
+#include <qclient/Logger.hh>
 
 using namespace quarkdb;
 
@@ -65,6 +66,18 @@ private:
 };
 
 
+class QuarkDBLogger : public qclient::Logger {
+public:
+
+  QuarkDBLogger() {
+    logLevel = qclient::LogLevel::kWarn;
+  }
+
+  void print(LogLevel level, int line, const std::string &file, const std::string &msg) override {
+      ___log("QCLIENT (" << logLevelToString(level) << "): " << msg);
+  }
+};
+
 RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &contactDetails)
 : server(server_) {
 
@@ -73,6 +86,7 @@ RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &cont
   opts.transparentRedirects = false;
   opts.retryStrategy = qclient::RetryStrategy::NoRetries();
   opts.backpressureStrategy = qclient::BackpressureStrategy::Default();
+  opts.logger.reset(new QuarkDBLogger());
 
   opts.chainHmacHandshake(contactDetails.getPassword());
   opts.chainHandshake(std::unique_ptr<Handshake>(new RaftHandshake(contactDetails)));

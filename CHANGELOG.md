@@ -2,7 +2,12 @@
 All notable changes to this project will be documented in this file.
 
 ## Unreleased
-- Updated rocksdb to v5.17.2
+- Updated rocksdb dependency to v5.17.2
+- Improved output of ``quarkdb-checkpoint`` command. The generated directory can now be used directly
+to spin-up a full QuarkDB node. Command aliased to ``raft-checkpoint``.
+- Light refactoring, more widespread use of ``std::string_view``, which paves the
+way for certain performance optimizations in the future.
+- Removed flood of "attempting connection to .. " messages when some node is unavailable
 
 ## 0.3.4 (2018-10-09)
 - Updated rocksdb dependency to v5.15.10.
