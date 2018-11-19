@@ -593,7 +593,8 @@ rocksdb::Status StateMachine::lhlen(StagingArea &stagingArea, std::string_view k
 }
 
 rocksdb::Status StateMachine::rawGetAllVersions(std::string_view key, std::vector<rocksdb::KeyVersion> &versions) {
-  return rocksdb::GetAllKeyVersions(db.get(), toSlice(key), toSlice(key), &versions);
+  return rocksdb::GetAllKeyVersions(db.get(), toSlice(key), toSlice(key),
+    std::numeric_limits<size_t>::max(), &versions);
 }
 
 rocksdb::Status StateMachine::rawScan(StagingArea &stagingArea, std::string_view key, size_t count, std::vector<std::string> &elements) {
