@@ -165,16 +165,6 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       conn->raftAuthorization = true;
       return conn->ok();
     }
-    case RedisCommand::RAFT_CHECKPOINT: {
-      if(req.size() != 2) return conn->errArgs(req[0]);
-
-      std::string err;
-      if(!checkpoint(req[1], err)) {
-        return conn->err(err);
-      }
-
-      return conn->ok();
-    }
     case RedisCommand::RAFT_ATTEMPT_COUP: {
       RaftStateSnapshotPtr snapshot = state.getSnapshot();
 
@@ -611,25 +601,4 @@ RaftInfo RaftDispatcher::info() {
 bool RaftDispatcher::fetch(LogIndex index, RaftEntry &entry) {
   rocksdb::Status st = journal.fetch(index, entry);
   return st.ok();
-}
-
-bool RaftDispatcher::checkpoint(const std::string &path, std::string &err) {
-  if(mkdir(path.c_str(), 0775) != 0) {
-    err = SSTR("Error when creating directory '" << path << "', errno: " << errno);
-    return false;
-  }
-
-  rocksdb::Status st = stateMachine.checkpoint(SSTR(path << "/state-machine"));
-  if(!st.ok()) {
-    err = st.ToString();
-    return false;
-  }
-
-  st = journal.checkpoint(SSTR(path << "/raft-journal"));
-  if(!st.ok()) {
-    err = st.ToString();
-    return false;
-  }
-
-  return true;
 }

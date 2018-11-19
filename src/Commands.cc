@@ -118,7 +118,6 @@ struct cmdMapInit {
     redis_cmd_map["raft_leader_info"] = {RedisCommand::RAFT_LEADER_INFO, CommandType::RAFT};
     redis_cmd_map["raft_request_vote"] = {RedisCommand::RAFT_REQUEST_VOTE, CommandType::RAFT};
     redis_cmd_map["raft_fetch"] = {RedisCommand::RAFT_FETCH, CommandType::RAFT};
-    redis_cmd_map["raft_checkpoint"] = {RedisCommand::RAFT_CHECKPOINT, CommandType::RAFT};
     redis_cmd_map["raft_attempt_coup"] = {RedisCommand::RAFT_ATTEMPT_COUP, CommandType::RAFT};
     redis_cmd_map["raft_add_observer"] = {RedisCommand::RAFT_ADD_OBSERVER, CommandType::RAFT};
     redis_cmd_map["raft_remove_member"] = {RedisCommand::RAFT_REMOVE_MEMBER, CommandType::RAFT};
@@ -140,6 +139,10 @@ struct cmdMapInit {
     redis_cmd_map["quarkdb_level_stats"] = {RedisCommand::QUARKDB_LEVEL_STATS, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_compression_stats"] = {RedisCommand::QUARKDB_COMPRESSION_STATS, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_version"] = {RedisCommand::QUARKDB_VERSION, CommandType::QUARKDB};
+    redis_cmd_map["quarkdb_checkpoint"] = {RedisCommand::QUARKDB_CHECKPOINT, CommandType::QUARKDB};
+    // Compatibility: Keep raft_checkpoint, make identical to quarkdb_checkpoint.
+    // Maybe remove in a few versions.
+    redis_cmd_map["raft_checkpoint"] = {RedisCommand::QUARKDB_CHECKPOINT, CommandType::QUARKDB};
 
     redis_cmd_map["recovery_info"] = {RedisCommand::RECOVERY_INFO, CommandType::RECOVERY};
     redis_cmd_map["recovery_set"] = {RedisCommand::RECOVERY_SET, CommandType::RECOVERY};

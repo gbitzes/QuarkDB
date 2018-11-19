@@ -54,7 +54,6 @@ public:
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);
-  bool checkpoint(const std::string &path, std::string &err);
 
   RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req);
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);

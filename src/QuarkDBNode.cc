@@ -133,6 +133,16 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::QUARKDB_VERSION: {
       return conn->string(VERSION_FULL_STRING);
     }
+    case RedisCommand::QUARKDB_CHECKPOINT: {
+      if(req.size() != 2) return conn->errArgs(req[0]);
+      std::string err = shardDirectory->checkpoint(req[1]);
+
+      if(!err.empty()) {
+        return conn->err(err);
+      }
+
+      return conn->ok();
+    }
     case RedisCommand::CONVERT_STRING_TO_INT:
     case RedisCommand::CONVERT_INT_TO_STRING: {
       return conn->raw(handleConversion(req));

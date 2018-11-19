@@ -54,7 +54,7 @@ StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm)
 
 LinkStatus StandaloneDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   // Show a user-friendly error message for raft-info, instead of
-  // "internal dispatching error" less scary message for "raft-info"
+  // "internal dispatching error"
 
   if(req.getCommandType() == CommandType::RAFT) {
     qdb_warn("Received command " << req[0] << ", even though raft is not active");

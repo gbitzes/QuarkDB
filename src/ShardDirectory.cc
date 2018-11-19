@@ -21,11 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "utils/FileUtils.hh"
 #include "ShardDirectory.hh"
+#include "utils/FileUtils.hh"
 #include "StateMachine.hh"
 #include "utils/FileDescriptor.hh"
 #include "raft/RaftJournal.hh"
+
+#include <sys/stat.h>
 
 using namespace quarkdb;
 
@@ -180,17 +182,17 @@ std::unique_ptr<ShardSnapshot> ShardDirectory::takeSnapshot(const SnapshotID &id
     return nullptr;
   }
 
-  std::string journalCheckpoint = pathJoin(snapshotDirectory, "raft-journal");
-  rocksdb::Status st = getRaftJournal()->checkpoint(journalCheckpoint);
+  std::string smCheckpoint = pathJoin(snapshotDirectory, "state-machine");
+  rocksdb::Status st = getStateMachine()->checkpoint(smCheckpoint);
   if(!st.ok()) {
-    qdb_critical("cannot create journal checkpoint in " << journalCheckpoint << ": " << st.ToString());
+    qdb_critical("cannot create state machine checkpoint in " << smCheckpoint << ": " << st.ToString());
     return nullptr;
   }
 
-  std::string smCheckpoint = pathJoin(snapshotDirectory, "state-machine");
-  st = getStateMachine()->checkpoint(smCheckpoint);
+  std::string journalCheckpoint = pathJoin(snapshotDirectory, "raft-journal");
+  st = getRaftJournal()->checkpoint(journalCheckpoint);
   if(!st.ok()) {
-    qdb_critical("cannot create state machine checkpoint in " << smCheckpoint << ": " << st.ToString());
+    qdb_critical("cannot create journal checkpoint in " << journalCheckpoint << ": " << st.ToString());
     return nullptr;
   }
 
@@ -274,4 +276,49 @@ std::string ShardDirectory::getTempSnapshot(const SnapshotID &id) {
 
 const ResilveringHistory& ShardDirectory::getResilveringHistory() const {
   return resilveringHistory;
+}
+
+std::string ShardDirectory::checkpoint(const std::string &path) {
+  if(mkdir(path.c_str(), S_IRWXU) != 0) {
+    return SSTR("Could not mkdir " << path << ": " << errno << " (" << strerror(errno) << ")");
+  }
+
+  std::string checkpointCurrent = pathJoin(path, "current");
+  if(mkdir(checkpointCurrent.c_str(), S_IRWXU) != 0) {
+    return SSTR("Could not mkdir " << checkpointCurrent << ": " << errno << " (" << strerror(errno) << ")");
+  }
+
+  std::string smCheckpoint = pathJoin(checkpointCurrent, "state-machine");
+  rocksdb::Status st = getStateMachine()->checkpoint(smCheckpoint);
+  if(!st.ok()) {
+    std::string err = SSTR("Could not create state machine checkpoint in  " << smCheckpoint << ": " << st.ToString());
+    qdb_critical(err);
+    return err;
+  }
+
+  // TODO, switch to if(configuration.getMode() == Mode::raft)
+  if(journalptr) {
+    std::string journalCheckpoint = pathJoin(checkpointCurrent, "raft-journal");
+    rocksdb::Status st = getRaftJournal()->checkpoint(journalCheckpoint);
+    if(!st.ok()) {
+      std::string err = SSTR("Could not create journal checkpoint in " << journalCheckpoint << ": " << st.ToString());
+      qdb_critical(err);
+      return err;
+    }
+  }
+
+  std::string resilvHist = pathJoin(path, "RESILVERING-HISTORY");
+  std::string err;
+  if(!write_file(resilvHist, resilveringHistory.serialize(), err))  {
+    qdb_critical(err);
+    return err;
+  }
+
+  std::string shardIdentPath = pathJoin(path, "SHARD-ID");
+  if(!write_file(shardIdentPath, shardID, err)) {
+    qdb_critical(err);
+    return err;
+  }
+
+  return {}; // success
 }

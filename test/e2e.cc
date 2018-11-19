@@ -27,6 +27,7 @@
 #include "raft/RaftCommitTracker.hh"
 #include "raft/RaftConfig.hh"
 #include "raft/RaftContactDetails.hh"
+#include "ShardDirectory.hh"
 #include "Version.hh"
 #include "Poller.hh"
 #include "Configuration.hh"
@@ -158,11 +159,11 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   // Before taking a checkpoint, ensure node #0 is caught up
   RETRY_ASSERT_TRUE(stateMachine(0)->getLastApplied() == stateMachine(leaderID)->getLastApplied());
 
-  ASSERT_TRUE(dispatcher()->checkpoint(checkpointPath, err));
-  ASSERT_FALSE(dispatcher()->checkpoint(checkpointPath, err)); // exists already
+  ASSERT_TRUE(shardDirectory()->checkpoint(checkpointPath).empty());
+  ASSERT_FALSE(shardDirectory()->checkpoint(checkpointPath).empty()); // exists already
 
   // pretty expensive to open two extra databases, but necessary
-  StateMachine checkpointSM(SSTR(checkpointPath << "/state-machine"));
+  StateMachine checkpointSM(SSTR(checkpointPath << "/current/state-machine"));
 
   std::string tmp;
   ASSERT_OK(checkpointSM.get("client3", tmp));
@@ -174,7 +175,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   // TODO: verify checkpointSM last applied, once atomic commits are implemented
 
   // ensure the checkpoint journal is identical to the original
-  RaftJournal checkpointJournal(SSTR(checkpointPath << "/raft-journal"));
+  RaftJournal checkpointJournal(SSTR(checkpointPath << "/current/raft-journal"));
   ASSERT_EQ(checkpointJournal.getLogSize(), journal()->getLogSize());
   for(LogIndex i = 0; i < journal()->getLogSize(); i++) {
     RaftEntry entry1, entry2;

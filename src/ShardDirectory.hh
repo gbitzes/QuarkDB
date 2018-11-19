@@ -76,8 +76,11 @@ public:
   bool resilveringStart(const ResilveringEventID &id, std::string &err);
   bool resilveringCopy(const ResilveringEventID &id, const std::string &filename, const std::string &contents, std::string &err);
   bool resilveringFinish(const ResilveringEventID &id, std::string &err);
-
   const ResilveringHistory& getResilveringHistory() const;
+
+  // empty string in case of success - otherwise contains the error
+  // TODO: replace with proper status object
+  std::string checkpoint(const std::string &path);
 
 private:
   void parseResilveringHistory();
