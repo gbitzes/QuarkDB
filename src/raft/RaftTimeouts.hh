@@ -86,6 +86,7 @@ private:
   bool artificialTimeout = false;
 };
 
+extern RaftTimeouts relaxedTimeouts;
 extern RaftTimeouts defaultTimeouts;
 extern RaftTimeouts tightTimeouts;
 extern RaftTimeouts aggressiveTimeouts;

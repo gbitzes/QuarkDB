@@ -70,7 +70,7 @@ class QuarkDBNode; class RaftContactDetails;
 
 #define RETRY_ASSERT_TRUE_SPIN(cond) RETRY_ASSERT_TRUE_3(cond, 100000, 0)
 
-#define NUMBER_OF_RETRIES ( (size_t) testconfig.raftTimeouts->getLow().count() * 10)
+#define NUMBER_OF_RETRIES ( (size_t) timeouts().getLow().count() * 10)
 
 // retry every 10ms
 #define RETRY_ASSERT_TRUE(cond) RETRY_ASSERT_TRUE_3(cond, NUMBER_OF_RETRIES, 10)
@@ -133,7 +133,7 @@ extern GlobalEnv &commonState;
 // about raft messing up your variables and terms due to timeouts.
 class TestNode {
 public:
-  TestNode(RaftServer myself, RaftClusterID clusterID, const std::vector<RaftServer> &nodes);
+  TestNode(RaftServer myself, RaftClusterID clusterID, RaftTimeouts timeouts, const std::vector<RaftServer> &nodes);
   ~TestNode();
 
   QuarkDBNode* quarkdbNode();
@@ -166,6 +166,9 @@ private:
 // Everything is initialized lazily, including the nodes of the cluster themselves.
 class TestCluster {
 public:
+  TestCluster(RaftTimeouts timeouts, RaftClusterID clusterID,
+    const std::vector<RaftServer> &nodes, int initialActiveNodes = -1);
+
   TestCluster(RaftClusterID clusterID, const std::vector<RaftServer> &nodes,
     int initialActiveNodes = -1);
   ~TestCluster();
@@ -185,6 +188,7 @@ public:
   RaftConfig *raftconfig(int id = 0);
   RaftTrimmer* trimmer(int id = 0);
   const RaftContactDetails* contactDetails(int id = 0);
+  RaftTimeouts timeouts();
 
   qclient::Options makeNoRedirectOptions(int id = 0);
   std::unique_ptr<qclient::Handshake> makeQClientHandshake(int id = 0);
@@ -320,6 +324,7 @@ private:
   std::string rocksdbPath(int id = 0);
 
   RaftClusterID clusterid;
+  RaftTimeouts clusterTimeouts;
 
   // The list of nodes which are initially part of the cluster.
   std::vector<RaftServer> initialNodes;
@@ -340,6 +345,18 @@ public:
     GlobalEnv::server(2)
   }) { };
 };
+
+// Just like the above, but with relaxed raft timeouts
+class TestCluster3NodesRelaxedTimeouts : public TestCluster {
+public:
+  TestCluster3NodesRelaxedTimeouts() : TestCluster(relaxedTimeouts,
+    "a9b9e979-5428-42e9-8a52-f675c39fdf80", {
+    GlobalEnv::server(0),
+    GlobalEnv::server(1),
+    GlobalEnv::server(2)
+  }) { };
+};
+
 
 class TestCluster5Nodes : public TestCluster {
 public:
@@ -371,6 +388,7 @@ public:
 };
 
 class TestCluster3NodesFixture : public TestCluster3Nodes, public ::testing::Test {};
+class TestCluster3NodesRelaxedTimeoutsFixture : public TestCluster3NodesRelaxedTimeouts, public ::testing::Test {};
 class TestCluster5NodesFixture : public TestCluster5Nodes, public ::testing::Test {};
 class TestCluster10Nodes1InitialFixture : public TestCluster10Nodes1Initial, public ::testing::Test {};
 

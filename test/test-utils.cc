@@ -104,9 +104,9 @@ RaftServer GlobalEnv::server(int id) {
 ::testing::Environment* const commonStatePtr = ::testing::AddGlobalTestEnvironment(new GlobalEnv);
 GlobalEnv &commonState(*(GlobalEnv*)commonStatePtr);
 
-TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd,
-  int initialActiveNodes)
-: clusterid(clust), allNodes(nd) {
+TestCluster::TestCluster(RaftTimeouts timeouts, RaftClusterID clust,
+    const std::vector<RaftServer> &nd, int initialActiveNodes)
+: clusterid(clust), clusterTimeouts(timeouts), allNodes(nd) {
 
   if(initialActiveNodes < 0) {
     initialNodes = allNodes;
@@ -118,6 +118,10 @@ TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd,
 
   Connection::setPhantomBatchLimit(100);
 }
+
+TestCluster::TestCluster(RaftClusterID clust, const std::vector<RaftServer> &nd,
+  int initialActiveNodes)
+: TestCluster(testconfig.raftTimeouts, clust, nd, initialActiveNodes) {}
 
 TestCluster::~TestCluster() {
   for(auto &kv : testnodes) {
@@ -217,7 +221,7 @@ TestNode* TestCluster::node(int id, const RaftServer &srv) {
 
   RaftServer newserver = srv;
   if(newserver.empty()) newserver = allNodes[id];
-  TestNode *ret = new TestNode(newserver, clusterID(), initialNodes);
+  TestNode *ret = new TestNode(newserver, clusterID(), timeouts(), initialNodes);
   testnodes[id] = ret;
   return ret;
 }
@@ -259,7 +263,11 @@ int TestCluster::getLeaderID() {
   return getServerID(state(0)->getSnapshot()->leader);
 }
 
-TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftServer> &nd)
+RaftTimeouts TestCluster::timeouts() {
+  return clusterTimeouts;
+}
+
+TestNode::TestNode(RaftServer me, RaftClusterID clust, RaftTimeouts timeouts, const std::vector<RaftServer> &nd)
 : myselfSrv(me), clusterID(clust), initialNodes(nd) {
 
   std::string shardPath = SSTR(commonState.testdir << "/" << myself().hostname << "-" << myself().port);
@@ -280,7 +288,7 @@ TestNode::TestNode(RaftServer me, RaftClusterID clust, const std::vector<RaftSer
 
   // We inject the shard directory in QDB node.
   sharddirptr = commonState.getShardDirectory(shardPath, clusterID, initialNodes);
-  qdbnodeptr = new QuarkDBNode(config, testconfig.raftTimeouts, sharddirptr);
+  qdbnodeptr = new QuarkDBNode(config, timeouts, sharddirptr);
 }
 
 ShardDirectory* TestNode::shardDirectory() {

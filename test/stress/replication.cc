@@ -313,7 +313,7 @@ TEST_F(Replication, several_transitions) {
   // same time. :)
 
   for(size_t iteration = 0; iteration < 5; iteration++) {
-    std::this_thread::sleep_for(testconfig.raftTimeouts->getHigh() * 5);
+    std::this_thread::sleep_for(timeouts().getHigh() * 5);
 
     int leaderID = getLeaderID();
     int follower1 = (getLeaderID() + 1) % 3;
@@ -603,7 +603,7 @@ TEST_F(SingleNodeInitially, BuildClusterFromSingle) {
     if(leaderID == 1) break;
     tunnel(1)->exec("raft-attempt-coup").get();
 
-    std::this_thread::sleep_for(testconfig.raftTimeouts->getLow());
+    std::this_thread::sleep_for(timeouts().getLow());
   }
 
   // commit a write

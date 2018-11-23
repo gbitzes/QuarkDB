@@ -33,6 +33,9 @@ std::mt19937 RaftTimeouts::gen(rd());
 std::mutex RaftTimeouts::genMutex;
 
 
+RaftTimeouts quarkdb::relaxedTimeouts {milliseconds(5000), milliseconds(10000),
+  milliseconds(500)};
+
 RaftTimeouts quarkdb::defaultTimeouts {milliseconds(1000), milliseconds(1500),
   milliseconds(250)};
 

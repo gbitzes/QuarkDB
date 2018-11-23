@@ -42,8 +42,8 @@ using namespace quarkdb;
 
 class Raft_Replicator : public TestCluster3NodesFixture {};
 class Raft_Voting : public TestCluster3NodesFixture {};
-class Raft_Dispatcher : public TestCluster3NodesFixture {};
-class Raft_Election : public TestCluster3NodesFixture {};
+class Raft_Dispatcher : public TestCluster3NodesRelaxedTimeoutsFixture {};
+class Raft_Election : public TestCluster3NodesRelaxedTimeoutsFixture {};
 class Raft_Director : public TestCluster3NodesFixture {};
 class Raft_CommitTracker : public TestCluster3NodesFixture {};
 class Raft_JournalIterator : public TestCluster3NodesFixture {};
@@ -370,7 +370,7 @@ TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
   // cluster id, verify it sends us to hell
 
   poller(0);
-  RaftContactDetails cd("random_cluster_id", testconfig.raftTimeouts, "");
+  RaftContactDetails cd("random_cluster_id", timeouts(), "");
   RaftTalker talker(myself(0), cd);
 
   RaftVoteRequest votereq;
