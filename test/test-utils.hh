@@ -299,12 +299,14 @@ public:
   }
 
   template<typename... Args>
-  bool checkStateConsensus(const Args... args) {
+  bool checkStateConsensusWithSnapshots(std::vector<RaftStateSnapshotPtr> &snapshots,
+    const Args... args) {
+
     std::vector<int> arguments = { args... };
-    std::vector<RaftStateSnapshotPtr> snapshots;
+    snapshots.resize(arguments.size());
 
     for(size_t i = 0; i < arguments.size(); i++) {
-      snapshots.emplace_back(state(arguments[i])->getSnapshot());
+      snapshots[i] = state(arguments[i])->getSnapshot();
     }
 
     for(size_t i = 1; i < snapshots.size(); i++) {
@@ -313,8 +315,35 @@ public:
       if(snapshots[i]->leader != snapshots[i-1]->leader) return false;
     }
 
+    // Exactly one should be leader, others followers
+    size_t leaders = 0;
+    size_t followers = 0;
+
+    for(size_t i = 0; i < snapshots.size(); i++) {
+      if(snapshots[i]->status == RaftStatus::LEADER) {
+        leaders++;
+      }
+      else if(snapshots[i]->status == RaftStatus::FOLLOWER) {
+        followers++;
+      }
+    }
+
+    if(leaders != 1u) {
+      return false;
+    }
+
+    if(followers != snapshots.size() - 1) {
+      return false;
+    }
+
     qdb_info("Achieved state consensus for term " << snapshots[0]->term << " with leader " << snapshots[0]->leader.toString());
     return true;
+  }
+
+  template<typename... Args>
+  bool checkStateConsensus(const Args... args) {
+    std::vector<RaftStateSnapshotPtr> snapshots;
+    return checkStateConsensusWithSnapshots(snapshots, args...);
   }
 
   int getServerID(const RaftServer &srv);

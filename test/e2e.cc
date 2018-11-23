@@ -812,7 +812,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
 
 TEST_F(Raft_e2e, DequeTrimming) {
   spinup(0); spinup(1); spinup(2);
-  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getServerID(state(0)->getSnapshot()->leader);
 
   ASSERT_REPLY(tunnel(leaderID)->exec("deque-push-back", "dq", "1", "2", "3", "4", "5", "6"), 6);

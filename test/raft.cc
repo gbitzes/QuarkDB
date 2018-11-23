@@ -729,12 +729,9 @@ TEST_F(Raft_Election, split_votes_unsuccessful_election) {
 TEST_F(Raft_Director, achieve_natural_election) {
   // spin up the directors and pollers - this fully simulates a 3-node cluster
   spinup(0); spinup(1); spinup(2);
-  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   std::vector<RaftStateSnapshotPtr> snapshots;
-  snapshots.push_back(state(0)->getSnapshot());
-  snapshots.push_back(state(1)->getSnapshot());
-  snapshots.push_back(state(2)->getSnapshot());
+  RETRY_ASSERT_TRUE(checkStateConsensusWithSnapshots(snapshots, 0, 1, 2));
 
   // verify all have agreed on the same term
   ASSERT_EQ(snapshots[0]->term, snapshots[1]->term);
