@@ -861,8 +861,19 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
     ASSERT_REPLY(futures[i], 1);
   }
 
-  // now let's trim leader's journal..
-  journal(leaderID)->trimUntil(4);
+  // ensure the two nodes have reached complete consensus
+  RETRY_ASSERT_TRUE(checkFullConsensus(0, 1));
+
+  // now let's trim their journals..
+  std::vector<RaftEntry> entryBackup;
+  for(size_t i = 1; i < 5; i++) {
+    RaftEntry entry;
+    ASSERT_TRUE(journal(firstSlaveID)->fetch(i, entry).ok());
+    entryBackup.emplace_back(std::move(entry));
+  }
+
+  journal(0)->trimUntil(4);
+  journal(1)->trimUntil(4);
 
   // and verify it's NOT possible to bring node #2 up to date
   spinup(2);
@@ -872,11 +883,8 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   ASSERT_EQ(journal(2)->getLogStart(), 0);
 
   // a divine intervention fills up the missing entries in node #2 journal
-  for(size_t i = 1; i < 5; i++) {
-    RaftEntry entry;
-    ASSERT_TRUE(journal(firstSlaveID)->fetch(i, entry).ok());
-
-    journal(2)->append(i, entry);
+  for(size_t i = 0; i < 4; i++) {
+    journal(2)->append(i+1, entryBackup[i]);
   }
 
   // now verify node #2 can be brought up to date successfully
