@@ -498,6 +498,7 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   ASSERT_EQ(dispatcher()->requestVote(req).vote, RaftVote::VETO);
 
   // Case where lastIndex has been trimmed already
+  RETRY_ASSERT_TRUE(stateMachine()->getLastApplied() >= 2);
   journal()->trimUntil(2);
   req.lastIndex = 1;
   req.lastTerm = 3;

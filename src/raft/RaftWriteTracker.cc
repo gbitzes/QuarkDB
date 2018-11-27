@@ -78,6 +78,8 @@ void RaftWriteTracker::updatedCommitIndex(LogIndex commitIndex) {
 
 void RaftWriteTracker::applyCommits() {
   LogIndex commitIndex = journal.getCommitIndex(); // local cached value
+  updatedCommitIndex(commitIndex);
+
   while(journal.waitForCommits(commitIndex)) {
     if(shutdown) break;
 
