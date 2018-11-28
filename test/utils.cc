@@ -575,4 +575,13 @@ TEST(RingAllocator, MemoryRegion) {
 
   ASSERT_EQ(region.bytesConsumed(), 4u);
   ASSERT_EQ(region.bytesFree(), 124u);
+
+  ASSERT_EQ(region.allocate(125u), nullptr);
+
+  std::byte* ptr5 = region.allocate(124u);
+  ASSERT_EQ(ptr4 + 4, ptr5);
+  ASSERT_EQ(region.allocate(1u), nullptr);
+
+  ASSERT_EQ(region.bytesFree(), 0u);
+  ASSERT_EQ(region.bytesConsumed(), 128u);
 }
