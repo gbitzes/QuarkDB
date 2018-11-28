@@ -39,6 +39,7 @@
 #include "redis/InternalFilter.hh"
 #include "redis/RedisEncodedResponse.hh"
 #include "storage/Randomization.hh"
+#include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
 
@@ -551,3 +552,27 @@ TEST(AssistedThread, CoordinatorThread) {
   coord.join();
 }
 
+TEST(RingAllocator, MemoryRegion) {
+  MemoryRegion region(128);
+
+  ASSERT_EQ(region.size(), 128u);
+  ASSERT_EQ(region.bytesFree(), 128u);
+  ASSERT_EQ(region.bytesConsumed(), 0u);
+
+  std::byte* ptr1 = region.allocate(8);
+  std::byte* ptr2 = region.allocate(16);
+  std::byte* ptr3 = region.allocate(3);
+
+  ASSERT_TRUE(ptr1+8 == ptr2);
+  ASSERT_TRUE(ptr2+16 == ptr3);
+  ASSERT_EQ(region.bytesConsumed(), 27u);
+  ASSERT_EQ(region.bytesFree(), 101u);
+
+  region.resetAllocations();
+
+  std::byte* ptr4 = region.allocate(4);
+  ASSERT_EQ(ptr1, ptr4);
+
+  ASSERT_EQ(region.bytesConsumed(), 4u);
+  ASSERT_EQ(region.bytesFree(), 124u);
+}

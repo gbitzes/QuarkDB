@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_BUFFERED_READER_H__
-#define __QUARKDB_BUFFERED_READER_H__
+#ifndef QUARKDB_BUFFERED_READER_HH
+#define QUARKDB_BUFFERED_READER_HH
 
 #include <deque>
 #include <string>
