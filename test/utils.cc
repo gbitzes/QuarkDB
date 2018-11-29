@@ -592,3 +592,26 @@ TEST(RingAllocator, MemoryRegion) {
   ASSERT_EQ(region->bytesFree(), 0u);
   ASSERT_EQ(region->bytesConsumed(), 128u);
 }
+
+TEST(PinnedBuffer, substr) {
+  std::shared_ptr<MemoryRegion> region = MemoryRegion::Construct(128);
+  ASSERT_EQ(region->refcount(), 1u);
+
+  PinnedBuffer buf1 = region->allocate(10).value();
+  buf1[0] = 'a';
+  buf1[9] = 'b';
+  for(size_t i = 1; i < 9; i++) {
+    buf1[i] = 'c';
+  }
+
+  ASSERT_EQ(buf1, "accccccccb");
+  ASSERT_EQ(region->refcount(), 2u);
+
+  PinnedBuffer buf2 = buf1.substr(0, 3);
+  ASSERT_EQ(region->refcount(), 3u);
+  ASSERT_EQ(buf2, "acc");
+
+  PinnedBuffer buf3 = buf1.substr(1, 9);
+  ASSERT_EQ(region->refcount(), 4u);
+  ASSERT_EQ(buf3, "ccccccccb");
+}

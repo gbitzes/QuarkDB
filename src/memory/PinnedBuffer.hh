@@ -26,6 +26,7 @@
 
 #include <memory>
 #include <string_view>
+#include <string.h>
 
 namespace quarkdb {
 
@@ -170,6 +171,27 @@ public:
 
     internalBuffer.erase(internalBuffer.begin()+internalBuffer.size()-n,
       internalBuffer.end());
+  }
+
+  //----------------------------------------------------------------------------
+  // Extract substring - no sanity checking
+  //----------------------------------------------------------------------------
+  PinnedBuffer substr(size_t start, size_t size) {
+    if(region) {
+      return PinnedBuffer(region, regionPtr+start, size);
+    }
+
+    PinnedBuffer retval(size);
+    retval.internalBuffer.resize(size);
+    memcpy(internalBuffer.data(), retval.internalBuffer.data(), size);
+    return retval;
+  }
+
+  //----------------------------------------------------------------------------
+  // Check if empty
+  //----------------------------------------------------------------------------
+  bool empty() const {
+    return size() == 0u;
   }
 
 
