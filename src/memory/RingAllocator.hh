@@ -69,7 +69,9 @@ public:
 
   //----------------------------------------------------------------------------
   // Allocate this amount of bytes, filling a PinnedBuffer.
-  // Return false if we don't have enough space to service this request.
+  //
+  // Return an empty optional if we don't have enough space to service
+  // this request.
   //----------------------------------------------------------------------------
   std::optional<PinnedBuffer> allocate(size_t bytes) {
     if(allocated + bytes > region.size()) {
@@ -114,7 +116,7 @@ public:
   // Return number of references to this object
   //----------------------------------------------------------------------------
   long refcount() const {
-    return shared_from_this().use_count();
+    return weak_from_this().use_count();
   }
 
 
