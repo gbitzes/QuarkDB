@@ -28,14 +28,14 @@
 
 namespace quarkdb {
 
-std::string pathJoin(const std::string &part1, const std::string &part2);
+std::string pathJoin(std::string_view part1, std::string_view part2);
 bool mkpath(const std::string &path, mode_t mode, std::string &err);
 void mkpath_or_die(const std::string &path, mode_t mode);
 bool directoryExists(const std::string &path, std::string &err);
 bool readFile(FILE *f, std::string &contents);
 bool readFile(const std::string &path, std::string &contents);
-bool write_file(const std::string &path, const std::string &contents, std::string &err);
-void write_file_or_die(const std::string &path, const std::string &contents);
+bool write_file(std::string_view path, std::string_view contents, std::string &err);
+void write_file_or_die(std::string_view path, std::string_view contents);
 void rename_directory_or_die(const std::string &source, const std::string &destination);
 bool areFilePermissionsSecure(mode_t mode);
 bool readPasswordFile(const std::string &path, std::string &contents);

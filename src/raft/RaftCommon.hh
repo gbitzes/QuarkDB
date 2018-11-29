@@ -79,12 +79,12 @@ struct RaftEntry {
     return ss.str();
   }
 
-  static void deserialize(RaftEntry &entry, const RaftSerializedEntry &data) {
+  static void deserialize(RaftEntry &entry, std::string_view data) {
     entry.request.clear();
-    entry.term = fetch_int_from_string(data.c_str());
+    entry.term = fetch_int_from_string(data.data());
 
-    const char *pos = data.c_str() + sizeof(term);
-    const char *end = data.c_str() + data.size();
+    const char *pos = data.data() + sizeof(term);
+    const char *end = data.data() + data.size();
 
     while(pos < end) {
       int64_t len = fetch_int_from_string(pos);
@@ -95,8 +95,8 @@ struct RaftEntry {
     }
   }
 
-  static int64_t fetchTerm(const RaftSerializedEntry &data) {
-    return fetch_int_from_string(data.c_str());
+  static int64_t fetchTerm(std::string_view data) {
+    return fetch_int_from_string(data.data());
   }
 
   bool operator==(const RaftEntry &rhs) const {

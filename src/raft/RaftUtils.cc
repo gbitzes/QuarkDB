@@ -148,11 +148,11 @@ bool RaftParser::appendEntries(RedisRequest &&source, RaftAppendEntriesRequest &
   if(source[2].size() != sizeof(int64_t) * 5) return false;
   int64_t nreqs;
 
-  dest.term        = binaryStringToInt(source[2].c_str() + 0*sizeof(int64_t) );
-  dest.prevIndex   = binaryStringToInt(source[2].c_str() + 1*sizeof(int64_t) );
-  dest.prevTerm    = binaryStringToInt(source[2].c_str() + 2*sizeof(int64_t) );
-  dest.commitIndex = binaryStringToInt(source[2].c_str() + 3*sizeof(int64_t) );
-  nreqs            = binaryStringToInt(source[2].c_str() + 4*sizeof(int64_t) );
+  dest.term        = binaryStringToInt(source[2].data() + 0*sizeof(int64_t) );
+  dest.prevIndex   = binaryStringToInt(source[2].data() + 1*sizeof(int64_t) );
+  dest.prevTerm    = binaryStringToInt(source[2].data() + 2*sizeof(int64_t) );
+  dest.commitIndex = binaryStringToInt(source[2].data() + 3*sizeof(int64_t) );
+  nreqs            = binaryStringToInt(source[2].data() + 4*sizeof(int64_t) );
 
   if((int) source.size() != 3 + nreqs) return false;
   dest.entries.resize(nreqs);

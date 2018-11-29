@@ -28,11 +28,11 @@
 
 namespace quarkdb {
 
-std::string pathJoin(const std::string &part1, const std::string &part2) {
-  if(part1.empty()) return "/" + part2;
-  if(part2.empty()) return part1;
-  if(part1[part1.size()-1] == '/') return part1 + part2;
-  return part1 + "/" + part2;
+std::string pathJoin(std::string_view part1, std::string_view part2) {
+  if(part1.empty()) return SSTR("/" << part2);
+  if(part2.empty()) return SSTR(part1);
+  if(part1[part1.size()-1] == '/') return SSTR(part1 << part2);
+  return SSTR(part1 << "/" << part2);
 }
 
 bool mkpath(const std::string &path, mode_t mode, std::string &err) {
@@ -165,22 +165,22 @@ bool areFilePermissionsSecure(mode_t mode) {
   return true;
 }
 
-bool write_file(const std::string &path, const std::string &contents, std::string &err) {
+bool write_file(std::string_view path, std::string_view contents, std::string &err) {
   bool retvalue;
 
-  FILE *out = fopen(path.c_str(), "wb");
+  FILE *out = fopen(std::string(path).c_str(), "wb");
 
   if(!out) {
     err = SSTR("Unable to open path for writing: " << path << ", errno: " << errno);
     return false;
   }
 
-  retvalue = fwrite(contents.c_str(), sizeof(char), contents.size(), out);
+  retvalue = fwrite(contents.data(), sizeof(char), contents.size(), out);
   fclose(out);
   return retvalue;
 }
 
-void write_file_or_die(const std::string &path, const std::string &contents) {
+void write_file_or_die(std::string_view path, std::string_view contents) {
   std::string err;
   if(!write_file(path, contents, err)) {
     qdb_throw(err);

@@ -136,7 +136,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       if(req.size() != 2) return conn->errArgs(req[0]);
 
-      ResilveringEventID eventID = req[1];
+      ResilveringEventID eventID(req[1]);
 
       std::string err;
       if(!shardDirectory->resilveringStart(eventID, err)) {
@@ -149,7 +149,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       if(req.size() != 4) return conn->errArgs(req[0]);
 
-      ResilveringEventID eventID = req[1];
+      ResilveringEventID eventID(req[1]);
 
       std::string err;
       if(!shardDirectory->resilveringCopy(eventID, req[2], req[3], err)) {
@@ -162,7 +162,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       if(req.size() != 2) return conn->errArgs(req[0]);
 
-      ResilveringEventID eventID = req[1];
+      ResilveringEventID eventID(req[1]);
 
       std::lock_guard<std::mutex> lock(raftGroupMtx);
       detach();

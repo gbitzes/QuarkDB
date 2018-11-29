@@ -209,7 +209,7 @@ bool ShardDirectory::resilveringStart(const ResilveringEventID &id, std::string 
   return true;
 }
 
-bool ShardDirectory::resilveringCopy(const ResilveringEventID &id, const std::string &filename, const std::string &contents, std::string &err) {
+bool ShardDirectory::resilveringCopy(const ResilveringEventID &id, std::string_view filename,  std::string_view contents, std::string &err) {
   std::string targetPath = pathJoin(getResilveringArena(id), filename);
 
   if(!mkpath(targetPath, 0755, err)) {
@@ -278,8 +278,8 @@ const ResilveringHistory& ShardDirectory::getResilveringHistory() const {
   return resilveringHistory;
 }
 
-std::string ShardDirectory::checkpoint(const std::string &path) {
-  if(mkdir(path.c_str(), S_IRWXU) != 0) {
+std::string ShardDirectory::checkpoint(std::string_view path) {
+  if(mkdir(std::string(path).c_str(), S_IRWXU) != 0) {
     return SSTR("Could not mkdir " << path << ": " << errno << " (" << strerror(errno) << ")");
   }
 
