@@ -24,6 +24,7 @@
 #ifndef QUARKDB_BUFFERED_READER_HH
 #define QUARKDB_BUFFERED_READER_HH
 
+#include "memory/RingAllocator.hh"
 #include <deque>
 #include <string>
 
@@ -44,6 +45,21 @@ public:
   // link yet and we get nothing.
   //----------------------------------------------------------------------------
   LinkStatus consume(size_t len, std::string &str);
+
+  //----------------------------------------------------------------------------
+  // Read exactly len bytes from the link. An all-or-nothing operation -
+  // either it succeeds and we get len bytes, or there's not enough data on the
+  // link yet and we get nothing.
+  //
+  // We are given a PinnedBuffer - if we're lucky, we'll be able to avoid
+  // any dynamic memory allocations, and reference the data directly to our
+  // MemoryRegion.
+  //
+  // This is not always possible - in such case, use the buffer's internal
+  // storage to copy the data.
+  //----------------------------------------------------------------------------
+  LinkStatus consume(size_t len, PinnedBuffer &buf);
+
 private:
   Link *link;
 
@@ -54,7 +70,7 @@ private:
   // release it.
   //----------------------------------------------------------------------------
 
-  std::deque<char*> buffers;
+  std::deque<std::shared_ptr<MemoryRegion>> buffers;
   size_t position_read; // always points to the buffer at the front
   size_t position_write; // always points to the buffer at the end
   const size_t buffer_size;
@@ -72,6 +88,11 @@ private:
   // possible to read if and only if that amount is greater than len
   //----------------------------------------------------------------------------
   LinkStatus canConsume(size_t len);
+
+  //----------------------------------------------------------------------------
+  // Internal consume function - does not check canConsume first
+  //----------------------------------------------------------------------------
+  LinkStatus consumeInternal(size_t len, std::string &str);
 };
 
 }

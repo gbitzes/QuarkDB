@@ -49,6 +49,11 @@ class MemoryRegion;
 class PinnedBuffer {
 public:
   //----------------------------------------------------------------------------
+  // Constructor: Make empty PinnedBuffer.
+  //----------------------------------------------------------------------------
+  PinnedBuffer() {}
+
+  //----------------------------------------------------------------------------
   // Constructor: Pass the corresponding reference to MemoryRegion, as well as
   // the chunk we're pointing to.
   //----------------------------------------------------------------------------
@@ -113,6 +118,13 @@ public:
   //----------------------------------------------------------------------------
   char& operator[](size_t i) {
     return data()[i];
+  }
+
+  //----------------------------------------------------------------------------
+  // Return internal buffer
+  //----------------------------------------------------------------------------
+  std::string& getInternalBuffer() {
+    return internalBuffer;
   }
 
 private:

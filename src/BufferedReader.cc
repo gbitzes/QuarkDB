@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "memory/PinnedBuffer.hh"
 #include "BufferedReader.hh"
 #include "Utils.hh"
 
@@ -30,12 +31,11 @@ BufferedReader::BufferedReader(Link *lp, size_t bsize)
 : link(lp), buffer_size(bsize) {
   position_read = 0;
   position_write = 0;
-  buffers.push_back((char*) malloc(buffer_size));
+  buffers.emplace_back(MemoryRegion::Construct(buffer_size));
 }
 
 BufferedReader::~BufferedReader() {
   while(!buffers.empty()) {
-    free(buffers.front());
     buffers.pop_front();
   }
 }
@@ -47,7 +47,7 @@ LinkStatus BufferedReader::readFromLink(size_t limit) {
     int available_space = buffer_size - position_write;
 
     // non-blocking read
-    LinkStatus rlen = link->Recv(buffers.back() + position_write, available_space, 0);
+    LinkStatus rlen = link->Recv(buffers.back()->data() + position_write, available_space, 0);
     if(rlen < 0) return rlen; // an error occured, propagate to caller
 
     total_bytes += rlen;
@@ -58,7 +58,7 @@ LinkStatus BufferedReader::readFromLink(size_t limit) {
     }
 
     // we have more data to read, but no more space. Need to allocate buffer
-    buffers.push_back((char*) malloc(buffer_size));
+    buffers.emplace_back(MemoryRegion::Construct(buffer_size));
     position_write = 0;
 
     if(total_bytes > (int) limit) return total_bytes;
@@ -83,10 +83,7 @@ LinkStatus BufferedReader::canConsume(size_t len) {
   return 0; // nope, not enough data
 }
 
-LinkStatus BufferedReader::consume(size_t len, std::string &str) {
-  LinkStatus status = canConsume(len);
-  if(status <= 0) return status;
-
+LinkStatus BufferedReader::consumeInternal(size_t len, std::string &str) {
   str.clear();
   str.reserve(len);
 
@@ -102,16 +99,41 @@ LinkStatus BufferedReader::consume(size_t len, std::string &str) {
 
     // add them
     qdb_debug("Appending " << available_bytes << " bytes to str");
-    str.append(buffers.front() + position_read, available_bytes);
+    str.append(buffers.front()->data() + position_read, available_bytes);
     position_read += available_bytes;
 
     if(position_read >= buffer_size) {
       qdb_debug("An entire buffer has been consumed, releasing");
       // an entire buffer has been consumed
-      free(buffers.front());
       buffers.pop_front();
       position_read = 0;
     }
   }
   return len;
+}
+
+LinkStatus BufferedReader::consume(size_t len, std::string &str) {
+  LinkStatus status = canConsume(len);
+  if(status <= 0) return status;
+
+  return consumeInternal(len, str);
+}
+
+LinkStatus BufferedReader::consume(size_t len, PinnedBuffer &buf) {
+  LinkStatus status = canConsume(len);
+  if(status <= 0) return status;
+
+  // can we simply point "buf" to our MemoryRegion?
+  size_t available_bytes = buffer_size - position_read;
+  if(available_bytes >= len) {
+    // Yes! Fast path, simply make a PinnedBuffer which references our
+    // MemoryRegion.
+    buf = PinnedBuffer(buffers.front(), buffers.front()->data() + position_read, len);
+    position_read += len;
+    return len;
+  }
+
+  // nope, use internal buffer
+  buf = PinnedBuffer(len);
+  return consumeInternal(len, buf.getInternalBuffer());
 }

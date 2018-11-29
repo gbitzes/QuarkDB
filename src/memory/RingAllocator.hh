@@ -92,6 +92,20 @@ public:
   }
 
   //----------------------------------------------------------------------------
+  // Return pointer to start of the array
+  //----------------------------------------------------------------------------
+  char* data() {
+    return (char*) region.data();
+  }
+
+  //----------------------------------------------------------------------------
+  // Return const pointer to start of the array
+  //----------------------------------------------------------------------------
+  const char* data() const {
+    return (const char*) region.data();
+  }
+
+  //----------------------------------------------------------------------------
   // Return size
   //----------------------------------------------------------------------------
   size_t size() const {
@@ -154,18 +168,25 @@ private:
 // will explode otherwise. It should, however, still behave correctly even
 // in such case.
 //------------------------------------------------------------------------------
-// class RingAllocator {
-// public:
-//   //----------------------------------------------------------------------------
-//   // Provide the size of allocated memory blocks, and the number of blocks to
-//   // keep around for recycling.
-//   //
-//   // If a request for memory exceeds this size, direct malloc is used.
-//   //
-//   // TODO
-//   //----------------------------------------------------------------------------
-//   RingAllocator(size_t blockSize, size_t blockCount);
-// };
+class RingAllocator {
+public:
+  //----------------------------------------------------------------------------
+  // Provide the size of allocated memory blocks, and the number of blocks to
+  // keep around for recycling.
+  //
+  // If a request for memory exceeds this size, direct malloc is used.
+  //
+  // TODO
+  //----------------------------------------------------------------------------
+  RingAllocator(size_t blockSize, size_t minBlockCount, size_t maxBlockCount) :
+  blockSize(blockSize), minBlockCount(minBlockCount),
+  maxBlockCount(maxBlockCount) {}
+
+private:
+  size_t blockSize;
+  size_t minBlockCount;
+  size_t maxBlockCount;
+};
 
 }
 
