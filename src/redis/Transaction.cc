@@ -28,7 +28,7 @@ using namespace quarkdb;
 
 Transaction::Transaction(RedisRequest &&req) {
   this->emplace_back(std::move(req));
-  checkLastCommandForWrites();
+  checkNthCommandForWrites();
   setPhantom(true);
 }
 
@@ -38,7 +38,7 @@ Transaction::~Transaction() {}
 
 void Transaction::push_back(RedisRequest &&req) {
   requests.push_back(std::move(req));
-  checkLastCommandForWrites();
+  checkNthCommandForWrites();
 }
 
 void serializeRequestToString(std::stringstream &ss, const RedisRequest &req) {
@@ -60,8 +60,9 @@ std::string Transaction::serialize() const {
   return ss.str();
 }
 
-void Transaction::checkLastCommandForWrites() {
-  RedisRequest &lastreq = requests.back();
+void Transaction::checkNthCommandForWrites(int n) {
+  if(n == -1) n = requests.size() - 1;
+  RedisRequest &lastreq = requests[n];
 
   qdb_assert(lastreq.getCommandType() == CommandType::READ || lastreq.getCommandType() == CommandType::WRITE);
   if(lastreq.getCommandType() == CommandType::WRITE) {
@@ -102,28 +103,32 @@ bool Transaction::deserialize(const RedisRequest &req) {
   return true;
 }
 
-bool Transaction::deserialize(std::string_view src) {
+bool Transaction::deserialize(const PinnedBuffer &src) {
   qdb_assert(requests.empty());
   if(src.empty()) return false;
 
   const char *pos = src.data();
   int64_t totalRequests = binaryStringToInt(pos);
   pos += sizeof(int64_t);
+  size_t bytesConsumed = sizeof(int64_t);
+
+  requests.resize(totalRequests);
 
   for(int64_t i = 0; i < totalRequests; i++) {
-    requests.emplace_back();
-
     int64_t totalParts = binaryStringToInt(pos);
     pos += sizeof(int64_t);
+    bytesConsumed += sizeof(int64_t);
 
     for(int64_t part = 0; part < totalParts; part++) {
       int64_t length = binaryStringToInt(pos);
       pos += sizeof(int64_t);
+      bytesConsumed += sizeof(int64_t);
 
-      requests[i].push_back(std::string(pos, length));
+      requests[i].push_back(src.substr(bytesConsumed, length));
       pos += (length * sizeof(char));
+      bytesConsumed += (length * sizeof(char));
     }
-    checkLastCommandForWrites();
+    checkNthCommandForWrites(i);
   }
 
   return true;

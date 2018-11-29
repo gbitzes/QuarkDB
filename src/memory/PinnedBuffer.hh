@@ -176,14 +176,14 @@ public:
   //----------------------------------------------------------------------------
   // Extract substring - no sanity checking
   //----------------------------------------------------------------------------
-  PinnedBuffer substr(size_t start, size_t size) {
+  PinnedBuffer substr(size_t start, size_t size) const {
     if(region) {
       return PinnedBuffer(region, regionPtr+start, size);
     }
 
     PinnedBuffer retval(size);
     retval.internalBuffer.resize(size);
-    memcpy(internalBuffer.data(), retval.internalBuffer.data(), size);
+    memcpy(retval.internalBuffer.data(), internalBuffer.data()+start, size);
     return retval;
   }
 

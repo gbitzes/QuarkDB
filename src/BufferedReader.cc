@@ -84,6 +84,7 @@ LinkStatus BufferedReader::canConsume(size_t len) {
 }
 
 LinkStatus BufferedReader::consumeInternal(size_t len, std::string &str) {
+  // assumption: str is len bytes long
   str.clear();
   str.reserve(len);
 
@@ -134,6 +135,6 @@ LinkStatus BufferedReader::consume(size_t len, PinnedBuffer &buf) {
   }
 
   // nope, use internal buffer
-  buf = PinnedBuffer(len);
+  buf = PinnedBuffer();
   return consumeInternal(len, buf.getInternalBuffer());
 }

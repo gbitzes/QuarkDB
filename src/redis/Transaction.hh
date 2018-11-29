@@ -41,7 +41,7 @@ public:
   }
 
   std::string serialize() const;
-  bool deserialize(std::string_view src);
+  bool deserialize(const PinnedBuffer &src);
   bool deserialize(const RedisRequest &req);
 
   RedisRequest& operator[](size_t i) {
@@ -59,7 +59,7 @@ public:
   template<typename... Args>
   void emplace_back(Args&&... args) {
     requests.emplace_back( RedisRequest { args ... } );
-    checkLastCommandForWrites();
+    checkNthCommandForWrites();
   }
 
   size_t size() const {
@@ -102,7 +102,7 @@ public:
   }
 
 private:
-  void checkLastCommandForWrites();
+  void checkNthCommandForWrites(int n = -1);
 
   bool hasWrites = false;
   bool phantom = false;

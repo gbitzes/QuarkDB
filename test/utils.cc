@@ -420,7 +420,7 @@ TEST(Transaction, Parsing) {
   tx.setPhantom(true);
   ASSERT_EQ(tx.expectedResponses(), 2);
 
-  std::string serialized = tx.serialize();
+  PinnedBuffer serialized(tx.serialize());
 
   Transaction tx2;
   tx2.deserialize(serialized);
@@ -614,4 +614,11 @@ TEST(PinnedBuffer, substr) {
   PinnedBuffer buf3 = buf1.substr(1, 9);
   ASSERT_EQ(region->refcount(), 4u);
   ASSERT_EQ(buf3, "ccccccccb");
+
+  PinnedBuffer buf4(std::string("qwerty"));
+  ASSERT_EQ(buf4, "qwerty");
+
+  PinnedBuffer buf5 = buf4.substr(1, 3);
+  ASSERT_EQ(buf5, "wer");
+  ASSERT_TRUE(buf5.usingInternalBuffer());
 }
