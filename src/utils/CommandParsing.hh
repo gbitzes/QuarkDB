@@ -49,7 +49,7 @@ inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator 
     args.cursor = "";
   }
   else if(StringUtils::startsWith(*begin, "next:")) {
-    args.cursor = std::string(begin->begin() + 5, begin->end());
+    args.cursor = std::string(begin->data() + 5, begin->size() - 5);
   }
   else {
     args.error = "invalid cursor";

@@ -182,7 +182,7 @@ struct CommandComparator {
       return ret;
     }
 
-    bool operator() (const std::string& lhs, const std::string& rhs) const {
+    bool operator() (std::string_view lhs, std::string_view rhs) const {
         for(size_t i = 0; i < std::min(lhs.size(), rhs.size()); i++) {
           char left = normalize(lhs[i]);
           char right = normalize(rhs[i]);
@@ -193,6 +193,8 @@ struct CommandComparator {
         }
         return lhs.size() < rhs.size();
     }
+
+    struct is_transparent {};
 };
 
 extern std::map<std::string,

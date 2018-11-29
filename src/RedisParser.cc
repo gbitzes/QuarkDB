@@ -62,7 +62,7 @@ int RedisParser::fetch(RedisRequest &req, bool allowZeroSizedStrings) {
   }
 
   for( ; current_element < request_size; current_element++) {
-    int rc = readElement(req[current_element]);
+    int rc = readElement(req.getPinnedBuffer(current_element));
     if(rc <= 0) return rc;
     element_size = -1;
   }
@@ -121,7 +121,7 @@ int RedisParser::readInteger(char prefix, int &retval) {
   return 1; // success
 }
 
-int RedisParser::readElement(std::string &str) {
+int RedisParser::readElement(PinnedBuffer &str) {
   qdb_debug("Element size: " << element_size);
   if(element_size == -1) {
     int retcode = readInteger('$', element_size);
@@ -131,7 +131,7 @@ int RedisParser::readElement(std::string &str) {
   return readString(element_size, str);
 }
 
-int RedisParser::readString(int nbytes, std::string &str) {
+int RedisParser::readString(int nbytes, PinnedBuffer &str) {
   int rlen = reader.consume(nbytes+2, str);
   if(rlen <= 0) return rlen;
 
@@ -145,7 +145,7 @@ int RedisParser::readString(int nbytes, std::string &str) {
     return -1;
   }
 
-  str.erase(str.begin()+str.size()-2, str.end());
-  qdb_debug("Got string: " << str);
+  str.remove_suffix(2);
+  qdb_debug("Got string: " << str.sv());
   return rlen;
 }

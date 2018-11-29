@@ -30,6 +30,8 @@
 
 namespace quarkdb {
 
+class PinnedBuffer;
+
 class RedisParser {
 public:
   RedisParser(Link *link);
@@ -84,8 +86,8 @@ private:
   //----------------------------------------------------------------------------
 
   int readInteger(char prefix, int& retval);
-  int readElement(std::string &str);
-  int readString(int nbytes, std::string &str);
+  int readElement(PinnedBuffer &buff);
+  int readString(int nbytes, PinnedBuffer &buff);
 
 };
 

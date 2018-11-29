@@ -56,7 +56,7 @@ TEST_F(State_Machine, test_write_transactions) {
   ASSERT_OK(stateMachine()->hget("myhash", "key1", tmp));
   ASSERT_EQ(tmp, "value");
 
-  std::vector<std::string> elem { "key1", "key2" };
+  RedisRequest elem { "key1", "key2" };
   int64_t count;
   ASSERT_OK(stateMachine()->hdel("myhash", elem.begin(), elem.end(), count, 4));
   ASSERT_EQ(count, 1);
@@ -84,13 +84,13 @@ TEST_F(State_Machine, test_write_transactions) {
   ASSERT_EQ(stateMachine()->getLastApplied(), 9);
 
   int64_t added;
-  std::vector<std::string> elementsToAdd { "elem1", "elem2" };
+  RedisRequest elementsToAdd { "elem1", "elem2" };
   ASSERT_OK(stateMachine()->sadd("set1", elementsToAdd.begin(), elementsToAdd.end(), added, 10));
   ASSERT_EQ(added, 2);
   ASSERT_EQ(stateMachine()->getLastApplied(), 10);
 
   int64_t removed;
-  std::vector<std::string> elementsToRem { "elem2", "elem3" };
+  RedisRequest elementsToRem { "elem2", "elem3" };
   ASSERT_OK(stateMachine()->srem("set1", elementsToRem.begin(), elementsToRem.end(), removed, 11));
   ASSERT_EQ(removed, 1);
   ASSERT_EQ(stateMachine()->getLastApplied(), 11);
@@ -179,7 +179,7 @@ TEST_F(State_Machine, basic_sanity) {
   ASSERT_OK(stateMachine()->get("abc", buffer));
   ASSERT_EQ(buffer, "cde");
 
-  std::vector<std::string> elem = {"abc"};
+  RedisRequest elem = {"abc"};
   int64_t count;
   ASSERT_OK(stateMachine()->del(elem.begin(), elem.end(), count));
   ASSERT_EQ(count, 1);
@@ -209,7 +209,7 @@ TEST_F(State_Machine, basic_sanity) {
   ASSERT_EQ(vec.size(), 0u);
 
   int64_t num = 0;
-  std::vector<std::string> elements { "qqq" };
+  RedisRequest elements { "qqq" };
   ASSERT_OK(stateMachine()->sadd("myset", elements.begin(), elements.end(), num));
   ASSERT_EQ(num, 1);
 
@@ -300,8 +300,8 @@ TEST_F(State_Machine, basic_sanity) {
   ASSERT_OK(stateMachine()->hlen("myhash", size));
   ASSERT_EQ(size, 3u);
 
-  vec2 = { "val" };
-  ASSERT_OK(stateMachine()->hdel("myhash", vec2.begin(), vec2.end(), count));
+  elements = { "val" };
+  ASSERT_OK(stateMachine()->hdel("myhash", elements.begin(), elements.end(), count));
   ASSERT_EQ(count, 1);
   ASSERT_OK(stateMachine()->hlen("myhash", size));
   ASSERT_EQ(size, 2u);
@@ -354,7 +354,8 @@ TEST_F(State_Machine, hscan) {
 }
 
 TEST_F(State_Machine, hmset) {
-  std::vector<std::string> vec;
+  // std::vector<std::string> vec;
+  RedisRequest vec;
   for(size_t i = 1; i <= 3; i++) {
     vec.push_back(SSTR("f" << i));
     vec.push_back(SSTR("v" << i));
@@ -376,7 +377,7 @@ TEST_F(State_Machine, hmset) {
 }
 
 TEST_F(State_Machine, DequeOperations) {
-  std::vector<std::string> vec = {"item1", "item2", "item3"};
+  RedisRequest vec = {"item1", "item2", "item3"};
   int64_t length;
 
   ASSERT_OK(stateMachine()->dequePushFront("my_list", vec.begin(), vec.end(), length));
@@ -403,7 +404,7 @@ TEST_F(State_Machine, DequeOperations) {
 }
 
 TEST_F(State_Machine, DequeTrimming) {
-  std::vector<std::string> vec = {"1", "2", "3", "4", "5", "6", "7"};
+  RedisRequest vec = {"1", "2", "3", "4", "5", "6", "7"};
   int64_t length;
 
   ASSERT_OK(stateMachine()->dequePushBack("my-deque", vec.begin(), vec.end(), length));
@@ -442,7 +443,7 @@ TEST_F(State_Machine, DequeTrimming) {
 }
 
 TEST_F(State_Machine, DequeOperations2) {
-  std::vector<std::string> vec = {"item1", "item2", "item3", "item4"};
+  RedisRequest vec = {"item1", "item2", "item3", "item4"};
   int64_t length;
 
   ASSERT_OK(stateMachine()->dequePushBack("my_list", vec.begin(), vec.end(), length));
@@ -503,7 +504,7 @@ TEST_F(State_Machine, config) {
   ASSERT_OK(stateMachine()->configGet("raft.trimming.limit", item));
   ASSERT_EQ(item, "1000");
 
-  std::vector<std::string> elem = { "raft.trimming.limit", "raft.trimming.step" };
+  RedisRequest elem = { "raft.trimming.limit", "raft.trimming.step" };
   int64_t count;
   ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
   ASSERT_EQ(count, 0u);
@@ -520,7 +521,7 @@ TEST_F(State_Machine, config) {
   ASSERT_OK(stateMachine()->exists(elem.begin(), elem.end(), count));
   ASSERT_EQ(count, 1);
 
-  std::vector<std::string> keysToDelete = {"raft.trimming.step"};
+  RedisRequest keysToDelete = {"raft.trimming.step"};
   int64_t num = 0;
   ASSERT_OK(stateMachine()->del(keysToDelete.begin(), keysToDelete.end(), num, ++commitIndex));
   ASSERT_EQ(num, 1);
@@ -703,7 +704,7 @@ TEST_F(State_Machine, SnapshotReads) {
   ASSERT_EQ(tmp, "someval-2");
 
   int64_t count = 0;
-  std::vector<std::string> vals = {"mykey", "mykey-2"};
+  RedisRequest vals = {"mykey", "mykey-2"};
   ASSERT_OK(stateMachine()->exists(*readArea, vals.begin(), vals.end(), count));
   ASSERT_EQ(count, 1);
 }
@@ -821,7 +822,7 @@ TEST_F(State_Machine, Leases) {
 
   ASSERT_OK(stateMachine()->lease_release("my-lease-2", ClockValue(13)));
   int64_t count = 0;
-  std::vector<std::string> keys = { "my-lease-2" };
+  RedisRequest keys = { "my-lease-2" };
   ASSERT_OK(stateMachine()->exists(keys.begin(), keys.end(), count) );
   ASSERT_EQ(count, 0);
 

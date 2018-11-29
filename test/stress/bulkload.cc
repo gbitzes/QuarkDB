@@ -59,7 +59,7 @@ TEST(BulkLoad, BasicSanity) {
     ASSERT_OK(stateMachine.set(SSTR("a-" << i), SSTR("v-" << i)));
     ASSERT_OK(stateMachine.set(SSTR("z#|#-" << i), SSTR("vz-" << i)));
 
-    std::vector<std::string> items;
+    RedisRequest items;
     items.push_back(SSTR(i));
     items.push_back(SSTR(i+1));
     items.push_back(SSTR(i+200));

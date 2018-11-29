@@ -92,9 +92,9 @@ public:
   }
 
   //----------------------------------------------------------------------------
-  // Implicit conversion to std::string_view
+  // Explicit conversion to std::string_view
   //----------------------------------------------------------------------------
-  operator std::string_view() const {
+  std::string_view sv() const noexcept {
     if(region != nullptr) {
       return std::string_view(regionPtr, regionSize);
     }
@@ -103,10 +103,28 @@ public:
   }
 
   //----------------------------------------------------------------------------
+  // Implicit conversion to std::string_view
+  //----------------------------------------------------------------------------
+  operator std::string_view() const noexcept {
+    return this->sv();
+  }
+
+  //----------------------------------------------------------------------------
   // Return reference to data
   //----------------------------------------------------------------------------
   char* data() {
-    if(region != nullptr) {
+    if(region) {
+      return regionPtr;
+    }
+
+    return internalBuffer.data();
+  }
+
+  //----------------------------------------------------------------------------
+  // Return const reference to data
+  //----------------------------------------------------------------------------
+  const char* data() const {
+    if(region) {
       return regionPtr;
     }
 
@@ -126,6 +144,34 @@ public:
   std::string& getInternalBuffer() {
     return internalBuffer;
   }
+
+  //----------------------------------------------------------------------------
+  // Equality operator with std::string_view
+  //----------------------------------------------------------------------------
+  bool operator==(std::string_view sv) const {
+    return std::string_view(*this) == sv;
+  }
+
+  //----------------------------------------------------------------------------
+  // Equality operator - other PinnedBuffers
+  //----------------------------------------------------------------------------
+  bool operator==(const PinnedBuffer &other) const {
+    return std::string_view(*this) == std::string_view(other);
+  }
+
+  //----------------------------------------------------------------------------
+  // Drop last n characters
+  //----------------------------------------------------------------------------
+  void remove_suffix(size_t n) {
+    if(region) {
+      regionSize -= n;
+      return;
+    }
+
+    internalBuffer.erase(internalBuffer.begin()+internalBuffer.size()-n,
+      internalBuffer.end());
+  }
+
 
 private:
   std::shared_ptr<MemoryRegion> region;

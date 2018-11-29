@@ -24,6 +24,7 @@
 #ifndef QUARKDB_REDIS_REQUEST_H
 #define QUARKDB_REDIS_REQUEST_H
 
+#include "memory/PinnedBuffer.hh"
 #include "Commands.hh"
 #include <string>
 #include <vector>
@@ -33,14 +34,14 @@ namespace quarkdb {
 
 class RedisRequest {
 public:
-  using container = std::vector<std::string>;
+  using container = std::vector<PinnedBuffer>;
   using iterator = container::iterator;
   using const_iterator = container::const_iterator;
   using size_type = container::size_type;
 
   RedisRequest(std::initializer_list<std::string> list) {
     for(auto it = list.begin(); it != list.end(); it++) {
-      contents.push_back(*it);
+      contents.emplace_back(*it);
     }
     parseCommand();
   }
@@ -51,7 +52,7 @@ public:
     return contents.size();
   }
 
-  std::string& operator[](size_t i) {
+  PinnedBuffer& getPinnedBuffer(size_t i) {
     return contents[i];
   }
 
@@ -83,7 +84,7 @@ public:
   }
 
   void emplace_back(const char* buf, size_t size) {
-    contents.emplace_back(buf, size);
+    contents.emplace_back(std::string_view(buf, size));
     if(contents.size() == 1) parseCommand();
   }
 
@@ -120,11 +121,12 @@ public:
   }
 
 private:
-  std::vector<std::string> contents;
+  std::vector<PinnedBuffer> contents;
   RedisCommand command = RedisCommand::INVALID;
   CommandType commandType = CommandType::INVALID;
 };
 
+using ReqIterator = RedisRequest::const_iterator;
 std::ostream& operator<<(std::ostream& out, const RedisRequest& req);
 
 }

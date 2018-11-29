@@ -145,14 +145,14 @@ RedisEncodedResponse RedisDispatcher::dispatchLHSET(StagingArea &stagingArea, st
   return Formatter::integer(fieldcreated);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchHDEL(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end) {
+RedisEncodedResponse RedisDispatcher::dispatchHDEL(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end) {
   int64_t count = 0;
   rocksdb::Status st = store.hdel(stagingArea, key, start, end, count);
   if(!st.ok()) return Formatter::fromStatus(st);
   return Formatter::integer(count);
 }
 
-RedisEncodedResponse RedisDispatcher::dispatchLHDEL(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end) {
+RedisEncodedResponse RedisDispatcher::dispatchLHDEL(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end) {
   int64_t count = 0;
   rocksdb::Status st = store.lhdel(stagingArea, key, start, end, count);
   if(!st.ok()) return Formatter::fromStatus(st);

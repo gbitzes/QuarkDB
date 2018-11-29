@@ -35,7 +35,7 @@ void RedisRequest::parseCommand() {
     return;
   }
 
-  auto it = redis_cmd_map.find(contents[0]);
+  auto it = redis_cmd_map.find(std::string_view(contents[0]));
   if(it == redis_cmd_map.end()) {
     return;
   }
@@ -56,7 +56,7 @@ std::string RedisRequest::toPrintableString() const {
     if(it != begin()) ss << " ";
 
     if(StringUtils::isPrintable(*it)) {
-      ss << "\"" << *it << "\"";
+      ss << "\"" << std::string_view(*it) << "\"";
     }
     else {
       ss << "\"" << StringUtils::escapeNonPrintable(*it) << "\"";

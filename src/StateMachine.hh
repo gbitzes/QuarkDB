@@ -26,6 +26,7 @@
 
 #include "Timekeeper.hh"
 #include "Common.hh"
+#include "RedisRequest.hh"
 #include "utils/Macros.hh"
 #include "utils/RequestCounter.hh"
 #include "storage/KeyDescriptor.hh"
@@ -56,7 +57,6 @@ public:
   DISALLOW_COPY_AND_ASSIGN(StateMachine);
   void reset();
 
-  using VecIterator = std::vector<std::string>::const_iterator;
   using IteratorPtr = std::unique_ptr<rocksdb::Iterator>;
 
   //----------------------------------------------------------------------------
@@ -64,27 +64,27 @@ public:
   // per batch, not per individual operation.
   //----------------------------------------------------------------------------
   rocksdb::Status set(StagingArea &stagingArea, std::string_view key, std::string_view value);
-  rocksdb::Status del(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status del(StagingArea &stagingArea, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
   rocksdb::Status flushall(StagingArea &stagingArea);
 
   rocksdb::Status hset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
-  rocksdb::Status hmset(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end);
+  rocksdb::Status hmset(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end);
   rocksdb::Status hsetnx(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
   rocksdb::Status hincrby(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view incrby, int64_t &result);
   rocksdb::Status hincrbyfloat(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view incrby, double &result);
-  rocksdb::Status hdel(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status hdel(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
   rocksdb::Status hclone(StagingArea &stagingArea, std::string_view source, std::string_view target);
 
   rocksdb::Status lhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated);
-  rocksdb::Status lhdel(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed);
-  rocksdb::Status lhmset(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end);
+  rocksdb::Status lhdel(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
+  rocksdb::Status lhmset(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end);
 
-  rocksdb::Status sadd(StagingArea &stagingArea, std::string_view key,  const VecIterator &start, const VecIterator &end, int64_t &added);
-  rocksdb::Status srem(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed);
+  rocksdb::Status sadd(StagingArea &stagingArea, std::string_view key,  const ReqIterator &start, const ReqIterator &end, int64_t &added);
+  rocksdb::Status srem(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
   rocksdb::Status smove(StagingArea &stagingArea, std::string_view source, std::string_view destination, std::string_view element, int64_t &outcome);
 
-  rocksdb::Status dequePushFront(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length);
-  rocksdb::Status dequePushBack(StagingArea &stagingArea, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePushFront(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &length);
+  rocksdb::Status dequePushBack(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &length);
   rocksdb::Status dequePopFront(StagingArea &stagingArea, std::string_view key, std::string &item);
   rocksdb::Status dequePopBack(StagingArea &stagingArea, std::string_view key, std::string &item);
   rocksdb::Status dequeTrimFront(StagingArea &stagingArea, std::string_view key, std::string_view maxToKeep, int64_t &itemsRemoved);
@@ -98,7 +98,7 @@ public:
   // API for transactional reads. Can be part of a mixed read-write transaction.
   //----------------------------------------------------------------------------
   rocksdb::Status get(StagingArea &stagingArea, std::string_view key, std::string &value);
-  rocksdb::Status exists(StagingArea &stagingArea, const VecIterator &start, const VecIterator &end, int64_t &count);
+  rocksdb::Status exists(StagingArea &stagingArea, const ReqIterator &start, const ReqIterator &end, int64_t &count);
   rocksdb::Status keys(StagingArea &stagingArea, std::string_view pattern, std::vector<std::string> &result);
   rocksdb::Status scan(StagingArea &stagingArea, std::string_view cursor, std::string_view pattern, size_t count, std::string &newcursor, std::vector<std::string> &results);
   rocksdb::Status hget(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string &value);
@@ -129,29 +129,29 @@ public:
   rocksdb::Status hkeys(std::string_view key, std::vector<std::string> &keys);
   rocksdb::Status hgetall(std::string_view key, std::vector<std::string> &res);
   rocksdb::Status hset(std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated, LogIndex index = 0);
-  rocksdb::Status hmset(std::string_view key, const VecIterator &start, const VecIterator &end, LogIndex index = 0);
+  rocksdb::Status hmset(std::string_view key, const ReqIterator &start, const ReqIterator &end, LogIndex index = 0);
   rocksdb::Status hsetnx(std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated, LogIndex index = 0);
   rocksdb::Status hincrby(std::string_view key, std::string_view field, std::string_view incrby, int64_t &result, LogIndex index = 0);
   rocksdb::Status hincrbyfloat(std::string_view key, std::string_view field, std::string_view incrby, double &result, LogIndex index = 0);
-  rocksdb::Status hdel(std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
+  rocksdb::Status hdel(std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status hlen(std::string_view key, size_t &len);
   rocksdb::Status hscan(std::string_view key, std::string_view cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
   rocksdb::Status hvals(std::string_view key, std::vector<std::string> &vals);
-  rocksdb::Status sadd(std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &added, LogIndex index = 0);
+  rocksdb::Status sadd(std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &added, LogIndex index = 0);
   rocksdb::Status sismember(std::string_view key, std::string_view element);
-  rocksdb::Status srem(std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
+  rocksdb::Status srem(std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed, LogIndex index = 0);
   rocksdb::Status smembers(std::string_view key, std::vector<std::string> &members);
   rocksdb::Status scard(std::string_view key, size_t &count);
   rocksdb::Status sscan(std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
   rocksdb::Status set(std::string_view key, std::string_view value, LogIndex index = 0);
   rocksdb::Status get(std::string_view key, std::string &value);
-  rocksdb::Status del(const VecIterator &start, const VecIterator &end, int64_t &removed, LogIndex index = 0);
-  rocksdb::Status exists(const VecIterator &start, const VecIterator &end, int64_t &count);
+  rocksdb::Status del(const ReqIterator &start, const ReqIterator &end, int64_t &removed, LogIndex index = 0);
+  rocksdb::Status exists(const ReqIterator &start, const ReqIterator &end, int64_t &count);
   rocksdb::Status keys(std::string_view pattern, std::vector<std::string> &result);
   rocksdb::Status scan(std::string_view cursor, std::string_view pattern, size_t count, std::string &newcursor, std::vector<std::string> &results);
   rocksdb::Status flushall(LogIndex index = 0);
-  rocksdb::Status dequePushFront(std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
-  rocksdb::Status dequePushBack(std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length, LogIndex index = 0);
+  rocksdb::Status dequePushFront(std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &length, LogIndex index = 0);
+  rocksdb::Status dequePushBack(std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &length, LogIndex index = 0);
   rocksdb::Status dequePopFront(std::string_view key, std::string &item, LogIndex index = 0);
   rocksdb::Status dequePopBack(std::string_view key, std::string &item, LogIndex index = 0);
   rocksdb::Status dequeTrimFront(std::string_view key, std::string_view maxToKeep, int64_t &itemsRemoved, LogIndex index = 0);
@@ -237,7 +237,7 @@ private:
   void commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index);
   bool assertKeyType(StagingArea &stagingArea, std::string_view key, KeyType keytype);
   rocksdb::Status dequePop(StagingArea &stagingArea, Direction direction, std::string_view key, std::string &item);
-  rocksdb::Status dequePush(StagingArea &stagingArea, Direction direction, std::string_view key, const VecIterator &start, const VecIterator &end, int64_t &length);
+  rocksdb::Status dequePush(StagingArea &stagingArea, Direction direction, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &length);
 
   class WriteOperation {
   public:

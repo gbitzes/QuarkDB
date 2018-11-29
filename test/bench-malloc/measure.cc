@@ -31,7 +31,7 @@ using namespace quarkdb;
 using namespace qclient;
 class AllocationCount : public TestCluster3NodesFixture {};
 
-TEST_F(AllocationCount, 30k_entries) {
+TEST_F(AllocationCount, 300k_entries) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
@@ -41,9 +41,9 @@ TEST_F(AllocationCount, 30k_entries) {
 
   std::vector<std::future<redisReplyPtr>> futures;
 
-  constexpr int64_t NENTRIES = 5000000;
+  constexpr int64_t NENTRIES = 300000;
   for(size_t i = 0; i < NENTRIES; i++) {
-    futures.emplace_back(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)));
+    futures.emplace_back(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-------------------------------------------------------------------" << i)));
   }
 
   for(size_t i = 0; i < futures.size(); i++) {

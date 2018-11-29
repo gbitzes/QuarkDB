@@ -66,7 +66,7 @@ inline bool isPrefix(const std::string &prefix, const std::string &target) {
   return isPrefix(prefix, target.c_str(), target.size());
 }
 
-inline bool isPrintable(const std::string &str) {
+inline bool isPrintable(std::string_view str) {
   for(size_t i = 0; i < str.size(); i++) {
     if(!isprint(str[i])) {
       return false;
