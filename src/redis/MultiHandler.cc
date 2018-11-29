@@ -88,7 +88,7 @@ LinkStatus MultiHandler::process(Dispatcher *dispatcher, Connection *conn, Redis
   }
 
   // Queue
-  transaction.push_back(req);
+  transaction.push_back(std::move(req));
   if(!transaction.isPhantom()) {
     return conn->status("QUEUED");
   }

@@ -35,7 +35,7 @@ public:
 
   explicit Transaction(RedisRequest &&req);
 
-  void push_back(const RedisRequest &req);
+  void push_back(RedisRequest &&req);
   bool containsWrites() const {
     return hasWrites;
   }
@@ -58,7 +58,7 @@ public:
 
   template<typename... Args>
   void emplace_back(Args&&... args) {
-    requests.push_back( RedisRequest { args ... } );
+    requests.emplace_back( RedisRequest { args ... } );
     checkLastCommandForWrites();
   }
 

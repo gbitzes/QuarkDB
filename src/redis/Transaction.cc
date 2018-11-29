@@ -36,8 +36,8 @@ Transaction::Transaction() {}
 
 Transaction::~Transaction() {}
 
-void Transaction::push_back(const RedisRequest &req) {
-  requests.push_back(req);
+void Transaction::push_back(RedisRequest &&req) {
+  requests.push_back(std::move(req));
   checkLastCommandForWrites();
 }
 
