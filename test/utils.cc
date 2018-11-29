@@ -553,35 +553,40 @@ TEST(AssistedThread, CoordinatorThread) {
 }
 
 TEST(RingAllocator, MemoryRegion) {
-  MemoryRegion region(128);
+  std::shared_ptr<MemoryRegion> region = MemoryRegion::Construct(128);
+  ASSERT_EQ(region->refcount(), 2);
 
-  ASSERT_EQ(region.size(), 128u);
-  ASSERT_EQ(region.bytesFree(), 128u);
-  ASSERT_EQ(region.bytesConsumed(), 0u);
+  ASSERT_EQ(region->size(), 128u);
+  ASSERT_EQ(region->bytesFree(), 128u);
+  ASSERT_EQ(region->bytesConsumed(), 0u);
 
-  std::byte* ptr1 = region.allocate(8);
-  std::byte* ptr2 = region.allocate(16);
-  std::byte* ptr3 = region.allocate(3);
+  PinnedBuffer ptr1 = region->allocate(8).value();
+  ASSERT_EQ(region->refcount(), 3);
 
-  ASSERT_TRUE(ptr1+8 == ptr2);
-  ASSERT_TRUE(ptr2+16 == ptr3);
-  ASSERT_EQ(region.bytesConsumed(), 27u);
-  ASSERT_EQ(region.bytesFree(), 101u);
+  PinnedBuffer ptr2 = region->allocate(16).value();
+  ASSERT_EQ(region->refcount(), 4);
 
-  region.resetAllocations();
+  PinnedBuffer ptr3 = region->allocate(3).value();
+  ASSERT_EQ(region->refcount(), 5);
 
-  std::byte* ptr4 = region.allocate(4);
-  ASSERT_EQ(ptr1, ptr4);
+  ASSERT_EQ(ptr1.data()+8, ptr2.data());
+  ASSERT_EQ(ptr2.data()+16, ptr3.data());
+  ASSERT_EQ(region->bytesConsumed(), 27u);
+  ASSERT_EQ(region->bytesFree(), 101u);
 
-  ASSERT_EQ(region.bytesConsumed(), 4u);
-  ASSERT_EQ(region.bytesFree(), 124u);
+  region->resetAllocations();
 
-  ASSERT_EQ(region.allocate(125u), nullptr);
+  PinnedBuffer ptr4 = region->allocate(4).value();
+  ASSERT_EQ(ptr4.data(), ptr1.data());
 
-  std::byte* ptr5 = region.allocate(124u);
-  ASSERT_EQ(ptr4 + 4, ptr5);
-  ASSERT_EQ(region.allocate(1u), nullptr);
+  ASSERT_EQ(region->bytesConsumed(), 4u);
+  ASSERT_EQ(region->bytesFree(), 124u);
+  ASSERT_FALSE(region->allocate(125u).has_value());
 
-  ASSERT_EQ(region.bytesFree(), 0u);
-  ASSERT_EQ(region.bytesConsumed(), 128u);
+  PinnedBuffer ptr5 = region->allocate(124u).value();
+  ASSERT_EQ(ptr4.data() + 4, ptr5.data());
+  ASSERT_FALSE(region->allocate(1u).has_value());
+
+  ASSERT_EQ(region->bytesFree(), 0u);
+  ASSERT_EQ(region->bytesConsumed(), 128u);
 }

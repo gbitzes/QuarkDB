@@ -24,24 +24,30 @@
 #ifndef QUARKDB_RING_ALLOCATOR_HH
 #define QUARKDB_RING_ALLOCATOR_HH
 
+#include "PinnedBuffer.hh"
 #include <vector>
 #include <cstddef>
 #include <memory>
+#include <optional>
 
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
 // A fancy way of saying "non-copyable contiguous array".
 //------------------------------------------------------------------------------
-class MemoryRegion {
+class MemoryRegion : public std::enable_shared_from_this<MemoryRegion> {
 public:
   //----------------------------------------------------------------------------
-  // Empty constructor
+  // Construct
   //----------------------------------------------------------------------------
-  MemoryRegion() { }
+  static std::shared_ptr<MemoryRegion> Construct(size_t n) {
+    return std::make_shared<MemoryRegion>(n);
+  }
 
   //----------------------------------------------------------------------------
-  // Constructor
+  // Private constructor - use "Construct" method which gives you a shared_ptr.
+  // Don't use this! Should have been private, but make_shared doesn't seem
+  // to work with private constructors.
   //----------------------------------------------------------------------------
   MemoryRegion(size_t n) {
     allocated = 0u;
@@ -49,17 +55,11 @@ public:
   }
 
   //----------------------------------------------------------------------------
-  // Move-constructor
-  //----------------------------------------------------------------------------
-  MemoryRegion(MemoryRegion&& other) {
-    region = std::move(other.region);
-  }
-
-  //----------------------------------------------------------------------------
-  // NO move assignment: We could accidentally overwrite an existing object,
-  // while there are dangling references to it.
+  // NO moving: All referencing PinnedBuffers to the moved-from object would
+  // become invalid..
   //----------------------------------------------------------------------------
   MemoryRegion& operator=(MemoryRegion&& other) = delete;
+  MemoryRegion(MemoryRegion&& other) = delete;
 
   //----------------------------------------------------------------------------
   // No copy-constructor, no copy-assignment for obvious reasons
@@ -68,18 +68,17 @@ public:
   MemoryRegion(const MemoryRegion& other) = delete;
 
   //----------------------------------------------------------------------------
-  // Allocate this amount of bytes, returning pointer to memory region
-  // in question.
-  // Return nullptr if we don't have enough space to service this request.
+  // Allocate this amount of bytes, filling a PinnedBuffer.
+  // Return false if we don't have enough space to service this request.
   //----------------------------------------------------------------------------
-  std::byte* allocate(size_t bytes) {
+  std::optional<PinnedBuffer> allocate(size_t bytes) {
     if(allocated + bytes > region.size()) {
-      return nullptr;
+      return {};
     }
 
-    std::byte* retval = region.data() + allocated;
+    char* ptr = (char*) (region.data() + allocated);
     allocated += bytes;
-    return retval;
+    return PinnedBuffer(shared_from_this(), ptr, bytes);
   }
 
   //----------------------------------------------------------------------------
@@ -110,6 +109,14 @@ public:
   size_t bytesFree() const {
     return size() - bytesConsumed();
   }
+
+  //----------------------------------------------------------------------------
+  // Return number of references to this object
+  //----------------------------------------------------------------------------
+  long refcount() const {
+    return shared_from_this().use_count();
+  }
+
 
 private:
   std::vector<std::byte> region;
@@ -145,18 +152,18 @@ private:
 // will explode otherwise. It should, however, still behave correctly even
 // in such case.
 //------------------------------------------------------------------------------
-class RingAllocator {
-public:
-  //----------------------------------------------------------------------------
-  // Provide the size of allocated memory blocks, and the number of blocks to
-  // keep around for recycling.
-  //
-  // If a request for memory exceeds this size, direct malloc is used.
-  //
-  // TODO
-  //----------------------------------------------------------------------------
-  RingAllocator(size_t blockSize, size_t blockCount);
-};
+// class RingAllocator {
+// public:
+//   //----------------------------------------------------------------------------
+//   // Provide the size of allocated memory blocks, and the number of blocks to
+//   // keep around for recycling.
+//   //
+//   // If a request for memory exceeds this size, direct malloc is used.
+//   //
+//   // TODO
+//   //----------------------------------------------------------------------------
+//   RingAllocator(size_t blockSize, size_t blockCount);
+// };
 
 }
 
