@@ -97,11 +97,9 @@ void RaftWriteTracker::flushQueues(const RedisEncodedResponse &response) {
 bool RaftWriteTracker::append(LogIndex index, RaftTerm term, Transaction &&tx, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher) {
   std::lock_guard<std::mutex> lock(mtx);
 
-  RaftEntry entry(term, tx.toRedisRequest());
-
   if(!journal.append(index, RaftEntry(term, tx.toRedisRequest()))) {
     qdb_warn("appending to journal failed for index = " << index <<
-    " and term " << entry.term << " when appending to write tracker");
+    " and term " << term << " when appending to write tracker");
     return false;
   }
 
