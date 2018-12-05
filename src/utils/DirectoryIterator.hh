@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_DIRECTORY_ITERATOR_H__
-#define __QUARKDB_DIRECTORY_ITERATOR_H__
+#ifndef QUARKDB_DIRECTORY_ITERATOR_HH
+#define QUARKDB_DIRECTORY_ITERATOR_HH
 
 #include <dirent.h>
 #include <string>

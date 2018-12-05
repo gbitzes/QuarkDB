@@ -24,6 +24,7 @@ set(COMMON_TEST_SOURCES
 add_executable(quarkdb-tests
   auth.cc
   buffered-reader.cc
+  clock-wrapper.cc
   configuration.cc
   connection.cc
   dispatcher.cc
