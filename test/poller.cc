@@ -25,6 +25,7 @@
 #include "test-utils.hh"
 #include <gtest/gtest.h>
 #include <qclient/QClient.hh>
+#include <qclient/ReconnectionListener.hh>
 
 using namespace quarkdb;
 using namespace qclient;
@@ -62,10 +63,34 @@ TEST_F(tPoller, T1) {
   ASSERT_REPLY(reply, "asdf");
 }
 
+
+class ReconnectionCounter : public ReconnectionListener {
+public:
+
+  virtual void notifyConnectionLost(int64_t epoch, int errc,
+    const std::string &msg) override { }
+
+  virtual void notifyConnectionEstablished(int64_t epoch) override {
+    lastEpoch = epoch;
+  }
+
+  int64_t getEpoch() const {
+    return lastEpoch;
+  }
+
+private:
+  int64_t lastEpoch = 0u;
+};
+
 TEST_F(tPoller, test_reconnect) {
   RedisDispatcher dispatcher(*stateMachine());
 
-  QClient tunnel(myself().hostname, myself().port, {} );
+  std::shared_ptr<ReconnectionCounter> listener = std::make_shared<ReconnectionCounter>();
+
+  qclient::Options opts;
+  opts.reconnectionListener = listener;
+
+  QClient tunnel(myself().hostname, myself().port, std::move(opts));
 
   for(size_t reconnects = 0; reconnects < 5; reconnects++) {
     Poller rocksdbpoller(myself().port, &dispatcher);
@@ -86,4 +111,7 @@ TEST_F(tPoller, test_reconnect) {
 
     ASSERT_TRUE(success);
   }
+
+  std::cout << "Number of reconnections in total: " << listener->getEpoch() << std::endl;
+  ASSERT_GE(listener->getEpoch(), 6u);
 }
