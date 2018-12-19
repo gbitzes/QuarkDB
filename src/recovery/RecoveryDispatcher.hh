@@ -26,7 +26,6 @@
 
 #include "../Dispatcher.hh"
 #include "RecoveryEditor.hh"
-#include "../Formatter.hh"
 
 namespace quarkdb {
 

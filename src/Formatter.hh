@@ -52,10 +52,20 @@ public:
   static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries, bool raw);
   static RedisEncodedResponse noauth(std::string_view str);
 
+  static RedisEncodedResponse subscribe(std::string_view channel, size_t active);
+  static RedisEncodedResponse psubscribe(std::string_view pattern, size_t active);
+  static RedisEncodedResponse unsubscribe(std::string_view channel, size_t active);
+  static RedisEncodedResponse punsubscribe(std::string_view channel, size_t active);
+  static RedisEncodedResponse message(std::string_view channel, std::string_view payload);
+  static RedisEncodedResponse pmessage(std::string_view pattern, std::string_view channel, std::string_view payload);
+
   static RedisEncodedResponse simpleRedisRequest(const RedisRequest &req);
   static RedisEncodedResponse redisRequest(const RedisRequest &req);
 
   static RedisEncodedResponse multiply(const RedisEncodedResponse &resp, size_t factor);
+
+private:
+  static RedisEncodedResponse strstrint(std::string_view str1, std::string_view str2, int num);
 };
 
 }

@@ -176,3 +176,54 @@ RedisEncodedResponse Formatter::multiply(const RedisEncodedResponse &resp, size_
 
   return RedisEncodedResponse(ss.str());
 }
+
+RedisEncodedResponse Formatter::subscribe(std::string_view channel, size_t active) {
+  return strstrint("subscribe", channel, active);
+}
+
+RedisEncodedResponse Formatter::psubscribe(std::string_view pattern, size_t active) {
+  return strstrint("psubscribe", pattern, active);
+}
+
+RedisEncodedResponse Formatter::unsubscribe(std::string_view channel, size_t active) {
+  return strstrint("unsubscribe", channel, active);
+}
+
+RedisEncodedResponse Formatter::punsubscribe(std::string_view pattern, size_t active) {
+  return strstrint("punsubscribe", pattern, active);
+}
+
+RedisEncodedResponse Formatter::message(std::string_view channel, std::string_view payload) {
+  std::ostringstream ss;
+  ss << "*3\r\n";
+  ss << "$7\r\nmessage\r\n";
+  ss << "$" << channel.size() << "\r\n";
+  ss << channel << "\r\n";
+  ss << "$" << payload.size() << "\r\n";
+  ss << payload << "\r\n";
+  return RedisEncodedResponse(ss.str());
+}
+
+RedisEncodedResponse Formatter::pmessage(std::string_view pattern, std::string_view channel, std::string_view payload) {
+  std::ostringstream ss;
+  ss << "*4\r\n";
+  ss << "$8\r\npmessage\r\n";
+  ss << "$" << pattern.size() << "\r\n";
+  ss << pattern << "\r\n";
+  ss << "$" << channel.size() << "\r\n";
+  ss << channel << "\r\n";
+  ss << "$" << payload.size() << "\r\n";
+  ss << payload << "\r\n";
+  return RedisEncodedResponse(ss.str());
+}
+
+RedisEncodedResponse Formatter::strstrint(std::string_view str1, std::string_view str2, int num) {
+  std::ostringstream ss;
+  ss << "*3\r\n";
+  ss << "$" << str1.size() << "\r\n";
+  ss << str1 << "\r\n";
+  ss << "$" << str2.size() << "\r\n";
+  ss << str2 << "\r\n";
+  ss << ":" << num << "\r\n";
+  return RedisEncodedResponse(ss.str());
+}
