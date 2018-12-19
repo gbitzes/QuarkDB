@@ -65,6 +65,8 @@ public:
   LinkStatus addPendingTransaction(RedisDispatcher *dispatcher, Transaction &&tx, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
   bool appendIfAttached(RedisEncodedResponse &&raw);
+  size_t subscriptions = 0u;
+
 private:
   LinkStatus appendResponseNoLock(RedisEncodedResponse &&raw);
   Connection *conn;

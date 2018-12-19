@@ -155,6 +155,12 @@ enum class RedisCommand {
 
   CONVERT_STRING_TO_INT,
   CONVERT_INT_TO_STRING,
+
+  PUBLISH,
+  SUBSCRIBE,
+  PSUBSCRIBE,
+  UNSUBSCRIBE,
+  PUNSUBSCRIBE,
 };
 
 enum class CommandType {
@@ -166,7 +172,8 @@ enum class CommandType {
   RAFT,
   QUARKDB,
   AUTHENTICATION,
-  RECOVERY
+  RECOVERY,
+  PUBSUB
 };
 
 #define QDB_ALWAYS_INLINE __attribute__((always_inline))

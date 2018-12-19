@@ -53,7 +53,27 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, Transaction &transaction) 
   return this->service(conn, transaction);
 }
 
+LinkStatus RaftDispatcher::dispatchPubsub(Connection *conn, RedisRequest &req) {
+  // Only leaders should service pubsub requests.
+  RaftStateSnapshotPtr snapshot = state.getSnapshot();
+  if(snapshot->status != RaftStatus::LEADER) {
+    if(snapshot->leader.empty()) {
+      return conn->raw(Formatter::err("unavailable"));
+    }
+
+    // Redirect.
+    return conn->raw(Formatter::moved(0, snapshot->leader));
+  }
+
+  // We're good, submit to publisher.
+  return publisher.dispatch(conn, req);
+}
+
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
+  if(req.getCommandType() == CommandType::PUBSUB) {
+    return dispatchPubsub(conn, req);
+  }
+
   switch(req.getCommand()) {
     case RedisCommand::RAFT_INFO: {
       // safe, read-only request, does not need authorization
@@ -410,6 +430,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
   //----------------------------------------------------------------------------
 
   writeTracker.flushQueues(Formatter::moved(0, snapshot->leader));
+  publisher.purge(Formatter::moved(0, snapshot->leader));
 
   if(!journal.matchEntries(req.prevIndex, req.prevTerm)) {
     return {snapshot->term, journal.getLogSize(), false, "Log entry mismatch"};

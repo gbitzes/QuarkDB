@@ -173,6 +173,10 @@ std::vector<RaftServer> TestCluster::nodes(int id) {
   return node(id)->nodes();
 }
 
+qclient::Members TestCluster::members(int id) {
+  return node(id)->members();
+}
+
 qclient::QClient* TestCluster::tunnel(int id) {
   return node(id)->tunnel();
 }
@@ -319,6 +323,17 @@ RaftServer TestNode::myself() {
 
 std::vector<RaftServer> TestNode::nodes() {
   return group()->journal()->getNodes();
+}
+
+qclient::Members TestNode::members() {
+  qclient::Members memb;
+  std::vector<RaftServer> clusterNodes = this->nodes();
+
+  for(auto it = clusterNodes.begin(); it != clusterNodes.end(); it++) {
+    memb.push_back(it->hostname, it->port);
+  }
+
+  return memb;
 }
 
 Poller* TestNode::poller() {

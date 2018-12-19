@@ -147,6 +147,7 @@ public:
 
   RaftServer myself();
   std::vector<RaftServer> nodes();
+  qclient::Members members();
 
   void spinup();
   void spindown();
@@ -207,6 +208,7 @@ public:
   // initialize nodes using information passed on the nodes variable, except if srv is set
   TestNode* node(int id = 0, const RaftServer &srv = {});
   std::vector<RaftServer> nodes(int id = 0);
+  qclient::Members members(int id = 0);
   RaftClusterID clusterID();
 
   template<typename... Args>

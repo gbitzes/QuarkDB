@@ -40,6 +40,8 @@
 #include "qclient/QSet.hh"
 #include "qclient/ConnectionInitiator.hh"
 #include "qclient/QHash.hh"
+#include "qclient/pubsub/MessageQueue.hh"
+#include "qclient/BaseSubscriber.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -1704,4 +1706,59 @@ TEST_F(Raft_e2e, CloneHash) {
   ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "not-existing", "hash"), "ERR Invalid argument: ERR target key already exists, will not overwrite");
   ASSERT_REPLY(tunnel(leaderID)->exec("hclone", "not-existing", "not-existing-2"), "OK");
   ASSERT_REPLY(tunnel(leaderID)->exec("exists", "not-existing", "not-existing-2"), 0);
+}
+
+bool lookForSentinelValues(qclient::MessageQueue *queue) {
+  bool penguinsFound = false;
+  bool chickensFound = false;
+
+  auto iterator = queue->begin();
+
+  for(size_t i = 0; i < queue->size(); i++) {
+    Message& item = iterator.item();
+
+    if(item.getPayload() == "penguins") {
+      penguinsFound = true;
+    }
+
+    if(item.getPayload() == "chickens") {
+      chickensFound = true;
+    }
+
+    iterator.next();
+  }
+
+  return penguinsFound && chickensFound;
+}
+
+TEST_F(Raft_e2e, pubsub) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  std::shared_ptr<qclient::MessageQueue> mq = std::make_shared<qclient::MessageQueue>();
+  qclient::SubscriptionOptions opts;
+  opts.handshake = makeQClientHandshake();
+  qclient::BaseSubscriber subscriber(members(), mq, std::move(opts));
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("publish", "test-channel", "giraffes"), 0);
+  subscriber.subscribe( {"test-channel"} );
+
+  RETRY_ASSERT_TRUE(
+    qclient::describeRedisReply(tunnel(leaderID)->exec("publish", "test-channel", "penguins").get()) ==
+    "(integer) 1"
+  );
+
+  spindown(0); spindown(1); spindown(2);
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  leaderID = getLeaderID();
+
+  // Ensure subscriber is able to re-subscribe!
+  RETRY_ASSERT_TRUE(
+    qclient::describeRedisReply(tunnel(leaderID)->exec("publish", "test-channel", "chickens").get()) ==
+    "(integer) 1"
+  );
+
+  RETRY_ASSERT_TRUE(lookForSentinelValues(mq.get()));
 }

@@ -153,5 +153,10 @@ struct cmdMapInit {
     redis_cmd_map["convert_string_to_int"] = {RedisCommand::CONVERT_STRING_TO_INT, CommandType::CONTROL};
     redis_cmd_map["convert_int_to_string"] = {RedisCommand::CONVERT_INT_TO_STRING, CommandType::CONTROL};
 
+    redis_cmd_map["publish"] = {RedisCommand::PUBLISH, CommandType::PUBSUB};
+    redis_cmd_map["subscribe"] = {RedisCommand::SUBSCRIBE, CommandType::PUBSUB};
+    redis_cmd_map["psubscribe"] = {RedisCommand::PSUBSCRIBE, CommandType::PUBSUB};
+    redis_cmd_map["unsubscribe"] = {RedisCommand::UNSUBSCRIBE, CommandType::PUBSUB};
+    redis_cmd_map["punsubscribe"] = {RedisCommand::PUNSUBSCRIBE, CommandType::PUBSUB};
   }
 } cmd_map_init;

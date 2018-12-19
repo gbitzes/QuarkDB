@@ -25,6 +25,7 @@
 #define QUARKDB_RAFT_DISPATCHER_HH
 
 #include "../Dispatcher.hh"
+#include "../pubsub/Publisher.hh"
 #include "RaftUtils.hh"
 #include "RaftTimeouts.hh"
 #include "RaftBlockedWrites.hh"
@@ -51,6 +52,7 @@ public:
   LinkStatus dispatchInfo(Connection *conn, RedisRequest &req);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
+  LinkStatus dispatchPubsub(Connection *conn, RedisRequest &req);
 
   RaftInfo info();
   bool fetch(LogIndex index, RaftEntry &entry);
@@ -88,6 +90,10 @@ private:
   std::chrono::steady_clock::time_point lastLaggingWarning;
   void warnIfLagging(LogIndex leaderLogIndex);
 
+  //----------------------------------------------------------------------------
+  // Publishing service
+  //----------------------------------------------------------------------------
+  Publisher publisher;
 };
 
 }

@@ -40,6 +40,8 @@ add_library(XrdQuarkDB SHARED
 
                                       health/HealthIndicator.hh
 
+  pubsub/Publisher.cc                 pubsub/Publisher.hh
+
   raft/RaftBlockedWrites.cc           raft/RaftBlockedWrites.hh
   raft/RaftConfig.cc                  raft/RaftConfig.hh
   raft/RaftJournal.cc                 raft/RaftJournal.hh
