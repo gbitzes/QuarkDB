@@ -1731,6 +1731,28 @@ bool lookForSentinelValues(qclient::MessageQueue *queue) {
   return penguinsFound && chickensFound;
 }
 
+bool lookForTurtles(qclient::MessageQueue *queue) {
+  bool turtlesFound = false;
+
+  auto iterator = queue->begin();
+
+  for(size_t i = 0; i < queue->size(); i++) {
+    Message& item = iterator.item();
+
+    if(item.getMessageType() == MessageType::kPatternMessage &&
+       item.getPattern() == "abc-*" &&
+       item.getChannel() == "abc-cde" &&
+       item.getPayload() == "turtles") {
+
+      turtlesFound = true;
+    }
+
+    iterator.next();
+  }
+
+  return turtlesFound;
+}
+
 TEST_F(Raft_e2e, pubsub) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
@@ -1761,4 +1783,13 @@ TEST_F(Raft_e2e, pubsub) {
   );
 
   RETRY_ASSERT_TRUE(lookForSentinelValues(mq.get()));
+
+  // now subscribe to a pattern
+  subscriber.psubscribe( {"abc-*" } );
+  RETRY_ASSERT_TRUE(
+    qclient::describeRedisReply(tunnel(leaderID)->exec("publish", "abc-cde", "turtles").get()) ==
+    "(integer) 1"
+  );
+
+  RETRY_ASSERT_TRUE(lookForTurtles(mq.get()));
 }

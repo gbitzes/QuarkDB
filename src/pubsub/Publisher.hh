@@ -24,6 +24,7 @@
 #ifndef QUARKDB_PUBLISHER_HH
 #define QUARKDB_PUBLISHER_HH
 
+#include "SimplePatternMatcher.hh"
 #include "../Connection.hh"
 #include "../Dispatcher.hh"
 #include <map>
@@ -41,8 +42,11 @@ public:
   // Destructor
   ~Publisher();
 
-  // Subscribe connection to given channels - returns how many subscriptions were new.
+  // Subscribe connection to given channel or pattern. Return whether the subscription
+  // existed already, or not.
   int subscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel);
+  int psubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern);
+
   int publish(std::string_view channel, std::string_view payload);
   void purgeListeners(RedisEncodedResponse resp);
 
@@ -50,10 +54,18 @@ public:
   virtual LinkStatus dispatch(Connection *conn, Transaction &tx) override final;
 
 private:
+  int publishChannels(std::string_view channel, std::string_view payload);
+  int publishPatterns(std::string_view channel, std::string_view payload);
+  bool unsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel);
+  bool punsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern);
+
   std::mutex mtx;
 
   // Map of subscribed-to channels
   std::map<std::string, std::set<std::shared_ptr<PendingQueue>>> channelSubscriptions;
+
+  // Pattern matcher
+  SimplePatternMatcher<std::shared_ptr<PendingQueue>> patternMatcher;
 };
 
 }
