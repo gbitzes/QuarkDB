@@ -26,7 +26,11 @@
 
 using namespace quarkdb;
 
-void Publisher::purge(RedisEncodedResponse resp) {
+Publisher::~Publisher() {
+  purgeListeners(Formatter::err("unavailable"));
+}
+
+void Publisher::purgeListeners(RedisEncodedResponse resp) {
   std::unique_lock<std::mutex> lock(mtx);
 
   for(auto it1 = channelSubscriptions.begin(); it1 != channelSubscriptions.end(); it1++) {

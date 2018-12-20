@@ -97,6 +97,11 @@ void RaftGroup::spindown() {
     delete ctptr;
     ctptr = nullptr;
   }
+
+  if(publisherptr) {
+    delete publisherptr;
+    publisherptr = nullptr;
+  }
 }
 
 RaftServer RaftGroup::myself() {
@@ -116,7 +121,7 @@ RaftJournal* RaftGroup::journal() {
 RaftDispatcher* RaftGroup::dispatcher() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(dispatcherptr == nullptr) {
-    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock(), *writeTracker(), *replicator());
+    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock(), *writeTracker(), *replicator(), *publisher());
   }
   return dispatcherptr;
 }
@@ -140,7 +145,7 @@ RaftState* RaftGroup::state() {
 RaftDirector* RaftGroup::director() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), shardDirectory, *config(), *replicator(), *contactDetails());
+    directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), shardDirectory, *config(), *replicator(), *contactDetails(), *publisher());
   }
   return directorptr;
 }
@@ -191,6 +196,14 @@ RaftReplicator* RaftGroup::replicator() {
     replicatorptr = new RaftReplicator(*journal(), *state(), *lease(), *commitTracker(), *trimmer(), shardDirectory, *config(), *contactDetails());
   }
   return replicatorptr;
+}
+
+Publisher* RaftGroup::publisher() {
+  std::lock_guard<std::recursive_mutex> lock(mtx);
+  if(publisherptr == nullptr) {
+    publisherptr = new Publisher();
+  }
+  return publisherptr;
 }
 
 const RaftContactDetails* RaftGroup::contactDetails() const {

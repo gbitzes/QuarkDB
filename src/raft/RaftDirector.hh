@@ -37,11 +37,11 @@
 namespace quarkdb {
 
 class RaftTrimmer; class ShardDirectory; class RaftConfig; class RaftReplicator;
-class RaftContactDetails;
+class RaftContactDetails; class Publisher;
 
 class RaftDirector {
 public:
-  RaftDirector(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &config, RaftReplicator &replicator, const RaftContactDetails &contactDetails);
+  RaftDirector(RaftJournal &journal, StateMachine &stateMachine, RaftState &state, RaftLease &lease, RaftCommitTracker &commitTracker, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &config, RaftReplicator &replicator, const RaftContactDetails &contactDetails, Publisher &publisher);
   ~RaftDirector();
   DISALLOW_COPY_AND_ASSIGN(RaftDirector);
 private:
@@ -62,6 +62,7 @@ private:
   RaftConfig &config;
   RaftReplicator &replicator;
   const RaftContactDetails &contactDetails;
+  Publisher &publisher;
 
   std::chrono::steady_clock::time_point lastHeartbeatBeforeVeto;
   std::thread mainThread;

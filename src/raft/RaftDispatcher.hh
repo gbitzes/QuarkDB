@@ -46,7 +46,7 @@ using RaftStateSnapshotPtr = std::shared_ptr<const RaftStateSnapshot>;
 
 class RaftDispatcher : public Dispatcher {
 public:
-  RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &rt, RaftReplicator &replicator);
+  RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &rt, RaftReplicator &replicator, Publisher &publisher);
   DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
   LinkStatus dispatchInfo(Connection *conn, RedisRequest &req);
@@ -70,19 +70,16 @@ private:
   std::mutex raftCommand;
 
   //----------------------------------------------------------------------------
-  // The all-important raft journal, state machine, and state tracker
+  // Injected dependencies
   //----------------------------------------------------------------------------
   RaftJournal &journal;
   StateMachine &stateMachine;
   RaftState &state;
-
-  //----------------------------------------------------------------------------
-  // Misc
-  //----------------------------------------------------------------------------
   RaftClock &raftClock;
   RedisDispatcher redisDispatcher;
   RaftWriteTracker& writeTracker;
   RaftReplicator &replicator;
+  Publisher &publisher;
 
   //----------------------------------------------------------------------------
   // Print a message when a follower is too far behind in regular intervals
@@ -90,10 +87,6 @@ private:
   std::chrono::steady_clock::time_point lastLaggingWarning;
   void warnIfLagging(LogIndex leaderLogIndex);
 
-  //----------------------------------------------------------------------------
-  // Publishing service
-  //----------------------------------------------------------------------------
-  Publisher publisher;
 };
 
 }

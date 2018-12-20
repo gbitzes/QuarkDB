@@ -29,8 +29,8 @@
 
 namespace quarkdb {
 
-RaftDirector::RaftDirector(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &conf, RaftReplicator &rep, const RaftContactDetails &cd)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), shardDirectory(sharddir), config(conf), replicator(rep), contactDetails(cd) {
+RaftDirector::RaftDirector(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &conf, RaftReplicator &rep, const RaftContactDetails &cd, Publisher &pub)
+: journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), shardDirectory(sharddir), config(conf), replicator(rep), contactDetails(cd), publisher(pub) {
   mainThread = std::thread(&RaftDirector::main, this);
 }
 
@@ -73,6 +73,7 @@ void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
       qdb_event("My leader lease has expired, I no longer control a quorum, stepping down.");
       state.observed(snapshot->term+1, {});
       writeTracker.flushQueues(Formatter::err("unavailable"));
+      publisher.purgeListeners(Formatter::err("unavailable"));
       break;
     }
 
@@ -124,6 +125,7 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
     if(snapshot->term != now->term || snapshot->status != now->status) return;
 
     writeTracker.flushQueues(Formatter::err("unavailable"));
+    publisher.purgeListeners(Formatter::err("unavailable"));
     state.wait(randomTimeout);
 
     if(raftClock.getLastHeartbeat() == lastHeartbeatBeforeVeto) {

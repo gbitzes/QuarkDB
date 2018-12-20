@@ -37,6 +37,7 @@ class RaftState; class RaftReplicator; class RaftClock;
 class RaftDirector; class RaftLease; class RaftWriteTracker;
 class RaftTrimmer; class RaftCommitTracker; class RaftConfig;
 class ShardDirectory; class RaftContactDetails;
+class Publisher;
 
 //------------------------------------------------------------------------------
 // This class keeps track of and owns all objects needed for the raft party.
@@ -61,6 +62,7 @@ public:
   RaftTrimmer *trimmer();
   RaftConfig *config();
   RaftReplicator *replicator();
+  Publisher *publisher();
   const RaftContactDetails* contactDetails() const;
 
   RaftServer myself();
@@ -89,6 +91,7 @@ private:
   RaftTrimmer *trimmerptr = nullptr;
   RaftConfig *configptr = nullptr;
   RaftReplicator *replicatorptr = nullptr;
+  Publisher *publisherptr = nullptr;
 };
 
 }

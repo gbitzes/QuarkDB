@@ -37,8 +37,8 @@
 
 using namespace quarkdb;
 
-RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &wt, RaftReplicator &rep)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt), replicator(rep) {
+RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &wt, RaftReplicator &rep, Publisher &pub)
+: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt), replicator(rep), publisher(pub) {
 }
 
 LinkStatus RaftDispatcher::dispatchInfo(Connection *conn, RedisRequest &req) {
@@ -430,7 +430,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
   //----------------------------------------------------------------------------
 
   writeTracker.flushQueues(Formatter::moved(0, snapshot->leader));
-  publisher.purge(Formatter::moved(0, snapshot->leader));
+  publisher.purgeListeners(Formatter::moved(0, snapshot->leader));
 
   if(!journal.matchEntries(req.prevIndex, req.prevTerm)) {
     return {snapshot->term, journal.getLogSize(), false, "Log entry mismatch"};

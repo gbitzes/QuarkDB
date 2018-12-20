@@ -38,10 +38,13 @@ class RedisRequest;
 
 class Publisher : public Dispatcher {
 public:
+  // Destructor
+  ~Publisher();
+
   // Subscribe connection to given channels - returns how many subscriptions were new.
   int subscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel);
   int publish(std::string_view channel, std::string_view payload);
-  void purge(RedisEncodedResponse resp);
+  void purgeListeners(RedisEncodedResponse resp);
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, Transaction &tx) override final;
