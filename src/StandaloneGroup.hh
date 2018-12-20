@@ -26,6 +26,7 @@
 
 #include <memory>
 #include "Dispatcher.hh"
+#include "pubsub/Publisher.hh"
 
 namespace quarkdb {
 
@@ -36,18 +37,20 @@ class Dispatcher;
 
 class StandaloneDispatcher : public Dispatcher {
 public:
-  StandaloneDispatcher(StateMachine &sm);
+  StandaloneDispatcher(StateMachine &sm, Publisher &pub);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, Transaction &req) override final;
 
 private:
   StateMachine* stateMachine;
   RedisDispatcher dispatcher;
+  Publisher* publisher;
 };
 
 class StandaloneGroup {
 public:
   StandaloneGroup(ShardDirectory& shardDirectory, bool bulkload);
+  ~StandaloneGroup();
 
   StateMachine* getStateMachine();
   Dispatcher* getDispatcher();
@@ -57,6 +60,7 @@ private:
   bool bulkload;
 
   std::unique_ptr<StandaloneDispatcher> dispatcher;
+  std::unique_ptr<Publisher> publisher;
   StateMachine* stateMachine;
 };
 

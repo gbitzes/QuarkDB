@@ -38,7 +38,11 @@ StandaloneGroup::StandaloneGroup(ShardDirectory& dir, bool bulk)
       stateMachine = shardDirectory.getStateMachine();
   }
 
-  dispatcher.reset(new StandaloneDispatcher(*stateMachine));
+  publisher.reset(new Publisher());
+  dispatcher.reset(new StandaloneDispatcher(*stateMachine, *publisher));
+}
+
+StandaloneGroup::~StandaloneGroup() {
 }
 
 StateMachine* StandaloneGroup::getStateMachine() {
@@ -49,16 +53,20 @@ Dispatcher* StandaloneGroup::getDispatcher() {
   return dispatcher.get();
 }
 
-StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm)
-: stateMachine(&sm), dispatcher(sm) {}
+StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm, Publisher &pub)
+: stateMachine(&sm), dispatcher(sm), publisher(&pub) {}
 
 LinkStatus StandaloneDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   // Show a user-friendly error message for raft-info, instead of
   // "internal dispatching error"
-
   if(req.getCommandType() == CommandType::RAFT) {
     qdb_warn("Received command " << req[0] << ", even though raft is not active");
     return conn->err(SSTR("raft not enabled, " << req[0] << " is unavailable, try quarkdb-info for general information"));
+  }
+
+  // Handle pubsub commands
+  if(req.getCommandType() == CommandType::PUBSUB) {
+    return publisher->dispatch(conn, req);
   }
 
   return dispatcher.dispatch(conn, req);
