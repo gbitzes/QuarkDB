@@ -21,8 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_PATTERN_MATCHING_H__
-#define __QUARKDB_PATTERN_MATCHING_H__
+#ifndef QUARKDB_PATTERN_MATCHING_HH
+#define QUARKDB_PATTERN_MATCHING_HH
+
+#include <string>
 
 namespace quarkdb {
 

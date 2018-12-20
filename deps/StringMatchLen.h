@@ -33,13 +33,15 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef __QUARKDB_STRING_MATCH_LEN_H__
-#define __QUARKDB_STRING_MATCH_LEN_H__
+#ifndef QUARKDB_STRING_MATCH_LEN_HH
+#define QUARKDB_STRING_MATCH_LEN_HH
+
+#include <ctype.h>
 
 namespace quarkdb {
 
 /* Glob-style pattern matching. */
-int stringmatchlen(const char *pattern, int patternLen,
+inline int stringmatchlen(const char *pattern, int patternLen,
         const char *string, int stringLen, int nocase)
 {
     while(patternLen) {

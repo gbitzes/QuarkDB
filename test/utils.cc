@@ -39,6 +39,7 @@
 #include "redis/InternalFilter.hh"
 #include "redis/RedisEncodedResponse.hh"
 #include "storage/Randomization.hh"
+#include "pubsub/SimplePatternMatcher.hh"
 #include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
@@ -621,4 +622,122 @@ TEST(PinnedBuffer, substr) {
   PinnedBuffer buf5 = buf4.substr(1, 3);
   ASSERT_EQ(buf5, "wer");
   ASSERT_TRUE(buf5.usingInternalBuffer());
+}
+
+TEST(SimplePatternMatcher, BasicSanity) {
+  SimplePatternMatcher<int64_t> matcher;
+  auto it = matcher.find("aaa");
+  ASSERT_FALSE(it.valid());
+
+  ASSERT_EQ(matcher.size(), 0u);
+  ASSERT_TRUE(matcher.insert("*", 999));
+  ASSERT_EQ(matcher.size(), 1u);
+  ASSERT_FALSE(matcher.insert("*", 999));
+  ASSERT_EQ(matcher.size(), 1u);
+  ASSERT_TRUE(matcher.insert("abc", 111));
+  ASSERT_EQ(matcher.size(), 2u);
+  ASSERT_TRUE(matcher.insert("bbb", 123));
+  ASSERT_EQ(matcher.size(), 3u);
+
+  it = matcher.find("aaa");
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "*");
+  ASSERT_EQ(it.getValue(), 999);
+
+  it.next();
+  ASSERT_FALSE(it.valid());
+
+  it = matcher.find("abc");
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "*");
+  ASSERT_EQ(it.getValue(), 999);
+
+  it.next();
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "abc");
+  ASSERT_EQ(it.getValue(), 111);
+
+  it.next();
+  ASSERT_FALSE(it.valid());
+
+  ASSERT_TRUE(matcher.insert("[ab]bc", 222));
+  ASSERT_EQ(matcher.size(), 4u);
+  it = matcher.find("abc");
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "*");
+  ASSERT_EQ(it.getValue(), 999);
+
+  it.next();
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "[ab]bc");
+  ASSERT_EQ(it.getValue(), 222);
+
+  it.next();
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "abc");
+  ASSERT_EQ(it.getValue(), 111);
+
+  it.next();
+  ASSERT_FALSE(it.valid());
+
+  ASSERT_TRUE(matcher.insert("bbb", 777));
+  ASSERT_EQ(matcher.size(), 5u);
+  it = matcher.find("bbb");
+
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "*");
+  ASSERT_EQ(it.getValue(), 999);
+
+  it.next();
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "bbb");
+  ASSERT_EQ(it.getValue(), 123);
+
+  it.next();
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "bbb");
+  ASSERT_EQ(it.getValue(), 777);
+
+  it.next();
+  ASSERT_FALSE(it.valid());
+
+  ASSERT_FALSE(matcher.erase("*", 888));
+  ASSERT_EQ(matcher.size(), 5u);
+  ASSERT_TRUE(matcher.erase("*", 999));
+  ASSERT_EQ(matcher.size(), 4u);
+
+  ASSERT_TRUE(matcher.insert("bb*", 333));
+  ASSERT_EQ(matcher.size(), 5u);
+
+  it = matcher.find("bbb");
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "bb*");
+  ASSERT_EQ(it.getValue(), 333);
+
+  it.next();
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "bbb");
+  ASSERT_EQ(it.getValue(), 123);
+
+  it.next();
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getPattern(), "bbb");
+  ASSERT_EQ(it.getValue(), 777);
+
+  it.next();
+  ASSERT_FALSE(it.valid());
+
+  ASSERT_FALSE(matcher.erase("bb*", 222));
+  ASSERT_EQ(matcher.size(), 5u);
+  ASSERT_TRUE(matcher.erase("bb*", 333));
+  ASSERT_EQ(matcher.size(), 4u);
+
+  ASSERT_TRUE(matcher.erase("bbb", 123));
+  ASSERT_EQ(matcher.size(), 3u);
+  ASSERT_TRUE(matcher.erase("bbb", 777));
+  ASSERT_EQ(matcher.size(), 2u);
+  ASSERT_TRUE(matcher.erase("[ab]bc", 222));
+  ASSERT_EQ(matcher.size(), 1u);
+  ASSERT_TRUE(matcher.erase("abc", 111));
+  ASSERT_EQ(matcher.size(), 0u);
 }
