@@ -132,6 +132,19 @@ public:
       }
     }
 
+    //--------------------------------------------------------------------------
+    // Erase element this iterator is pointing to, and advance to the next one
+    //--------------------------------------------------------------------------
+    void eraseAndAdvance() {
+      secondIterator = firstIterator->second.erase(secondIterator);
+      matcher->storedValues--;
+
+      if(secondIterator == secondIteratorEnd) {
+        firstIterator++;
+        advanceFirstIteratorUntilMatch();
+      }
+    }
+
   private:
     //--------------------------------------------------------------------------
     // Advance first iterator until there's a pattern match
