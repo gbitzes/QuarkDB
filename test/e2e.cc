@@ -1792,4 +1792,27 @@ TEST_F(Raft_e2e, pubsub) {
   );
 
   RETRY_ASSERT_TRUE(lookForTurtles(mq.get()));
+
+  mq->clear();
+
+  subscriber.unsubscribe( {"test-channel"} );
+  subscriber.punsubscribe( {"abc-*"} );
+
+  Message* item = mq->begin().getItemBlockOrNull();
+  ASSERT_NE(item, nullptr);
+
+  ASSERT_EQ(item->getMessageType(), MessageType::kUnsubscribe);
+  ASSERT_EQ(item->getChannel(), "test-channel");
+  ASSERT_EQ(item->getActiveSubscriptions(), 1);
+  mq->pop_front();
+
+  item = mq->begin().getItemBlockOrNull();
+  ASSERT_NE(item, nullptr);
+
+  ASSERT_EQ(item->getMessageType(), MessageType::kPatternUnsubscribe);
+  ASSERT_EQ(item->getPattern(), "abc-*");
+  ASSERT_EQ(item->getActiveSubscriptions(), 0);
+  mq->pop_front();
+
+  ASSERT_EQ(mq->size(), 0u);
 }
