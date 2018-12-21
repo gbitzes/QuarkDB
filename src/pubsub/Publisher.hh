@@ -52,6 +52,7 @@ public:
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, Transaction &tx) override final;
+  virtual void notifyDisconnect(Connection *conn) override final {}
 
 private:
   int publishChannels(std::string_view channel, std::string_view payload);

@@ -41,6 +41,10 @@ RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &s
 : journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt), replicator(rep), publisher(pub) {
 }
 
+void RaftDispatcher::notifyDisconnect(Connection *conn) {
+  publisher.notifyDisconnect(conn);
+}
+
 LinkStatus RaftDispatcher::dispatchInfo(Connection *conn, RedisRequest &req) {
   if(req.size() == 2 && caseInsensitiveEquals(req[1], "leader")) {
     return conn->string(state.getSnapshot()->leader.toString());

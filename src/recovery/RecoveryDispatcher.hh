@@ -36,6 +36,7 @@ public:
   RecoveryDispatcher(RecoveryEditor &editor);
   virtual LinkStatus dispatch(Connection *conn, Transaction &tx) override final;
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
+  virtual void notifyDisconnect(Connection *conn) override final {}
   RedisEncodedResponse dispatch(RedisRequest &request);
 
 private:

@@ -54,6 +54,7 @@ public:
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
+  virtual void notifyDisconnect(Connection *conn) override final {}
 
   const Configuration& getConfiguration() {
     return configuration;

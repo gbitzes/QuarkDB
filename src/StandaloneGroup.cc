@@ -56,6 +56,10 @@ Dispatcher* StandaloneGroup::getDispatcher() {
 StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm, Publisher &pub)
 : stateMachine(&sm), dispatcher(sm), publisher(&pub) {}
 
+void StandaloneDispatcher::notifyDisconnect(Connection *conn) {
+  publisher->notifyDisconnect(conn);
+}
+
 LinkStatus StandaloneDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   // Show a user-friendly error message for raft-info, instead of
   // "internal dispatching error"

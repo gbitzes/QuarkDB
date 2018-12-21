@@ -160,6 +160,8 @@ void Poller::worker(int fd, Dispatcher *dispatcher) {
       break;
     }
   }
+
+  dispatcher->notifyDisconnect(&conn);
 }
 
 void Poller::main(Dispatcher *dispatcher) {

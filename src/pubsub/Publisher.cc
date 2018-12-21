@@ -61,7 +61,6 @@ bool Publisher::punsubscribe(std::shared_ptr<PendingQueue> connection, std::stri
 
 int Publisher::subscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel) {
   std::unique_lock<std::mutex> lock(mtx);
-
   auto res = channelSubscriptions[std::string(channel)].emplace(connection);
   return res.second;
 }

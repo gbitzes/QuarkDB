@@ -114,6 +114,7 @@ XrdProtocol* XrdQuarkDB::Match(XrdLink *lp) {
 
 void XrdQuarkDB::Reset() {
   if(conn) {
+    quarkdbNode->notifyDisconnect(conn);
     delete conn;
     conn = nullptr;
   }
