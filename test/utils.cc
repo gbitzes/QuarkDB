@@ -40,6 +40,7 @@
 #include "redis/RedisEncodedResponse.hh"
 #include "storage/Randomization.hh"
 #include "pubsub/SimplePatternMatcher.hh"
+#include "pubsub/BidirectionalMultiMap.hh"
 #include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
@@ -738,6 +739,10 @@ TEST(SimplePatternMatcher, BasicSanity) {
   ASSERT_EQ(it.getValue(), 123);
 
   it.eraseAndAdvance();
+
+  // ASSERT_TRUE(it.erase());
+  // ASSERT_FALSE(it.erase());
+  // it.next();
   ASSERT_EQ(matcher.size(), 3u);
 
   ASSERT_TRUE(it.valid());
@@ -752,4 +757,106 @@ TEST(SimplePatternMatcher, BasicSanity) {
   ASSERT_EQ(matcher.size(), 1u);
   ASSERT_TRUE(matcher.erase("abc", 111));
   ASSERT_EQ(matcher.size(), 0u);
+}
+
+TEST(BidirectionalMultiMap, BasicSanity) {
+  std::vector<size_t> stageSizesToTest = {1, 2, 3, 4, 5, 6, 7, 10, 20, 100, 1000, 2000 };
+
+  BidirectionalMultiMap<std::string, int64_t> mm;
+
+  auto keyIter = mm.getKeyIterator();
+  ASSERT_FALSE(keyIter.valid());
+
+  ASSERT_EQ(mm.size(), 0u);
+  ASSERT_TRUE(mm.insert("test", 123));
+  ASSERT_EQ(mm.size(), 1u);
+  ASSERT_TRUE(mm.insert("test", 234));
+  ASSERT_EQ(mm.size(), 2u);
+  ASSERT_TRUE(mm.insert("test", 333));
+  ASSERT_EQ(mm.size(), 3u);
+
+  for(size_t stageSize : stageSizesToTest) {
+    keyIter = mm.getKeyIterator(stageSize);
+    ASSERT_TRUE(keyIter.valid());
+    ASSERT_EQ(keyIter.getKey(), "test");
+    keyIter.next();
+    ASSERT_FALSE(keyIter.valid());
+  }
+
+  ASSERT_TRUE(mm.insert("test-2", 111));
+  ASSERT_EQ(mm.size(), 4u);
+  ASSERT_TRUE(mm.insert("test-3", 999));
+  ASSERT_EQ(mm.size(), 5u);
+  ASSERT_TRUE(mm.insert("test-4", 888));
+  ASSERT_EQ(mm.size(), 6u);
+  ASSERT_TRUE(mm.insert("test-4", 777));
+  ASSERT_EQ(mm.size(), 7u);
+
+  for(size_t stageSize : stageSizesToTest) {
+    keyIter = mm.getKeyIterator(stageSize);
+    ASSERT_TRUE(keyIter.valid());
+    ASSERT_EQ(keyIter.getKey(), "test");
+    keyIter.next();
+
+    ASSERT_TRUE(keyIter.valid());
+    ASSERT_EQ(keyIter.getKey(), "test-2");
+    keyIter.next();
+
+    ASSERT_TRUE(keyIter.valid());
+    ASSERT_EQ(keyIter.getKey(), "test-3");
+    keyIter.next();
+
+    ASSERT_TRUE(keyIter.valid());
+    ASSERT_EQ(keyIter.getKey(), "test-4");
+    keyIter.next();
+
+    ASSERT_FALSE(keyIter.valid());
+  }
+
+  ASSERT_FALSE(mm.insert("test-2", 111));
+  ASSERT_EQ(mm.size(), 7u);
+
+  for(size_t stageSize : stageSizesToTest) {
+    auto matchIter = mm.findMatching("test", stageSize);
+    ASSERT_TRUE(matchIter.valid());
+    ASSERT_EQ(matchIter.getValue(), 123);
+    matchIter.next();
+
+    ASSERT_TRUE(matchIter.valid());
+    ASSERT_EQ(matchIter.getValue(), 234);
+    matchIter.next();
+
+    ASSERT_TRUE(matchIter.valid());
+    ASSERT_EQ(matchIter.getValue(), 333);
+    matchIter.next();
+
+    ASSERT_FALSE(matchIter.valid());
+
+    matchIter = mm.findMatching("test-3", stageSize);
+    ASSERT_TRUE(matchIter.valid());
+    ASSERT_EQ(matchIter.getValue(), 999);
+    matchIter.next();
+
+    ASSERT_FALSE(matchIter.valid());
+
+    matchIter = mm.findMatching("not-existing", stageSize);
+    ASSERT_FALSE(matchIter.valid());
+  }
+
+  auto matchIter1 = mm.findMatching("test-2", 1);
+  auto matchIter2 = mm.findMatching("test-2", 1);
+
+  ASSERT_TRUE(matchIter1.valid());
+  ASSERT_TRUE(matchIter1.valid());
+
+  ASSERT_EQ(matchIter1.getValue(), 111);
+  ASSERT_EQ(matchIter2.getValue(), 111);
+
+  ASSERT_TRUE(matchIter1.erase());
+  ASSERT_FALSE(matchIter1.erase());
+
+  auto matchIter3 = mm.findMatching("test-2", 1);
+  ASSERT_FALSE(matchIter3.valid());
+  ASSERT_EQ(mm.size(), 6u);
+
 }
