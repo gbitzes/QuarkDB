@@ -40,7 +40,7 @@
 #include "redis/RedisEncodedResponse.hh"
 #include "storage/Randomization.hh"
 #include "pubsub/SimplePatternMatcher.hh"
-#include "pubsub/BidirectionalMultiMap.hh"
+#include "pubsub/ThreadSafeMultiMap.hh"
 #include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
@@ -757,10 +757,10 @@ TEST(SimplePatternMatcher, BasicSanity) {
   ASSERT_EQ(matcher.size(), 0u);
 }
 
-TEST(BidirectionalMultiMap, BasicSanity) {
+TEST(ThreadSafeMultiMap, BasicSanity) {
   std::vector<size_t> stageSizesToTest = {1, 2, 3, 4, 5, 6, 7, 10, 20, 100, 1000, 2000 };
 
-  BidirectionalMultiMap<std::string, int64_t> mm;
+  ThreadSafeMultiMap<std::string, int64_t> mm;
 
   auto keyIter = mm.getKeyIterator();
   ASSERT_FALSE(keyIter.valid());

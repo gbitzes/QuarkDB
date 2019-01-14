@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: BidirectionalMultiMap.hh
+// File: ThreadSafeMultiMap.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_PUBSUB_BIDIRECTIONAL_MULTIMAP_HH
-#define QUARKDB_PUBSUB_BIDIRECTIONAL_MULTIMAP_HH
+#ifndef QUARKDB_PUBSUB_THREAD_SAFE_MULTIMAP_HH
+#define QUARKDB_PUBSUB_THREAD_SAFE_MULTIMAP_HH
 
 #include <shared_mutex>
 #include <map>
@@ -41,7 +41,7 @@ namespace quarkdb {
 // results.
 //------------------------------------------------------------------------------
 template<typename Key, typename Value>
-class BidirectionalMultiMap {
+class ThreadSafeMultiMap {
 public:
 
   //----------------------------------------------------------------------------
@@ -99,7 +99,7 @@ public:
     //--------------------------------------------------------------------------
     // Constructor
     //--------------------------------------------------------------------------
-    KeyIterator(BidirectionalMultiMap<Key, Value> *trg, size_t stage)
+    KeyIterator(ThreadSafeMultiMap<Key, Value> *trg, size_t stage)
     : target(trg), stageSize(stage) {
       populateStage(nullptr);
     }
@@ -162,7 +162,7 @@ public:
       }
     }
 
-    BidirectionalMultiMap<Key, Value> *target;
+    ThreadSafeMultiMap<Key, Value> *target;
     size_t stageSize;
 
     std::list<Key> stage;
@@ -184,7 +184,7 @@ public:
     //--------------------------------------------------------------------------
     // Constructor
     //--------------------------------------------------------------------------
-    MatchIterator(BidirectionalMultiMap<Key, Value> *trg, const Key& k, size_t
+    MatchIterator(ThreadSafeMultiMap<Key, Value> *trg, const Key& k, size_t
       st) : target(trg), targetKey(k), stageSize(st) {
 
       populateStage(nullptr);
@@ -267,7 +267,7 @@ public:
       }
     }
 
-    BidirectionalMultiMap<Key, Value> *target;
+    ThreadSafeMultiMap<Key, Value> *target;
     Key targetKey;
     size_t stageSize;
 

@@ -25,7 +25,7 @@
 #define QUARKDB_PUBSUB_SIMPLE_PATTERN_MATCHER_HH
 
 #include "../../deps/StringMatchLen.h"
-#include "BidirectionalMultiMap.hh"
+#include "ThreadSafeMultiMap.hh"
 #include <map>
 #include <set>
 
@@ -148,8 +148,8 @@ public:
 
     SimplePatternMatcher<T> *matcher;
     Key key;
-    typename BidirectionalMultiMap<Pattern, T>::KeyIterator keyIterator;
-    typename BidirectionalMultiMap<Pattern, T>::MatchIterator matchIterator;
+    typename ThreadSafeMultiMap<Pattern, T>::KeyIterator keyIterator;
+    typename ThreadSafeMultiMap<Pattern, T>::MatchIterator matchIterator;
     bool isValid = true;
   };
 
@@ -161,7 +161,7 @@ public:
   }
 
 private:
-  BidirectionalMultiMap<Pattern, T> contents;
+  ThreadSafeMultiMap<Pattern, T> contents;
 };
 
 }
