@@ -41,7 +41,6 @@
 #include "storage/Randomization.hh"
 #include "pubsub/SimplePatternMatcher.hh"
 #include "pubsub/ThreadSafeMultiMap.hh"
-#include "pubsub/SubscriptionTracker.hh"
 #include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
