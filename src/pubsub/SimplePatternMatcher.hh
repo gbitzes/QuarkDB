@@ -160,6 +160,20 @@ public:
     return Iterator(this, key);
   }
 
+  //----------------------------------------------------------------------------
+  // Get iterator to full contents
+  //----------------------------------------------------------------------------
+  typename ThreadSafeMultiMap<Pattern, T>::FullIterator getFullIterator() {
+    return contents.getFullIterator();
+  }
+
+  //----------------------------------------------------------------------------
+  // Clear contents
+  //----------------------------------------------------------------------------
+  void clear() {
+    contents.clear();
+  }
+
 private:
   ThreadSafeMultiMap<Pattern, T> contents;
 };
