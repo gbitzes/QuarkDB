@@ -41,6 +41,7 @@
 #include "storage/Randomization.hh"
 #include "pubsub/SimplePatternMatcher.hh"
 #include "pubsub/ThreadSafeMultiMap.hh"
+#include "pubsub/SubscriptionTracker.hh"
 #include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
@@ -856,5 +857,61 @@ TEST(ThreadSafeMultiMap, BasicSanity) {
   auto matchIter3 = mm.findMatching("test-2", 1);
   ASSERT_FALSE(matchIter3.valid());
   ASSERT_EQ(mm.size(), 6u);
+}
 
+TEST(ThreadSafeMultiMap, FullIteration) {
+  std::vector<size_t> stageSizesToTest = {1, 2, 3, 4, 5, 6, 7, 10, 20, 100, 1000, 2000 };
+  ThreadSafeMultiMap<std::string, int64_t> mm;
+
+  auto fullIter = mm.getFullIterator();
+  ASSERT_FALSE(fullIter.valid());
+
+  mm.insert("aaa", 123);
+  mm.insert("aaa", 444);
+  mm.insert("aaa", 555);
+
+  mm.insert("bbb", 111);
+  mm.insert("bbb", 222);
+
+  mm.insert("ccc", 999);
+  mm.insert("ccc", 888);
+
+  mm.insert("ddd", 111);
+
+  fullIter = mm.getFullIterator();
+  ASSERT_TRUE(fullIter.valid());
+
+  ASSERT_EQ(fullIter.getKey(), "aaa");
+  ASSERT_EQ(fullIter.getValue(), 123);
+
+  ASSERT_TRUE(mm.erase("aaa", 444));
+  ASSERT_TRUE(mm.erase("bbb", 111));
+
+  fullIter.next();
+  ASSERT_TRUE(fullIter.valid());
+  ASSERT_EQ(fullIter.getKey(), "aaa");
+  ASSERT_EQ(fullIter.getValue(), 444);
+
+  fullIter.next();
+  ASSERT_TRUE(fullIter.valid());
+  ASSERT_EQ(fullIter.getKey(), "aaa");
+  ASSERT_EQ(fullIter.getValue(), 555);
+
+  fullIter.next();
+  ASSERT_TRUE(fullIter.valid());
+  ASSERT_EQ(fullIter.getKey(), "bbb");
+  ASSERT_EQ(fullIter.getValue(), 222);
+
+  fullIter.next();
+  ASSERT_TRUE(fullIter.valid());
+  ASSERT_EQ(fullIter.getKey(), "ccc");
+  ASSERT_EQ(fullIter.getValue(), 888);
+
+  fullIter.skipKey();
+  ASSERT_TRUE(fullIter.valid());
+  ASSERT_EQ(fullIter.getKey(), "ddd");
+  ASSERT_EQ(fullIter.getValue(), 111);
+
+  fullIter.next();
+  ASSERT_FALSE(fullIter.valid());
 }

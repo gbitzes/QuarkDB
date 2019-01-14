@@ -276,6 +276,100 @@ public:
   };
 
   //----------------------------------------------------------------------------
+  // FullIterator: Iterate through the entire multi-map contents
+  //----------------------------------------------------------------------------
+  class FullIterator {
+  public:
+    //--------------------------------------------------------------------------
+    // Empty constructor
+    //--------------------------------------------------------------------------
+    FullIterator() {
+      isValid = false;
+    }
+
+    //--------------------------------------------------------------------------
+    // Constructor
+    //--------------------------------------------------------------------------
+    FullIterator(ThreadSafeMultiMap<Key, Value> *trg, size_t keyStage,
+      size_t vst) :
+      target(trg), valueStage(vst) {
+
+      keyIter = target->getKeyIterator(keyStage);
+      findValidMatchIter();
+    }
+
+    //--------------------------------------------------------------------------
+    // Check iterator validity
+    //--------------------------------------------------------------------------
+    bool valid() {
+      return isValid;
+    }
+
+    //--------------------------------------------------------------------------
+    // Skip entire key, and go to the next
+    //--------------------------------------------------------------------------
+    void skipKey() {
+      keyIter.next();
+      findValidMatchIter();
+    }
+
+    //--------------------------------------------------------------------------
+    // Advance iterator
+    //--------------------------------------------------------------------------
+    void next() {
+      matchIter.next();
+      if(matchIter.valid()) {
+        // Simple case, the pointed-to key contains more values
+        return;
+      }
+
+      // Complex case, need to advance key iterator as well
+      skipKey();
+    }
+
+    //--------------------------------------------------------------------------
+    // Get key we're pointing to
+    //--------------------------------------------------------------------------
+    Key getKey() const {
+      return matchIter.getKey();
+    }
+
+    //--------------------------------------------------------------------------
+    // Get value we're pointing to
+    //--------------------------------------------------------------------------
+    Value getValue() const {
+      return matchIter.getValue();
+    }
+
+  private:
+
+    //--------------------------------------------------------------------------
+    // Find valid matchIter position
+    //--------------------------------------------------------------------------
+    void findValidMatchIter() {
+      while(keyIter.valid()) {
+        matchIter = target->findMatching(keyIter.getKey(), valueStage);
+
+        if(matchIter.valid()) {
+          // Found valid position
+          return;
+        }
+      }
+
+      isValid = false;
+    }
+
+
+    ThreadSafeMultiMap<Key, Value> *target = nullptr;
+
+    bool isValid = true;
+    size_t valueStage;
+
+    ThreadSafeMultiMap<Key, Value>::KeyIterator keyIter;
+    ThreadSafeMultiMap<Key, Value>::MatchIterator matchIter;
+  };
+
+  //----------------------------------------------------------------------------
   // Retrieve a key iterator
   //----------------------------------------------------------------------------
   KeyIterator getKeyIterator(size_t stage = 100) {
@@ -287,6 +381,13 @@ public:
   //----------------------------------------------------------------------------
   MatchIterator findMatching(const Key& lookup, size_t stage = 100) {
     return MatchIterator(this, lookup, stage);
+  }
+
+  //----------------------------------------------------------------------------
+  // Retrieve a full iterator
+  //----------------------------------------------------------------------------
+  FullIterator getFullIterator(size_t keyStage = 100, size_t valueStage = 100) {
+    return FullIterator(this, keyStage, valueStage);
   }
 
 private:
