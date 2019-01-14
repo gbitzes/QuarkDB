@@ -36,15 +36,13 @@ void Publisher::purgeListeners(RedisEncodedResponse resp) {
 
   for(auto it = channelSubscriptions.getFullIterator(); it.valid(); it.next()) {
     it.getValue()->appendIfAttached(RedisEncodedResponse(resp));
+    it.erase();
   }
-
-  channelSubscriptions.clear();
 
   for(auto it = patternMatcher.getFullIterator(); it.valid(); it.next()) {
     it.getValue()->appendIfAttached(RedisEncodedResponse(resp));
+    it.erase();
   }
-
-  patternMatcher.clear();
 }
 
 bool Publisher::unsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel) {

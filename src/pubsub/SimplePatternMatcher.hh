@@ -167,13 +167,6 @@ public:
     return contents.getFullIterator();
   }
 
-  //----------------------------------------------------------------------------
-  // Clear contents
-  //----------------------------------------------------------------------------
-  void clear() {
-    contents.clear();
-  }
-
 private:
   ThreadSafeMultiMap<Pattern, T> contents;
 };
