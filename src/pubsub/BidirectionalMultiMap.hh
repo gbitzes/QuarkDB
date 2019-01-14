@@ -32,8 +32,7 @@
 namespace quarkdb {
 
 //------------------------------------------------------------------------------
-// A thread-safe, bidirectional multi-map used in tracking pub-sub
-// subscriptions.
+// A thread-safe multi-map used for tracking pub-sub subscriptions.
 //
 // Modifying the map while iterators are held by other threasds is safe, too.
 // Only items present in the map during the entire duration of iteration are

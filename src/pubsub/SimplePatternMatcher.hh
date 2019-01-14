@@ -25,6 +25,7 @@
 #define QUARKDB_PUBSUB_SIMPLE_PATTERN_MATCHER_HH
 
 #include "../../deps/StringMatchLen.h"
+#include "BidirectionalMultiMap.hh"
 #include <map>
 #include <set>
 
@@ -51,35 +52,21 @@ public:
   // Insert the given pattern and value.
   //----------------------------------------------------------------------------
   bool insert(const Pattern &pattern, const T& value) {
-    auto match = contents[pattern].emplace(value);
-    storedValues += match.second;
-    return match.second;
+    return contents.insert(pattern, value);
   }
 
   //----------------------------------------------------------------------------
   // Erase the given pattern and value, if they exist
   //----------------------------------------------------------------------------
   bool erase(const Pattern &pattern, const T& value) {
-    auto targetSet = contents.find(pattern);
-    if(targetSet == contents.end()) {
-      return false;
-    }
-
-    auto match = targetSet->second.erase(value);
-    storedValues -= match;
-
-    if(targetSet->second.empty()) {
-      contents.erase(pattern);
-    }
-
-    return match;
+    return contents.erase(pattern, value);
   }
 
   //----------------------------------------------------------------------------
   // Get total number of values stored
   //----------------------------------------------------------------------------
   size_t size() const {
-    return storedValues;
+    return contents.size();
   }
 
   //----------------------------------------------------------------------------
@@ -91,11 +78,9 @@ public:
     // Constructor
     //--------------------------------------------------------------------------
     Iterator(SimplePatternMatcher<T> *obj, const Key &k) :
-      matcher(obj), contents(&matcher->contents), key(k) {
+      matcher(obj), key(k) {
 
-      firstIterator = contents->begin();
-      firstIteratorEnd = contents->end();
-
+      keyIterator = matcher->contents.getKeyIterator();
       advanceFirstIteratorUntilMatch();
     }
 
@@ -110,39 +95,30 @@ public:
     // Get pattern of item this iterator is pointing to
     //--------------------------------------------------------------------------
     Pattern getPattern() const {
-      return firstIterator->first;
+      return keyIterator.getKey();
     }
 
     //--------------------------------------------------------------------------
     // Get value of item this iterator is pointing to
     //--------------------------------------------------------------------------
     T getValue() const {
-      return *secondIterator;
+      return matchIterator.getValue();
     }
 
     //--------------------------------------------------------------------------
     // Advance iterator
     //--------------------------------------------------------------------------
     void next() {
-      secondIterator++;
+      matchIterator.next();
 
-      if(secondIterator == secondIteratorEnd) {
-        firstIterator++;
+      if(!matchIterator.valid()) {
+        keyIterator.next();
         advanceFirstIteratorUntilMatch();
       }
     }
 
-    //--------------------------------------------------------------------------
-    // Erase element this iterator is pointing to, and advance to the next one
-    //--------------------------------------------------------------------------
-    void eraseAndAdvance() {
-      secondIterator = firstIterator->second.erase(secondIterator);
-      matcher->storedValues--;
-
-      if(secondIterator == secondIteratorEnd) {
-        firstIterator++;
-        advanceFirstIteratorUntilMatch();
-      }
+    bool erase() {
+      return matchIterator.erase();
     }
 
   private:
@@ -151,36 +127,29 @@ public:
     //--------------------------------------------------------------------------
     void advanceFirstIteratorUntilMatch() {
 
-      while(firstIterator != firstIteratorEnd) {
-        if(stringmatchlen(firstIterator->first.data(),
-          firstIterator->first.size(), key.data(), key.size(), 0) == 1) {
+      while(keyIterator.valid()) {
+        Key iterKey = keyIterator.getKey();
+
+        if(stringmatchlen(iterKey.data(), iterKey.size(), key.data(), key.size(), 0) == 1) {
           // We have a match
-
-          secondIterator = firstIterator->second.begin();
-          secondIteratorEnd = firstIterator->second.end();
-
-          if(secondIterator != secondIteratorEnd) {
+          matchIterator = matcher->contents.findMatching(iterKey);
+          if(matchIterator.valid()) {
             return;
           }
         }
 
-        firstIterator++;
+        keyIterator.next();
       }
 
       // No match, stop iterating
       isValid = false;
     }
 
+
     SimplePatternMatcher<T> *matcher;
-    std::map<Pattern, std::set<T>> *contents;
     Key key;
-
-    typename std::map<Pattern, std::set<T>>::iterator firstIterator;
-    typename std::map<Pattern, std::set<T>>::iterator firstIteratorEnd;
-
-    typename std::set<T>::iterator secondIterator;
-    typename std::set<T>::iterator secondIteratorEnd;
-
+    typename BidirectionalMultiMap<Pattern, T>::KeyIterator keyIterator;
+    typename BidirectionalMultiMap<Pattern, T>::MatchIterator matchIterator;
     bool isValid = true;
   };
 
@@ -192,8 +161,7 @@ public:
   }
 
 private:
-  size_t storedValues = 0u;
-  std::map<Pattern, std::set<T>> contents;
+  BidirectionalMultiMap<Pattern, T> contents;
 };
 
 }

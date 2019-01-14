@@ -107,10 +107,9 @@ int Publisher::publishPatterns(std::string_view channel, std::string_view payloa
     bool stillAlive = it.getValue()->appendIfAttached(Formatter::pmessage(it.getPattern(), channel, payload));
 
     if(!stillAlive) {
-      it.eraseAndAdvance();
+      it.erase();
     }
     else {
-      it.next();
       hits++;
     }
   }

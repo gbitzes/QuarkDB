@@ -738,11 +738,9 @@ TEST(SimplePatternMatcher, BasicSanity) {
   ASSERT_EQ(it.getPattern(), "bbb");
   ASSERT_EQ(it.getValue(), 123);
 
-  it.eraseAndAdvance();
-
-  // ASSERT_TRUE(it.erase());
-  // ASSERT_FALSE(it.erase());
-  // it.next();
+  ASSERT_TRUE(it.erase());
+  ASSERT_FALSE(it.erase());
+  it.next();
   ASSERT_EQ(matcher.size(), 3u);
 
   ASSERT_TRUE(it.valid());
