@@ -76,6 +76,15 @@ public:
   }
 
   //----------------------------------------------------------------------------
+  // Clear contents
+  //----------------------------------------------------------------------------
+  void clear() {
+    std::unique_lock<std::shared_mutex> lock(mtx);
+    contents.clear();
+    storedEntries = 0;
+  }
+
+  //----------------------------------------------------------------------------
   // Get total number of entries stored
   //----------------------------------------------------------------------------
   size_t size() const {
@@ -393,7 +402,6 @@ public:
 private:
   mutable std::shared_mutex mtx;
   std::map<Key, std::set<Value>> contents;
-  std::map<Value, std::set<Key>> reverseContents;
   size_t storedEntries = 0u;
 };
 

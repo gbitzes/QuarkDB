@@ -63,7 +63,7 @@ private:
   std::mutex mtx;
 
   // Map of subscribed-to channels
-  std::map<std::string, std::set<std::shared_ptr<PendingQueue>>> channelSubscriptions;
+  ThreadSafeMultiMap<std::string, std::shared_ptr<PendingQueue>> channelSubscriptions;
 
   // Pattern matcher
   SimplePatternMatcher<std::shared_ptr<PendingQueue>> patternMatcher;

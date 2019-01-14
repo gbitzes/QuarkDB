@@ -34,10 +34,8 @@ Publisher::~Publisher() {
 void Publisher::purgeListeners(RedisEncodedResponse resp) {
   std::unique_lock<std::mutex> lock(mtx);
 
-  for(auto it1 = channelSubscriptions.begin(); it1 != channelSubscriptions.end(); it1++) {
-    for(auto it2 = it1->second.begin(); it2 != it1->second.end(); it2++) {
-      (*it2)->appendIfAttached(RedisEncodedResponse(resp));
-    }
+  for(auto it = channelSubscriptions.getFullIterator(); it.valid(); it.next()) {
+    it.getValue()->appendIfAttached(RedisEncodedResponse(resp));
   }
 
   channelSubscriptions.clear();
@@ -45,13 +43,7 @@ void Publisher::purgeListeners(RedisEncodedResponse resp) {
 
 bool Publisher::unsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel) {
   std::unique_lock<std::mutex> lock(mtx);
-
-  auto targetSet = channelSubscriptions.find(std::string(channel));
-  if(targetSet == channelSubscriptions.end()) {
-    return 0;
-  }
-
-  return targetSet->second.erase(connection);
+  return channelSubscriptions.erase(std::string(channel), connection);
 }
 
 bool Publisher::punsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern) {
@@ -61,8 +53,7 @@ bool Publisher::punsubscribe(std::shared_ptr<PendingQueue> connection, std::stri
 
 int Publisher::subscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel) {
   std::unique_lock<std::mutex> lock(mtx);
-  auto res = channelSubscriptions[std::string(channel)].emplace(connection);
-  return res.second;
+  return channelSubscriptions.insert(std::string(channel), connection);
 }
 
 int Publisher::psubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern) {
@@ -73,27 +64,16 @@ int Publisher::psubscribe(std::shared_ptr<PendingQueue> connection, std::string_
 int Publisher::publishChannels(std::string_view channel, std::string_view payload) {
   int hits = 0;
 
-  auto existenceCheck = channelSubscriptions.find(std::string(channel));
-  if(existenceCheck == channelSubscriptions.end()) {
-    return 0u;
-  }
-
-  auto &targetSet = existenceCheck->second;
-
-  for(auto it = targetSet.begin(); it != targetSet.end(); ) {
-    bool stillAlive = (*it)->appendIfAttached(Formatter::message(channel, payload));
+  // publish to matching channels
+  for(auto it = channelSubscriptions.findMatching(std::string(channel)); it.valid(); it.next()) {
+    bool stillAlive = it.getValue()->appendIfAttached(Formatter::message(channel, payload));
 
     if(!stillAlive) {
-      it = targetSet.erase(it);
+      it.erase();
     }
     else {
-      it++;
       hits++;
     }
-  }
-
-  if(targetSet.size() == 0u) {
-    channelSubscriptions.erase(std::string(channel));
   }
 
   return hits;
