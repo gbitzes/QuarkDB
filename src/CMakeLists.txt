@@ -42,6 +42,7 @@ add_library(XrdQuarkDB SHARED
 
                                       pubsub/SimplePatternMatcher.hh
   pubsub/Publisher.cc                 pubsub/Publisher.hh
+  pubsub/SubscriptionTracker.cc       pubsub/SubscriptionTracker.hh
 
   raft/RaftBlockedWrites.cc           raft/RaftBlockedWrites.hh
   raft/RaftConfig.cc                  raft/RaftConfig.hh

@@ -41,6 +41,7 @@
 #include "storage/Randomization.hh"
 #include "pubsub/SimplePatternMatcher.hh"
 #include "pubsub/ThreadSafeMultiMap.hh"
+#include "pubsub/SubscriptionTracker.hh"
 #include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
@@ -913,4 +914,20 @@ TEST(ThreadSafeMultiMap, FullIteration) {
 
   fullIter.next();
   ASSERT_FALSE(fullIter.valid());
+}
+
+TEST(SubscriptionTracker, BasicSanity) {
+  SubscriptionTracker tracker;
+  ASSERT_TRUE(tracker.addChannel("test-1"));
+  ASSERT_FALSE(tracker.addChannel("test-1"));
+
+  ASSERT_TRUE(tracker.addPattern("test-*"));
+  ASSERT_TRUE(tracker.addPattern("test*"));
+
+  ASSERT_TRUE(tracker.hasChannel("test-1"));
+  ASSERT_FALSE(tracker.hasChannel("test-2"));
+
+  ASSERT_TRUE(tracker.hasPattern("test-*"));
+  ASSERT_FALSE(tracker.hasPattern("test-*1"));
+  ASSERT_TRUE(tracker.hasPattern("test*"));
 }
