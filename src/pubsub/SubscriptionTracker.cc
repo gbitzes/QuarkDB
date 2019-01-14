@@ -40,6 +40,20 @@ bool SubscriptionTracker::addPattern(const std::string &item) {
 }
 
 //------------------------------------------------------------------------------
+// Remove channel
+//------------------------------------------------------------------------------
+bool SubscriptionTracker::removeChannel(const std::string &item) {
+	return channels.erase(item);
+}
+
+//------------------------------------------------------------------------------
+// Remove pattern
+//------------------------------------------------------------------------------
+bool SubscriptionTracker::removePattern(const std::string &item) {
+	return patterns.erase(item);
+}
+
+//------------------------------------------------------------------------------
 // Check for existence of a channel
 //------------------------------------------------------------------------------
 bool SubscriptionTracker::hasChannel(const std::string &item) const {

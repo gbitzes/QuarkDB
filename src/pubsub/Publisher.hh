@@ -47,7 +47,7 @@ public:
   int subscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel);
   int psubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern);
 
-  int publish(std::string_view channel, std::string_view payload);
+  int publish(const std::string& channel, std::string_view payload);
   void purgeListeners(RedisEncodedResponse resp);
 
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
@@ -55,12 +55,10 @@ public:
   virtual void notifyDisconnect(Connection *conn) override final {}
 
 private:
-  int publishChannels(std::string_view channel, std::string_view payload);
-  int publishPatterns(std::string_view channel, std::string_view payload);
+  int publishChannels(const std::string &channel, std::string_view payload);
+  int publishPatterns(const std::string &channel, std::string_view payload);
   bool unsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel);
   bool punsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern);
-
-  std::mutex mtx;
 
   // Map of subscribed-to channels
   ThreadSafeMultiMap<std::string, std::shared_ptr<PendingQueue>> channelSubscriptions;

@@ -930,4 +930,13 @@ TEST(SubscriptionTracker, BasicSanity) {
   ASSERT_TRUE(tracker.hasPattern("test-*"));
   ASSERT_FALSE(tracker.hasPattern("test-*1"));
   ASSERT_TRUE(tracker.hasPattern("test*"));
+
+  ASSERT_TRUE(tracker.removeChannel("test-1"));
+  ASSERT_FALSE(tracker.removeChannel("test-1"));
+  ASSERT_FALSE(tracker.removeChannel("test-2"));
+
+  ASSERT_TRUE(tracker.removePattern("test-*"));
+  ASSERT_FALSE(tracker.removePattern("test-*"));
+  ASSERT_TRUE(tracker.removePattern("test*"));
+  ASSERT_FALSE(tracker.removePattern("test***"));
 }

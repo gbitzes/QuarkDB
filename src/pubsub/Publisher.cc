@@ -32,8 +32,6 @@ Publisher::~Publisher() {
 }
 
 void Publisher::purgeListeners(RedisEncodedResponse resp) {
-  std::unique_lock<std::mutex> lock(mtx);
-
   for(auto it = channelSubscriptions.getFullIterator(); it.valid(); it.next()) {
     it.getValue()->appendIfAttached(RedisEncodedResponse(resp));
     it.erase();
@@ -46,31 +44,31 @@ void Publisher::purgeListeners(RedisEncodedResponse resp) {
 }
 
 bool Publisher::unsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel) {
-  std::unique_lock<std::mutex> lock(mtx);
+  connection->unsubscribe(std::string(channel));
   return channelSubscriptions.erase(std::string(channel), connection);
 }
 
 bool Publisher::punsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern) {
-  std::unique_lock<std::mutex> lock(mtx);
+  connection->punsubscribe(std::string(pattern));
   return patternMatcher.erase(std::string(pattern), connection);
 }
 
 int Publisher::subscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel) {
-  std::unique_lock<std::mutex> lock(mtx);
+  connection->subscribe(std::string(channel));
   return channelSubscriptions.insert(std::string(channel), connection);
 }
 
 int Publisher::psubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern) {
-  std::unique_lock<std::mutex> lock(mtx);
+  connection->psubscribe(std::string(pattern));
   return patternMatcher.insert(std::string(pattern), connection);
 }
 
-int Publisher::publishChannels(std::string_view channel, std::string_view payload) {
+int Publisher::publishChannels(const std::string &channel, std::string_view payload) {
   int hits = 0;
 
   // publish to matching channels
   for(auto it = channelSubscriptions.findMatching(std::string(channel)); it.valid(); it.next()) {
-    bool stillAlive = it.getValue()->appendIfAttached(Formatter::message(channel, payload));
+    bool stillAlive = it.getValue()->addMessageIfAttached(channel, Formatter::message(channel, payload));
 
     if(!stillAlive) {
       it.erase();
@@ -83,12 +81,12 @@ int Publisher::publishChannels(std::string_view channel, std::string_view payloa
   return hits;
 }
 
-int Publisher::publishPatterns(std::string_view channel, std::string_view payload) {
+int Publisher::publishPatterns(const std::string& channel, std::string_view payload) {
   int hits = 0;
 
   // publish to matching patterns
   for(auto it = patternMatcher.find(std::string(channel)); it.valid(); it.next()) {
-    bool stillAlive = it.getValue()->appendIfAttached(Formatter::pmessage(it.getPattern(), channel, payload));
+    bool stillAlive = it.getValue()->addPatternMessageIfAttached(it.getPattern(), Formatter::pmessage(it.getPattern(), channel, payload));
 
     if(!stillAlive) {
       it.erase();
@@ -101,8 +99,7 @@ int Publisher::publishPatterns(std::string_view channel, std::string_view payloa
   return hits;
 }
 
-int Publisher::publish(std::string_view channel, std::string_view payload) {
-  std::unique_lock<std::mutex> lock(mtx);
+int Publisher::publish(const std::string &channel, std::string_view payload) {
   return publishChannels(channel, payload) + publishPatterns(channel, payload);
 }
 
@@ -166,7 +163,7 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
     }
     case RedisCommand::PUBLISH: {
       if(req.size() != 3) return conn->errArgs(req[0]);
-      int hits = publish(req[1], req[2]);
+      int hits = publish(std::string(req[1]), req[2]);
       return conn->integer(hits);
     }
     default: {

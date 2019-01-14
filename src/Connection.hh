@@ -30,6 +30,7 @@
 #include "Formatter.hh"
 #include "redis/MultiHandler.hh"
 #include "redis/Authenticator.hh"
+#include "pubsub/SubscriptionTracker.hh"
 #include <queue>
 
 namespace rocksdb {
@@ -67,6 +68,15 @@ public:
   bool appendIfAttached(RedisEncodedResponse &&raw);
   size_t subscriptions = 0u;
 
+  void subscribe(const std::string &item);
+  void psubscribe(const std::string &item);
+
+  void unsubscribe(const std::string &item);
+  void punsubscribe(const std::string &item);
+
+  bool addMessageIfAttached(const std::string &channel, RedisEncodedResponse &&raw);
+  bool addPatternMessageIfAttached(const std::string &pattern, RedisEncodedResponse &&raw);
+
 private:
   LinkStatus appendResponseNoLock(RedisEncodedResponse &&raw);
   Connection *conn;
@@ -99,6 +109,7 @@ private:
 
   LogIndex lastIndex = -1;
   std::queue<PendingRequest> pending;
+  SubscriptionTracker subscriptionTracker;
 };
 
 //------------------------------------------------------------------------------
