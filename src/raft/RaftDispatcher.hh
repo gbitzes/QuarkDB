@@ -37,16 +37,15 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 // Forward declarations
 //------------------------------------------------------------------------------
-class RaftJournal; class RaftState; class RaftClock; class RaftWriteTracker;
-class RaftReplicator;
-class Transaction;
+class RaftJournal; class RaftState; class RaftHeartbeatTracker;
+class RaftWriteTracker; class RaftReplicator; class Transaction;
 
 struct RaftStateSnapshot;
 using RaftStateSnapshotPtr = std::shared_ptr<const RaftStateSnapshot>;
 
 class RaftDispatcher : public Dispatcher {
 public:
-  RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &rt, RaftReplicator &replicator, Publisher &publisher);
+  RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftHeartbeatTracker &rht, RaftWriteTracker &rt, RaftReplicator &replicator, Publisher &publisher);
   DISALLOW_COPY_AND_ASSIGN(RaftDispatcher);
 
   LinkStatus dispatchInfo(Connection *conn, RedisRequest &req);
@@ -76,7 +75,7 @@ private:
   RaftJournal &journal;
   StateMachine &stateMachine;
   RaftState &state;
-  RaftClock &raftClock;
+  RaftHeartbeatTracker &heartbeatTracker;
   RedisDispatcher redisDispatcher;
   RaftWriteTracker& writeTracker;
   RaftReplicator &replicator;

@@ -29,8 +29,8 @@
 
 namespace quarkdb {
 
-RaftDirector::RaftDirector(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftClock &rc, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &conf, RaftReplicator &rep, const RaftContactDetails &cd, Publisher &pub)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc), lease(ls), commitTracker(ct), writeTracker(wt), shardDirectory(sharddir), config(conf), replicator(rep), contactDetails(cd), publisher(pub) {
+RaftDirector::RaftDirector(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftLease &ls, RaftCommitTracker &ct, RaftHeartbeatTracker &rht, RaftWriteTracker &wt, ShardDirectory &sharddir, RaftConfig &conf, RaftReplicator &rep, const RaftContactDetails &cd, Publisher &pub)
+: journal(jour), stateMachine(sm), state(st), heartbeatTracker(rht), lease(ls), commitTracker(ct), writeTracker(wt), shardDirectory(sharddir), config(conf), replicator(rep), contactDetails(cd), publisher(pub) {
   mainThread = std::thread(&RaftDirector::main, this);
 }
 
@@ -40,9 +40,10 @@ RaftDirector::~RaftDirector() {
 }
 
 void RaftDirector::main() {
-  raftClock.heartbeat();
+  heartbeatTracker.heartbeat();
+
   while(true) {
-    raftClock.refreshRandomTimeout();
+    heartbeatTracker.refreshRandomTimeout();
     RaftStateSnapshotPtr snapshot = state.getSnapshot();
 
     if(snapshot->status == RaftStatus::SHUTDOWN) {
@@ -53,7 +54,7 @@ void RaftDirector::main() {
     }
     else if(snapshot->status == RaftStatus::LEADER) {
       leaderLoop(snapshot);
-      raftClock.heartbeat();
+      heartbeatTracker.heartbeat();
     }
     else {
       qdb_throw("should never happen");
@@ -85,7 +86,7 @@ void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
 void RaftDirector::runForLeader() {
   // If we get vetoed, this ensures we stop election attempts up until the
   // point we receive a fresh heartbeat.
-  std::chrono::steady_clock::time_point lastHeartbeat = raftClock.getLastHeartbeat();
+  std::chrono::steady_clock::time_point lastHeartbeat = heartbeatTracker.getLastHeartbeat();
 
   // don't reuse the snapshot from the main loop,
   // it could have changed in-between
@@ -119,7 +120,7 @@ void RaftDirector::runForLeader() {
 
 void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
   stateMachine.getRequestCounter().setReportingStatus(false);
-  milliseconds randomTimeout = raftClock.getRandomTimeout();
+  milliseconds randomTimeout = heartbeatTracker.getRandomTimeout();
   while(true) {
     RaftStateSnapshotPtr now = state.getSnapshot();
     if(snapshot->term != now->term || snapshot->status != now->status) return;
@@ -128,7 +129,7 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
     publisher.purgeListeners(Formatter::err("unavailable"));
     state.wait(randomTimeout);
 
-    if(raftClock.getLastHeartbeat() == lastHeartbeatBeforeVeto) {
+    if(heartbeatTracker.getLastHeartbeat() == lastHeartbeatBeforeVeto) {
       // I've been vetoed during my last election attempt, and no heartbeat has
       // appeared since then.
       //
@@ -142,7 +143,7 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
       // Since a veto means the next cluster leader cannot be me, completely
       // abstain from starting elections until we receive a heartbeat.
     }
-    else if(raftClock.timeout()) {
+    else if(heartbeatTracker.timeout()) {
       if(contains(journal.getMembership().nodes, state.getMyself())) {
         qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
         runForLeader();

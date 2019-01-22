@@ -189,8 +189,8 @@ qclient::Options TestCluster::makeNoRedirectOptions(int id) {
   return node(id)->makeNoRedirectOptions();
 }
 
-RaftClock* TestCluster::raftclock(int id) {
-  return node(id)->group()->raftclock();
+RaftHeartbeatTracker* TestCluster::heartbeatTracker(int id) {
+  return node(id)->group()->heartbeatTracker();
 }
 
 const RaftContactDetails* TestCluster::contactDetails(int id) {

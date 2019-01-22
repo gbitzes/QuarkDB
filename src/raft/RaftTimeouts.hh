@@ -63,10 +63,10 @@ private:
   mutable std::uniform_int_distribution<> dist;
 };
 
-class RaftClock {
+class RaftHeartbeatTracker {
 public:
-  RaftClock(const RaftTimeouts timeouts);
-  DISALLOW_COPY_AND_ASSIGN(RaftClock);
+  RaftHeartbeatTracker(const RaftTimeouts timeouts);
+  DISALLOW_COPY_AND_ASSIGN(RaftHeartbeatTracker);
 
   milliseconds refreshRandomTimeout();
   void heartbeat();

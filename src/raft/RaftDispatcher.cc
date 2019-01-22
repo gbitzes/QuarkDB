@@ -37,8 +37,8 @@
 
 using namespace quarkdb;
 
-RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftClock &rc, RaftWriteTracker &wt, RaftReplicator &rep, Publisher &pub)
-: journal(jour), stateMachine(sm), state(st), raftClock(rc), redisDispatcher(sm), writeTracker(wt), replicator(rep), publisher(pub) {
+RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftHeartbeatTracker &rht, RaftWriteTracker &wt, RaftReplicator &rep, Publisher &pub)
+: journal(jour), stateMachine(sm), state(st), heartbeatTracker(rht), redisDispatcher(sm), writeTracker(wt), replicator(rep), publisher(pub) {
 }
 
 void RaftDispatcher::notifyDisconnect(Connection *conn) {
@@ -181,8 +181,8 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err("wrong cluster id");
       }
 
-      if(req[3] != raftClock.getTimeouts().toString()) {
-        qdb_misconfig("received handshake with different raft timeouts (" << req[3] << ") than mine (" << raftClock.getTimeouts().toString() << ")");
+      if(req[3] != heartbeatTracker.getTimeouts().toString()) {
+        qdb_misconfig("received handshake with different raft timeouts (" << req[3] << ") than mine (" << heartbeatTracker.getTimeouts().toString() << ")");
         return conn->err("incompatible raft timeouts");
       }
 
@@ -205,7 +205,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       }
 
       qdb_event("Received request to attempt a coup d'etat against the current leader.");
-      raftClock.triggerTimeout();
+      heartbeatTracker.triggerTimeout();
       return conn->status("vive la revolution");
     }
     case RedisCommand::RAFT_ADD_OBSERVER:
@@ -409,7 +409,7 @@ RaftHeartbeatResponse RaftDispatcher::heartbeat(const RaftHeartbeatRequest &req,
     qdb_throw("Received append entries from " << req.leader.toString() << ", while I believe leader for term " << snapshot->term << " is " << snapshot->leader.toString());
   }
 
-  raftClock.heartbeat();
+  heartbeatTracker.heartbeat();
   return {snapshot->term, true, ""};
 }
 
@@ -606,7 +606,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
     return {snapshot->term, RaftVote::REFUSED};
   }
 
-  raftClock.heartbeat();
+  heartbeatTracker.heartbeat();
   return {snapshot->term, RaftVote::GRANTED};
 }
 

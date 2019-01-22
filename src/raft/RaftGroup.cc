@@ -85,9 +85,9 @@ void RaftGroup::spindown() {
     delete stateptr;
     stateptr = nullptr;
   }
-  if(clockptr) {
-    delete clockptr;
-    clockptr = nullptr;
+  if(heartbeattrackerptr) {
+    delete heartbeattrackerptr;
+    heartbeattrackerptr = nullptr;
   }
   if(leaseptr) {
     delete leaseptr;
@@ -121,17 +121,17 @@ RaftJournal* RaftGroup::journal() {
 RaftDispatcher* RaftGroup::dispatcher() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(dispatcherptr == nullptr) {
-    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *raftclock(), *writeTracker(), *replicator(), *publisher());
+    dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *heartbeatTracker(), *writeTracker(), *replicator(), *publisher());
   }
   return dispatcherptr;
 }
 
-RaftClock* RaftGroup::raftclock() {
+RaftHeartbeatTracker* RaftGroup::heartbeatTracker() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
-  if(clockptr == nullptr) {
-    clockptr = new RaftClock(contactDetails()->getRaftTimeouts());
+  if(heartbeattrackerptr == nullptr) {
+    heartbeattrackerptr = new RaftHeartbeatTracker(contactDetails()->getRaftTimeouts());
   }
-  return clockptr;
+  return heartbeattrackerptr;
 }
 
 RaftState* RaftGroup::state() {
@@ -145,7 +145,7 @@ RaftState* RaftGroup::state() {
 RaftDirector* RaftGroup::director() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(directorptr == nullptr) {
-    directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *raftclock(), *writeTracker(), shardDirectory, *config(), *replicator(), *contactDetails(), *publisher());
+    directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *heartbeatTracker(), *writeTracker(), shardDirectory, *config(), *replicator(), *contactDetails(), *publisher());
   }
   return directorptr;
 }
@@ -153,7 +153,7 @@ RaftDirector* RaftGroup::director() {
 RaftLease* RaftGroup::lease() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(leaseptr == nullptr) {
-    leaseptr = new RaftLease(journal()->getMembership().nodes, raftclock()->getTimeouts().getLow());
+    leaseptr = new RaftLease(journal()->getMembership().nodes, heartbeatTracker()->getTimeouts().getLow());
   }
   return leaseptr;
 }

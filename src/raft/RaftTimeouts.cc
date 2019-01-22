@@ -102,22 +102,22 @@ bool RaftTimeouts::fromString(RaftTimeouts &ret, const std::string &str) {
   return true;
 }
 
-RaftClock::RaftClock(const RaftTimeouts t)
+RaftHeartbeatTracker::RaftHeartbeatTracker(const RaftTimeouts t)
 : timeouts(t) {
   refreshRandomTimeout();
 }
 
-void RaftClock::heartbeat() {
+void RaftHeartbeatTracker::heartbeat() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
   lastHeartbeat = std::chrono::steady_clock::now();
 }
 
-void RaftClock::triggerTimeout() {
+void RaftHeartbeatTracker::triggerTimeout() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
   artificialTimeout = true;
 }
 
-bool RaftClock::timeout() {
+bool RaftHeartbeatTracker::timeout() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
   if(artificialTimeout) {
     qdb_event("Triggering an artificial timeout.");
@@ -128,18 +128,18 @@ bool RaftClock::timeout() {
   return std::chrono::steady_clock::now() - lastHeartbeat > randomTimeout;
 }
 
-milliseconds RaftClock::getRandomTimeout() {
+milliseconds RaftHeartbeatTracker::getRandomTimeout() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
   return randomTimeout;
 }
 
-milliseconds RaftClock::refreshRandomTimeout() {
+milliseconds RaftHeartbeatTracker::refreshRandomTimeout() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
   randomTimeout = timeouts.getRandom();
   return randomTimeout;
 }
 
-std::chrono::steady_clock::time_point RaftClock::getLastHeartbeat() {
+std::chrono::steady_clock::time_point RaftHeartbeatTracker::getLastHeartbeat() {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
   return lastHeartbeat;
 }

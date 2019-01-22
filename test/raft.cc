@@ -807,7 +807,7 @@ TEST_F(Raft_Director, late_arrival_in_established_cluster) {
 TEST_F(Raft_Director, late_consensus) {
   // at first, node #0 is all alone and should not be able to ascend
   spinup(0);
-  std::this_thread::sleep_for(raftclock()->getTimeouts().getHigh()*2);
+  std::this_thread::sleep_for(heartbeatTracker()->getTimeouts().getHigh()*2);
 
   // verify the node tried to ascend, and failed
   RaftStateSnapshotPtr snapshot = state(0)->getSnapshot();

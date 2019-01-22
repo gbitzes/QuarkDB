@@ -33,7 +33,7 @@ namespace quarkdb {
 // Forward declarations
 //------------------------------------------------------------------------------
 class StateMachine; class RaftJournal; class RaftDispatcher;
-class RaftState; class RaftReplicator; class RaftClock;
+class RaftState; class RaftReplicator; class RaftHeartbeatTracker;
 class RaftDirector; class RaftLease; class RaftWriteTracker;
 class RaftTrimmer; class RaftCommitTracker; class RaftConfig;
 class ShardDirectory; class RaftContactDetails;
@@ -54,7 +54,7 @@ public:
   RaftJournal *journal();
   RaftDispatcher *dispatcher();
   RaftState *state();
-  RaftClock *raftclock();
+  RaftHeartbeatTracker *heartbeatTracker();
   RaftDirector *director();
   RaftLease *lease();
   RaftCommitTracker *commitTracker();
@@ -83,7 +83,7 @@ private:
   // All components needed for the raft party - owned by this class.
   RaftDispatcher *dispatcherptr = nullptr;
   RaftState *stateptr = nullptr;
-  RaftClock *clockptr = nullptr;
+  RaftHeartbeatTracker *heartbeattrackerptr = nullptr;
   RaftDirector *directorptr = nullptr;
   RaftLease *leaseptr = nullptr;
   RaftCommitTracker *ctptr = nullptr;
