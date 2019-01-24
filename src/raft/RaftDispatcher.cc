@@ -409,7 +409,7 @@ RaftHeartbeatResponse RaftDispatcher::heartbeat(const RaftHeartbeatRequest &req,
     qdb_throw("Received append entries from " << req.leader.toString() << ", while I believe leader for term " << snapshot->term << " is " << snapshot->leader.toString());
   }
 
-  heartbeatTracker.heartbeat();
+  heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
   return {snapshot->term, true, ""};
 }
 
@@ -606,7 +606,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
     return {snapshot->term, RaftVote::REFUSED};
   }
 
-  heartbeatTracker.heartbeat();
+  heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
   return {snapshot->term, RaftVote::GRANTED};
 }
 

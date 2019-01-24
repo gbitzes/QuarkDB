@@ -69,8 +69,8 @@ public:
   DISALLOW_COPY_AND_ASSIGN(RaftHeartbeatTracker);
 
   milliseconds refreshRandomTimeout();
-  void heartbeat();
-  bool timeout();
+  void heartbeat(std::chrono::steady_clock::time_point now);
+  bool timeout(std::chrono::steady_clock::time_point now);
 
   std::chrono::steady_clock::time_point getLastHeartbeat();
 

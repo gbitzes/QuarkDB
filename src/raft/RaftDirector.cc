@@ -40,7 +40,7 @@ RaftDirector::~RaftDirector() {
 }
 
 void RaftDirector::main() {
-  heartbeatTracker.heartbeat();
+  heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
 
   while(true) {
     heartbeatTracker.refreshRandomTimeout();
@@ -54,7 +54,7 @@ void RaftDirector::main() {
     }
     else if(snapshot->status == RaftStatus::LEADER) {
       leaderLoop(snapshot);
-      heartbeatTracker.heartbeat();
+      heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
     }
     else {
       qdb_throw("should never happen");
@@ -143,7 +143,7 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
       // Since a veto means the next cluster leader cannot be me, completely
       // abstain from starting elections until we receive a heartbeat.
     }
-    else if(heartbeatTracker.timeout()) {
+    else if(heartbeatTracker.timeout(std::chrono::steady_clock::now())) {
       if(contains(journal.getMembership().nodes, state.getMyself())) {
         qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
         runForLeader();
