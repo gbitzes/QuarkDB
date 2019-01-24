@@ -34,15 +34,18 @@
 namespace quarkdb {
 using std::chrono::steady_clock;
 
+class RaftLease;
+
 class RaftLastContact {
 public:
-  RaftLastContact(const RaftServer &srv_) : srv(srv_) {}
+  RaftLastContact(const RaftServer &srv_, RaftLease &l) : srv(srv_), lease(l) {}
   void heartbeat(const steady_clock::time_point &timepoint);
   steady_clock::time_point get();
 private:
   steady_clock::time_point lastCommunication;
   std::mutex mtx;
   RaftServer srv;
+  RaftLease &lease;
 };
 
 class RaftLease {
@@ -52,6 +55,8 @@ public:
   ~RaftLease();
   RaftLastContact& getHandler(const RaftServer &srv);
   steady_clock::time_point getDeadline();
+
+  void recalculateDeadline();
 private:
   RaftLastContact& getHandlerInternal(const RaftServer &srv);
 
@@ -60,6 +65,11 @@ private:
   std::map<RaftServer, RaftLastContact*> registrations;
   steady_clock::duration leaseDuration;
   size_t quorumSize;
+
+  void updateDeadline(std::chrono::steady_clock::time_point tp);
+
+  std::mutex cachedDeadlineMutex;
+  std::chrono::steady_clock::time_point cachedDeadline;
 };
 
 }

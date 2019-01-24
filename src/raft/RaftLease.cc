@@ -27,11 +27,14 @@
 using namespace quarkdb;
 
 void RaftLastContact::heartbeat(const std::chrono::steady_clock::time_point &timepoint) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::unique_lock<std::mutex> lock(mtx);
 
   if(lastCommunication < timepoint) {
     lastCommunication = timepoint;
   }
+
+  lock.unlock();
+  lease.recalculateDeadline();
 }
 
 std::chrono::steady_clock::time_point RaftLastContact::get() {
@@ -75,7 +78,7 @@ RaftLastContact& RaftLease::getHandlerInternal(const RaftServer &srv) {
   auto it = registrations.find(srv);
 
   if(it == registrations.end()) {
-    registrations[srv] = new RaftLastContact(srv);
+    registrations[srv] = new RaftLastContact(srv, *this);
   }
 
   return *registrations[srv];
@@ -86,16 +89,26 @@ RaftLastContact& RaftLease::getHandler(const RaftServer &srv) {
   return getHandlerInternal(srv);
 }
 
+void RaftLease::updateDeadline(std::chrono::steady_clock::time_point tp) {
+  std::lock_guard<std::mutex> lock(cachedDeadlineMutex);
+  cachedDeadline = tp;
+}
+
+std::chrono::steady_clock::time_point RaftLease::getDeadline() {
+  std::lock_guard<std::mutex> lock(cachedDeadlineMutex);
+  return cachedDeadline;
+}
+
 //------------------------------------------------------------------------------
 // Only consider the targets when determining the deadline, and not any other
 // registered endpoints. (they might be observers, which don't affect leases)
 //------------------------------------------------------------------------------
-std::chrono::steady_clock::time_point RaftLease::getDeadline() {
+void RaftLease::recalculateDeadline() {
   std::lock_guard<std::mutex> lock(mtx);
 
   if(quorumSize == 1) {
     // Special case: There's only a single node in our raft "cluster" - us.
-    return std::chrono::steady_clock::now() + leaseDuration;
+    updateDeadline(std::chrono::steady_clock::now() + leaseDuration);
   }
 
   std::vector<std::chrono::steady_clock::time_point> leases;
@@ -106,5 +119,6 @@ std::chrono::steady_clock::time_point RaftLease::getDeadline() {
 
   std::sort(leases.begin(), leases.end());
   size_t threshold = (leases.size()+1) - quorumSize;
-  return leases[threshold] + leaseDuration;
+
+  updateDeadline(leases[threshold] + leaseDuration);
 }
