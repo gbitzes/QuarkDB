@@ -109,8 +109,9 @@ RaftHeartbeatTracker::RaftHeartbeatTracker(const RaftTimeouts t)
 
 void RaftHeartbeatTracker::heartbeat(std::chrono::steady_clock::time_point now) {
   std::lock_guard<std::mutex> lock(lastHeartbeatMutex);
-  qdb_assert(lastHeartbeat <= now);
-  lastHeartbeat = now;
+  if(lastHeartbeat <= now) {
+    lastHeartbeat = now;
+  }
 }
 
 void RaftHeartbeatTracker::triggerTimeout() {

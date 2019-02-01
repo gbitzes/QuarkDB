@@ -1033,3 +1033,34 @@ TEST(RaftEntry, parsing) {
   RaftSerializedEntry serialized = entry.serialize();
   ASSERT_EQ(RaftEntry::fetchTerm(serialized), 13);
 }
+
+TEST(RaftHeartbeatTracker, BasicSanity) {
+  RaftHeartbeatTracker tracker(defaultTimeouts);
+
+  std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+  ASSERT_EQ(tracker.getLastHeartbeat(), std::chrono::steady_clock::time_point());
+
+  tracker.heartbeat(now);
+
+  ASSERT_EQ(tracker.getTimeouts(), defaultTimeouts);
+
+  std::chrono::milliseconds timeout = tracker.getRandomTimeout();
+  ASSERT_GE(timeout, defaultTimeouts.getLow());
+  ASSERT_LE(timeout, defaultTimeouts.getHigh());
+
+  ASSERT_FALSE(tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
+  ASSERT_FALSE(tracker.timeout(now+timeout));
+  ASSERT_TRUE(tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
+
+  tracker.heartbeat(now - std::chrono::milliseconds(1));
+
+  ASSERT_FALSE(tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
+  ASSERT_FALSE(tracker.timeout(now+timeout));
+  ASSERT_TRUE(tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
+
+  tracker.heartbeat(now + std::chrono::milliseconds(1));
+
+  ASSERT_FALSE(tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
+  ASSERT_FALSE(tracker.timeout(now+timeout));
+  ASSERT_FALSE(tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
+}
