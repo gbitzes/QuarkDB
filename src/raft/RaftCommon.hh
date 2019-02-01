@@ -258,7 +258,7 @@ struct ReplicationStatus {
       }
     }
 
-    qdb_throw("Replica " << " replica.target.toString() " << " not found");
+    qdb_throw("Replica " << replica.toString() << " not found");
   }
 
   void removeReplica(const RaftServer &replica) {
@@ -269,7 +269,7 @@ struct ReplicationStatus {
       }
     }
 
-    qdb_throw("Replica " << " replica.target.toString() " << " not found");
+    qdb_throw("Replica " << replica.toString() << " not found");
   }
 
   void removeReplicas(const std::vector<RaftServer> &replicas) {
