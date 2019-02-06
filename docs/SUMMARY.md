@@ -5,10 +5,11 @@
   * [Installation](INSTALLATION.md)
   * [Configuration](CONFIGURATION.md)
   * [Troubleshooting](TROUBLESHOOTING.md)
+* [Password authentication](AUTHENTICATION.md)
 * [Backup & restore](BACKUP.md)
 * [Upgrading](UPGRADING.md)
 * [Raft basics](RAFT.md)
-* [Write path](WRITEPATH.md)
 * [Membership updates](MEMBERSHIP.md)
 * Advanced topics
+  * [Write path](WRITEPATH.md)
   * [Raft extensions](RAFT-EXTENSIONS.md)
