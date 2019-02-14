@@ -86,6 +86,7 @@ void RaftCommitTracker::updateTargets(const std::vector<RaftServer> &trgt) {
   if(quorumSize == 1) {
     qdb_assert(trgt.empty());
     autoCommitter.reset(&RaftCommitTracker::runAutoCommit, this);
+    autoCommitter.setName("autocommitter");
   }
   for(const RaftServer& target : trgt) {
     targets[target] = &this->getHandlerInternal(target);

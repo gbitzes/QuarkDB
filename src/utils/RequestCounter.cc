@@ -28,7 +28,9 @@
 using namespace quarkdb;
 
 RequestCounter::RequestCounter(std::chrono::seconds intv)
-  : interval(intv), thread(&RequestCounter::mainThread, this) { }
+  : interval(intv), thread(&RequestCounter::mainThread, this) {
+  thread.setName("request-count-reporter");
+}
 
 void RequestCounter::account(const RedisRequest &req) {
   if(req.getCommandType() == CommandType::READ) {

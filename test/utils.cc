@@ -528,6 +528,10 @@ void coordinator(ThreadAssistant &assistant) {
   AssistedThread t2(busyWaiting);
   AssistedThread t3(busyWaiting);
 
+  t1.setName("busy-waiter-1");
+  t2.setName("busy-waiter-2");
+  t3.setName("busy-waiter-3");
+
   // Without the following three lines, we'd block forever waiting for
   // t1 to stop, ignoring our own termination signal.
   assistant.propagateTerminationSignal(t1);

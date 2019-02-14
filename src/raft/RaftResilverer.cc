@@ -80,6 +80,7 @@ RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const
   resilveringID = generateUuid();
   setStatus(ResilveringState::INPROGRESS, "");
   mainThread.reset(&RaftResilverer::main, this);
+  mainThread.setName(SSTR("resilvering-thread-targetting-" << target.toString()));
 }
 
 RaftResilverer::~RaftResilverer() {

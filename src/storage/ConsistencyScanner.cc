@@ -32,6 +32,7 @@ const std::string ConsistencyScanner::kConfigurationKey = "state-machine.consist
 
 ConsistencyScanner::ConsistencyScanner(StateMachine &sm) : stateMachine(sm) {
   thread.reset(&ConsistencyScanner::main, this);
+  thread.setName("checksum-scanner");
 }
 
 void ConsistencyScanner::singlePass() {

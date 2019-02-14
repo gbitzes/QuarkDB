@@ -32,8 +32,37 @@
 
 namespace quarkdb {
 
-
+//------------------------------------------------------------------------------
+// C++ threads offer no easy way to stop a thread once it's started. Signalling
+// "stop" to a (potentially sleeping) background thread involves a subtle dance
+// involving a mutex, condition variable, and possibly an atomic.
+//
+// Doing this correctly for every thread is a huge pain, which this class
+// tries to alleviate.
+//
+// How to create a thread: Just like std::thread, ie
+// AssistedThread(&SomeClass::SomeFunction, this, some_int_value)
+//
+// The function will receive a thread assistant object as *one extra*
+// parameter *at the end*, for example:
+//
+// void SomeClass::SomeFunction(int some_int_value, ThreadAssistant &assistant)
+//
+// The assistant object can then be used to check if thread termination has been
+// requested, or sleep for a specified amount of time but wake up immediatelly
+// the moment termination is requested.
+//
+// A common pattern for background threads is then:
+// while(!assistant.terminationRequested()) {
+//   doStuff();
+//   assistant.sleep_for(std::chrono::seconds(1));
+// }
+//------------------------------------------------------------------------------
 class AssistedThread;
+
+//------------------------------------------------------------------------------
+//! Class ThreadAssistant
+//------------------------------------------------------------------------------
 class ThreadAssistant {
 public:
   void reset() {
@@ -138,11 +167,15 @@ private:
 
 class AssistedThread {
 public:
-  // null constructor, no underlying thread
+  //----------------------------------------------------------------------------
+  //! null constructor, no underlying thread
+  //----------------------------------------------------------------------------
   AssistedThread() : assistant(new ThreadAssistant(true)), joined(true) { }
 
+  //----------------------------------------------------------------------------
   // universal references, perfect forwarding, variadic template
   // (C++ is intensifying)
+  //----------------------------------------------------------------------------
   template<typename... Args>
   AssistedThread(Args&&... args) : assistant(new ThreadAssistant(false)), joined(false), th(std::forward<Args>(args)..., std::ref(*assistant)) {
   }
@@ -198,6 +231,13 @@ public:
 
   void dropCallbacks() {
     assistant->dropCallbacks();
+  }
+
+  //----------------------------------------------------------------------------
+  //! Set thread name. Useful to have in GDB traces, for example.
+  //----------------------------------------------------------------------------
+  void setName(const std::string &threadName) {
+    pthread_setname_np(th.native_handle(), threadName.c_str());
   }
 
 private:

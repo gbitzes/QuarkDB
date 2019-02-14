@@ -60,7 +60,7 @@ void RaftTrimmingBlock::lift() {
 
 RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
 : journal(jr), raftConfig(conf), stateMachine(sm), mainThread(&RaftTrimmer::main, this) {
-
+  mainThread.setName("trimmer");
 }
 
 void RaftTrimmer::registerChange(RaftTrimmingBlock* block) {

@@ -75,7 +75,9 @@ RaftReplicaTracker::RaftReplicaTracker(const RaftServer &target_, const RaftStat
 
   running = true;
   thread = std::thread(&RaftReplicaTracker::main, this);
+
   heartbeatThread.reset(&RaftReplicaTracker::sendHeartbeats, this);
+  heartbeatThread.setName(SSTR("heartbeat-thread-for-" << target.toString()));
 }
 
 RaftReplicaTracker::~RaftReplicaTracker() {
@@ -330,6 +332,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
 
   streamingUpdates = true;
   AssistedThread ackmonitor(&RaftReplicaTracker::monitorAckReception, this);
+  ackmonitor.setName(SSTR("streaming-replication-ack-monitor-for-" << SSTR(target.toString())));
 
   const int64_t payloadLimit = 512;
   LogIndex nextIndex = firstNextIndex;

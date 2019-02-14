@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_DIRECTOR_H__
-#define __QUARKDB_RAFT_DIRECTOR_H__
+#ifndef QUARKDB_RAFT_DIRECTOR_HH
+#define QUARKDB_RAFT_DIRECTOR_HH
 
 #include "../StateMachine.hh"
 #include "RaftJournal.hh"
