@@ -39,7 +39,8 @@ enum class KeyType : char {
   kSet = 'c',
   kDeque = 'd',
   kLocalityHash = 'e',
-  kLease = 'f'
+  kLease = 'f',
+  kVersionedHash = 'g'
 };
 
 inline KeyType parseKeyType(char c) {
@@ -61,6 +62,9 @@ inline KeyType parseKeyType(char c) {
     }
     case char(KeyType::kLease): {
       return KeyType::kLease;
+    }
+    case char(KeyType::kVersionedHash): {
+      return KeyType::kVersionedHash;
     }
     default: {
       return KeyType::kParseError;
@@ -93,6 +97,9 @@ inline std::string keyTypeAsString(KeyType key) {
     }
     case KeyType::kLease: {
       return "lease";
+    }
+    case KeyType::kVersionedHash: {
+      return "versioned hash";
     }
   }
 
@@ -154,6 +161,18 @@ public:
         // All done
         return;
       }
+      case KeyType::kVersionedHash: {
+        qdb_assert(str.size() == kVersionedHashDescriptorSize);
+
+        // Parse size.
+        sz = binaryStringToInt(str.data() + kOffsetSize);
+
+        // Parse version, store into startIndex.
+        startIndex = binaryStringToInt(str.data() + kOffsetStartIndex);
+
+        // All done
+        return;
+      }
       default: {
         qdb_throw("error parsing key descriptor - unknown key type");
       }
@@ -174,7 +193,7 @@ public:
   }
 
   uint64_t getStartIndex() const {
-    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease);
+    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease || keyType == KeyType::kVersionedHash);
     return startIndex;
   }
 
@@ -193,7 +212,7 @@ public:
   }
 
   void setStartIndex(uint64_t newval) {
-    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease);
+    qdb_assert(keyType == KeyType::kDeque || keyType == KeyType::kLease || keyType == KeyType::kVersionedHash);
     startIndex = newval;
   }
 
@@ -228,6 +247,16 @@ public:
         intToBinaryString(endIndex, serializationBuffer.data() + kOffsetEndIndex);
 
         qdb_assert(startIndex <= endIndex);
+        return serializationBuffer.toView();
+      }
+      case KeyType::kVersionedHash: {
+        serializationBuffer.shrink(kVersionedHashDescriptorSize);
+
+        // Store the size..
+        intToBinaryString(sz, serializationBuffer.data() + kOffsetSize);
+
+        // Store start index
+        intToBinaryString(startIndex, serializationBuffer.data() + kOffsetStartIndex);
         return serializationBuffer.toView();
       }
       default: {
@@ -274,6 +303,7 @@ private:
   static constexpr size_t kStringDescriptorSize = 1 + sizeof(int64_t);
   static constexpr size_t kHashDescriptorSize = 1 + sizeof(int64_t);
   static constexpr size_t kDequeDescriptorSize = 1 + sizeof(int64_t) + 2*sizeof(uint64_t);
+  static constexpr size_t kVersionedHashDescriptorSize = 1 + sizeof(int64_t) + 1*sizeof(uint64_t);
 
   static constexpr size_t kOffsetSize = 1;
   static constexpr size_t kOffsetStartIndex = 1 + sizeof(int64_t);
@@ -282,7 +312,7 @@ private:
   // Only used in hashes, sets, and deques
   int64_t sz = 0;
 
-  // Only used in deques
+  // Only used in deques. startIndex is also used in versioned hashes.
   static constexpr uint64_t kIndexInitialValue = std::numeric_limits<uint64_t>::max() / 2;
   uint64_t startIndex = kIndexInitialValue;
   uint64_t endIndex = kIndexInitialValue;

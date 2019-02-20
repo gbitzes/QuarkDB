@@ -984,6 +984,25 @@ TEST(KeyDescriptor, BasicSanity) {
   ASSERT_EQ(leaseDescr.getEndIndex(), 15u);
 }
 
+TEST(KeyDescriptor, VersionedHash) {
+  KeyDescriptor vhash;
+  vhash.setKeyType(KeyType::kVersionedHash);
+  vhash.setSize(19);
+  vhash.setStartIndex(99);
+  ASSERT_THROW(vhash.setEndIndex(11), FatalException);
+
+  ASSERT_EQ(vhash.getKeyType(), KeyType::kVersionedHash);
+  ASSERT_EQ(vhash.getSize(), 19);
+  ASSERT_EQ(vhash.getStartIndex(), 99u);
+  ASSERT_THROW(vhash.getEndIndex(), FatalException);
+
+  KeyDescriptor vhash2(vhash.serialize());
+  ASSERT_TRUE(vhash == vhash2);
+  ASSERT_EQ(vhash2.getSize(), 19);
+  ASSERT_EQ(vhash2.getStartIndex(), 99u);
+  ASSERT_THROW(vhash2.getEndIndex(), FatalException);
+}
+
 TEST(KeyType, AsString) {
   ASSERT_THROW(keyTypeAsString(KeyType::kParseError), FatalException);
   ASSERT_EQ(keyTypeAsString(KeyType::kNull), "none");
