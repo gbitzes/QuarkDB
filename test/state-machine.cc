@@ -588,6 +588,8 @@ TEST_F(State_Machine, keys) {
 }
 
 TEST_F(State_Machine, BatchedWrites) {
+  std::string keyDescr;
+  {
   StagingArea stagingArea(*stateMachine());
 
   bool fieldcreated;
@@ -599,7 +601,13 @@ TEST_F(State_Machine, BatchedWrites) {
   ASSERT_OK(stateMachine()->hset(stagingArea, "key", "field", "value", fieldcreated));
   ASSERT_FALSE(fieldcreated);
 
+  ASSERT_OK(stagingArea.readFromWriteBatch("!key", keyDescr));
+  KeyDescriptor descr(keyDescr);
+  ASSERT_EQ(descr.getKeyType(), KeyType::kHash);
+  ASSERT_EQ(descr.getSize(), 1);
+
   stagingArea.commit(1);
+  }
 
   std::string val;
   ASSERT_OK(stateMachine()->get("one", val));
@@ -610,6 +618,12 @@ TEST_F(State_Machine, BatchedWrites) {
 
   ASSERT_OK(stateMachine()->hget("key", "field", val));
   ASSERT_EQ(val, "value");
+
+  StagingArea stagingArea2(*stateMachine());
+  std::string keyDescr2;
+  ASSERT_NOTFOUND(stagingArea2.readFromWriteBatch("!key", keyDescr2));
+  ASSERT_OK(stagingArea2.get("!key", keyDescr2));
+  ASSERT_EQ(keyDescr, keyDescr2);
 }
 
 TEST_F(State_Machine, scan) {

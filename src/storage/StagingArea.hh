@@ -59,6 +59,16 @@ public:
     }
   }
 
+  // Read the given key from the write batch, without touching the DB.
+  rocksdb::Status readFromWriteBatch(std::string_view key, std::string &value) {
+    if(readOnly) qdb_throw("cannot call inWriteBatch() on a readonly staging area");
+    if(bulkLoad) {
+      return rocksdb::Status::NotFound();
+    }
+
+    return writeBatchWithIndex.GetFromBatch(rocksdb::DBOptions(), key, &value);
+  }
+
   rocksdb::Status getForUpdate(std::string_view slice, std::string &value) {
     if(readOnly) qdb_throw("cannot call getForUpdate() on a readonly staging area");
     if(bulkLoad) {
