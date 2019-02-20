@@ -1030,6 +1030,13 @@ TEST(FieldLocator, BasicSanity) {
   ASSERT_EQ(locator3.getPrefix(), SSTR(char(KeyType::kSet) << "evil|#key|##"));
 }
 
+TEST(FieldLocator, VersionedHash) {
+  FieldLocator locator(KeyType::kVersionedHash, "my_versioned_hash");
+  locator.resetField("some-field");
+  ASSERT_EQ(locator.toView(), SSTR(char(KeyType::kVersionedHash) << "my_versioned_hash##some-field"));
+  ASSERT_EQ(locator.getPrefix(), SSTR(char(KeyType::kVersionedHash) << "my_versioned_hash##"));
+}
+
 TEST(ReverseLocator, BasicSanity) {
   FieldLocator locator1(KeyType::kHash, "some_key");
   locator1.resetField("some_field");
