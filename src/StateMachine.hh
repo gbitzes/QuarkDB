@@ -100,7 +100,7 @@ public:
   rocksdb::Status lease_get(StagingArea &stagingArea, std::string_view key, ClockValue clockUpdate, LeaseInfo &info);
 
   // versioned hashes
-  rocksdb::Status vhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
+  rocksdb::Status vhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, uint64_t &version);
 
   //----------------------------------------------------------------------------
   // API for transactional reads. Can be part of a mixed read-write transaction.
@@ -188,7 +188,7 @@ public:
   LeaseAcquisitionStatus lease_acquire(std::string_view key, std::string_view value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, LogIndex index = 0);
   rocksdb::Status lease_release(std::string_view key, ClockValue clockUpdate, LogIndex index = 0);
   rocksdb::Status lease_get(std::string_view key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index = 0);
-  rocksdb::Status vhset(std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated, LogIndex index);
+  rocksdb::Status vhset(std::string_view key, std::string_view field, std::string_view value, uint64_t &version, LogIndex index);
   rocksdb::Status vhgetall(std::string_view key, std::vector<std::string> &res, uint64_t &version);
 
   //----------------------------------------------------------------------------
