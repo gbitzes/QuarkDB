@@ -421,6 +421,14 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::ok();
     }
+    case RedisCommand::VHSET: {
+      if(request.size() !=  4) return Formatter::errArgs("vhset");
+
+      uint64_t version;
+      rocksdb::Status st = store.vhset(stagingArea, request[1], request[2], request[3], version);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(version);
+    }
     case RedisCommand::TX_READWRITE: {
       // Unpack transaction and process
       Transaction transaction;
@@ -759,6 +767,14 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       reply.emplace_back(SSTR("DYNAMIC-CLOCK: " << dynamicClock));
 
       return Formatter::statusVector(reply);
+    }
+    case RedisCommand::VHGETALL: {
+      if(request.size() != 2) return errArgs(request);
+      std::vector<std::string> vec;
+      uint64_t version = 0u;
+      rocksdb::Status st = store.vhgetall(stagingArea, request[1], vec, version);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::versionedVector(version, vec);
     }
     case RedisCommand::TX_READONLY: {
       // Unpack transaction and process

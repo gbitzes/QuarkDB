@@ -1816,3 +1816,34 @@ TEST_F(Raft_e2e, pubsub) {
 
   ASSERT_EQ(mq->size(), 0u);
 }
+
+TEST_F(Raft_e2e, vhset) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> replies;
+  replies.emplace_back(tunnel(leaderID)->exec("set", "key-0", "val"));
+  replies.emplace_back(tunnel(leaderID)->exec("vhset", "key-0", "f1", "v1"));
+  replies.emplace_back(tunnel(leaderID)->exec("vhset", "key-1", "f1", "v1"));
+
+  ASSERT_REPLY(replies[0], "OK");
+  ASSERT_REPLY(replies[1], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+  ASSERT_REPLY(replies[2], 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f2", "v2"), 2);
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f3", "v3"), 3);
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f4", "v4"), 4);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 4\n"
+    "2) 1) \"f1\"\n"
+    "   2) \"v1\"\n"
+    "   3) \"f2\"\n"
+    "   4) \"v2\"\n"
+    "   5) \"f3\"\n"
+    "   6) \"v3\"\n"
+    "   7) \"f4\"\n"
+    "   8) \"v4\"\n"
+  );
+}

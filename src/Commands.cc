@@ -67,6 +67,7 @@ struct cmdMapInit {
     redis_cmd_map["raw_get_all_versions"] = {RedisCommand::RAW_GET_ALL_VERSIONS, CommandType::READ};
     redis_cmd_map["clock_get"] = {RedisCommand::CLOCK_GET, CommandType::READ};
     redis_cmd_map["type"] = {RedisCommand::TYPE, CommandType::READ};
+    redis_cmd_map["vhgetall"] = {RedisCommand::VHGETALL, CommandType::READ};
 
     redis_cmd_map["flushall"] = {RedisCommand::FLUSHALL, CommandType::WRITE};
     redis_cmd_map["set"] = {RedisCommand::SET, CommandType::WRITE};
@@ -100,6 +101,7 @@ struct cmdMapInit {
     redis_cmd_map["timestamped_lease_acquire"] = {RedisCommand::TIMESTAMPED_LEASE_ACQUIRE, CommandType::WRITE};
     redis_cmd_map["timestamped_lease_get"] = {RedisCommand::TIMESTAMPED_LEASE_GET, CommandType::WRITE};
     redis_cmd_map["timestamped_lease_release"] = {RedisCommand::TIMESTAMPED_LEASE_RELEASE, CommandType::WRITE};
+    redis_cmd_map["vhset"] = {RedisCommand::VHSET, CommandType::WRITE};
 
     redis_cmd_map["exec"] = {RedisCommand::EXEC, CommandType::CONTROL};
     redis_cmd_map["discard"] = {RedisCommand::DISCARD, CommandType::CONTROL};
