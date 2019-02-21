@@ -166,6 +166,20 @@ RedisEncodedResponse Formatter::noauth(std::string_view str) {
   return RedisEncodedResponse(SSTR("-NOAUTH " << str << "\r\n"));
 }
 
+RedisEncodedResponse Formatter::versionedVector(uint64_t num, const std::vector<std::string> &vec) {
+  std::stringstream ss;
+  ss << "*2\r\n";
+  ss << ":" << num << "\r\n";
+
+  ss << "*" << vec.size() << "\r\n";
+  for(auto it = vec.begin(); it != vec.end(); it++) {
+    ss << "$" << it->length() << "\r\n";
+    ss << *it << "\r\n";
+  }
+
+  return RedisEncodedResponse(ss.str());
+}
+
 RedisEncodedResponse Formatter::multiply(const RedisEncodedResponse &resp, size_t factor) {
   qdb_assert(factor >= 1);
 

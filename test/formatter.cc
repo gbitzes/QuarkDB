@@ -121,3 +121,30 @@ TEST(Formatter, pmessage) {
     "3) \"channel\"\n"
     "4) \"payload\"\n");
 }
+
+TEST(Formatter, VersionedVector) {
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::versionedVector(999, {"one", "two", "three", "four" } ).val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) (integer) 999\n"
+    "2) 1) \"one\"\n"
+    "   2) \"two\"\n"
+    "   3) \"three\"\n"
+    "   4) \"four\"\n");
+}
+
+TEST(Formatter, EmptyVersionedVector) {
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::versionedVector(888, {} ).val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) (integer) 888\n"
+    "2) (empty list or set)\n");
+}

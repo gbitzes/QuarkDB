@@ -51,6 +51,7 @@ public:
   static RedisEncodedResponse raftEntry(const RaftEntry &entry, bool raw);
   static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries, bool raw);
   static RedisEncodedResponse noauth(std::string_view str);
+  static RedisEncodedResponse versionedVector(uint64_t num, const std::vector<std::string> &vec);
 
   static RedisEncodedResponse subscribe(std::string_view channel, size_t active);
   static RedisEncodedResponse psubscribe(std::string_view pattern, size_t active);
