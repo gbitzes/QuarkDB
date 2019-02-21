@@ -749,6 +749,58 @@ TEST_F(State_Machine, Clock) {
   ASSERT_EQ(clk, 345u);
 }
 
+TEST_F(State_Machine, VersionedHash) {
+  uint64_t version = 0;
+  std::vector<std::string> results, exp;
+
+  bool fieldcreated;
+  ASSERT_NOTFOUND(stateMachine()->vhgetall("my-key", results, version));
+
+  ASSERT_OK(stateMachine()->vhset("my-key", "f1", "v1", fieldcreated, 1));
+  ASSERT_OK(stateMachine()->vhgetall("my-key", results, version));
+  exp = { "f1", "v1" };
+  ASSERT_TRUE(fieldcreated);
+  ASSERT_EQ(results, exp);
+  ASSERT_EQ(version, 1u);
+
+  ASSERT_OK(stateMachine()->vhset("my-key", "f2", "v2", fieldcreated, 2));
+  ASSERT_OK(stateMachine()->vhgetall("my-key", results, version));
+  exp = { "f1", "v1", "f2", "v2" };
+  ASSERT_TRUE(fieldcreated);
+  ASSERT_EQ(results, exp);
+  ASSERT_EQ(version, 2u);
+
+  ASSERT_OK(stateMachine()->vhset("my-key", "f2", "v3", fieldcreated, 3));
+  ASSERT_OK(stateMachine()->vhgetall("my-key", results, version));
+  exp = { "f1", "v1", "f2", "v3" };
+  ASSERT_FALSE(fieldcreated);
+  ASSERT_EQ(results, exp);
+  ASSERT_EQ(version, 3u);
+
+  ASSERT_OK(stateMachine()->vhset("my-key", "f4", "v4", fieldcreated, 4));
+  ASSERT_OK(stateMachine()->vhgetall("my-key", results, version));
+  exp = { "f1", "v1", "f2", "v3", "f4", "v4" };
+  ASSERT_TRUE(fieldcreated);
+  ASSERT_EQ(results, exp);
+  ASSERT_EQ(version, 4u);
+
+  // Two updates in a single transaction - version must only jump once
+  {
+    StagingArea stagingArea(*stateMachine());
+
+    ASSERT_OK(stateMachine()->vhset(stagingArea, "my-key", "f5", "v5", fieldcreated));
+    ASSERT_TRUE(fieldcreated);
+    ASSERT_OK(stateMachine()->vhset(stagingArea, "my-key", "f6", "v1", fieldcreated));
+    ASSERT_TRUE(fieldcreated);
+    stagingArea.commit(5);
+
+    ASSERT_OK(stateMachine()->vhgetall("my-key", results, version));
+    exp = {"f1", "v1", "f2", "v3", "f4", "v4", "f5", "v5", "f6", "v1"};
+    ASSERT_EQ(results, exp);
+    ASSERT_EQ(version, 5u);
+  }
+}
+
 TEST_F(State_Machine, Leases) {
   ClockValue clk;
   stateMachine()->getClock(clk);

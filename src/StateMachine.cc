@@ -953,9 +953,20 @@ StateMachine::WriteOperation::WriteOperation(StagingArea &staging, std::string_v
 
   if(keyinfo.empty() && isValid) {
     keyinfo.setKeyType(expectedType);
+
+    if(expectedType == KeyType::kVersionedHash) {
+      keyinfo.setStartIndex(0u);
+    }
   }
 
   finalized = !isValid;
+}
+
+bool StateMachine::WriteOperation::descriptorModifiedAlreadyInWriteBatch() {
+  std::string ignored;
+  rocksdb::Status st = stagingArea.readFromWriteBatch(dlocator.toView(), ignored);
+  ASSERT_OK_OR_NOTFOUND(st);
+  return st.ok();
 }
 
 bool StateMachine::WriteOperation::valid() {
@@ -1028,7 +1039,7 @@ void StateMachine::WriteOperation::write(std::string_view value) {
 void StateMachine::WriteOperation::writeField(std::string_view field, std::string_view value) {
   assertWritable();
 
-  if(keyinfo.getKeyType() != KeyType::kHash && keyinfo.getKeyType() != KeyType::kSet && keyinfo.getKeyType() != KeyType::kDeque) {
+  if(keyinfo.getKeyType() != KeyType::kHash && keyinfo.getKeyType() != KeyType::kSet && keyinfo.getKeyType() != KeyType::kDeque && keyinfo.getKeyType() != KeyType::kVersionedHash) {
     qdb_throw("writing with a field makes sense only for hashes, sets, or lists");
   }
 
@@ -1239,6 +1250,54 @@ rocksdb::Status StateMachine::lease_get(StagingArea &stagingArea, std::string_vi
   THROW_ON_ERROR(stagingArea.get(locator.toView(), value));
 
   info = LeaseInfo(value, keyinfo.getStartIndex(), keyinfo.getEndIndex());
+  return rocksdb::Status::OK();
+}
+
+rocksdb::Status StateMachine::vhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated) {
+  WriteOperation operation(stagingArea, key, KeyType::kVersionedHash);
+  if(!operation.valid()) return wrong_type();
+
+  fieldcreated = !operation.fieldExists(field);
+  int64_t newsize = operation.keySize() + fieldcreated;
+  operation.writeField(field, value);
+
+  // Have we modified this key in the same write batch already?
+  // If yes:
+  // - We have already incremented the version, nothing to do. Each transaction
+  //   towards the state machine counts as a single version.
+  // If not:
+  // - We need to increment the version by one.
+  if(!operation.descriptorModifiedAlreadyInWriteBatch()) {
+    KeyDescriptor &descriptor = operation.descriptor();
+    descriptor.setStartIndex(descriptor.getStartIndex() + 1);
+  }
+
+  return operation.finalize(newsize, true);
+}
+
+rocksdb::Status StateMachine::vhgetall(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &res, uint64_t &version) {
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
+
+  if(keyinfo.empty()) {
+    return rocksdb::Status::NotFound();
+  }
+
+  if(keyinfo.getKeyType() != KeyType::kVersionedHash) {
+    return wrong_type();
+  }
+
+  res.clear();
+  FieldLocator locator(KeyType::kVersionedHash, key);
+
+  IteratorPtr iter(stagingArea.getIterator());
+  for(iter->Seek(locator.getPrefix()); iter->Valid(); iter->Next()) {
+    std::string tmp = iter->key().ToString();
+    if(!StringUtils::startsWith(tmp, locator.toView())) break;
+    res.push_back(std::string(tmp.begin()+locator.getPrefixSize(), tmp.end()));
+    res.push_back(iter->value().ToString());
+  }
+
+  version = keyinfo.getStartIndex();
   return rocksdb::Status::OK();
 }
 
@@ -1845,6 +1904,10 @@ rocksdb::Status StateMachine::lhget(std::string_view key, std::string_view field
   CHAIN_READ(lhget, key, field, hint, value);
 }
 
+rocksdb::Status StateMachine::vhgetall(std::string_view key, std::vector<std::string> &res, uint64_t &version) {
+  CHAIN_READ(vhgetall, key, res, version);
+}
+
 //------------------------------------------------------------------------------
 // Writes:
 //------------------------------------------------------------------------------
@@ -1932,3 +1995,8 @@ rocksdb::Status StateMachine::lease_release(std::string_view key, ClockValue clo
 rocksdb::Status StateMachine::dequeTrimFront(std::string_view key, std::string_view maxToKeep, int64_t &itemsRemoved, LogIndex index) {
   CHAIN(index, dequeTrimFront, key, maxToKeep, itemsRemoved);
 }
+
+rocksdb::Status StateMachine::vhset(std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated, LogIndex index) {
+  CHAIN(index, vhset, key, field, value, fieldcreated);
+}
+

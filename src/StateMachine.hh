@@ -67,6 +67,7 @@ public:
   rocksdb::Status del(StagingArea &stagingArea, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
   rocksdb::Status flushall(StagingArea &stagingArea);
 
+  // hashes
   rocksdb::Status hset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
   rocksdb::Status hmset(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end);
   rocksdb::Status hsetnx(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
@@ -75,32 +76,48 @@ public:
   rocksdb::Status hdel(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
   rocksdb::Status hclone(StagingArea &stagingArea, std::string_view source, std::string_view target);
 
+  // locality hashes
   rocksdb::Status lhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value, bool &fieldcreated);
   rocksdb::Status lhdel(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
   rocksdb::Status lhmset(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end);
 
+  // sets
   rocksdb::Status sadd(StagingArea &stagingArea, std::string_view key,  const ReqIterator &start, const ReqIterator &end, int64_t &added);
   rocksdb::Status srem(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed);
   rocksdb::Status smove(StagingArea &stagingArea, std::string_view source, std::string_view destination, std::string_view element, int64_t &outcome);
 
+  // deques
   rocksdb::Status dequePushFront(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &length);
   rocksdb::Status dequePushBack(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &length);
   rocksdb::Status dequePopFront(StagingArea &stagingArea, std::string_view key, std::string &item);
   rocksdb::Status dequePopBack(StagingArea &stagingArea, std::string_view key, std::string &item);
   rocksdb::Status dequeTrimFront(StagingArea &stagingArea, std::string_view key, std::string_view maxToKeep, int64_t &itemsRemoved);
 
+  // leases
   void advanceClock(StagingArea &stagingArea, ClockValue newValue);
   LeaseAcquisitionStatus lease_acquire(StagingArea &stagingArea, std::string_view key,  std::string_view value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info);
   rocksdb::Status lease_release(StagingArea &stagingArea, std::string_view key, ClockValue clockValue);
   rocksdb::Status lease_get(StagingArea &stagingArea, std::string_view key, ClockValue clockUpdate, LeaseInfo &info);
 
+  // versioned hashes
+  rocksdb::Status vhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated);
+
   //----------------------------------------------------------------------------
   // API for transactional reads. Can be part of a mixed read-write transaction.
   //----------------------------------------------------------------------------
+  void getClock(StagingArea &stagingArea, ClockValue &value);
+  void getType(StagingArea &stagingArea, std::string_view key, std::string& keyType);
+
+  // strings
   rocksdb::Status get(StagingArea &stagingArea, std::string_view key, std::string &value);
-  rocksdb::Status exists(StagingArea &stagingArea, const ReqIterator &start, const ReqIterator &end, int64_t &count);
-  rocksdb::Status keys(StagingArea &stagingArea, std::string_view pattern, std::vector<std::string> &result);
+
+  // generic
   rocksdb::Status scan(StagingArea &stagingArea, std::string_view cursor, std::string_view pattern, size_t count, std::string &newcursor, std::vector<std::string> &results);
+  rocksdb::Status rawScan(StagingArea &stagingArea, std::string_view key, size_t count, std::vector<std::string> &elements);
+  rocksdb::Status keys(StagingArea &stagingArea, std::string_view pattern, std::vector<std::string> &result);
+  rocksdb::Status exists(StagingArea &stagingArea, const ReqIterator &start, const ReqIterator &end, int64_t &count);
+
+  // hashes
   rocksdb::Status hget(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string &value);
   rocksdb::Status hexists(StagingArea &stagingArea, std::string_view key, std::string_view field);
   rocksdb::Status hkeys(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &keys);
@@ -108,18 +125,24 @@ public:
   rocksdb::Status hlen(StagingArea &stagingArea, std::string_view key, size_t &len);
   rocksdb::Status hvals(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &vals);
   rocksdb::Status hscan(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
-  rocksdb::Status sismember(StagingArea &stagingArea, std::string_view key, std::string_view element);
-  rocksdb::Status smembers(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &members);
-  rocksdb::Status scard(StagingArea &stagingArea, std::string_view key, size_t &count);
-  rocksdb::Status sscan(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
-  rocksdb::Status dequeLen(StagingArea &stagingArea, std::string_view key, size_t &len);
+
+  // locality hashes
   rocksdb::Status lhget(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string &value);
   rocksdb::Status lhlen(StagingArea &stagingArea, std::string_view key, size_t &len);
   rocksdb::Status lhscan(StagingArea &stagingArae, std::string_view key, std::string_view cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
-  rocksdb::Status rawScan(StagingArea &stagingArea, std::string_view key, size_t count, std::vector<std::string> &elements);
+
+  // deque
+  rocksdb::Status dequeLen(StagingArea &stagingArea, std::string_view key, size_t &len);
   rocksdb::Status dequeScanBack(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &results);
-  void getClock(StagingArea &stagingArea, ClockValue &value);
-  void getType(StagingArea &stagingArea, std::string_view key, std::string& keyType);
+
+  // sets
+  rocksdb::Status scard(StagingArea &stagingArea, std::string_view key, size_t &count);
+  rocksdb::Status sscan(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &res);
+  rocksdb::Status smembers(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &members);
+  rocksdb::Status sismember(StagingArea &stagingArea, std::string_view key, std::string_view element);
+
+  // versioned hashes
+  rocksdb::Status vhgetall(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &res, uint64_t &version);
 
   //----------------------------------------------------------------------------
   // Simple API
@@ -165,6 +188,8 @@ public:
   LeaseAcquisitionStatus lease_acquire(std::string_view key, std::string_view value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info, LogIndex index = 0);
   rocksdb::Status lease_release(std::string_view key, ClockValue clockUpdate, LogIndex index = 0);
   rocksdb::Status lease_get(std::string_view key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index = 0);
+  rocksdb::Status vhset(std::string_view key, std::string_view field, std::string_view value, bool &fieldcreated, LogIndex index);
+  rocksdb::Status vhgetall(std::string_view key, std::vector<std::string> &res, uint64_t &version);
 
   //----------------------------------------------------------------------------
   // Internal configuration, not exposed to users through 'KEYS' and friends.
@@ -249,6 +274,7 @@ private:
     bool getField(std::string_view field, std::string &out);
     bool getLocalityIndex(std::string_view field, std::string &out);
     void cancel();
+    bool descriptorModifiedAlreadyInWriteBatch();
 
     int64_t keySize();
 
