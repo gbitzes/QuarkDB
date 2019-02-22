@@ -1602,7 +1602,7 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const ReqIterator &s
       THROW_ON_ERROR(stagingArea.get(slocator.toView(), tmp));
       stagingArea.del(slocator.toView());
     }
-    else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kDeque) {
+    else if(keyInfo.getKeyType() == KeyType::kHash || keyInfo.getKeyType() == KeyType::kSet || keyInfo.getKeyType() == KeyType::kDeque || keyInfo.getKeyType() == KeyType::kVersionedHash) {
       FieldLocator locator(keyInfo.getKeyType(), *it);
       int64_t count = 0;
       remove_all_with_prefix(locator.toView(), count, stagingArea);
@@ -1622,7 +1622,7 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const ReqIterator &s
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
     else {
-      qdb_throw("should never happen");
+      qdb_throw("DEL called on unknown keytype - should never happen");
     }
 
     removed++;

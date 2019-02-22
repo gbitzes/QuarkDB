@@ -1899,4 +1899,20 @@ TEST_F(Raft_e2e, vhset) {
     "   2) \"v3\"\n"
   );
 
+  ASSERT_REPLY(tunnel(leaderID)->exec("del", "key-1"), 1);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 0\n"
+    "2) (empty list or set)\n"
+  );
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f9", "v9"), 1);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 1\n"
+    "2) 1) \"f9\"\n"
+    "   2) \"v9\"\n"
+  );
+
+
 }
