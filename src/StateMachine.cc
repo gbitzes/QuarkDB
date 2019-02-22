@@ -1074,7 +1074,7 @@ rocksdb::Status StateMachine::WriteOperation::finalize(int64_t newsize, bool for
 
   if(newsize < 0) qdb_throw("invalid newsize: " << newsize);
 
-  if(newsize == 0) {
+  if(newsize == 0 && keyinfo.getKeyType() != KeyType::kVersionedHash) {
     stagingArea.del(dlocator.toView());
   }
   else if(keyinfo.getSize() != newsize || forceUpdate) {
@@ -1276,6 +1276,44 @@ rocksdb::Status StateMachine::vhset(StagingArea &stagingArea, std::string_view k
   }
 
   return operation.finalize(newsize, true);
+}
+
+rocksdb::Status StateMachine::vhdel(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, uint64_t &version) {
+  int64_t removed = 0;
+
+  WriteOperation operation(stagingArea, key, KeyType::kVersionedHash);
+  if(!operation.valid()) return wrong_type();
+
+  for(ReqIterator it = start; it != end; it++) {
+    removed += operation.deleteField(*it);
+  }
+
+  // Have we modified this key in the same write batch already?
+  // If yes:
+  // - We have already incremented the version, nothing to do. Each transaction
+  //   towards the state machine counts as a single version.
+  // If not:
+  // - We need to increment the version by one.
+  KeyDescriptor &descriptor = operation.descriptor();
+  version = descriptor.getStartIndex();
+
+  if(removed != 0 && !operation.descriptorModifiedAlreadyInWriteBatch()) {
+    version++;
+    descriptor.setStartIndex(version);
+  }
+
+  int64_t newsize = operation.keySize() - removed;
+  return operation.finalize(newsize, true);
+}
+
+rocksdb::Status StateMachine::vhlen(StagingArea &stagingArea, std::string_view key, size_t &len) {
+  len = 0;
+
+  KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
+  if(isWrongType(keyinfo, KeyType::kVersionedHash)) return wrong_type();
+
+  len = keyinfo.getSize();
+  return rocksdb::Status::OK();
 }
 
 rocksdb::Status StateMachine::vhgetall(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &res, uint64_t &version) {

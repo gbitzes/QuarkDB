@@ -1846,4 +1846,57 @@ TEST_F(Raft_e2e, vhset) {
     "   7) \"f4\"\n"
     "   8) \"v4\"\n"
   );
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhdel", "key-1", "f3"), 5);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 5\n"
+    "2) 1) \"f1\"\n"
+    "   2) \"v1\"\n"
+    "   3) \"f2\"\n"
+    "   4) \"v2\"\n"
+    "   5) \"f4\"\n"
+    "   6) \"v4\"\n"
+  );
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhlen", "key-1"), 3);
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhdel", "key-1", "f1"), 6);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 6\n"
+    "2) 1) \"f2\"\n"
+    "   2) \"v2\"\n"
+    "   3) \"f4\"\n"
+    "   4) \"v4\"\n"
+  );
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhlen", "key-1"), 2);
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhdel", "key-1", "f4"), 7);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 7\n"
+    "2) 1) \"f2\"\n"
+    "   2) \"v2\"\n"
+  );
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhlen", "key-1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhdel", "key-1", "not-existing"), 7);
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhlen", "key-1"), 1);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhdel", "key-1", "f2"), 8);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 8\n"
+    "2) (empty list or set)\n"
+  );
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhdel", "key-1", "f2"), 8);
+  ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f3", "v3"), 9);
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("vhgetall", "key-1").get(),
+    "1) (integer) 9\n"
+    "2) 1) \"f3\"\n"
+    "   2) \"v3\"\n"
+  );
+
 }

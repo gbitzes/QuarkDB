@@ -422,10 +422,18 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       return Formatter::ok();
     }
     case RedisCommand::VHSET: {
-      if(request.size() !=  4) return Formatter::errArgs("vhset");
+      if(request.size() !=  4) return errArgs(request);
 
       uint64_t version;
       rocksdb::Status st = store.vhset(stagingArea, request[1], request[2], request[3], version);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(version);
+    }
+    case RedisCommand::VHDEL: {
+      if(request.size() <= 2) return errArgs(request);
+
+      uint64_t version = 0;
+      rocksdb::Status st = store.vhdel(stagingArea, request[1], request.begin()+2, request.end(), version);
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(version);
     }
@@ -781,6 +789,13 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       Transaction transaction;
       qdb_assert(transaction.deserialize(request));
       return dispatchReadOnly(stagingArea, transaction);
+    }
+    case RedisCommand::VHLEN: {
+      if(request.size() != 2) return errArgs(request);
+      size_t len;
+      rocksdb::Status st = store.vhlen(stagingArea, request[1], len);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(len);
     }
     default: {
       return dispatchingError(request, 0);

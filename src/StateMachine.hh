@@ -101,6 +101,7 @@ public:
 
   // versioned hashes
   rocksdb::Status vhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, uint64_t &version);
+  rocksdb::Status vhdel(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, uint64_t &version);
 
   //----------------------------------------------------------------------------
   // API for transactional reads. Can be part of a mixed read-write transaction.
@@ -143,6 +144,7 @@ public:
 
   // versioned hashes
   rocksdb::Status vhgetall(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &res, uint64_t &version);
+  rocksdb::Status vhlen(StagingArea &stagingArea, std::string_view key, size_t &len);
 
   //----------------------------------------------------------------------------
   // Simple API
