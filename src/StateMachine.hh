@@ -244,7 +244,6 @@ public:
 
   ClockValue getDynamicClock();
   void hardSynchronizeDynamicClock();
-  std::string getGenesisUuid() const;
 
 private:
   ClockValue maybeAdvanceClock(StagingArea &stagingArea, ClockValue newValue);
@@ -318,8 +317,6 @@ private:
   KeyDescriptor lockKeyDescriptor(StagingArea &stagingArea, DescriptorLocator &dlocator);
 
   void retrieveLastApplied();
-  void retrieveGenesisUuid();
-  void generateRandomGenesisUuid();
   void ensureCompatibleFormat(bool justCreated);
   void ensureBulkloadSanity(bool justCreated);
   void ensureClockSanity(bool justCreated);
@@ -329,8 +326,6 @@ private:
   std::atomic<LogIndex> lastApplied;
   std::condition_variable lastAppliedCV;
   std::mutex lastAppliedMtx;
-
-  std::string genesisUuid;
 
   std::mutex writeMtx;
   std::unique_ptr<rocksdb::DB> db;

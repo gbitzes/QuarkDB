@@ -46,7 +46,6 @@ public:
   virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
   virtual void notifyDisconnect(Connection *conn) override final {}
   size_t monitors() { return commandMonitor.size(); }
-  std::string getGenesisUuid();
 
 private:
   void detach();

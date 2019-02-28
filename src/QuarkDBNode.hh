@@ -41,7 +41,6 @@ struct QuarkDBInfo {
   size_t monitors;
   int64_t bootTime;
   int64_t uptime;
-  std::string genesisUuid;
 
   std::vector<std::string> toVector() const;
 };
