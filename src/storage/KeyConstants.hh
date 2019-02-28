@@ -45,6 +45,7 @@ namespace KeyConstants {
   constexpr char kStateMachine_LastApplied[]         = "__last-applied";
   constexpr char kStateMachine_InBulkload[]          = "__in-bulkload";
   constexpr char kStateMachine_Clock[]               = "__clock";
+  constexpr char kStateMachine_GenesisUuid[]         = "__genesis-uuid";
 
   extern std::vector<std::string> allKeys;
 };

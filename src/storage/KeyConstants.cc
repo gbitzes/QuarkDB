@@ -50,6 +50,7 @@ public:
     ADD_TO_ALLKEYS(kStateMachine_LastApplied);
     ADD_TO_ALLKEYS(kStateMachine_InBulkload);
     ADD_TO_ALLKEYS(kStateMachine_Clock);
+    ADD_TO_ALLKEYS(kStateMachine_GenesisUuid);
   }
 };
 

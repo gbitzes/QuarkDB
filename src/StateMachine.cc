@@ -34,6 +34,7 @@
 #include "storage/ReverseLocator.hh"
 #include "utils/IntToBinaryString.hh"
 #include "utils/TimeFormatting.hh"
+#include "utils/Uuid.hh"
 #include <sys/stat.h>
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
@@ -150,8 +151,32 @@ StateMachine::StateMachine(std::string_view f, bool write_ahead_log, bool bulk_l
   ensureBulkloadSanity(!dirExists);
   ensureClockSanity(!dirExists);
   retrieveLastApplied();
+  retrieveGenesisUuid();
+
+  if(bulkLoad || !dirExists) {
+    qdb_assert(genesisUuid.empty());
+  }
+
+  if(bulkLoad) {
+    generateRandomGenesisUuid();
+  }
 
   consistencyScanner.reset(new ConsistencyScanner(*this));
+}
+
+void StateMachine::retrieveGenesisUuid() {
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), KeyConstants::kStateMachine_GenesisUuid, &genesisUuid);
+  ASSERT_OK_OR_NOTFOUND(st);
+}
+
+std::string StateMachine::getGenesisUuid() const {
+  return genesisUuid;
+}
+
+void StateMachine::generateRandomGenesisUuid() {
+  qdb_assert(genesisUuid.empty());
+  genesisUuid = generateUuid();
+  THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_GenesisUuid, genesisUuid));
 }
 
 void StateMachine::ensureClockSanity(bool justCreated) {

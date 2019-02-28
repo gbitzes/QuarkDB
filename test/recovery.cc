@@ -52,7 +52,7 @@ TEST(Recovery, BasicSanity) {
 
     std::vector<std::string> magicValues = recovery.retrieveMagicValues();
 
-    ASSERT_EQ(magicValues.size(), 18u);
+    ASSERT_EQ(magicValues.size(), 19u);
 
     ASSERT_EQ(magicValues[0], "RAFT_CURRENT_TERM: NotFound: ");
     ASSERT_EQ(magicValues[1], "RAFT_LOG_SIZE: NotFound: ");
@@ -72,6 +72,7 @@ TEST(Recovery, BasicSanity) {
     ASSERT_EQ(magicValues[15], boolToString(false));
     ASSERT_EQ(magicValues[16], "__clock");
     ASSERT_EQ(magicValues[17], unsignedIntToBinaryString(0u));
+    ASSERT_EQ(magicValues[18], "__genesis-uuid: NotFound: ");
   }
 
   RedisRequest req {"recovery-get", "__last-applied"};
@@ -133,7 +134,8 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
       "__format: NotFound: ",
       "__last-applied: NotFound: ",
       "__in-bulkload: NotFound: ",
-      "__clock: NotFound: "
+      "__clock: NotFound: ",
+      "__genesis-uuid: NotFound: "
     };
 
     ASSERT_REPLY(qcl.exec("recovery-info"), rep);
@@ -173,7 +175,8 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
       "__format: NotFound: ",
       "__last-applied: NotFound: ",
       "__in-bulkload: NotFound: ",
-      "__clock: NotFound: "
+      "__clock: NotFound: ",
+      "__genesis-uuid: NotFound: "
     };
 
     ASSERT_REPLY(qcl.exec("recovery-info"), rep);

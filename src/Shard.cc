@@ -105,6 +105,16 @@ void Shard::spindown() {
   raftGroup->spindown();
 }
 
+std::string Shard::getGenesisUuid() {
+  std::lock_guard<std::mutex> lock(raftGroupMtx);
+  if(stateMachine) {
+    return stateMachine->getGenesisUuid();
+  }
+  else {
+    return "N/A";
+  }
+}
+
 LinkStatus Shard::dispatch(Connection *conn, Transaction &transaction) {
   commandMonitor.broadcast(conn->describe(), transaction);
 
