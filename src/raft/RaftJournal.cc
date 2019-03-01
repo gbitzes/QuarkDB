@@ -58,30 +58,29 @@ inline void encodeEntryKey(LogIndex index, KeyBuffer &key) {
 //------------------------------------------------------------------------------
 // RaftJournal
 //------------------------------------------------------------------------------
-
-void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes) {
-  RaftJournal journal(path, clusterID, nodes);
+void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes, LogIndex startIndex) {
+  RaftJournal journal(path, clusterID, nodes, startIndex);
 }
 
-void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftServer> &newNodes) {
+void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftServer> &newNodes, LogIndex startIndex) {
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {
     db->Delete(rocksdb::WriteOptions(), iter->key().ToString());
   }
 
   this->set_int_or_die(KeyConstants::kJournal_CurrentTerm, 0);
-  this->set_int_or_die(KeyConstants::kJournal_LogSize, 1);
-  this->set_int_or_die(KeyConstants::kJournal_LogStart, 0);
+  this->set_int_or_die(KeyConstants::kJournal_LogSize, startIndex+1);
+  this->set_int_or_die(KeyConstants::kJournal_LogStart, startIndex);
   this->set_or_die(KeyConstants::kJournal_ClusterID, newClusterID);
   this->set_or_die(KeyConstants::kJournal_VotedFor, "");
-  this->set_int_or_die(KeyConstants::kJournal_CommitIndex, 0);
+  this->set_int_or_die(KeyConstants::kJournal_CommitIndex, startIndex);
 
   RaftMembers newMembers(newNodes, {});
   this->set_or_die(KeyConstants::kJournal_Members, newMembers.toString());
-  this->set_int_or_die(KeyConstants::kJournal_MembershipEpoch, 0);
+  this->set_int_or_die(KeyConstants::kJournal_MembershipEpoch, startIndex);
 
   RaftEntry entry(0, "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), newClusterID);
-  this->set_or_die(encodeEntryKey(0), entry.serialize());
+  this->set_or_die(encodeEntryKey(startIndex), entry.serialize());
 
   initialize();
 }
@@ -122,9 +121,9 @@ void RaftJournal::openDB(const std::string &path) {
   if(!status.ok()) qdb_throw("Error while opening journal in " << path << ":" << status.ToString());
 }
 
-RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
+RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex) {
   openDB(filename);
-  obliterate(clusterID, nodes);
+  obliterate(clusterID, nodes, startIndex);
 }
 
 RaftJournal::~RaftJournal() {

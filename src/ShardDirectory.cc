@@ -130,14 +130,14 @@ std::string ShardDirectory::raftJournalPath() {
   return pathJoin(currentPath(), "raft-journal");
 }
 
-void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes) {
+void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex) {
   getStateMachine()->reset();
 
   if(!journalptr) {
-    journalptr = new RaftJournal(raftJournalPath(), clusterID, nodes);
+    journalptr = new RaftJournal(raftJournalPath(), clusterID, nodes, startIndex);
   }
   else {
-    getRaftJournal()->obliterate(clusterID, nodes);
+    getRaftJournal()->obliterate(clusterID, nodes, startIndex);
   }
 
   resilveringHistory.clear();
@@ -165,11 +165,11 @@ ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID cl
   return new ShardDirectory(path);
 }
 
-ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes) {
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex) {
   initializeDirectory(path, clusterID, shardID);
 
   ShardDirectory *shardDirectory = new ShardDirectory(path);
-  shardDirectory->obliterate(clusterID, nodes);
+  shardDirectory->obliterate(clusterID, nodes, startIndex);
   return shardDirectory;
 }
 

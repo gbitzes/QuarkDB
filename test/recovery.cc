@@ -88,7 +88,7 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
       {"aaa", 999 }
     };
 
-    RaftJournal journal("/tmp/quarkdb-recovery-test", "some-cluster-id", nodes);
+    RaftJournal journal("/tmp/quarkdb-recovery-test", "some-cluster-id", nodes, 0);
     ASSERT_TRUE(journal.setCurrentTerm(1, RaftServer()));
     ASSERT_TRUE(journal.append(1, RaftEntry(1, "set", "abc", "cdf")));
 

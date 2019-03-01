@@ -34,7 +34,7 @@ protected:
     nodes.emplace_back("server1", 7776);
     nodes.emplace_back("server2", 7777);
     nodes.emplace_back("server3", 7778);
-    RaftJournal::ObliterateAndReinitializeJournal(dbpath, clusterID, nodes);
+    RaftJournal::ObliterateAndReinitializeJournal(dbpath, clusterID, nodes, 0);
   }
 
   virtual void TearDown() { }

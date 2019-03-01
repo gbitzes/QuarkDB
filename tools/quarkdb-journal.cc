@@ -102,7 +102,7 @@ int createJournal(const std::vector<option::Option> &opts) {
   std::vector<quarkdb::RaftServer> nodes;
   quarkdb::parseServers(opts[Opt::NODES].arg, nodes);
 
-  quarkdb::RaftJournal::ObliterateAndReinitializeJournal(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, nodes);
+  quarkdb::RaftJournal::ObliterateAndReinitializeJournal(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, nodes, 0);
   return 0;
 }
 

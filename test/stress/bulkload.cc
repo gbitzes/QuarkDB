@@ -159,3 +159,22 @@ TEST(BulkLoad, PanicWhenOpeningUnfinalizedStateMachine) {
 
   ASSERT_THROW(StateMachine("/tmp/quarkdb-bulkload-test"), FatalException);
 }
+
+TEST(Bulkload, RaftJournalAtNonZeroIndex) {
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-raft-journal"), 0);
+
+  {
+    RaftServer srv {"localhost", 2222};
+    RaftJournal journal("/tmp/quarkdb-tests-raft-journal", "some-uuid", {srv}, 1337);
+
+    ASSERT_EQ(journal.getLogSize(), 1338);
+    ASSERT_EQ(journal.getLogStart(), 1337);
+    ASSERT_EQ(journal.getCommitIndex(), 1337);
+    ASSERT_EQ(journal.getEpoch(), 1337);
+
+    RaftEntry entry;
+    ASSERT_TRUE(journal.fetch(1337, entry).ok());
+    ASSERT_EQ(entry, RaftEntry(0, "JOURNAL_UPDATE_MEMBERS", "localhost:2222|", "some-uuid"));
+  }
+
+}
