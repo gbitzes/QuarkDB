@@ -63,13 +63,14 @@ public:
 
   // Reset the contents of both the state machine and the raft journal.
   // Physical paths remain the same.
-  void obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex);
+  void obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes,
+    LogIndex startIndex, std::unique_ptr<StateMachine> existingContents);
 
   // Create a standalone shard.
   static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID);
 
   // Create a consensus shard.
-  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex);
+  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm);
 
   std::unique_ptr<ShardSnapshot> takeSnapshot(const SnapshotID &id, std::string &err);
 
@@ -81,6 +82,12 @@ public:
   // empty string in case of success - otherwise contains the error
   // TODO: replace with proper status object
   std::string checkpoint(std::string_view path);
+
+  //----------------------------------------------------------------------------
+  // Initialize our StateMachine with the given source, if any.
+  // If no source is given, create a brand new one.
+  //----------------------------------------------------------------------------
+  void initializeStateMachine(std::unique_ptr<StateMachine> sm, LogIndex initialLastApplied);
 
 private:
   void parseResilveringHistory();

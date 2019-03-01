@@ -190,6 +190,13 @@ StateMachine::~StateMachine() {
   }
 }
 
+//------------------------------------------------------------------------------
+// Get underlying folder where this SM resides
+//------------------------------------------------------------------------------
+std::string StateMachine::getPhysicalLocation() const {
+  return filename;
+}
+
 void StateMachine::reset() {
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {

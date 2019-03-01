@@ -252,6 +252,11 @@ public:
   //----------------------------------------------------------------------------
   void forceResetLastApplied(LogIndex newLastApplied);
 
+  //----------------------------------------------------------------------------
+  // Get underlying folder where this SM resides
+  //----------------------------------------------------------------------------
+  std::string getPhysicalLocation() const;
+
 private:
   ClockValue maybeAdvanceClock(StagingArea &stagingArea, ClockValue newValue);
   friend class StagingArea;

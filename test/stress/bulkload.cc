@@ -26,6 +26,7 @@
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
 #include "raft/RaftReplicator.hh"
+#include "ShardDirectory.hh"
 #include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
@@ -176,5 +177,32 @@ TEST(Bulkload, RaftJournalAtNonZeroIndex) {
     ASSERT_TRUE(journal.fetch(1337, entry).ok());
     ASSERT_EQ(entry, RaftEntry(0, "JOURNAL_UPDATE_MEMBERS", "localhost:2222|", "some-uuid"));
   }
+}
 
+TEST(Bulkload, CreateConsensusShardFromExistingSM) {
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-tests-shard-from-existing-sm"), 0);
+  ASSERT_EQ(system("mkdir /tmp/quarkdb-tests-shard-from-existing-sm"), 0);
+
+  std::unique_ptr<StateMachine> sm;
+  sm.reset(new StateMachine("/tmp/quarkdb-tests-shard-from-existing-sm/original-sm"));
+
+  ASSERT_EQ(sm->getLastApplied(), 0);
+  ASSERT_EQ(sm->getPhysicalLocation(), "/tmp/quarkdb-tests-shard-from-existing-sm/original-sm");
+  ASSERT_TRUE(sm->set("my-key", "123", 1).ok());
+
+  std::string value;
+  ASSERT_TRUE(sm->get("my-key", value).ok());
+  ASSERT_EQ(value, "123");
+
+  ASSERT_EQ(sm->getLastApplied(), 1);
+
+  std::unique_ptr<ShardDirectory> shardDir;
+  RaftServer srv("localhost", 123);
+  shardDir.reset(ShardDirectory::create("/tmp/quarkdb-tests-shard-from-existing-sm/shard", "cluster-id", "shar-id", {srv}, 99, std::move(sm) ));
+  ASSERT_EQ(sm.get(), nullptr);
+
+  ASSERT_EQ(shardDir->getStateMachine()->getPhysicalLocation(), "/tmp/quarkdb-tests-shard-from-existing-sm/shard/current/state-machine");
+  ASSERT_EQ(shardDir->getStateMachine()->getLastApplied(), 99);
+
+  ASSERT_TRUE(shardDir->getStateMachine()->get("my-key", value).ok());
 }

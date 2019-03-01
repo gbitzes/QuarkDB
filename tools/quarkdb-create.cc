@@ -103,7 +103,7 @@ std::vector<option::Option> parse_args(int argc, char** argv) {
     std::cerr << "   $ quarkdb-create --path /db/directory --cluster-ID unique-string-that-identifies-cluster --nodes host1:port1,host2:port2,host3:port3" << std::endl << std::endl;
 
     std::cerr << " - To create a new cluster out of a bulkloaded instance:" << std::endl;
-    std::cerr << "  1. Shut down the bulkload instance, if currently running." << std::endl;
+    std::cerr << "  1. Shut down the bulkload node, if currently running." << std::endl;
     std::cerr << "  2. Run $ quarkdb-create --path /db/directory --clusterID unique-string --nodes host1:port1,host2:port2,host3:port3 --steal-state-machine /path/to/bulkloaded/state/machine" << std::endl;
     std::cerr << "  3. Using scp, stream over the network the entire contents of '/db/directory' to all of host1, host2, and host3." << std::endl;
     std::cerr << "  4. No need to run quarkdb-create again - simply start up all nodes, they should form a quorum, and the contents will be the bulkloaded ones." << std::endl;
@@ -116,26 +116,36 @@ std::vector<option::Option> parse_args(int argc, char** argv) {
 int main(int argc, char** argv) {
   std::vector<option::Option> opts = parse_args(argc-1, argv+1);
 
-  // Are we stealing a state machine?
+  quarkdb::LogIndex journalStartingIndex = 0;
   std::unique_ptr<quarkdb::StateMachine> stolenStateMachine;
+
+  // Are we stealing a state machine?
   if(opts[Opt::STEAL_STATE_MACHINE]) {
     // Yes - extract its lastApplied. We'll need to sync-up the journal with this
     // number.
+
     std::string err;
     if(!quarkdb::directoryExists(opts[Opt::STEAL_STATE_MACHINE].arg, err)) {
       std::cerr << "Error accessing path given in --steal-state-machine: " << err << std::endl;
       exit(1);
     }
 
+    // Use this unusual starting index for our journal to better protect against
+    // the common mistake of:
+    // - Start a raft cluster, where only a single node has the bulkloaded data,
+    //   and the rest are clean.
+    // - With a starting index of 1111, if a node without all data becomes leader,
+    //   the cluster will blow up and the error will be detected.
+    // - If the node with all data becomes leader, it'll just resilver the rest.
+    journalStartingIndex = 1111;
     stolenStateMachine.reset(new quarkdb::StateMachine(opts[Opt::STEAL_STATE_MACHINE].arg));
-    // .. TODO
   }
 
   std::unique_ptr<quarkdb::ShardDirectory> shardDirectory;
   if(opts[Opt::NODES]) {
     std::vector<quarkdb::RaftServer> nodes;
     quarkdb::parseServers(opts[Opt::NODES].arg, nodes);
-    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, "default", nodes, 0));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, "default", nodes, journalStartingIndex, std::move(stolenStateMachine)));
   }
   else {
     shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, "null", "default"));

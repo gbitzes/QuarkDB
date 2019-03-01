@@ -130,8 +130,37 @@ std::string ShardDirectory::raftJournalPath() {
   return pathJoin(currentPath(), "raft-journal");
 }
 
-void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex) {
-  getStateMachine()->reset();
+//------------------------------------------------------------------------------
+// Initialize our StateMachine with the given source, if any.
+// If no source is given, create a brand new one.
+//------------------------------------------------------------------------------
+void ShardDirectory::initializeStateMachine(std::unique_ptr<StateMachine> sm, LogIndex initialLastApplied) {
+  if(!sm) {
+    // Easy case, no existing contents. Wipe out any existing contents, if any.
+    getStateMachine()->reset();
+  }
+  else {
+    // We reset the contents of this ShardDirectory using a pre-existing
+    // StateMachine. First, get the target filename..
+    std::string sourceStateMahchine = sm->getPhysicalLocation();
+
+    // Shut it down - we don't want to be moving files of a live SM..
+    sm.reset();
+
+    // Shut down any existing, to-be-deleted SMs we own
+    detach();
+
+    // Do the actual move
+    qdb_assert(system(SSTR("mv " << quotes(sourceStateMahchine) << " " << quotes(stateMachinePath()) ).c_str()) == 0);
+  }
+
+  // Force reset lastApplied.
+  getStateMachine()->forceResetLastApplied(initialLastApplied);
+}
+
+void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm) {
+  bool hasSeedSM = (sm.get() != nullptr);
+  initializeStateMachine(std::move(sm), startIndex);
 
   if(!journalptr) {
     journalptr = new RaftJournal(raftJournalPath(), clusterID, nodes, startIndex);
@@ -141,7 +170,14 @@ void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftS
   }
 
   resilveringHistory.clear();
-  resilveringHistory.append(ResilveringEvent("GENESIS", time(NULL)));
+
+  if(!hasSeedSM) {
+    resilveringHistory.append(ResilveringEvent("GENESIS", time(NULL)));
+  }
+  else {
+    resilveringHistory.append(ResilveringEvent(SSTR("GENESIS-FROM-EXISTING-SM-AT-INDEX:" << startIndex), time(NULL)));
+  }
+
   storeResilveringHistory();
 }
 
@@ -165,11 +201,11 @@ ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID cl
   return new ShardDirectory(path);
 }
 
-ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex) {
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm) {
   initializeDirectory(path, clusterID, shardID);
 
   ShardDirectory *shardDirectory = new ShardDirectory(path);
-  shardDirectory->obliterate(clusterID, nodes, startIndex);
+  shardDirectory->obliterate(clusterID, nodes, startIndex, std::move(sm) );
   return shardDirectory;
 }
 
