@@ -97,6 +97,16 @@ TEST_F(State_Machine, test_write_transactions) {
 
   ASSERT_OK(stateMachine()->noop(12));
   ASSERT_EQ(stateMachine()->getLastApplied(), 12);
+
+  // Now try artificially resetting lastApplied
+  stateMachine()->forceResetLastApplied(32);
+  ASSERT_EQ(stateMachine()->getLastApplied(), 32);
+  ASSERT_OK(stateMachine()->noop(33));
+  ASSERT_EQ(stateMachine()->getLastApplied(), 33);
+
+  ASSERT_THROW(stateMachine()->noop(12), FatalException);
+  ASSERT_THROW(stateMachine()->noop(33), FatalException);
+  ASSERT_THROW(stateMachine()->noop(13), FatalException);
 }
 
 TEST_F(State_Machine, test_hincrby) {

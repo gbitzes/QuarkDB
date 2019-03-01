@@ -1827,6 +1827,18 @@ bool StateMachine::waitUntilTargetLastApplied(LogIndex targetLastApplied, std::c
   return (targetLastApplied <= lastApplied);
 }
 
+//------------------------------------------------------------------------------
+// Extremely dangerous operation, the state-machine should NOT be part
+// of an active raft-machinery when this function is called, or even facing
+// client traffic at all.
+//------------------------------------------------------------------------------
+void StateMachine::forceResetLastApplied(LogIndex newLastApplied) {
+  std::lock_guard<std::mutex> lock(lastAppliedMtx);
+  qdb_info("Resetting lastApplied for state-machine stored in '" << filename << "': " << lastApplied << " => " << newLastApplied);
+  THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_LastApplied, intToBinaryString(newLastApplied)));
+  lastApplied = newLastApplied;
+}
+
 void StateMachine::commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index) {
   std::lock_guard<std::mutex> lock(lastAppliedMtx);
 

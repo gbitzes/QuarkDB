@@ -245,6 +245,13 @@ public:
   ClockValue getDynamicClock();
   void hardSynchronizeDynamicClock();
 
+  //----------------------------------------------------------------------------
+  // Extremely dangerous operation, the state-machine should NOT be part
+  // of an active raft-machinery when this function is called, or even facing
+  // client traffic at all.
+  //----------------------------------------------------------------------------
+  void forceResetLastApplied(LogIndex newLastApplied);
+
 private:
   ClockValue maybeAdvanceClock(StagingArea &stagingArea, ClockValue newValue);
   friend class StagingArea;
