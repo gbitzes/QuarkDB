@@ -87,7 +87,7 @@ int XrdQuarkDB::Process(XrdLink *lp) {
   if(!link && tlsconfig.active) qdb_info("handling TLS connection. Security is intensifying");
   if(!link) link = new Link(lp, tlsconfig);
 
-  if(!conn) conn = new Connection(link);
+  if(!conn) conn = new Connection(link, quarkdbNode->getConfiguration().getPhantomSleep());
 
   return conn->processRequests(quarkdbNode, inFlightTracker);
 }

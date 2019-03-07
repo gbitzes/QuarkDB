@@ -30,6 +30,7 @@
 #include "Configuration.hh"
 #include "utils/Macros.hh"
 #include "utils/FileUtils.hh"
+#include "utils/ParseUtils.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -117,6 +118,13 @@ static bool parseTraceLevel(const std::string &buffer, TraceLevel &trace) {
   return true;
 }
 
+static bool parseMillis(const std::string &buffer, std::chrono::milliseconds &ms) {
+  int64_t val = 0;
+  bool retval = ParseUtils::parseInt64(buffer, val);
+  ms = std::chrono::milliseconds(val);
+  return retval;
+}
+
 bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
   std::string buffer;
   char *option;
@@ -157,6 +165,9 @@ bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
       }
       else if(!strcmp("require_password_for_localhost", option)) {
         success = fetchSingle(stream, buffer) && parseBool(buffer, out.requirePasswordForLocalhost);
+      }
+      else if(!strcmp("phantom_sleep", option)) {
+        success = fetchSingle(stream, buffer) && parseMillis(buffer, out.phantomSleep);
       }
       else {
         qdb_warn("Error when parsing configuration - unknown option " << quotes(option));

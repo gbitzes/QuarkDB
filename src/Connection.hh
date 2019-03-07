@@ -121,7 +121,7 @@ class Authenticator;
 
 class Connection {
 public:
-  Connection(Link *link);
+  Connection(Link *link, std::chrono::milliseconds phantomSleep = {} );
   ~Connection();
   std::string describe() const;
   std::string getID() const { return uuid; }
@@ -188,6 +188,7 @@ public:
 
   static void setPhantomBatchLimit(size_t newval);
 private:
+  std::chrono::milliseconds phantomSleep;
   BufferedWriter writer;
 
   RedisRequest currentRequest;
