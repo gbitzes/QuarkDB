@@ -181,8 +181,8 @@ void Connection::setPhantomBatchLimit(size_t newval) {
   phantomBatchLimit = newval;
 }
 
-Connection::Connection(Link *l, std::chrono::milliseconds pw)
-: phantomSleep(pw), writer(l), parser(l), pendingQueue(new PendingQueue(this)),
+Connection::Connection(Link *l)
+: writer(l), parser(l), pendingQueue(new PendingQueue(this)),
   description(l->describe()), uuid(l->getID()), localhost(l->isLocalhost()) {
 }
 
@@ -252,7 +252,6 @@ LinkStatus Connection::noauth(std::string_view msg) {
 
 LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTracker &inFlightTracker) {
   FlushGuard guard(this);
-  bool sleptThisRound = false;
 
   while(inFlightTracker.isAcceptingRequests()) {
     if(monitor) {
@@ -274,20 +273,9 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
 
     if(status == 0) {
       // slow link - process the write batch, if needed
-      if(!sleptThisRound && phantomSleep.count() != 0u && multiHandler.isPhantom()) {
-        // Phantom sleep is engaged - sleep for the requested duration
-        // to wait for more requests to pile up
-        // TODO: This is a quick hack, need to improve and test..
-        std::this_thread::sleep_for(phantomSleep);
-        sleptThisRound = true;
-        continue;
-      }
-
       multiHandler.finalizePhantomTransaction(dispatcher, this);
       return 1; // slow link
     }
-
-    sleptThisRound = false;
 
     // Beginning of a MULTI block: Finalize phantom transactions
     if(currentRequest.getCommand() == RedisCommand::MULTI) {

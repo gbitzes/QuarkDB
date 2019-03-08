@@ -73,8 +73,6 @@ public:
   bool getRequirePasswordForLocalhost() const { return requirePasswordForLocalhost; }
 
   std::string extractPasswordOrDie() const;
-  std::chrono::milliseconds getPhantomSleep() const { return phantomSleep; }
-
 private:
   Mode mode;
   std::string database;
@@ -85,7 +83,6 @@ private:
   std::string password;
   bool requirePasswordForLocalhost = false;
   bool writeAheadLog = true;
-  std::chrono::milliseconds phantomSleep;
 
   // raft options
   RaftServer myself;
