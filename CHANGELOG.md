@@ -1,13 +1,14 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-### Unreleased
+## Unreleased
 - Better memory management and recycling, putting less pressure on the global
 memory allocator.
 - Addition of pub/sub support, commands implemented: ``PUBLISH``, ``SUBSCRIBE``,
   ``PSUBSCRIBE``, ``UNSUBSCRIBE``, ``PUNSUBSCRIBE``
 - Addition of ``--steal-state-machine`` flag to ``quarkdb-create`` to make
   transition from bulkload mode to raft easier.
+- Updated rocksdb to v5.18.3.
 
 ## 0.3.5 (2018-11-28)
 - Updated rocksdb dependency to v5.17.2.
