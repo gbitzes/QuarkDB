@@ -67,7 +67,7 @@ public:
     LogIndex startIndex, std::unique_ptr<StateMachine> existingContents);
 
   // Create a standalone shard.
-  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID);
+  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, std::unique_ptr<StateMachine> sm);
 
   // Create a consensus shard.
   static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm);

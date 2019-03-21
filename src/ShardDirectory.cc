@@ -196,8 +196,13 @@ void ShardDirectory::initializeDirectory(const std::string &path, RaftClusterID 
   write_file_or_die(pathJoin(path, "RESILVERING-HISTORY"), history.serialize());
 }
 
-ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID) {
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, std::unique_ptr<StateMachine> sm) {
   initializeDirectory(path, clusterID, shardID);
+
+  ShardDirectory *shardDirectory = new ShardDirectory(path);
+
+  // Standalone shard, we start from LogIndex 0
+  shardDirectory->initializeStateMachine(std::move(sm), 0);
   return new ShardDirectory(path);
 }
 

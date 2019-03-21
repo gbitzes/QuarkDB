@@ -148,7 +148,7 @@ int main(int argc, char** argv) {
     shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, "default", nodes, journalStartingIndex, std::move(stolenStateMachine)));
   }
   else {
-    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, "null", "default"));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, "null", "default", std::move(stolenStateMachine)));
   }
 
   return 0;
