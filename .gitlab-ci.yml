@@ -141,7 +141,7 @@ cc7-koji:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
-    - yum install -y koji --disablerepo=extras
+    - yum install -y koji
     - yum install -y git rpm-build python
     - mkdir ~/.koji
     - cp ci/koji/config ~/.koji
