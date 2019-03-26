@@ -1,7 +1,7 @@
 # Membership updates
 
-QuarkDB supports dynamic changes to cluster membership without any impact on availability. 
-Caution needs to be taken that at any point in time, a quorum of nodes is 
+QuarkDB supports dynamic changes to cluster membership without any impact on availability.
+Caution needs to be taken that at any point in time, a quorum of nodes is
 available and up-to-date for the cluster to function properly.
 
 # Distinction between full nodes and observers
@@ -38,34 +38,45 @@ keep the above in mind.
 
 # How to view current cluster membership
 
-Issue the command `raft_info` using `redis-cli` to any of the nodes, and check the `NODES` and
+Issue the command `raft-info` using `redis-cli` to any of the nodes, and check the `NODES` and
 `OBSERVERS` fields. It's perfectly valid if the list of observers is empty.
 
 # How to add a node
 
-When adding a new node to an existing cluster, do not include it in the list of
-nodes passed to the `quarkdb-create` command - this prevents the node from
-thinking it is a full member of the cluster, and attempting to start elections.
+Three steps:
 
-A new node must always be added as an observer. 
-To do so, issue `raft_add_observer server_hostname:server_port` towards the current leader.
-This allows it to begin receiving existing entries.
+1. Run `quarkdb-create --path /path/to/db --clusterID ... ` on the machine you
+would like to add. Note the complete omission of `--nodes` in the above invocation.
+This creates a node which is _in limbo_ - the node has no idea of the participants
+in the cluster, and will simply wait until it is contacted.
+
+2. Write the xrootd configuration file for the new node, and start the process.
+You will notice it complaining in the logs that it is in limbo, which is
+completely normal.
+
+3. Run `raft-add-observer server_hostname:server_port` towards the current
+leader. Immediately, you should notice that the new node is no longer complaining
+in the logs about not receiving heartbeats. The leader will start the process
+of bringing this new node up-to-date.
+
+A new node must always be added as an observer, there's no way to directly add
+it as full member.
 
 # How to promote an observer to full status
 
-Issue `raft_promote_observer server_hostname:server_port` towards the current
+Issue `raft-promote-observer server_hostname:server_port` towards the current
 leader.
 
-First make sure it is sufficiently up to date! Running `raft_info` on the leader
+First make sure it is sufficiently up to date! Running `raft-info` on the leader
 will provide information on which replicas are online, up-to-date, or lagging.
 
 # How to remove a node
 
-Issue `raft_remove_member server_hostname:server_port` towards the current leader.
+Issue `raft-remove-member server_hostname:server_port` towards the current leader.
 Works both on full members, as well as observers.
 
 It's not possible to remove a node which is currently a leader. To do that, stop
-the node, wait until the new leader emerges, and issue `raft_remove_member` towards
+the node, wait until the new leader emerges, and issue `raft-remove-member` towards
 it.
 
 A membership update is represented internally as a special kind of log entry.
