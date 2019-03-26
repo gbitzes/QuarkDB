@@ -144,12 +144,19 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
       // abstain from starting elections until we receive a heartbeat.
     }
     else if(heartbeatTracker.timeout(std::chrono::steady_clock::now())) {
-      if(contains(journal.getMembership().nodes, state.getMyself())) {
+      RaftMembership membership = journal.getMembership();
+
+      if(membership.inLimbo()) {
+        qdb_warn("This node is in limbo: I don't know who the nodes of this cluster are, and I am not receiving heartbeats. Run quarkdb-add-observer on the current leader to add me to the cluster.");
+      }
+      else if(contains(membership.nodes, state.getMyself())) {
         qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
         runForLeader();
         return;
       }
-      qdb_warn("I am not receiving heartbeats - not running for leader since in membership epoch " << journal.getEpoch() << " I am not a full node. Will keep on waiting.");
+      else {
+        qdb_warn("I am not receiving heartbeats - not running for leader since in membership epoch " << membership.epoch << " I am not a full node. Will keep on waiting. Maybe I am not part of the members? Run 'raft-info' on the current leader to check the current members, and then run 'quarkdb-add-observer' to add me.");
+      }
     }
   }
 }

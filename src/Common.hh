@@ -41,6 +41,14 @@ struct RaftServer {
   std::string hostname;
   int port = 0;
 
+  static RaftServer Null() {
+    RaftServer srv;
+
+    srv.hostname = "NULL-HOSTNAME";
+    srv.port = 0;
+    return srv;
+  }
+
   RaftServer() {}
   RaftServer(std::string_view h, int p) : hostname(h), port(p) {}
 

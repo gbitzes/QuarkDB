@@ -48,8 +48,8 @@ bool verify_options_sane(option::Parser &parse, std::vector<option::Option> &opt
     return false;
   }
 
-  if( (options[Opt::CLUSTERID] && !options[Opt::NODES]) || (!options[Opt::CLUSTERID] && options[Opt::NODES]) ) {
-    std::cout << "Both --clusterID and --nodes need to be provided at the same time." << std::endl;
+  if( (!options[Opt::CLUSTERID] && options[Opt::NODES]) ) {
+    std::cout << "--nodes requires specifying --clusterID as well." << std::endl;
     return false;
   }
 
@@ -142,9 +142,17 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<quarkdb::ShardDirectory> shardDirectory;
-  if(opts[Opt::NODES]) {
+  if(opts[Opt::CLUSTERID]) {
     std::vector<quarkdb::RaftServer> nodes;
-    quarkdb::parseServers(opts[Opt::NODES].arg, nodes);
+
+    if(opts[Opt::NODES]) {
+      quarkdb::parseServers(opts[Opt::NODES].arg, nodes);
+    }
+    else {
+      nodes.emplace_back(quarkdb::RaftServer::Null());
+      qdb_info("--nodes were not specified. This new node will be 'in limbo' until it is contacted by an existing cluster, and cannot be used to start a new cluster from scratch. Run 'quarkdb-add-observer' on the leader of the existing cluster to add it.");
+    }
+
     shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, "default", nodes, journalStartingIndex, std::move(stolenStateMachine)));
   }
   else {

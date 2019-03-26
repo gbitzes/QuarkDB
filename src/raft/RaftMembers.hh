@@ -45,12 +45,26 @@ struct RaftMembership {
   bool operator==(const RaftMembership &rhs) const {
     return nodes == rhs.nodes && observers == rhs.observers && epoch == rhs.epoch;
   }
+
+  // Check if this node is "in limbo", that is the
+  // initial, uninitialized state where we don't know
+  // the members of this cluster
+  bool inLimbo() const {
+    return nodes.size() == 1 && nodes[0] == RaftServer::Null() && observers.empty();
+  }
+
 };
 
 // Internal class, not exposed to users
 struct RaftMembers {
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;
+
+  static RaftMembers LimboMembers() {
+    RaftMembers limbo;
+    limbo.nodes.emplace_back(RaftServer::Null());
+    return limbo;
+  }
 
   RaftMembers() {}
 
