@@ -44,7 +44,7 @@ struct RaftServer {
   static RaftServer Null() {
     RaftServer srv;
 
-    srv.hostname = "NULL-HOSTNAME";
+    srv.hostname = "#!^NULL-HOSTNAME^!#";
     srv.port = 0;
     return srv;
   }
