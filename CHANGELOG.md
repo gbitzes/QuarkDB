@@ -1,6 +1,11 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+- Fixed regression introduced in 0.3.6, which made it impossible to create new
+bulkload nodes. (Note: to workaround, delete directory ``/path/to/bulkload/current/state-machine``
+right after running ``quarkdb-create``)
+
 ## 0.3.6 (2019-03-21)
 - Improved memory management and recycling, putting less pressure on the global
 memory allocator.

@@ -131,30 +131,70 @@ std::string ShardDirectory::raftJournalPath() {
 }
 
 //------------------------------------------------------------------------------
+// Wipe out StateMachine contents.
+//------------------------------------------------------------------------------
+void ShardDirectory::wipeoutStateMachineContents() {
+  if(smptr) {
+    //--------------------------------------------------------------------------
+    // We have the state machine open already.. wipe contents through reset
+    //--------------------------------------------------------------------------
+    getStateMachine()->reset();
+  }
+  else {
+    //--------------------------------------------------------------------------
+    // Not open, simply delete the entire folder
+    //--------------------------------------------------------------------------
+    qdb_assert(system(SSTR("rm -rf '" << stateMachinePath() << "'").c_str()) == 0);
+  }
+}
+
+//------------------------------------------------------------------------------
 // Initialize our StateMachine with the given source, if any.
 // If no source is given, create a brand new one.
 //------------------------------------------------------------------------------
 void ShardDirectory::initializeStateMachine(std::unique_ptr<StateMachine> sm, LogIndex initialLastApplied) {
+  if(!sm && initialLastApplied == 0) {
+    //--------------------------------------------------------------------------
+    // Simplest case: No seed machine, and starting from 0.
+    // Just ensure SM is wiped out.
+    //--------------------------------------------------------------------------
+    wipeoutStateMachineContents();
+    return;
+  }
+
   if(!sm) {
-    // Easy case, no existing contents. Wipe out any existing contents, if any.
-    getStateMachine()->reset();
-  }
-  else {
-    // We reset the contents of this ShardDirectory using a pre-existing
-    // StateMachine. First, get the target filename..
-    std::string sourceStateMahchine = sm->getPhysicalLocation();
-
-    // Shut it down - we don't want to be moving files of a live SM..
-    sm.reset();
-
-    // Shut down any existing, to-be-deleted SMs we own
-    detach();
-
-    // Do the actual move
-    qdb_assert(system(SSTR("mv " << quotes(sourceStateMahchine) << " " << quotes(stateMachinePath()) ).c_str()) == 0);
+    //--------------------------------------------------------------------------
+    // No seed machine, but starting from non-zero.
+    //--------------------------------------------------------------------------
+    wipeoutStateMachineContents();
+    getStateMachine()->forceResetLastApplied(initialLastApplied);
   }
 
+  //----------------------------------------------------------------------------
+  // We have to reset any old contents with those of the pre-existing seed
+  // StateMachine. First, get the target filename..
+  //----------------------------------------------------------------------------
+  std::string sourceStateMahchine = sm->getPhysicalLocation();
+
+  //----------------------------------------------------------------------------
+  // Shut it down - we don't want to be moving files of a live SM..
+  //----------------------------------------------------------------------------
+  sm.reset();
+
+  //----------------------------------------------------------------------------
+  // Shut down and wipe out any existing, to-be-deleted SMs we own
+  //----------------------------------------------------------------------------
+  detach();
+  wipeoutStateMachineContents();
+
+  //----------------------------------------------------------------------------
+  // Do the actual move
+  //----------------------------------------------------------------------------
+  qdb_assert(system(SSTR("mv " << quotes(sourceStateMahchine) << " " << quotes(stateMachinePath()) ).c_str()) == 0);
+
+  //----------------------------------------------------------------------------
   // Force reset lastApplied.
+  //----------------------------------------------------------------------------
   getStateMachine()->forceResetLastApplied(initialLastApplied);
 }
 

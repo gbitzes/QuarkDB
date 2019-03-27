@@ -89,6 +89,11 @@ public:
   //----------------------------------------------------------------------------
   void initializeStateMachine(std::unique_ptr<StateMachine> sm, LogIndex initialLastApplied);
 
+  //----------------------------------------------------------------------------
+  // Wipe out StateMachine contents.
+  //----------------------------------------------------------------------------
+  void wipeoutStateMachineContents();
+
 private:
   void parseResilveringHistory();
   void storeResilveringHistory();
