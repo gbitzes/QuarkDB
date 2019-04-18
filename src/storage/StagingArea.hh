@@ -130,6 +130,22 @@ public:
     THROW_ON_ERROR(writeBatchWithIndex.Delete(slice));
   }
 
+  // SingleDelete() has a performance advantage over del(), but can be used
+  // if and only if we're certain only a _SINGLE_ entry for this key exists
+  // across _ALL_ rocksdb compaction layers.
+  //
+  // The tombstone by single delete will annihilate upon meeting its target
+  // key, without polluting multiple compaction layers for a potentially very
+  // long time.
+  //
+  // For keys that are single-deleted: Never overwrite them, and never call
+  // del() on them.
+  void singleDelete(std::string_view slice) {
+    if(readOnly) qdb_throw("cannot call singleDelete() on a readonly staging area");
+    if(bulkLoad) qdb_throw("no deletions allowed during bulk load");
+    THROW_ON_ERROR(writeBatchWithIndex.SingleDelete(slice));
+  }
+
   rocksdb::Status commit(LogIndex index) {
     if(readOnly) qdb_throw("cannot call commit() on a readonly staging area");
     if(bulkLoad) {

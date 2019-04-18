@@ -32,12 +32,7 @@ ExpirationEventIterator::ExpirationEventIterator(StagingArea &st)
 : stagingArea(st), iter(stagingArea.getIterator()) {
 
   std::string searchPrefix(1, char(InternalKeyType::kExpirationEvent));
-
-  std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
   iter->Seek(searchPrefix);
-  std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
-
-  qdb_info("seeking in ExpirationEventIterator constructor took " << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms");
   assertDeadlineSanity();
 }
 
