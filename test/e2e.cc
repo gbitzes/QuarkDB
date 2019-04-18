@@ -765,11 +765,13 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   std::future<redisReplyPtr> l12 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder2", "10000");
   std::future<redisReplyPtr> l13 = tunnel(leaderID)->exec("lease-release", "mykey");
   std::future<redisReplyPtr> l14 = tunnel(leaderID)->exec("lease-acquire", "mykey", "holder2", "10000");
+  std::future<redisReplyPtr> l15 = tunnel(leaderID)->exec("lease-get-pending-expiration-events");
 
   ASSERT_REPLY(l11, "ACQUIRED");
   ASSERT_REPLY(l12, "RENEWED");
   ASSERT_REPLY(l13, "OK");
   ASSERT_REPLY(l14, "ACQUIRED");
+  l15.get(); // ignore for now..
 
   // Ensure the followers return the correct number of responses on MOVED for
   // pipelined writes.

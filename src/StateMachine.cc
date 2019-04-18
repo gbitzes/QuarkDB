@@ -1430,6 +1430,20 @@ void StateMachine::getClock(StagingArea &stagingArea, ClockValue &value) {
   value = binaryStringToUnsignedInt(prevValue.c_str());
 }
 
+void StateMachine::lease_get_pending_expiration_events(StagingArea &stagingArea, ClockValue &staticClock, ClockValue &dynamicClock, std::vector<ExpirationEvent> &events) {
+  events.clear();
+
+  getClock(stagingArea, staticClock);
+  dynamicClock = getDynamicClock();
+
+  ExpirationEventIterator iter(stagingArea);
+
+  while(iter.valid()) {
+    events.emplace_back(iter.getRedisKey(), iter.getDeadline());
+    iter.next();
+  }
+}
+
 void StateMachine::getType(StagingArea &stagingArea, std::string_view key, std::string &keyType) {
   KeyDescriptor keyinfo = getKeyDescriptor(stagingArea, key);
   keyType = keyTypeAsString(keyinfo.getKeyType());

@@ -146,6 +146,16 @@ public:
   rocksdb::Status vhgetall(StagingArea &stagingArea, std::string_view key, std::vector<std::string> &res, uint64_t &version);
   rocksdb::Status vhlen(StagingArea &stagingArea, std::string_view key, size_t &len);
 
+  // misc
+  struct ExpirationEvent {
+    ExpirationEvent(std::string_view sv, ClockValue cv) : key(sv), deadline(cv) {}
+
+    std::string key;
+    ClockValue deadline;
+  };
+
+  void lease_get_pending_expiration_events(StagingArea &stagingArea, ClockValue &staticClock, ClockValue &dynamicClock, std::vector<ExpirationEvent> &events);
+
   //----------------------------------------------------------------------------
   // Simple API
   //----------------------------------------------------------------------------

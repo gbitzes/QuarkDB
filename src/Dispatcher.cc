@@ -776,6 +776,23 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
 
       return Formatter::statusVector(reply);
     }
+    case RedisCommand::LEASE_GET_PENDING_EXPIRATION_EVENTS: {
+      if(request.size() != 1) return errArgs(request);
+
+      std::vector<StateMachine::ExpirationEvent> events;
+      ClockValue staticClock, dynamicClock;
+      store.lease_get_pending_expiration_events(stagingArea, staticClock, dynamicClock, events);
+
+      std::vector<std::string> reply;
+      reply.emplace_back(SSTR("STATIC-CLOCK: " << staticClock));
+      reply.emplace_back(SSTR("DYNAMIC-CLOCK: " << dynamicClock));
+
+      for(auto it = events.begin(); it != events.end(); it++) {
+        reply.emplace_back(SSTR(it->deadline << ": " << it->key));
+      }
+
+      return Formatter::vector(reply);
+    }
     case RedisCommand::VHGETALL: {
       if(request.size() != 2) return errArgs(request);
       std::vector<std::string> vec;

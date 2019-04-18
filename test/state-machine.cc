@@ -895,6 +895,19 @@ TEST_F(State_Machine, Leases) {
     ASSERT_EQ(iterator.getRedisKey(), "my-lease-2");
     iterator.next();
     ASSERT_FALSE(iterator.valid());
+
+    ClockValue staticClock;
+    ClockValue dynamicClock;
+    std::vector<StateMachine::ExpirationEvent> events;
+    stateMachine()->lease_get_pending_expiration_events(stagingArea, staticClock, dynamicClock, events);
+
+    ASSERT_EQ(staticClock, 13u);
+    ASSERT_EQ(events.size(), 2u);
+    ASSERT_EQ(events[0].key, "my-lease");
+    ASSERT_EQ(events[0].deadline, 19u);
+
+    ASSERT_EQ(events[1].key, "my-lease-2");
+    ASSERT_EQ(events[1].deadline, 23u);
   }
 
   ASSERT_OK(stateMachine()->lease_release("my-lease-2", ClockValue(13)));

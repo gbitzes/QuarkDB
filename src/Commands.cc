@@ -69,6 +69,7 @@ struct cmdMapInit {
     redis_cmd_map["type"] = {RedisCommand::TYPE, CommandType::READ};
     redis_cmd_map["vhgetall"] = {RedisCommand::VHGETALL, CommandType::READ};
     redis_cmd_map["vhlen"] = {RedisCommand::VHLEN, CommandType::READ};
+    redis_cmd_map["lease_get_pending_expiration_events"] = {RedisCommand::LEASE_GET_PENDING_EXPIRATION_EVENTS, CommandType::READ};
 
     redis_cmd_map["flushall"] = {RedisCommand::FLUSHALL, CommandType::WRITE};
     redis_cmd_map["set"] = {RedisCommand::SET, CommandType::WRITE};
