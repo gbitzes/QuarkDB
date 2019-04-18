@@ -1227,10 +1227,15 @@ void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
 
   // Clear out any leases past the deadline
   ExpirationEventIterator iter(stagingArea);
+
+  size_t expirationEventCount = 0u;
   while(iter.valid() && iter.getDeadline() <= newValue) {
     qdb_assert(lease_release(stagingArea, std::string(iter.getRedisKey()), ClockValue(0)).ok());
     iter.next();
+    expirationEventCount++;
   }
+
+  qdb_info("Scanned through " << expirationEventCount << " expiration events when advancing clock");
 
   // Update value
   stagingArea.put(KeyConstants::kStateMachine_Clock, unsignedIntToBinaryString(newValue));
