@@ -1002,16 +1002,19 @@ TEST_F(State_Machine, Leases) {
   ASSERT_NOTFOUND(stateMachine()->lease_get("does-not-exist", ClockValue(25), info));
 }
 
-TEST_F(State_Machine, RawScanTombstones) {
-  ASSERT_OK(stateMachine()->set("test-key", "test-data"));
+TEST(StateMachine, RawScanTombstones) {
+  ASSERT_EQ(system("rm -rf /tmp/quarkdb-tombstone-scan-test"), 0);
+  StateMachine stateMachine("/tmp/quarkdb-tombstone-scan-test");
+
+  ASSERT_OK(stateMachine.set("test-key", "test-data"));
 
   int64_t removed;
   RedisRequest todel = {"test-key"};
-  ASSERT_OK(stateMachine()->del(todel.begin(), todel.end(), removed));
+  ASSERT_OK(stateMachine.del(todel.begin(), todel.end(), removed));
   ASSERT_EQ(removed, 1);
 
   std::vector<std::string> elements;
-  ASSERT_OK(stateMachine()->rawScanTombstones("", 10, elements));;
+  ASSERT_OK(stateMachine.rawScanTombstones("", 10, elements));;
 
   ASSERT_EQ(elements.size(), 2u);
   ASSERT_EQ(elements[0], "!test-key");
