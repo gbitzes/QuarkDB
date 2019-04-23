@@ -29,6 +29,7 @@
 #include "utils/FileUtils.hh"
 #include "utils/ScopedAdder.hh"
 #include "utils/TimeFormatting.hh"
+#include "XrdVersion.hh"
 
 #include <sys/stat.h>
 
@@ -154,7 +155,10 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 }
 
 QuarkDBInfo QuarkDBNode::info() {
-  return {configuration.getMode(), configuration.getDatabase(), VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH), shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(bootEnd - bootStart).count(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - bootEnd).count() };
+  return {configuration.getMode(), configuration.getDatabase(),
+    VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH),
+    SSTR(XrdVERSION),
+    shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(bootEnd - bootStart).count(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - bootEnd).count() };
 }
 
 std::vector<std::string> QuarkDBInfo::toVector() const {
@@ -163,6 +167,7 @@ std::vector<std::string> QuarkDBInfo::toVector() const {
   ret.emplace_back(SSTR("BASE-DIRECTORY " << baseDir));
   ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
   ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
+  ret.emplace_back(SSTR("XROOTD-HEADERS " << xrootdHeaders));
   ret.emplace_back(SSTR("MONITORS " << monitors));
   ret.emplace_back(SSTR("BOOT-TIME " << bootTime << " (" << formatTime(std::chrono::seconds(bootTime)) << ")"));
   ret.emplace_back(SSTR("UPTIME " << uptime << " (" << formatTime(std::chrono::seconds(uptime)) << ")"));

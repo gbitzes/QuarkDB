@@ -38,6 +38,7 @@ struct QuarkDBInfo {
   std::string baseDir;
   std::string version;
   std::string rocksdbVersion;
+  std::string xrootdHeaders;
   size_t monitors;
   int64_t bootTime;
   int64_t uptime;
