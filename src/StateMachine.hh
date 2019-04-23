@@ -117,6 +117,7 @@ public:
   rocksdb::Status rawScan(StagingArea &stagingArea, std::string_view key, size_t count, std::vector<std::string> &elements);
   rocksdb::Status keys(StagingArea &stagingArea, std::string_view pattern, std::vector<std::string> &result);
   rocksdb::Status exists(StagingArea &stagingArea, const ReqIterator &start, const ReqIterator &end, int64_t &count);
+  rocksdb::Status rawScanTombstones(StagingArea &stagingArea, std::string_view seek, size_t count, std::vector<std::string> &elements);
 
   // hashes
   rocksdb::Status hget(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string &value);
@@ -202,6 +203,7 @@ public:
   rocksdb::Status lease_get(std::string_view key, ClockValue clockUpdate, LeaseInfo &info, LogIndex index = 0);
   rocksdb::Status vhset(std::string_view key, std::string_view field, std::string_view value, uint64_t &version, LogIndex index);
   rocksdb::Status vhgetall(std::string_view key, std::vector<std::string> &res, uint64_t &version);
+  rocksdb::Status rawScanTombstones(std::string_view seek, size_t count, std::vector<std::string> &keys);
 
   //----------------------------------------------------------------------------
   // Internal configuration, not exposed to users through 'KEYS' and friends.

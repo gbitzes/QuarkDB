@@ -158,10 +158,14 @@ public:
     return rocksdb::Status::OK();
   }
 
-  StateMachine::IteratorPtr getIterator() {
+  StateMachine::IteratorPtr getIterator(bool withInternalKeys = false) {
     if(readOnly) {
       // Return an iterator that views only the current snapshot.
-      return StateMachine::IteratorPtr(stateMachine.db->NewIterator(snapshot->opts()));
+      rocksdb::ReadOptions opts = snapshot->opts();
+      if(withInternalKeys) {
+        opts.iter_start_seqnum = 1;
+      }
+      return StateMachine::IteratorPtr(stateMachine.db->NewIterator(opts));
     }
 
     if(bulkLoad) {
@@ -171,8 +175,13 @@ public:
 
     // Return an iterator which takes into account keys both in WriteBatchWithIndex,
     // and the DB.
+    rocksdb::ReadOptions opts;
+    if(withInternalKeys) {
+      opts.iter_start_seqnum = 1;
+    }
+
     return StateMachine::IteratorPtr(
-      writeBatchWithIndex.NewIteratorWithBase(stateMachine.db->NewIterator(rocksdb::ReadOptions()))
+      writeBatchWithIndex.NewIteratorWithBase(stateMachine.db->NewIterator(opts))
     );
   }
 

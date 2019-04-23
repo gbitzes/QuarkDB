@@ -1002,6 +1002,22 @@ TEST_F(State_Machine, Leases) {
   ASSERT_NOTFOUND(stateMachine()->lease_get("does-not-exist", ClockValue(25), info));
 }
 
+TEST_F(State_Machine, RawScanTombstones) {
+  ASSERT_OK(stateMachine()->set("test-key", "test-data"));
+
+  int64_t removed;
+  RedisRequest todel = {"test-key"};
+  ASSERT_OK(stateMachine()->del(todel.begin(), todel.end(), removed));
+  ASSERT_EQ(removed, 1);
+
+  std::vector<std::string> elements;
+  ASSERT_OK(stateMachine()->rawScanTombstones("", 10, elements));;
+
+  ASSERT_EQ(elements.size(), 2u);
+  ASSERT_EQ(elements[0], "!test-key");
+  ASSERT_EQ(elements[1], "atest-key");
+}
+
 static std::string sliceToString(const std::string_view &slice) {
   return std::string(slice.data(), slice.size());
 }
