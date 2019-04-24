@@ -619,7 +619,7 @@ rocksdb::Status StateMachine::rawScanTombstones(StagingArea &stagingArea, std::s
   IteratorPtr iter(stagingArea.getIterator(true));
   iter->Seek(key);
 
-  while(iter->Valid() && elements.size() <= count) {
+  while(iter->Valid() && elements.size() < count) {
     std::string_view currentKey = iter->key().ToStringView();
 
     if(isTombstone(currentKey)) {
