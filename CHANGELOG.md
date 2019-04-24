@@ -1,10 +1,19 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.3.7 (2019-04-24)
+- Heavy use of lease commands could cause performance degradation and latency
+spikes, due to accumulation of long-lived deletion tombstones on expiration
+events. Starting from this release, such tombstones should disappear much
+more quickly without accumulating.
 - Fixed regression introduced in 0.3.6, which made it impossible to create new
 bulkload nodes. (Note: to workaround, delete directory ``/path/to/bulkload/current/state-machine``
 right after running ``quarkdb-create``)
+- Addition of ``LEASE-GET-PENDING-EXPIRATION-EVENTS`` command to list all
+pending lease expiration events, and ``RAW-SCAN-TOMBSTONES`` to inspect tombstones
+as an aid in debugging.
+- Expanding a cluster is now easier, no need to pass ``--nodes`` to quarkdb-create
+when creating a new node for an established cluster.
 
 ## 0.3.6 (2019-03-21)
 - Improved memory management and recycling, putting less pressure on the global
