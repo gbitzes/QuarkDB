@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------
-// File: KeyConstants.hh
+// File: InternalKeyParsing.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
 /************************************************************************
  * quarkdb - a redis-like highly available key-value store              *
- * Copyright (C) 2016 CERN/Switzerland                                  *
+ * Copyright (C) 2019 CERN/Switzerland                                  *
  *                                                                      *
  * This program is free software: you can redistribute it and/or modify *
  * it under the terms of the GNU General Public License as published by *
@@ -21,34 +21,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_KEY_CONSTANTS_HH
-#define QUARKDB_KEY_CONSTANTS_HH
+#ifndef QUARKDB_INTERNAL_KEY_PARSING_HH
+#define QUARKDB_INTERNAL_KEY_PARSING_HH
 
-#include <string>
-#include <vector>
+#include <string_view>
 
 namespace quarkdb {
 
-namespace KeyConstants {
-  constexpr char kJournal_CurrentTerm[]              = "RAFT_CURRENT_TERM";
-  constexpr char kJournal_LogSize[]                  = "RAFT_LOG_SIZE";
-  constexpr char kJournal_LogStart[]                 = "RAFT_LOG_START";
-  constexpr char kJournal_ClusterID[]                = "RAFT_CLUSTER_ID";
-  constexpr char kJournal_VotedFor[]                 = "RAFT_VOTED_FOR";
-  constexpr char kJournal_CommitIndex[]              = "RAFT_COMMIT_INDEX";
-  constexpr char kJournal_Members[]                  = "RAFT_MEMBERS";
-  constexpr char kJournal_MembershipEpoch[]          = "RAFT_MEMBERSHIP_EPOCH";
-  constexpr char kJournal_PreviousMembers[]          = "RAFT_PREVIOUS_MEMBERS";
-  constexpr char kJournal_PreviousMembershipEpoch[]  = "RAFT_PREVIOUS_MEMBERSHIP_EPOCH";
-
-  constexpr char kStateMachine_Format[]              = "__format";
-  constexpr char kStateMachine_LastApplied[]         = "__last-applied";
-  constexpr char kStateMachine_InBulkload[]          = "__in-bulkload";
-  constexpr char kStateMachine_Clock[]               = "__clock";
-
-  extern std::vector<std::string> allKeys;
-};
-
+bool isTombstone(std::string_view internalKey);
 
 }
 
