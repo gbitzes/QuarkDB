@@ -641,6 +641,14 @@ inline uint64_t DecodeFixed64(const char* ptr) {
   return result;
 }
 
+rocksdb::Status StateMachine::rawScanMaybeTombstones(StagingArea &stagingArea, std::string_view seek, size_t count, std::vector<std::string> &elements, bool tombstones) {
+  if(tombstones) {
+    return rawScanTombstones(stagingArea, seek, count, elements);
+  }
+
+  return rawScan(stagingArea, seek, count, elements);
+}
+
 rocksdb::Status StateMachine::rawScanTombstones(StagingArea &stagingArea, std::string_view key, size_t count, std::vector<std::string> &elements) {
   elements.clear();
 

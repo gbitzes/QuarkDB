@@ -118,6 +118,7 @@ public:
   rocksdb::Status keys(StagingArea &stagingArea, std::string_view pattern, std::vector<std::string> &result);
   rocksdb::Status exists(StagingArea &stagingArea, const ReqIterator &start, const ReqIterator &end, int64_t &count);
   rocksdb::Status rawScanTombstones(StagingArea &stagingArea, std::string_view seek, size_t count, std::vector<std::string> &elements);
+  rocksdb::Status rawScanMaybeTombstones(StagingArea &stagingArea, std::string_view seek, size_t count, std::vector<std::string> &elements, bool tombstones);
 
   // hashes
   rocksdb::Status hget(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string &value);

@@ -447,7 +447,6 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       qdb_throw("internal dispatching error in RedisDispatcher for " << request);
     }
   }
-
 }
 
 RedisEncodedResponse RedisDispatcher::dispatchHGET(StagingArea &stagingArea, std::string_view key, std::string_view field) {
@@ -721,12 +720,20 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
       return Formatter::integer(len);
     }
     case RedisCommand::RAW_SCAN: {
-      if(request.size() != 2 && request.size() != 4) return errArgs(request);
+    case RedisCommand::RAW_SCAN_TOMBSTONES:
+      bool withTombstones = request.getCommand() == RedisCommand::RAW_SCAN_TOMBSTONES;
+
+      if(request.size() != 1 && request.size() != 2 && request.size() != 4) return errArgs(request);
+
+      std::string_view cursor;
+      if(request.size() > 1) {
+        cursor = request[1];
+      }
 
       rocksdb::Status st;
       std::vector<std::string> results;
-      if(request.size() == 2) {
-        st = store.rawScan(stagingArea, request[1], 50, results);
+      if(request.size() == 1 || request.size() == 2) {
+        st = store.rawScanMaybeTombstones(stagingArea, cursor, 50, results, withTombstones);
       }
       else {
         if(!caseInsensitiveEquals(request[2], "count")) {
@@ -738,7 +745,7 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
           return Formatter::err("syntax error");
         }
 
-        st = store.rawScan(stagingArea, request[1], count, results);
+        st = store.rawScanMaybeTombstones(stagingArea, cursor, count, results, withTombstones);
       }
 
       if(!st.ok()) return Formatter::fromStatus(st);

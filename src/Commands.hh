@@ -94,6 +94,7 @@ enum class RedisCommand {
   DEQUE_SCAN_BACK,
 
   RAW_SCAN,
+  RAW_SCAN_TOMBSTONES,
   RAW_GET_ALL_VERSIONS,
 
   TYPE,
