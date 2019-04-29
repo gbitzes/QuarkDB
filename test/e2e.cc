@@ -36,10 +36,11 @@
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
 #include "test-reply-macros.hh"
-#include "qclient/QScanner.hh"
-#include "qclient/QSet.hh"
+#include "qclient/structures/QScanner.hh"
+#include "qclient/structures/QSet.hh"
+#include "qclient/structures/QLocalityHash.hh"
 #include "qclient/ConnectionInitiator.hh"
-#include "qclient/QHash.hh"
+#include "qclient/structures/QHash.hh"
 #include "qclient/pubsub/MessageQueue.hh"
 #include "qclient/BaseSubscriber.hh"
 
@@ -1476,6 +1477,74 @@ TEST_F(Raft_e2e, LocalityHash) {
     "22) \"hint1\"\n"
     )
   );
+
+  // QLocalityHash::Iterator on empty key
+  std::string errMsg;
+  QLocalityHash::Iterator iter(tunnel(leaderID), "empty-key");
+  ASSERT_FALSE(iter.valid());
+  ASSERT_FALSE(iter.hasError(errMsg));
+
+  // QLocalityHash::Iterator on wrong type
+  ASSERT_REPLY(tunnel(leaderID)->exec("set", "my-string", "aaaa"), "OK");
+  iter = QLocalityHash::Iterator(tunnel(leaderID), "my-string");
+  ASSERT_FALSE(iter.valid());
+  ASSERT_TRUE(iter.hasError(errMsg));
+  ASSERT_EQ(errMsg, "malformed server response to LHSCAN: (error) ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
+
+  // QLocalityHash::Iterator on correct type
+  iter = QLocalityHash::Iterator(tunnel(leaderID), "mykey");
+  ASSERT_TRUE(iter.valid());
+  ASSERT_FALSE(iter.hasError(errMsg));
+
+  ASSERT_EQ(iter.getLocalityHint(), "hint1");
+  ASSERT_EQ(iter.getKey(), "f3");
+  ASSERT_EQ(iter.getValue(), "v6");
+
+  iter.next();
+  ASSERT_TRUE(iter.valid());
+  ASSERT_EQ(iter.getLocalityHint(), "hint2");
+  ASSERT_EQ(iter.getKey(), "f2");
+  ASSERT_EQ(iter.getValue(), "v5");
+
+  iter.next();
+  ASSERT_TRUE(iter.valid());
+  ASSERT_EQ(iter.getLocalityHint(), "hint3");
+  ASSERT_EQ(iter.getKey(), "f1");
+  ASSERT_EQ(iter.getValue(), "v3");
+
+  ASSERT_EQ(iter.requestsSoFar(), 1u);
+  iter.next();
+  ASSERT_FALSE(iter.valid());
+  ASSERT_FALSE(iter.hasError(errMsg));
+
+  // QLocalityHash::Iterator as above, but with much smaller COUNT of 2
+  iter = QLocalityHash::Iterator(tunnel(leaderID), "mykey", 2u);
+  ASSERT_TRUE(iter.valid());
+  ASSERT_FALSE(iter.hasError(errMsg));
+  ASSERT_EQ(iter.requestsSoFar(), 1u);
+
+  ASSERT_EQ(iter.getLocalityHint(), "hint1");
+  ASSERT_EQ(iter.getKey(), "f3");
+  ASSERT_EQ(iter.getValue(), "v6");
+
+  iter.next();
+  ASSERT_EQ(iter.requestsSoFar(), 1u);
+
+  ASSERT_EQ(iter.getLocalityHint(), "hint2");
+  ASSERT_EQ(iter.getKey(), "f2");
+  ASSERT_EQ(iter.getValue(), "v5");
+
+  iter.next();
+  ASSERT_EQ(iter.requestsSoFar(), 2u);
+
+  ASSERT_EQ(iter.getLocalityHint(), "hint3");
+  ASSERT_EQ(iter.getKey(), "f1");
+  ASSERT_EQ(iter.getValue(), "v3");
+
+  iter.next();
+  ASSERT_EQ(iter.requestsSoFar(), 2u);
+  ASSERT_FALSE(iter.valid());
+  ASSERT_FALSE(iter.hasError(errMsg));
 
   std::vector<std::future<redisReplyPtr>> replies;
   replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0" ));
