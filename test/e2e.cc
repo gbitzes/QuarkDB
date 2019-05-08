@@ -1550,6 +1550,7 @@ TEST_F(Raft_e2e, LocalityHash) {
   replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0" ));
   replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0", "COUNT", "2" ));
   replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "next:hint3##f1", "COUNT", "2" ));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "next:hint3##", "COUNT", "5"));
 
   ASSERT_REPLY_DESCRIBE(replies[0],
     "1) \"0\"\n"
@@ -1575,6 +1576,13 @@ TEST_F(Raft_e2e, LocalityHash) {
   );
 
   ASSERT_REPLY_DESCRIBE(replies[2],
+    "1) \"0\"\n"
+    "2) 1) \"hint3\"\n"
+    "   2) \"f1\"\n"
+    "   3) \"v3\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[3],
     "1) \"0\"\n"
     "2) 1) \"hint3\"\n"
     "   2) \"f1\"\n"

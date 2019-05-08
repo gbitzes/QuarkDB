@@ -1,6 +1,10 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+- Prevent crashing when ``LHSCAN`` is provided with a cursor missing the field
+component.
+
 ## 0.3.7 (2019-04-24)
 - Heavy use of lease commands could cause performance degradation and latency
 spikes, due to accumulation of long-lived deletion tombstones on expiration

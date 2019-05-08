@@ -193,7 +193,6 @@ public:
   }
 
   void resetField(std::string_view field) {
-    qdb_assert(!field.empty());
     qdb_assert(localityPrefixSize != 0);
 
     keyBuffer.shrink(localityPrefixSize);
