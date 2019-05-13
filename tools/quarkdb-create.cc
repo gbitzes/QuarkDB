@@ -141,6 +141,7 @@ int main(int argc, char** argv) {
     stolenStateMachine.reset(new quarkdb::StateMachine(opts[Opt::STEAL_STATE_MACHINE].arg));
   }
 
+  quarkdb::Status st;
   std::unique_ptr<quarkdb::ShardDirectory> shardDirectory;
   if(opts[Opt::CLUSTERID]) {
     std::vector<quarkdb::RaftServer> nodes;
@@ -153,10 +154,15 @@ int main(int argc, char** argv) {
       qdb_info("--nodes were not specified. This new node will be 'in limbo' until it is contacted by an existing cluster, and cannot be used to start a new cluster from scratch. Run 'quarkdb-add-observer' on the leader of the existing cluster to add it.");
     }
 
-    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, "default", nodes, journalStartingIndex, std::move(stolenStateMachine)));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, "default", nodes, journalStartingIndex, std::move(stolenStateMachine), st));
   }
   else {
-    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, "null", "default", std::move(stolenStateMachine)));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, "null", "default", std::move(stolenStateMachine), st));
+  }
+
+  if(!st.ok()) {
+    std::cerr << "Error " << st.getErrc() << ": " << st.getMsg() << std::endl;
+    return 1;
   }
 
   return 0;

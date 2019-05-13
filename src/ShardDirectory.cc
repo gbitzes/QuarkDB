@@ -221,10 +221,10 @@ void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftS
   storeResilveringHistory();
 }
 
-void ShardDirectory::initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID) {
+Status ShardDirectory::initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID) {
   std::string err;
   if(directoryExists(path, err)) {
-    qdb_throw("Cannot initialize shard directory for '" << shardID << "', path already exists: " << path);
+    return Status(EEXIST, SSTR("Cannot initialize shard directory for '" << shardID << "', path already exists: " << path));
   }
 
   mkpath_or_die(path + "/", 0755);
@@ -234,10 +234,14 @@ void ShardDirectory::initializeDirectory(const std::string &path, RaftClusterID 
   ResilveringHistory history;
   history.append(ResilveringEvent("GENESIS", time(NULL)));
   write_file_or_die(pathJoin(path, "RESILVERING-HISTORY"), history.serialize());
+  return Status();
 }
 
-ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, std::unique_ptr<StateMachine> sm) {
-  initializeDirectory(path, clusterID, shardID);
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, std::unique_ptr<StateMachine> sm, Status &st) {
+  st = initializeDirectory(path, clusterID, shardID);
+  if(!st.ok()) {
+    return nullptr;
+  }
 
   ShardDirectory *shardDirectory = new ShardDirectory(path);
 
@@ -246,8 +250,12 @@ ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID cl
   return new ShardDirectory(path);
 }
 
-ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm) {
-  initializeDirectory(path, clusterID, shardID);
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm, Status &st) {
+  st = initializeDirectory(path, clusterID, shardID);
+  if(!st.ok()) {
+    return nullptr;
+  }
+
 
   ShardDirectory *shardDirectory = new ShardDirectory(path);
   shardDirectory->obliterate(clusterID, nodes, startIndex, std::move(sm) );

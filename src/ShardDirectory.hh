@@ -27,6 +27,7 @@
 #include <memory>
 #include "Common.hh"
 #include "Configuration.hh"
+#include "Status.hh"
 #include "utils/Resilvering.hh"
 
 namespace quarkdb {
@@ -67,10 +68,10 @@ public:
     LogIndex startIndex, std::unique_ptr<StateMachine> existingContents);
 
   // Create a standalone shard.
-  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, std::unique_ptr<StateMachine> sm);
+  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, std::unique_ptr<StateMachine> sm, Status &st);
 
   // Create a consensus shard.
-  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm);
+  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm, Status &st);
 
   std::unique_ptr<ShardSnapshot> takeSnapshot(const SnapshotID &id, std::string &err);
 
@@ -117,7 +118,7 @@ private:
   std::string getResilveringArena(const ResilveringEventID &id);
   std::string getTempSnapshot(const SnapshotID &id);
 
-  static void initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID);
+  static Status initializeDirectory(const std::string &path, RaftClusterID clusterID, ShardID shardID);
 };
 
 

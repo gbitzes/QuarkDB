@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 - Prevent crashing when ``LHSCAN`` is provided with a cursor missing the field
 component.
+- Print simple error message when the given path to quarkdb-create already exists,
+instead of a stacktrace
 
 ## 0.3.7 (2019-04-24)
 - Heavy use of lease commands could cause performance degradation and latency
