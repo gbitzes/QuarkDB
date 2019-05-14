@@ -36,6 +36,7 @@ namespace quarkdb {
 struct QuarkDBInfo {
   Mode mode;
   std::string baseDir;
+  std::string configurationPath;
   std::string version;
   std::string rocksdbVersion;
   std::string xrootdHeaders;

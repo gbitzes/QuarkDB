@@ -156,15 +156,18 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
 
 QuarkDBInfo QuarkDBNode::info() {
   return {configuration.getMode(), configuration.getDatabase(),
+    configuration.getConfigurationPath(),
     VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH),
     SSTR(XrdVERSION),
-    shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(bootEnd - bootStart).count(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - bootEnd).count() };
+    shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(bootEnd - bootStart).count(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - bootEnd).count()
+  };
 }
 
 std::vector<std::string> QuarkDBInfo::toVector() const {
   std::vector<std::string> ret;
   ret.emplace_back(SSTR("MODE " << modeToString(mode)));
   ret.emplace_back(SSTR("BASE-DIRECTORY " << baseDir));
+  ret.emplace_back(SSTR("CONFIGURATION-PATH " << configurationPath));
   ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
   ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
   ret.emplace_back(SSTR("XROOTD-HEADERS " << xrootdHeaders));

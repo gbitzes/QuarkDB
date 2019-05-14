@@ -48,6 +48,7 @@ bool Configuration::fromFile(const std::string &filename, Configuration &out) {
   }
 
   stream.Attach(fd);
+  out.configurationPath = filename;
   return Configuration::fromStream(stream, out);
 }
 
@@ -79,13 +80,13 @@ static bool parseMode(const std::string &buffer, Mode &mode) {
   return true;
 }
 
-static bool parseBool(const std::string &buffer, bool &enableWriteAheadLog) {
+static bool parseBool(const std::string &buffer, bool &val) {
   if(buffer == "true") {
-    enableWriteAheadLog = true;
+    val = true;
     return true;
   }
   else if(buffer == "false") {
-    enableWriteAheadLog = false;
+    val = false;
     return true;
   }
 

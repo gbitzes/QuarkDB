@@ -6,6 +6,7 @@ All notable changes to this project will be documented in this file.
 component.
 - Print simple error message when the given path to quarkdb-create already exists,
 instead of a stacktrace
+- Addition of configuration file path to ``quarkdb-info``
 
 ## 0.3.7 (2019-04-24)
 - Heavy use of lease commands could cause performance degradation and latency
