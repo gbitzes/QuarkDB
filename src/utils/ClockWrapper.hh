@@ -107,13 +107,11 @@ public:
   //
   // Has no effect on now() if we aren't faking time in this object.
   //----------------------------------------------------------------------------
-  std::enable_if_t<std::is_same_v<
-    std::false_type,
-    std::integral_constant<bool, T::is_steady>
-  >, void>
-  set(time_point point) {
-    std::unique_lock<std::mutex> lock(mtx);
-    fakeTime = point;
+  void set(time_point point) {
+    if(!is_steady) {
+      std::unique_lock<std::mutex> lock(mtx);
+      fakeTime = point;
+    }
   }
 
 private:
