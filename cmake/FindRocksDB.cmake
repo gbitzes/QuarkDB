@@ -16,12 +16,15 @@ else()
     ROCKSDB_INCLUDE_DIRS
     NAMES rocksdb/version.h
     HINTS  ${ROCKSDB_ROOT_DIR}
-    PATH_SUFFIXES include)
+    PATH_SUFFIXES include
+    NO_DEFAULT_PATH)
 
   find_library(
     ROCKSDB_LIBRARY
     NAMES librocksdb.a
-    HINTS ${ROCKSDB_ROOT_DIR})
+    HINTS ${ROCKSDB_ROOT_DIR}
+    NO_DEFAULT_PATH)
+
 endif()
 
 find_package_handle_standard_args(
