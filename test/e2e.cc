@@ -39,10 +39,11 @@
 #include "qclient/structures/QScanner.hh"
 #include "qclient/structures/QSet.hh"
 #include "qclient/structures/QLocalityHash.hh"
-#include "qclient/ConnectionInitiator.hh"
 #include "qclient/structures/QHash.hh"
 #include "qclient/pubsub/MessageQueue.hh"
-#include "qclient/BaseSubscriber.hh"
+#include "qclient/pubsub/BaseSubscriber.hh"
+#include "qclient/network/AsyncConnector.hh"
+#include "qclient/network/HostResolver.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -1063,10 +1064,17 @@ TEST_F(Raft_e2e, monitor) {
   qdb_info("Connection ID: " << connID);
 
   // We can't use QClient for this, it can't handle the output of MONITOR
-  qclient::ConnectionInitiator initiator("localhost", myself(leaderID).port);
-  ASSERT_TRUE(initiator.ok());
+  qclient::HostResolver resolver(nullptr);
+  qclient::Status st;
+  std::vector<qclient::ServiceEndpoint> endpoints = resolver.resolve("localhost", myself(leaderID).port, st);
+  ASSERT_TRUE(st.ok());
+  ASSERT_EQ(endpoints.size(), 1u);
 
-  Link link(initiator.getFd());
+  qclient::AsyncConnector connector(endpoints[0]);
+  ASSERT_TRUE(connector.blockUntilReady());
+  ASSERT_TRUE(connector.ok());
+
+  Link link(connector.getFd());
   BufferedReader reader(&link);
 
   ASSERT_EQ(link.Send(SSTR("*2\r\n$4\r\nAUTH\r\n$" << contactDetails()->getPassword().size() << "\r\n" << contactDetails()->getPassword() << "\r\n")), 56);
