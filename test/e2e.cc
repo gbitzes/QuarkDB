@@ -1068,9 +1068,17 @@ TEST_F(Raft_e2e, monitor) {
   qclient::Status st;
   std::vector<qclient::ServiceEndpoint> endpoints = resolver.resolve("localhost", myself(leaderID).port, st);
   ASSERT_TRUE(st.ok());
-  ASSERT_EQ(endpoints.size(), 1u);
+  ASSERT_GE(endpoints.size(), 1u);
 
-  qclient::AsyncConnector connector(endpoints[0]);
+  int ipv4 = 0;
+  for(size_t i = 0; i < endpoints.size(); i++) {
+    if(endpoints[i].getProtocolType() == qclient::ProtocolType::kIPv4) {
+      ipv4 = i;
+      break;
+    }
+  }
+
+  qclient::AsyncConnector connector(endpoints[ipv4]);
   ASSERT_TRUE(connector.blockUntilReady());
   ASSERT_TRUE(connector.ok());
 
