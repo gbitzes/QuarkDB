@@ -209,34 +209,33 @@ TEST_F(QClientTests, MultipleWriterThreads) {
   }
 }
 
-TEST_F(QClientTests, Partitions) {
-  spinup(0); spinup(1); spinup(2);
-  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
-  int leaderID = getLeaderID();
+// TEST_F(QClientTests, Partitions) {
+//   spinup(0); spinup(1); spinup(2);
+//   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+//   int leaderID = getLeaderID();
 
-  ASSERT_REPLY(tunnel(leaderID)->exec("PING", "pickles"), "pickles");
-  qclient::FaultInjector &faultInjector = tunnel(leaderID)->getFaultInjector();
+//   ASSERT_REPLY(tunnel(leaderID)->exec("PING", "pickles"), "pickles");
+//   qclient::FaultInjector &faultInjector = tunnel(leaderID)->getFaultInjector();
 
-  for(size_t i = 0; i < 10; i++) {
-    faultInjector.enforceTotalBlackout();
+//   for(size_t i = 0; i < 10; i++) {
+//     faultInjector.enforceTotalBlackout();
 
-    redisReplyPtr reply;
-    int attempts = 0;
-    while(attempts++ < 10 && reply) {
-      reply = tunnel(leaderID)->exec("PING", "pickles-3").get();
-    }
+//     redisReplyPtr reply;
+//     int attempts = 0;
+//     while(attempts++ < 10 && reply) {
+//       reply = tunnel(leaderID)->exec("PING", "pickles-3").get();
+//     }
 
-    ASSERT_EQ(reply, nullptr);
-    faultInjector.liftTotalBlackout();
+//     ASSERT_EQ(reply, nullptr);
+//     faultInjector.liftTotalBlackout();
 
-    redisReplyPtr reply2;
-    attempts = 0;
-    while(attempts++ < 10 && !reply2) {
-      reply2 = tunnel(leaderID)->exec("PING", "pickles-3").get();
-    }
+//     redisReplyPtr reply2;
+//     attempts = 0;
+//     while(attempts++ < 10 && !reply2) {
+//       reply2 = tunnel(leaderID)->exec("PING", "pickles-3").get();
+//     }
 
-    ASSERT_TRUE(reply2 != nullptr);
-    ASSERT_REPLY(reply2, "pickles-3");
-  }
-
-}
+//     ASSERT_TRUE(reply2 != nullptr);
+//     ASSERT_REPLY(reply2, "pickles-3");
+//   }
+// }

@@ -113,5 +113,5 @@ TEST_F(tPoller, test_reconnect) {
   }
 
   std::cout << "Number of reconnections in total: " << listener->getEpoch() << std::endl;
-  ASSERT_GE(listener->getEpoch(), 6u);
+  ASSERT_GE(listener->getEpoch(), 5u);
 }

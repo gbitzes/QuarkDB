@@ -82,6 +82,16 @@ add_executable(quarkdb-stress-tests
   ${COMMON_TEST_SOURCES}
 )
 
+#-------------------------------------------------------------------------------
+# Build test executable which requires root to run
+#-------------------------------------------------------------------------------
+add_executable(quarkdb-root-tests
+  root/qclient.cc
+)
+
+#-------------------------------------------------------------------------------
+# Include directories for all test executables
+#-------------------------------------------------------------------------------
 include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src  # need access to the private headers
@@ -120,6 +130,14 @@ target_link_libraries(quarkdb-bench-malloc
 target_link_libraries(quarkdb-stress-tests
   XrdQuarkDB
   gtest
+  ${XROOTD_CL_LIBRARY}
+  ${XROOTD_UTILS_LIBRARY}
+  ${GCOV_LIBS}
+)
+
+target_link_libraries(quarkdb-root-tests
+  XrdQuarkDB
+  gtest_main
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${GCOV_LIBS}
