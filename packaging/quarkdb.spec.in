@@ -89,6 +89,7 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/quarkdb-scrub
 %{_bindir}/quarkdb-tests
 %{_bindir}/quarkdb-stress-tests
+%{_bindir}/quarkdb-sudo-tests
 %{_bindir}/quarkdb-bench
 %{_bindir}/quarkdb-create
 %{_bindir}/quarkdb-recovery

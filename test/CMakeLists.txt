@@ -83,10 +83,10 @@ add_executable(quarkdb-stress-tests
 )
 
 #-------------------------------------------------------------------------------
-# Build test executable which requires root to run
+# Build test executable which requires root / sudo to run
 #-------------------------------------------------------------------------------
-add_executable(quarkdb-root-tests
-  root/qclient.cc
+add_executable(quarkdb-sudo-tests
+  sudo/qclient.cc
 )
 
 #-------------------------------------------------------------------------------
@@ -135,7 +135,7 @@ target_link_libraries(quarkdb-stress-tests
   ${GCOV_LIBS}
 )
 
-target_link_libraries(quarkdb-root-tests
+target_link_libraries(quarkdb-sudo-tests
   XrdQuarkDB
   gtest_main
   ${XROOTD_CL_LIBRARY}
@@ -147,6 +147,6 @@ target_link_libraries(quarkdb-root-tests
 # Install
 #-------------------------------------------------------------------------------
 install(
-  TARGETS quarkdb-tests quarkdb-bench quarkdb-stress-tests
+  TARGETS quarkdb-tests quarkdb-bench quarkdb-stress-tests quarkdb-sudo-tests
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )
