@@ -99,10 +99,10 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
   }
 
   {
-    RecoveryRunner runner("/tmp/quarkdb-recovery-test", 30100);
+    RecoveryRunner runner("/tmp/quarkdb-recovery-test", 15678);
     qclient::Options opts;
     opts.ensureConnectionIsPrimed = false;
-    qclient::QClient qcl("localhost", 30100, std::move(opts) );
+    qclient::QClient qcl("localhost", 15678, std::move(opts) );
 
     ASSERT_REPLY(qcl.exec("recovery-get", KeyConstants::kJournal_ClusterID), "some-cluster-id");
     ASSERT_REPLY(qcl.exec("recovery-set", KeyConstants::kJournal_ClusterID, "different-cluster-id"), "OK");
