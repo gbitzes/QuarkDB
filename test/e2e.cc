@@ -1082,7 +1082,7 @@ TEST_F(Raft_e2e, monitor) {
   ASSERT_TRUE(connector.blockUntilReady());
   ASSERT_TRUE(connector.ok());
 
-  Link link(connector.getFd());
+  Link link(connector.release().release());
   BufferedReader reader(&link);
 
   ASSERT_EQ(link.Send(SSTR("*2\r\n$4\r\nAUTH\r\n$" << contactDetails()->getPassword().size() << "\r\n" << contactDetails()->getPassword() << "\r\n")), 56);
