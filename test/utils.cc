@@ -33,6 +33,7 @@
 #include "utils/TimeFormatting.hh"
 #include "utils/Random.hh"
 #include "utils/AssistedThread.hh"
+#include "utils/CoreLocalArray.hh"
 #include "redis/Transaction.hh"
 #include "redis/Authenticator.hh"
 #include "redis/LeaseFilter.hh"
@@ -943,4 +944,19 @@ TEST(SubscriptionTracker, BasicSanity) {
   ASSERT_FALSE(tracker.removePattern("test-*"));
   ASSERT_TRUE(tracker.removePattern("test*"));
   ASSERT_FALSE(tracker.removePattern("test***"));
+}
+
+struct alignas(CoreLocal::kCacheLine) AlignedStruct {
+  int a;
+};
+
+TEST(CoreLocalArray, BasicSanity) {
+  CoreLocalArray<AlignedStruct> test;
+  std::cout << "CoreLocalArray size: " << test.size() << std::endl;
+
+  std::pair<AlignedStruct*, size_t> local = test.access();
+  std::cout << "Executing on core #" << local.second << std::endl;
+  local.first->a = 5;
+
+  ASSERT_EQ(test.accessAtCore(local.second)->a, 5);
 }
