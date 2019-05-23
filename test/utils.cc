@@ -23,6 +23,7 @@
 
 #include <gtest/gtest.h>
 #include "raft/RaftCommon.hh"
+#include "utils/Statistics.hh"
 #include "utils/IntToBinaryString.hh"
 #include "utils/ParseUtils.hh"
 #include "utils/StringUtils.hh"
@@ -964,4 +965,59 @@ TEST(CoreLocalArray, BasicSanity) {
   for(size_t i = 0; i < test.size(); i++) {
     ASSERT_EQ(  ((uintptr_t)test.accessAtCore(i) % CoreLocal::kCacheLine), 0u);
   }
+}
+
+TEST(Statistics, BasicSanity) {
+  Statistics stats;
+  stats.reads = 10;
+  stats.writes = 20;
+  stats.batches = 11;
+
+  Statistics stats2;
+  stats += stats2;
+
+  ASSERT_EQ(stats.reads, 10);
+  ASSERT_EQ(stats.writes, 20);
+  ASSERT_EQ(stats.batches, 11);
+
+  stats2.reads = 1;
+  stats2.writes = 2;
+  stats2.batches = 3;
+
+  stats += stats2;
+  ASSERT_EQ(stats.reads, 11);
+  ASSERT_EQ(stats.writes, 22);
+  ASSERT_EQ(stats.batches, 14);
+}
+
+TEST(StatAggregator, BasicSanity) {
+  StatAggregator aggr;
+
+  Statistics* stats = aggr.getStats();
+  ASSERT_EQ(stats->reads, 0);
+  ASSERT_EQ(stats->writes, 0);
+  ASSERT_EQ(stats->batches, 0);
+
+  stats->reads += 10;
+  stats->writes += 10;
+  stats->batches += 10;
+
+  Statistics overall = aggr.getOverallStats();
+  ASSERT_EQ(overall.reads, 10);
+  ASSERT_EQ(overall.writes, 10);
+  ASSERT_EQ(overall.batches, 10);
+
+  Statistics sinceLast = aggr.getOverallStatsSinceLastTime();
+  ASSERT_EQ(sinceLast.reads, 10);
+  ASSERT_EQ(sinceLast.writes, 10);
+  ASSERT_EQ(sinceLast.batches, 10);
+
+  stats->reads += 30;
+  stats->writes += 90;
+  stats->batches += 3;
+
+  sinceLast = aggr.getOverallStatsSinceLastTime();
+  ASSERT_EQ(sinceLast.reads, 30);
+  ASSERT_EQ(sinceLast.writes, 90);
+  ASSERT_EQ(sinceLast.batches, 3);
 }

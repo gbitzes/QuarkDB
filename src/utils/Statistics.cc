@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------
-// File: RequestCounter.hh
+// File: Statistics.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
 /************************************************************************
  * quarkdb - a redis-like highly available key-value store              *
- * Copyright (C) 2016 CERN/Switzerland                                  *
+ * Copyright (C) 2019 CERN/Switzerland                                  *
  *                                                                      *
  * This program is free software: you can redistribute it and/or modify *
  * it under the terms of the GNU General Public License as published by *
@@ -21,46 +21,45 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_REQUEST_COUNTER_H__
-#define __QUARKDB_REQUEST_COUNTER_H__
-
-#include <atomic>
-#include "AssistedThread.hh"
 #include "Statistics.hh"
 
 namespace quarkdb {
 
-class Transaction;
-class RedisRequest;
-
 //------------------------------------------------------------------------------
-// Count what types of requests we've been servicing, and reports statistics
-// every few seconds.
+// Get core-local stats object for modification - never
+// decrease the given values
 //------------------------------------------------------------------------------
-
-class RequestCounter {
-public:
-  RequestCounter(std::chrono::seconds interval);
-
-  void account(const Transaction &transaction);
-  void mainThread(ThreadAssistant &assistant);
-
-  void setReportingStatus(bool val);
-  void account(const RedisRequest &req);
-private:
-  std::string toRate(int64_t val);
-  CoreLocalArray<Statistics> statistics;
-
-  std::atomic<int64_t> reads {0};
-  std::atomic<int64_t> writes {0};
-  std::atomic<int64_t> batches {0};
-  bool paused = true;
-  std::atomic<bool> activated {true};
-
-  std::chrono::seconds interval;
-  AssistedThread thread;
-};
-
+Statistics* StatAggregator::getStats() {
+  return stats.access().first;
 }
 
-#endif
+//------------------------------------------------------------------------------
+// Get overall statistics, since the time the server started up. Aggregation
+// over all CPU cores.
+//------------------------------------------------------------------------------
+Statistics StatAggregator::getOverallStats() {
+  Statistics output;
+
+  for(size_t i = 0; i < stats.size(); i++) {
+    output += *(stats.accessAtCore(i));
+  }
+
+  return output;
+}
+
+//------------------------------------------------------------------------------
+// Get overall statistics, but only the difference between this function was
+// called, and now.
+//------------------------------------------------------------------------------
+Statistics StatAggregator::getOverallStatsSinceLastTime() {
+  Statistics overAllNow = getOverallStats();
+
+  Statistics output = overAllNow;
+  output -= lastTime;
+
+  lastTime = overAllNow;
+  return output;
+}
+
+
+}

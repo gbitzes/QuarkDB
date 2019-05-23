@@ -25,6 +25,10 @@
 #define QUARKDB_CORE_LOCAL_ARRAY_HH
 
 #include <stdlib.h>
+#include <utility>
+#include <memory>
+#include <sched.h>
+#include <thread>
 
 //------------------------------------------------------------------------------
 // Implementation largely inspired from rocksdb/util/core_local.h
@@ -67,6 +71,16 @@ public:
     // Default-construct elements
     for(size_t i = 0; i < cpus; i++) {
       new (array.get() + i) T();
+    }
+  }
+
+  //----------------------------------------------------------------------------
+  // Destructor
+  //----------------------------------------------------------------------------
+  ~CoreLocalArray() {
+    // Call destructors
+    for(size_t i = 0; i < cpus; i++) {
+      (array.get())[i].~T();
     }
   }
 
