@@ -24,7 +24,6 @@
 #include "ShardDirectory.hh"
 #include "utils/FileUtils.hh"
 #include "StateMachine.hh"
-#include "utils/FileDescriptor.hh"
 #include "raft/RaftJournal.hh"
 
 #include <sys/stat.h>
