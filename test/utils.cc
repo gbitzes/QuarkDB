@@ -959,4 +959,9 @@ TEST(CoreLocalArray, BasicSanity) {
   local.first->a = 5;
 
   ASSERT_EQ(test.accessAtCore(local.second)->a, 5);
+
+  // Ensure every single element is aligned
+  for(size_t i = 0; i < test.size(); i++) {
+    ASSERT_EQ(  ((uintptr_t)test.accessAtCore(i) % CoreLocal::kCacheLine), 0u);
+  }
 }

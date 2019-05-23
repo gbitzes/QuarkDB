@@ -66,7 +66,7 @@ public:
 
     // Default-construct elements
     for(size_t i = 0; i < cpus; i++) {
-      new (array.get() + (sizeof(T)*i) ) T();
+      new (array.get() + i) T();
     }
   }
 
