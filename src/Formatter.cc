@@ -27,6 +27,7 @@
 #include "Formatter.hh"
 #include "redis/ArrayResponseBuilder.hh"
 #include "redis/Transaction.hh"
+#include "utils/Statistics.hh"
 using namespace quarkdb;
 
 RedisEncodedResponse Formatter::moved(int64_t shardId, const RaftServer &location) {
@@ -189,6 +190,14 @@ RedisEncodedResponse Formatter::multiply(const RedisEncodedResponse &resp, size_
   }
 
   return RedisEncodedResponse(ss.str());
+}
+
+RedisEncodedResponse Formatter::stats(const Statistics &stats) {
+  std::vector<std::string> arr;
+  arr.emplace_back(SSTR("TOTAL-READS " << stats.reads));
+  arr.emplace_back(SSTR("TOTAL-WRITES " << stats.writes));
+  arr.emplace_back(SSTR("TOTAL-BATCHES " << stats.batches));
+  return statusVector(arr);
 }
 
 RedisEncodedResponse Formatter::subscribe(std::string_view channel, size_t active) {

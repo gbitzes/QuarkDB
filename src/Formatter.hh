@@ -32,6 +32,7 @@ namespace quarkdb {
 
 struct RaftEntry;
 class RedisRequest;
+struct Statistics;
 
 class Formatter {
 public:
@@ -64,6 +65,7 @@ public:
   static RedisEncodedResponse redisRequest(const RedisRequest &req);
 
   static RedisEncodedResponse multiply(const RedisEncodedResponse &resp, size_t factor);
+  static RedisEncodedResponse stats(const Statistics &stats);
 
 private:
   static RedisEncodedResponse strstrint(std::string_view str1, std::string_view str2, int num);

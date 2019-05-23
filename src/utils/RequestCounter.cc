@@ -65,6 +65,10 @@ void RequestCounter::setReportingStatus(bool val) {
   activated = val;
 }
 
+Statistics RequestCounter::getOverallStats() {
+  return aggregator.getOverallStats();
+}
+
 void RequestCounter::mainThread(ThreadAssistant &assistant) {
   while(!assistant.terminationRequested()) {
 

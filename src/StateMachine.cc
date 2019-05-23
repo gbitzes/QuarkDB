@@ -1786,12 +1786,18 @@ std::string StateMachine::statistics() {
   return stats;
 }
 
+//------------------------------------------------------------------------------
+// Get level stats
+//------------------------------------------------------------------------------
 std::string StateMachine::levelStats() {
   std::string stats;
   db->GetProperty(rocksdb::DB::Properties::kLevelStats, &stats);
   return stats;
 }
 
+//------------------------------------------------------------------------------
+// Get compression stats
+//------------------------------------------------------------------------------
 std::vector<std::string> StateMachine::compressionStats() {
   std::vector<std::string> results;
 
@@ -1802,6 +1808,13 @@ std::vector<std::string> StateMachine::compressionStats() {
   }
 
   return results;
+}
+
+//------------------------------------------------------------------------------
+// Get command stats
+//------------------------------------------------------------------------------
+Statistics StateMachine::commandStats() {
+  return requestCounter.getOverallStats();
 }
 
 rocksdb::Status StateMachine::noop(LogIndex index) {

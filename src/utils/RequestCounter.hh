@@ -48,6 +48,8 @@ public:
 
   void setReportingStatus(bool val);
   void account(const RedisRequest &req);
+
+  Statistics getOverallStats();
 private:
   void account(const RedisRequest &req, Statistics *stats);
 
