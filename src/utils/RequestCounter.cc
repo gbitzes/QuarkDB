@@ -32,20 +32,28 @@ RequestCounter::RequestCounter(std::chrono::seconds intv)
   thread.setName("request-count-reporter");
 }
 
-void RequestCounter::account(const RedisRequest &req) {
+
+void RequestCounter::account(const RedisRequest &req, Statistics *stats) {
   if(req.getCommandType() == CommandType::READ) {
-    reads++;
+    stats->reads++;
   }
   else if(req.getCommandType() == CommandType::WRITE) {
-    writes++;
+    stats->writes++;
   }
 }
 
+void RequestCounter::account(const RedisRequest &req) {
+  Statistics *stats = aggregator.getStats();
+  account(req, stats);
+}
+
 void RequestCounter::account(const Transaction &transaction) {
-  batches++;
+  Statistics *stats = aggregator.getStats();
+
+  stats->batches++;
 
   for(size_t i = 0; i < transaction.size(); i++) {
-    account(transaction[i]);
+    account(transaction[i], stats);
   }
 }
 
@@ -60,14 +68,12 @@ void RequestCounter::setReportingStatus(bool val) {
 void RequestCounter::mainThread(ThreadAssistant &assistant) {
   while(!assistant.terminationRequested()) {
 
-    int64_t localReads = reads.exchange(0);
-    int64_t localWrites = writes.exchange(0);
-    int64_t localBatches = batches.exchange(0);
+    Statistics local = aggregator.getOverallStatsSinceLastTime();
 
-    if(localReads != 0 || localWrites != 0) {
+    if(local.reads != 0 || local.writes != 0) {
       paused = false;
       if(activated) {
-        qdb_info("Over the last " << interval.count() << " seconds, I serviced " << localReads << " reads " << toRate(localReads) <<  ", and " << localWrites << " writes " << toRate(localWrites) << ". Processed " << localBatches << " batches.");
+        qdb_info("Over the last " << interval.count() << " seconds, I serviced " << local.reads << " reads " << toRate(local.reads) <<  ", and " << local.writes << " writes " << toRate(local.writes) << ". Processed " << local.batches << " batches.");
       }
     }
     else if(!paused) {

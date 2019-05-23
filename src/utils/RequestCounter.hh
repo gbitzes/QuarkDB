@@ -32,6 +32,7 @@ namespace quarkdb {
 
 class Transaction;
 class RedisRequest;
+class Statistics;
 
 //------------------------------------------------------------------------------
 // Count what types of requests we've been servicing, and reports statistics
@@ -48,12 +49,11 @@ public:
   void setReportingStatus(bool val);
   void account(const RedisRequest &req);
 private:
-  std::string toRate(int64_t val);
-  CoreLocalArray<Statistics> statistics;
+  void account(const RedisRequest &req, Statistics *stats);
 
-  std::atomic<int64_t> reads {0};
-  std::atomic<int64_t> writes {0};
-  std::atomic<int64_t> batches {0};
+  std::string toRate(int64_t val);
+  StatAggregator aggregator;
+
   bool paused = true;
   std::atomic<bool> activated {true};
 
