@@ -42,7 +42,7 @@ std::vector<std::string> Statistics::serialize() const {
 // Push new datapoint, along with corresponding timestamp
 //------------------------------------------------------------------------------
 void HistoricalStatistics::push(const Statistics &stats,
-  std::chrono::steady_clock::time_point point) {
+  std::chrono::system_clock::time_point point) {
 
   std::lock_guard<std::mutex> lock(mtx);
   store.emplace_front(point, stats);

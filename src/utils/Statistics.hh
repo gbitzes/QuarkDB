@@ -76,10 +76,10 @@ struct alignas(CoreLocal::kCacheLine) Statistics {
 };
 
 struct TimestampedStatistics {
-  std::chrono::steady_clock::time_point timepoint;
+  std::chrono::system_clock::time_point timepoint;
   Statistics stats;
 
-  TimestampedStatistics(std::chrono::steady_clock::time_point point,
+  TimestampedStatistics(std::chrono::system_clock::time_point point,
     const Statistics &stat) : timepoint(point), stats(stat) {}
 };
 
@@ -93,7 +93,7 @@ public:
   //----------------------------------------------------------------------------
   // Push new datapoint, along with corresponding timestamp
   //----------------------------------------------------------------------------
-  void push(const Statistics &stats, std::chrono::steady_clock::time_point point);
+  void push(const Statistics &stats, std::chrono::system_clock::time_point point);
 
   //----------------------------------------------------------------------------
   // Export into vector-of-vectors-with-headers format

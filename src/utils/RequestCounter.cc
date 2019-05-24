@@ -92,7 +92,7 @@ void RequestCounter::mainThread(ThreadAssistant &assistant) {
       }
     }
 
-    historical.push(local, std::chrono::steady_clock::now());
+    historical.push(local, std::chrono::system_clock::now());
     assistant.wait_for(interval);
   }
 }

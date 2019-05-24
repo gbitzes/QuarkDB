@@ -1027,7 +1027,7 @@ TEST(StatAggregator, BasicSanity) {
 TEST(HistoricalStatistics, BasicSanity) {
   HistoricalStatistics history(2);
 
-  std::chrono::steady_clock::time_point timepoint;
+  std::chrono::system_clock::time_point timepoint;
   Statistics stats;
 
   stats.reads = 90;
