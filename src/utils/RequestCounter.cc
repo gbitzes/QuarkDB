@@ -28,7 +28,7 @@
 using namespace quarkdb;
 
 RequestCounter::RequestCounter(std::chrono::seconds intv)
-  : interval(intv), thread(&RequestCounter::mainThread, this) {
+  : interval(intv), historical(100), thread(&RequestCounter::mainThread, this) {
   thread.setName("request-count-reporter");
 }
 
@@ -92,6 +92,19 @@ void RequestCounter::mainThread(ThreadAssistant &assistant) {
       }
     }
 
+    historical.push(local, std::chrono::steady_clock::now());
     assistant.wait_for(interval);
   }
+}
+
+void RequestCounter::fillHistorical(std::vector<std::string> &headers,
+  std::vector<std::vector<std::string>> &data) {
+
+  headers.clear();
+  data.clear();
+
+  headers.emplace_back("TOTALS");
+  data.emplace_back(aggregator.getOverallStats().serialize());
+
+  historical.serialize(headers, data);
 }

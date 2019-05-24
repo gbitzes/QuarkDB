@@ -60,16 +60,10 @@ void HistoricalStatistics::serialize(std::vector<std::string> &headers,
 
   std::lock_guard<std::mutex> lock(mtx);
 
-  headers.resize(store.size());
-  data.resize(store.size());
-
-  size_t i = 0;
   for(auto it = store.begin(); it != store.end(); it++) {
-    headers[i] = SSTR("TIMESTAMP " <<
-      std::chrono::duration_cast<std::chrono::seconds>(it->timepoint.time_since_epoch()).count());
-    data[i] = it->stats.serialize();
-
-    i++;
+    headers.emplace_back(SSTR("TIMESTAMP " <<
+      std::chrono::duration_cast<std::chrono::seconds>(it->timepoint.time_since_epoch()).count()));
+    data.emplace_back(it->stats.serialize());
   }
 }
 

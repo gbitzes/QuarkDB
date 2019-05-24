@@ -227,7 +227,10 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err("unavailable");
       }
 
-      return conn->raw(Formatter::stats(stateMachine->commandStats()));
+      std::vector<std::string> headers;
+      std::vector<std::vector<std::string>> data;
+      stateMachine->getRequestCounter().fillHistorical(headers, data);
+      return conn->raw(Formatter::vectorsWithHeaders(headers, data));
     }
     default: {
       if(req.getCommandType() == CommandType::QUARKDB) {

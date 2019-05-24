@@ -50,6 +50,10 @@ public:
   void account(const RedisRequest &req);
 
   Statistics getOverallStats();
+
+  void fillHistorical(std::vector<std::string> &headers,
+    std::vector<std::vector<std::string>> &data);
+
 private:
   void account(const RedisRequest &req, Statistics *stats);
 
@@ -60,6 +64,7 @@ private:
   std::atomic<bool> activated {true};
 
   std::chrono::seconds interval;
+  HistoricalStatistics historical;
   AssistedThread thread;
 };
 
