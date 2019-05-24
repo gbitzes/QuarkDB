@@ -30,33 +30,38 @@
 namespace quarkdb {
 
 struct alignas(CoreLocal::kCacheLine) Statistics {
-  Statistics() : reads(0), writes(0), batches(0) {}
+  Statistics() : reads(0), writes(0), txread(0), txreadwrite(0) {}
 
   std::atomic<int64_t> reads;
   std::atomic<int64_t> writes;
-  std::atomic<int64_t> batches;
+  std::atomic<int64_t> txread;
+  std::atomic<int64_t> txreadwrite;
 
   Statistics(const Statistics &other) : reads(other.reads.load()),
-  writes(other.writes.load()), batches(other.batches.load()) {}
+  writes(other.writes.load()), txread(other.txread.load()),
+  txreadwrite(other.txreadwrite.load()) {}
 
   Statistics& operator+=(const Statistics &other) {
     reads += other.reads;
     writes += other.writes;
-    batches += other.batches;
+    txread += other.txread;
+    txreadwrite += other.txreadwrite;
     return *this;
   }
 
   Statistics& operator-=(const Statistics &other) {
     reads -= other.reads;
     writes -= other.writes;
-    batches -= other.batches;
+    txread -= other.txread;
+    txreadwrite -= other.txreadwrite;
     return *this;
   }
 
   Statistics& operator=(const Statistics &other) {
     reads = other.reads.load();
     writes = other.writes.load();
-    batches = other.batches.load();
+    txread = other.txread.load();
+    txreadwrite = other.txreadwrite.load();
     return *this;
   }
 

@@ -50,7 +50,12 @@ void RequestCounter::account(const RedisRequest &req) {
 void RequestCounter::account(const Transaction &transaction) {
   Statistics *stats = aggregator.getStats();
 
-  stats->batches++;
+  if(transaction.containsWrites()) {
+    stats->txreadwrite++;
+  }
+  else {
+    stats->txread++;
+  }
 
   for(size_t i = 0; i < transaction.size(); i++) {
     account(transaction[i], stats);
@@ -77,7 +82,7 @@ void RequestCounter::mainThread(ThreadAssistant &assistant) {
     if(local.reads != 0 || local.writes != 0) {
       paused = false;
       if(activated) {
-        qdb_info("Over the last " << interval.count() << " seconds, I serviced " << local.reads << " reads " << toRate(local.reads) <<  ", and " << local.writes << " writes " << toRate(local.writes) << ". Processed " << local.batches << " batches.");
+        qdb_info("During the last " << interval.count() << " seconds, I serviced " << local.reads << " reads " << toRate(local.reads) <<  ", and " << local.writes << " writes " << toRate(local.writes) << " over " << local.txreadwrite << " write transactions");
       }
     }
     else if(!paused) {

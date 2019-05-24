@@ -196,7 +196,8 @@ RedisEncodedResponse Formatter::stats(const Statistics &stats) {
   std::vector<std::string> arr;
   arr.emplace_back(SSTR("TOTAL-READS " << stats.reads));
   arr.emplace_back(SSTR("TOTAL-WRITES " << stats.writes));
-  arr.emplace_back(SSTR("TOTAL-BATCHES " << stats.batches));
+  arr.emplace_back(SSTR("TOTAL-TXREAD " << stats.txread));
+  arr.emplace_back(SSTR("TOTAL-TXREADWRITE " << stats.txreadwrite));
   return statusVector(arr);
 }
 
