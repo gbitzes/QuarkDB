@@ -24,8 +24,12 @@
 #ifndef QUARKDB_STATISTICS_HH
 #define QUARKDB_STATISTICS_HH
 
-#include <atomic>
 #include "CoreLocalArray.hh"
+#include <atomic>
+#include <chrono>
+#include <vector>
+#include <list>
+#include <mutex>
 
 namespace quarkdb {
 
@@ -65,6 +69,42 @@ struct alignas(CoreLocal::kCacheLine) Statistics {
     return *this;
   }
 
+  //----------------------------------------------------------------------------
+  // Describe contents as a vector
+  //----------------------------------------------------------------------------
+  std::vector<std::string> serialize() const;
+};
+
+struct TimestampedStatistics {
+  std::chrono::steady_clock::time_point timepoint;
+  Statistics stats;
+
+  TimestampedStatistics(std::chrono::steady_clock::time_point point,
+    const Statistics &stat) : timepoint(point), stats(stat) {}
+};
+
+class HistoricalStatistics {
+public:
+  //----------------------------------------------------------------------------
+  // Keep last N entries
+  //----------------------------------------------------------------------------
+  HistoricalStatistics(size_t limit) : retentionLimit(limit) {}
+
+  //----------------------------------------------------------------------------
+  // Push new datapoint, along with corresponding timestamp
+  //----------------------------------------------------------------------------
+  void push(const Statistics &stats, std::chrono::steady_clock::time_point point);
+
+  //----------------------------------------------------------------------------
+  // Export into vector-of-vectors-with-headers format
+  //----------------------------------------------------------------------------
+  void serialize(std::vector<std::string> &headers,
+    std::vector<std::vector<std::string>> &data);
+
+private:
+  size_t retentionLimit;
+  std::mutex mtx;
+  std::list<TimestampedStatistics> store;
 };
 
 class StatAggregator {

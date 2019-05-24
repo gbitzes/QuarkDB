@@ -148,3 +148,29 @@ TEST(Formatter, EmptyVersionedVector) {
     "1) (integer) 888\n"
     "2) (empty list or set)\n");
 }
+
+TEST(Formatter, VectorOfVectors) {
+  std::vector<std::string> headers;
+  std::vector<std::vector<std::string>> data;
+
+  headers.emplace_back("SECTION 1");
+  ASSERT_THROW(Formatter::vectorsWithHeaders(headers, data), FatalException);
+
+  std::vector<std::string> vec = { "one", "two", "three" };
+  data.emplace_back(vec);
+
+  headers.emplace_back("SECTION 2");
+  vec = { "four", "five", "six" };
+  data.emplace_back(vec);
+
+  redisReplyPtr ans = qclient::ResponseBuilder::parseRedisEncodedString(Formatter::vectorsWithHeaders(headers, data).val);
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) 1) SECTION 1\n"
+    "   2) 1) one\n"
+    "      2) two\n"
+    "      3) three\n"
+    "2) 1) SECTION 2\n"
+    "   2) 1) four\n"
+    "      2) five\n"
+    "      3) six\n");
+}

@@ -47,6 +47,8 @@
 #include "memory/RingAllocator.hh"
 #include "Utils.hh"
 #include "Formatter.hh"
+#include "qclient/ResponseBuilder.hh"
+#include "qclient/QClient.hh"
 
 using namespace quarkdb;
 
@@ -1020,4 +1022,49 @@ TEST(StatAggregator, BasicSanity) {
   ASSERT_EQ(sinceLast.reads, 30);
   ASSERT_EQ(sinceLast.writes, 90);
   ASSERT_EQ(sinceLast.txreadwrite, 3);
+}
+
+TEST(HistoricalStatistics, BasicSanity) {
+  HistoricalStatistics history(2);
+
+  std::chrono::steady_clock::time_point timepoint;
+  Statistics stats;
+
+  stats.reads = 90;
+  stats.writes = 80;
+  timepoint += std::chrono::seconds(100);
+
+  history.push(stats, timepoint);
+
+  stats.reads = 100;
+  stats.writes = 50;
+  timepoint += std::chrono::seconds(99);
+
+  history.push(stats, timepoint);
+
+  stats.reads = 300;
+  stats.writes = 1;
+  timepoint += std::chrono::seconds(300);
+
+  history.push(stats, timepoint);
+
+  std::vector<std::string> headers;
+  std::vector<std::vector<std::string>> data;
+  history.serialize(headers, data);
+
+  qclient::redisReplyPtr ans = qclient::ResponseBuilder::parseRedisEncodedString(Formatter::vectorsWithHeaders(headers, data).val);
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) 1) TIMESTAMP 499\n"
+    "   2) 1) READS 300\n"
+    "      2) WRITES 1\n"
+    "      3) TXREAD 0\n"
+    "      4) TXREADWRITE 0\n"
+    "2) 1) TIMESTAMP 199\n"
+    "   2) 1) READS 100\n"
+    "      2) WRITES 50\n"
+    "      3) TXREAD 0\n"
+    "      4) TXREADWRITE 0\n"
+  );
+
+
 }

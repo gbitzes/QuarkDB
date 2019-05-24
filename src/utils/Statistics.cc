@@ -22,8 +22,56 @@
  ************************************************************************/
 
 #include "Statistics.hh"
+#include "Macros.hh"
 
 namespace quarkdb {
+
+//------------------------------------------------------------------------------
+// Describe contents as a vector
+//------------------------------------------------------------------------------
+std::vector<std::string> Statistics::serialize() const {
+  std::vector<std::string> output(4);
+  output[0] = SSTR("READS " << reads.load());
+  output[1] = SSTR("WRITES " << writes.load());
+  output[2] = SSTR("TXREAD " << txread.load());
+  output[3] = SSTR("TXREADWRITE " << txreadwrite.load());
+  return output;
+}
+
+//------------------------------------------------------------------------------
+// Push new datapoint, along with corresponding timestamp
+//------------------------------------------------------------------------------
+void HistoricalStatistics::push(const Statistics &stats,
+  std::chrono::steady_clock::time_point point) {
+
+  std::lock_guard<std::mutex> lock(mtx);
+  store.emplace_front(point, stats);
+
+  if(store.size() > retentionLimit) {
+    store.pop_back();
+  }
+}
+
+//------------------------------------------------------------------------------
+// Export into vector-of-vectors-with-headers format
+//------------------------------------------------------------------------------
+void HistoricalStatistics::serialize(std::vector<std::string> &headers,
+    std::vector<std::vector<std::string>> &data) {
+
+  std::lock_guard<std::mutex> lock(mtx);
+
+  headers.resize(store.size());
+  data.resize(store.size());
+
+  size_t i = 0;
+  for(auto it = store.begin(); it != store.end(); it++) {
+    headers[i] = SSTR("TIMESTAMP " <<
+      std::chrono::duration_cast<std::chrono::seconds>(it->timepoint.time_since_epoch()).count());
+    data[i] = it->stats.serialize();
+
+    i++;
+  }
+}
 
 //------------------------------------------------------------------------------
 // Get core-local stats object for modification - never

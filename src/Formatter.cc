@@ -192,6 +192,40 @@ RedisEncodedResponse Formatter::multiply(const RedisEncodedResponse &resp, size_
   return RedisEncodedResponse(ss.str());
 }
 
+//------------------------------------------------------------------------------
+// Produce a vector of vectors, where each vector has its own header. No binary
+// data, only text is safe.
+//
+// 1) 1) SECTION 1
+//    2) 1) one
+//       2) two
+//       3) three
+// 2) 1) SECTION 2
+//    2) 1) four
+//       2) five
+//       3) six
+//------------------------------------------------------------------------------
+RedisEncodedResponse Formatter::vectorsWithHeaders(const std::vector<std::string> &headers,
+ const std::vector<std::vector<std::string>> &data) {
+
+  qdb_assert(headers.size() == data.size());
+
+  std::ostringstream ss;
+  ss << "*" << headers.size() << "\r\n";
+
+  for(size_t i = 0; i < headers.size(); i++) {
+    ss << "*2\r\n";
+    ss << "+" << headers[i] << "\r\n";
+
+    ss << "*" << data[i].size() << "\r\n";
+    for(size_t j = 0; j < data[i].size(); j++) {
+      ss << "+" << data[i][j] << "\r\n";
+    }
+  }
+
+  return RedisEncodedResponse(ss.str());
+}
+
 RedisEncodedResponse Formatter::stats(const Statistics &stats) {
   std::vector<std::string> arr;
   arr.emplace_back(SSTR("TOTAL-READS " << stats.reads));
