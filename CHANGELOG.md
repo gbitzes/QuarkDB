@@ -1,12 +1,15 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## 0.3.8 (2019-05-27)
+- Prevent elections from hanging on the TCP timeout when one of the member hosts
+is dropping packets, which could bring down an otherwise healthy cluster.
 - Prevent crashing when ``LHSCAN`` is provided with a cursor missing the field
 component.
+- Make request statistics available through ``command-stats`` command.
+- Addition of configuration file path to ``quarkdb-info``.
 - Print simple error message when the given path to quarkdb-create already exists,
-instead of a stacktrace
-- Addition of configuration file path to ``quarkdb-info``
+instead of a stacktrace.
 
 ## 0.3.7 (2019-04-24)
 - Heavy use of lease commands could cause performance degradation and latency
