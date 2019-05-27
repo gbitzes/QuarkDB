@@ -25,11 +25,10 @@
 #include <gtest/gtest.h>
 #include <chrono>
 
-TEST(QClient, HostDroppingIncomingPackets) {
+TEST(QClient, HostDroppingIncomingPacketsConstructor) {
   ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j DROP"), 0);
 
   qclient::Options opts;
-
   std::unique_ptr<qclient::QClient> qcl;
 
   std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -53,3 +52,26 @@ TEST(QClient, HostDroppingIncomingPackets) {
 
   ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j ACCEPT"), 0);
 }
+
+TEST(QClient, HostDroppingIncomingPacketsFutureTimeout) {
+  ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j DROP"), 0);
+
+  qclient::Options opts;
+  opts.tcpTimeout = std::chrono::seconds(3);
+  auto start = std::chrono::steady_clock::now();
+
+  std::unique_ptr<qclient::QClient> qcl;
+  qcl.reset(new qclient::QClient("localhost", 56789, std::move(opts)));
+  qclient::redisReplyPtr reply = qcl->exec("PING").get();
+  ASSERT_EQ(reply, nullptr);
+
+  auto end = std::chrono::steady_clock::now();
+  std::chrono::milliseconds dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+  std::cout << "Duration: " << dur.count() << std::endl;
+
+  ASSERT_GE(dur, std::chrono::seconds(3));
+  ASSERT_LE(dur, std::chrono::seconds(4));
+
+  ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j ACCEPT"), 0);
+}
+
