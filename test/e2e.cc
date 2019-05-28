@@ -42,6 +42,7 @@
 #include "qclient/structures/QHash.hh"
 #include "qclient/pubsub/MessageQueue.hh"
 #include "qclient/pubsub/BaseSubscriber.hh"
+#include "qclient/pubsub/Subscriber.hh"
 #include "qclient/network/AsyncConnector.hh"
 #include "qclient/network/HostResolver.hh"
 
@@ -1910,6 +1911,36 @@ TEST_F(Raft_e2e, pubsub) {
   mq->pop_front();
 
   ASSERT_EQ(mq->size(), 0u);
+}
+
+TEST_F(Raft_e2e, Subscriber) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  qclient::SubscriptionOptions opts;
+  opts.handshake = makeQClientHandshake();
+  qclient::Subscriber subscriber(members(), std::move(opts));
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("publish", "test-channel", "giraffes").get(),
+    "(integer) 0");
+
+  std::unique_ptr<Subscription> subscription = subscriber.subscribe("test-channel");
+  ASSERT_TRUE(subscription->empty());
+
+  RETRY_ASSERT_TRUE(
+    qclient::describeRedisReply(tunnel(leaderID)->exec("publish", "test-channel", "giraffes").get()) == "(integer) 1");
+
+  while(true) {
+    tunnel(leaderID)->exec("publish", "test-channel", "giraffes");
+    if(!subscription->empty()) break;
+  }
+
+  ASSERT_FALSE(subscription->empty());
+
+  qclient::Message msg;
+  ASSERT_TRUE(subscription->front(msg));
+  ASSERT_EQ(msg, qclient::Message::createMessage("test-channel", "giraffes"));
 }
 
 TEST_F(Raft_e2e, vhset) {
