@@ -45,6 +45,8 @@
 #include "qclient/pubsub/Subscriber.hh"
 #include "qclient/network/AsyncConnector.hh"
 #include "qclient/network/HostResolver.hh"
+#include "qclient/shared/SharedManager.hh"
+#include "qclient/shared/TransientSharedHash.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -1911,6 +1913,49 @@ TEST_F(Raft_e2e, pubsub) {
   mq->pop_front();
 
   ASSERT_EQ(mq->size(), 0u);
+}
+
+TEST_F(Raft_e2e, TransientSharedHash) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  qclient::Options opts;
+  opts.handshake = makeQClientHandshake();
+  opts.transparentRedirects = true;
+
+  qclient::SubscriptionOptions subopts;
+  subopts.handshake = makeQClientHandshake();
+
+  qclient::SharedManager sm(members(), std::move(opts), std::move(subopts));
+
+  opts.handshake = makeQClientHandshake();
+  subopts.handshake = makeQClientHandshake();
+
+  qclient::SharedManager sm2(members(), std::move(opts), std::move(subopts));
+
+  std::unique_ptr<TransientSharedHash> hash1 = sm.makeTransientSharedHash("hash1");
+  std::unique_ptr<TransientSharedHash> hash2 = sm2.makeTransientSharedHash("hash1");
+
+  std::map<std::string, std::string> batch;
+  batch["aaa"] = "bbb";
+  batch["test"] = "meow";
+
+  std::string val1;
+  std::string val2;
+
+  while(true) {
+    hash1->set(batch);
+
+    if(hash2->get("aaa", val1)) {
+      ASSERT_TRUE(hash2->get("test", val2));
+      break;
+    }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+
+  ASSERT_EQ(val1, "bbb");
+  ASSERT_EQ(val2, "meow");
 }
 
 TEST_F(Raft_e2e, Subscriber) {
