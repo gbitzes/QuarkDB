@@ -26,8 +26,13 @@
 
 #include <atomic>
 #include "Macros.hh"
+#include "CoreLocalArray.hh"
 
 namespace quarkdb {
+
+struct alignas(CoreLocal::kCacheLine) AlignedAtomicInt64_t {
+  std::atomic<int64_t> value = {0};
+};
 
 //------------------------------------------------------------------------------
 // Keep track of how many requests are currently in-flight.
@@ -39,7 +44,7 @@ class InFlightTracker {
 public:
   InFlightTracker(bool accepting = true) : acceptingRequests(accepting) {}
 
-  bool up() {
+  int up() {
     // This contraption (hopefully) ensures that after setAcceptingRequests(false)
     // takes effect, the following guarantees hold:
     // - Any subsequent calls to up() will not increase inFlight.
@@ -50,29 +55,29 @@ public:
     // is zero to tell whether all in-flight requests have been dispatched.
 
     // If setAcceptingRequests takes effect here, the request is rejected, as expected.
-    if(!acceptingRequests) return false;
+    if(!acceptingRequests) return -1;
 
     // If setAcceptingRequests takes effect here, no problem. inFlight will
     // temporarily jump, but the request will be rejected.
-
-    inFlight++;
+    int coreIdx = inFlightArr.getCoreIndex();
+    inFlightArr.accessAtCore(coreIdx)->value++;
 
     // Same as before.
     if(!acceptingRequests) {
       // If we're here, it means setAcceptingRequests has already taken effect.
-      inFlight--;
-      return false;
+      inFlightArr.accessAtCore(coreIdx)->value--;
+      return -1;
     }
 
     // If setAcceptingRequests takes effect here, no problem:
     // inFlight can NOT be zero at this point, and the spinner will wait.
 
-    return true;
+    return coreIdx;
   }
 
-  void down() {
-    inFlight--;
-    qdb_assert(inFlight >= 0);
+  void down(int coreIdx) {
+    inFlightArr.accessAtCore(coreIdx)->value--;
+    qdb_assert(inFlightArr.accessAtCore(coreIdx)->value >= 0);
   }
 
   void setAcceptingRequests(bool value) {
@@ -89,32 +94,38 @@ public:
   }
 
   int64_t getInFlight() const {
+    int64_t inFlight = 0;
+    for(size_t i = 0; i < inFlightArr.size(); i++) {
+      inFlight += inFlightArr.accessAtCore(i)->value;
+    }
+
     return inFlight;
   }
 
 private:
   std::atomic<bool> acceptingRequests {true};
-  std::atomic<int64_t> inFlight {0};
+  CoreLocalArray<AlignedAtomicInt64_t> inFlightArr;
 };
 
 class InFlightRegistration {
 public:
   InFlightRegistration(InFlightTracker &tracker) : inFlightTracker(tracker) {
-    succeeded = inFlightTracker.up();
+    coreIdx = inFlightTracker.up();
   }
 
   ~InFlightRegistration() {
-    if(succeeded) {
-      inFlightTracker.down();
+    if(ok()) {
+      inFlightTracker.down(coreIdx);
     }
   }
 
   bool ok() {
-    return succeeded;
+    return coreIdx >= 0;
   }
 
 private:
   InFlightTracker &inFlightTracker;
+  int coreIdx;
   bool succeeded;
 };
 

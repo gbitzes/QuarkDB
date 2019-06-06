@@ -99,15 +99,31 @@ public:
   }
 
   //----------------------------------------------------------------------------
-  // Access element specific to the core we're currently running at, and return
-  // our core index.
+  // Access i-th element of the array, no matter which core we're executing at.
+  // Const overload.
   //----------------------------------------------------------------------------
-  std::pair<T*, size_t> access() {
+  const T* accessAtCore(size_t index) const {
+    return array.get() + index;
+  }
+
+  //----------------------------------------------------------------------------
+  // Return the core index we would have used when calling access()
+  //----------------------------------------------------------------------------
+  int getCoreIndex() const {
     int cpuno = sched_getcpu();
     if(cpuno < 0 || cpuno > (int) cpus) {
       cpuno = 0;
     }
 
+    return cpuno;
+  }
+
+  //----------------------------------------------------------------------------
+  // Access element specific to the core we're currently running at, and return
+  // our core index.
+  //----------------------------------------------------------------------------
+  std::pair<T*, size_t> access() {
+    int cpuno = getCoreIndex();
     return {accessAtCore(cpuno), cpuno};
   }
 
