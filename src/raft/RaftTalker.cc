@@ -61,6 +61,10 @@ public:
 
   virtual void restart() override {}
 
+  virtual std::unique_ptr<Handshake> clone() const {
+    return std::unique_ptr<Handshake>(new RaftHandshake(contactDetails));
+  }
+
 private:
   const RaftContactDetails &contactDetails;
 };

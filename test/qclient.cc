@@ -100,6 +100,10 @@ TEST(QClient, T2) {
     }
 
     virtual void restart() override { }
+
+    virtual std::unique_ptr<Handshake> clone() const {
+      return std::unique_ptr<Handshake>(new SimpleHandshake());
+    }
   };
 
   // with handshake
@@ -158,6 +162,11 @@ TEST(QClient, T3) {
     virtual void restart() override {
       count = 0;
     }
+
+    virtual std::unique_ptr<Handshake> clone() const {
+      return std::unique_ptr<Handshake>(new PingHandshake());
+    }
+
   private:
     int count = 0;
   };
