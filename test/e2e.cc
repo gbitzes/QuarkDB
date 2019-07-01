@@ -36,6 +36,7 @@
 #include "RedisParser.hh"
 #include <gtest/gtest.h>
 #include "test-reply-macros.hh"
+#include "qclient/structures/QDeque.hh"
 #include "qclient/structures/QScanner.hh"
 #include "qclient/structures/QSet.hh"
 #include "qclient/structures/QLocalityHash.hh"
@@ -851,6 +852,30 @@ TEST_F(Raft_e2e, DequeClear) {
   ASSERT_REPLY(tunnel(leaderID)->exec("deque-clear", "dq"), 4);
   ASSERT_REPLY(tunnel(leaderID)->exec("deque-len", "dq"), 0);
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "dq", "abc"), "OK");
+
+  qclient::QDeque dq(*tunnel(leaderID), "dq2");
+
+  size_t len;
+  ASSERT_TRUE(dq.size(len).ok());
+  ASSERT_EQ(len, 0u);
+
+  ASSERT_TRUE(dq.push_back("123").ok());
+  ASSERT_TRUE(dq.push_back("333").ok());
+
+  ASSERT_TRUE(dq.size(len).ok());
+  ASSERT_EQ(len, 2u);
+
+  std::string val;
+  ASSERT_TRUE(dq.pop_front(val).ok());
+  ASSERT_EQ(val, "123");
+
+  ASSERT_TRUE(dq.size(len).ok());
+  ASSERT_EQ(len, 1u);
+
+  ASSERT_TRUE(dq.clear().ok());
+
+  ASSERT_TRUE(dq.size(len).ok());
+  ASSERT_EQ(len, 0u);
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
