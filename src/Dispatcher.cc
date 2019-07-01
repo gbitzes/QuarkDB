@@ -300,6 +300,13 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::integer(itemsRemoved);
     }
+    case RedisCommand::DEQUE_CLEAR: {
+      if(request.size() != 2) return errArgs(request);
+      int64_t itemsRemoved;
+      rocksdb::Status st = store.dequeTrimFront(stagingArea, request[1], "0", itemsRemoved);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(itemsRemoved);
+    }
     case RedisCommand::CONFIG_SET: {
       if(request.size() != 3) return errArgs(request);
       rocksdb::Status st = store.configSet(stagingArea, request[1], request[2]);

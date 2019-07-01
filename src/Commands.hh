@@ -93,6 +93,7 @@ enum class RedisCommand {
   DEQUE_TRIM_FRONT,
   DEQUE_LEN,
   DEQUE_SCAN_BACK,
+  DEQUE_CLEAR,
 
   RAW_SCAN,
   RAW_SCAN_TOMBSTONES,

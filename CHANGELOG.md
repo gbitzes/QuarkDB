@@ -1,6 +1,9 @@
 # Changelog
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+- Add convenience command ``DEQUE-CLEAR``.
+
 ## 0.3.8 (2019-05-27)
 - Prevent elections from hanging on the TCP timeout when one of the member hosts
 is dropping packets, which could bring down an otherwise healthy cluster.

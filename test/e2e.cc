@@ -842,6 +842,17 @@ TEST_F(Raft_e2e, DequeTrimming) {
   ASSERT_REPLY(tunnel(leaderID)->exec("del", "dq", "test"), 2);
 }
 
+TEST_F(Raft_e2e, DequeClear) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getServerID(state(0)->getSnapshot()->leader);
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-push-back", "dq", "1", "2", "3", "4"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-clear", "dq"), 4);
+  ASSERT_REPLY(tunnel(leaderID)->exec("deque-len", "dq"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("set", "dq", "abc"), "OK");
+}
+
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
