@@ -46,6 +46,7 @@
 #include "qclient/pubsub/Subscriber.hh"
 #include "qclient/network/AsyncConnector.hh"
 #include "qclient/network/HostResolver.hh"
+#include "qclient/shared/SharedDeque.hh"
 #include "qclient/shared/SharedManager.hh"
 #include "qclient/shared/TransientSharedHash.hh"
 
@@ -1949,6 +1950,38 @@ TEST_F(Raft_e2e, pubsub) {
   mq->pop_front();
 
   ASSERT_EQ(mq->size(), 0u);
+}
+
+TEST_F(Raft_e2e, SharedDeque) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  qclient::Options opts;
+  opts.handshake = makeQClientHandshake();
+  opts.transparentRedirects = true;
+
+  qclient::SubscriptionOptions subopts;
+  subopts.handshake = makeQClientHandshake();
+
+  qclient::SharedManager sm(members(), std::move(opts), std::move(subopts));
+
+  opts.handshake = makeQClientHandshake();
+  subopts.handshake = makeQClientHandshake();
+
+  qclient::SharedManager sm2(members(), std::move(opts), std::move(subopts));
+
+  qclient::SharedDeque deque1(&sm, "shared-deque");
+  qclient::SharedDeque deque2(&sm2, "shared-deque");
+
+  size_t sz = 0u;
+  ASSERT_TRUE(deque1.size(sz));
+  ASSERT_EQ(sz, 0u);
+
+  deque2.push_back("turtles");
+
+  while(sz != 1) {
+    ASSERT_TRUE(deque1.size(sz));
+  }
 }
 
 TEST_F(Raft_e2e, TransientSharedHash) {
