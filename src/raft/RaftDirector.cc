@@ -68,6 +68,7 @@ void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
 
   replicator.activate(snapshot);
   while(state.isSnapshotCurrent(snapshot.get())) {
+    assertBasicSanity();
 
     std::chrono::steady_clock::time_point deadline = lease.getDeadline();
     if(deadline < std::chrono::steady_clock::now()) {
@@ -83,7 +84,26 @@ void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
   replicator.deactivate();
 }
 
+void RaftDirector::assertBasicSanity() {
+  // Assert that this node's numbers look reasonable before attempting an election.
+  // In the unlikely scenario that my memory has somehow been corrupted, this will
+  // prevent the errors from propagating to unaffected nodes.
+  //
+  // Not theoretical: There's been a case where last-applied jumped ahead of
+  // commit-index by 1024, and we're not quite sure how this could have happened.
+  // (cosmic rays ?! )
+
+  LogIndex lastApplied = stateMachine.getLastApplied();
+  LogIndex commitIndex = journal.getCommitIndex();
+  LogIndex totalSize = journal.getLogSize();
+
+  qdb_assert(commitIndex <= totalSize);
+  qdb_assert(lastApplied <= commitIndex);
+}
+
 void RaftDirector::runForLeader() {
+  assertBasicSanity();
+
   // If we get vetoed, this ensures we stop election attempts up until the
   // point we receive a fresh heartbeat.
   std::chrono::steady_clock::time_point lastHeartbeat = heartbeatTracker.getLastHeartbeat();

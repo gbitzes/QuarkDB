@@ -51,6 +51,7 @@ private:
   void leaderLoop(RaftStateSnapshotPtr &snapshot);
   void runForLeader();
   void applyCommits();
+  void assertBasicSanity();
 
   RaftJournal &journal;
   StateMachine &stateMachine;
