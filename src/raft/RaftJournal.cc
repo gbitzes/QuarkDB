@@ -30,6 +30,7 @@
 #include "../utils/IntToBinaryString.hh"
 #include "../utils/StaticBuffer.hh"
 #include "../utils/StringUtils.hh"
+#include "../../deps/StringMatchLen.h"
 #include "RaftState.hh"
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>
@@ -541,6 +542,40 @@ rocksdb::Status RaftJournal::checkpoint(const std::string &path) {
 }
 
 //------------------------------------------------------------------------------
+// Scan through the contents of the journal, starting from the given index
+//------------------------------------------------------------------------------
+rocksdb::Status RaftJournal::scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntry> &out, LogIndex &nextCursor) {
+  out.clear();
+  RaftJournal::Iterator iter = getIterator(startingPoint);
+
+  for(size_t i = 0; i < count; i++) {
+    if(!iter.valid()) {
+      break;
+    }
+
+    RaftSerializedEntry item;
+    iter.current(item);
+
+    if(match.empty() || stringmatchlen(match.data(), match.length(), item.data(), item.length(), 0) == 1) {
+      RaftEntry entry;
+      RaftEntry::deserialize(entry, item);
+      out.emplace_back(entry);
+    }
+
+    iter.next();
+  }
+
+  if(!iter.valid()) {
+    nextCursor = 0;
+  }
+  else {
+    nextCursor = iter.getCurrentIndex();
+  }
+
+  return rocksdb::Status::OK();
+}
+
+//------------------------------------------------------------------------------
 // Iterator
 //------------------------------------------------------------------------------
 RaftJournal::Iterator RaftJournal::getIterator(LogIndex startingPoint) {
@@ -596,4 +631,8 @@ void RaftJournal::Iterator::next() {
 void RaftJournal::Iterator::current(RaftSerializedEntry &entry) {
   qdb_assert(this->valid());
   entry = iter->value().ToString();
+}
+
+LogIndex RaftJournal::Iterator::getCurrentIndex() const {
+  return currentIndex;
 }

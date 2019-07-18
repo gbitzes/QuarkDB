@@ -96,6 +96,7 @@ public:
     bool valid();
     void next();
     void current(RaftSerializedEntry &entry);
+    LogIndex getCurrentIndex() const;
   private:
     void validate();
     LogIndex currentIndex;
@@ -103,6 +104,7 @@ public:
   };
 
   Iterator getIterator(LogIndex startingPoint);
+  rocksdb::Status scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntry> &out, LogIndex &nextCursor);
 
 private:
   void openDB(const std::string &path);

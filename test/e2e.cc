@@ -2153,6 +2153,36 @@ TEST_F(Raft_e2e, vhset) {
     "2) 1) \"f9\"\n"
     "   2) \"v9\"\n"
   );
+}
+
+TEST_F(Raft_e2e, JournalScanning) {
+  for(size_t i = 1; i <= 5; i ++) {
+    RaftEntry entry(0, {"set", SSTR("k" << i), SSTR("v" << i) } );
+    ASSERT_TRUE(journal(0)->append(i, entry));
+    ASSERT_TRUE(journal(1)->append(i, entry));
+    ASSERT_TRUE(journal(2)->append(i, entry));
+  }
+
+  std::vector<RaftEntry> entries;
+  LogIndex cursor;
+  ASSERT_OK(journal(0)->scanContents(1, 3, "", entries, cursor));
+  ASSERT_EQ(entries.size(), 3u);
+  ASSERT_EQ(cursor, 4);
+
+  for(size_t i = 1; i <= 3; i ++) {
+    RaftEntry entry(0, {"set", SSTR("k" << i), SSTR("v" << i) } );
+    ASSERT_EQ(entries[i-1], entry);
+  }
+
+  ASSERT_OK(journal(0)->scanContents(0, 300, "*k2*", entries, cursor));
+  ASSERT_EQ(entries.size(), 1u);
+  ASSERT_EQ(cursor, 0);
+
+  RaftEntry entry(0, {"set", "k2", "v2"});
+  ASSERT_EQ(entries[0], entry);
+
+
+
 
 
 }
