@@ -3,6 +3,12 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 - Add convenience command ``DEQUE-CLEAR``.
+- Protection for a strange suspected case of memory bitflip which brought down
+a development test cluster (last-applied jumped ahead of commit-index by 1024,
+causing all writes to stall). From now on, similar kind of corruption should only
+take out a single node, and not spread to the entire cluster.
+- Add command ``RAFT-JOURNAL-SCAN`` to make searching through the contents of the
+raft journal easier.
 
 ## 0.3.8 (2019-05-27)
 - Prevent elections from hanging on the TCP timeout when one of the member hosts

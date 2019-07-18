@@ -2181,8 +2181,19 @@ TEST_F(Raft_e2e, JournalScanning) {
   RaftEntry entry(0, {"set", "k2", "v2"});
   ASSERT_EQ(entries[0], entry);
 
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
-
-
+  ASSERT_REPLY_DESCRIBE(tunnel(0)->exec("raft-journal-scan", "next:1", "COUNT", "2").get(),
+    "1) \"next:3\"\n"
+    "2) 1) 1) \"0\"\n"
+    "      2) 1) \"set\"\n"
+    "         2) \"k1\"\n"
+    "         3) \"v1\"\n"
+    "   2) 1) \"0\"\n"
+    "      2) 1) \"set\"\n"
+    "         2) \"k2\"\n"
+    "         3) \"v2\"\n"
+  );
 
 }

@@ -51,6 +51,7 @@ public:
   static RedisEncodedResponse scan(std::string_view marker,  const std::vector<std::string> &vec);
   static RedisEncodedResponse raftEntry(const RaftEntry &entry, bool raw);
   static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries, bool raw);
+  static RedisEncodedResponse journalScan(LogIndex cursor, const std::vector<RaftEntry> &entries);
   static RedisEncodedResponse noauth(std::string_view str);
   static RedisEncodedResponse versionedVector(uint64_t num, const std::vector<std::string> &vec);
 

@@ -163,6 +163,18 @@ RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entrie
   return RedisEncodedResponse(ss.str());
 }
 
+RedisEncodedResponse Formatter::journalScan(LogIndex cursor, const std::vector<RaftEntry> &entries) {
+  std::string marker(SSTR("next:" << cursor));
+
+  std::stringstream ss;
+  ss << "*2\r\n";
+  ss << "$" << marker.length() << "\r\n";
+  ss << marker << "\r\n";
+  ss << Formatter::raftEntries(entries, false).val;
+
+  return RedisEncodedResponse(ss.str());
+}
+
 RedisEncodedResponse Formatter::noauth(std::string_view str) {
   return RedisEncodedResponse(SSTR("-NOAUTH " << str << "\r\n"));
 }

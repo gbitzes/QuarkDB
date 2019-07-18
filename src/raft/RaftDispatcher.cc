@@ -31,6 +31,7 @@
 #include "../StateMachine.hh"
 #include "../Formatter.hh"
 #include "../utils/ParseUtils.hh"
+#include "../utils/CommandParsing.hh"
 
 #include <random>
 #include <sys/stat.h>
@@ -271,6 +272,27 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::ACTIVATE_STALE_READS: {
       conn->raftStaleReads = true;
       return conn->ok();
+    }
+    case RedisCommand::RAFT_JOURNAL_SCAN: {
+      ScanCommandArguments args = parseScanCommand(req.begin()+1, req.end());
+      if(!args.error.empty()) {
+        return conn->err(args.error);
+      }
+
+      LogIndex cursor;
+      if(!ParseUtils::parseInt64(args.cursor, cursor)) {
+        return conn->err(SSTR("invalid cursor: " << args.cursor));
+      }
+
+      std::vector<RaftEntry> entries;
+      LogIndex nextCursor;
+
+      rocksdb::Status st = journal.scanContents(cursor, args.count, args.match, entries, nextCursor);
+      if(!st.ok()) {
+        return conn->raw(Formatter::fromStatus(st));
+      }
+
+      return conn->raw(Formatter::journalScan(nextCursor, entries));
     }
     default: {
       // Must be either a read, or write at this point.
