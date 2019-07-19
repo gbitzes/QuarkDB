@@ -31,6 +31,7 @@
 namespace quarkdb {
 
 struct RaftEntry;
+struct RaftEntryWithIndex;
 class RedisRequest;
 struct Statistics;
 
@@ -49,9 +50,9 @@ public:
   static RedisEncodedResponse vector(const std::vector<std::string> &vec);
   static RedisEncodedResponse statusVector(const std::vector<std::string> &vec);
   static RedisEncodedResponse scan(std::string_view marker,  const std::vector<std::string> &vec);
-  static RedisEncodedResponse raftEntry(const RaftEntry &entry, bool raw);
+  static RedisEncodedResponse raftEntry(const RaftEntry &entry, bool raw, LogIndex idx = -1);
   static RedisEncodedResponse raftEntries(const std::vector<RaftEntry> &entries, bool raw);
-  static RedisEncodedResponse journalScan(LogIndex cursor, const std::vector<RaftEntry> &entries);
+  static RedisEncodedResponse journalScan(LogIndex cursor, const std::vector<RaftEntryWithIndex> &entries);
   static RedisEncodedResponse noauth(std::string_view str);
   static RedisEncodedResponse versionedVector(uint64_t num, const std::vector<std::string> &vec);
 

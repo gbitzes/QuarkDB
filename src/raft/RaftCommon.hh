@@ -108,6 +108,14 @@ struct RaftEntry {
   }
 };
 
+struct RaftEntryWithIndex {
+  RaftEntry entry;
+  LogIndex index;
+
+  RaftEntryWithIndex(const RaftEntry &entr, LogIndex idx)
+  : entry(entr), index(idx) {}
+};
+
 inline std::ostream& operator<<(std::ostream& out, const RaftEntry& entry) {
   out << "term: " << entry.term << " -> " << entry.request;
   return out;

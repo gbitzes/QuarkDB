@@ -284,7 +284,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err(SSTR("invalid cursor: " << args.cursor));
       }
 
-      std::vector<RaftEntry> entries;
+      std::vector<RaftEntryWithIndex> entries;
       LogIndex nextCursor;
 
       rocksdb::Status st = journal.scanContents(cursor, args.count, args.match, entries, nextCursor);

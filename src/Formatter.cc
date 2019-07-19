@@ -134,13 +134,18 @@ RedisEncodedResponse Formatter::redisRequest(const RedisRequest &req) {
   return simpleRedisRequest(req);
 }
 
-RedisEncodedResponse Formatter::raftEntry(const RaftEntry &entry, bool raw) {
+RedisEncodedResponse Formatter::raftEntry(const RaftEntry &entry, bool raw, LogIndex idx) {
   // Very inefficient with copying, but this function is only to help
   // debugging, so we don't really mind.
 
-  ArrayResponseBuilder builder(2);
+  bool hasIndex = (idx != -1);
 
-  builder.push_back(Formatter::string(SSTR(entry.term)));
+  ArrayResponseBuilder builder(2 + hasIndex);
+
+  if(idx != -1) {
+    builder.push_back(Formatter::string(SSTR("INDEX: " << idx)));
+  }
+  builder.push_back(Formatter::string(SSTR("TERM: " << entry.term)));
 
   if(raw) {
     builder.push_back(simpleRedisRequest(entry.request));
@@ -163,14 +168,18 @@ RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entrie
   return RedisEncodedResponse(ss.str());
 }
 
-RedisEncodedResponse Formatter::journalScan(LogIndex cursor, const std::vector<RaftEntry> &entries) {
+RedisEncodedResponse Formatter::journalScan(LogIndex cursor, const std::vector<RaftEntryWithIndex> &entries) {
   std::string marker(SSTR("next:" << cursor));
 
   std::stringstream ss;
   ss << "*2\r\n";
   ss << "$" << marker.length() << "\r\n";
   ss << marker << "\r\n";
-  ss << Formatter::raftEntries(entries, false).val;
+
+  ss << "*" << entries.size() << "\r\n";
+  for(size_t i = 0; i < entries.size(); i++) {
+    ss << Formatter::raftEntry(entries[i].entry, false, entries[i].index).val;
+  }
 
   return RedisEncodedResponse(ss.str());
 }

@@ -2163,7 +2163,7 @@ TEST_F(Raft_e2e, JournalScanning) {
     ASSERT_TRUE(journal(2)->append(i, entry));
   }
 
-  std::vector<RaftEntry> entries;
+  std::vector<RaftEntryWithIndex> entries;
   LogIndex cursor;
   ASSERT_OK(journal(0)->scanContents(1, 3, "", entries, cursor));
   ASSERT_EQ(entries.size(), 3u);
@@ -2171,7 +2171,8 @@ TEST_F(Raft_e2e, JournalScanning) {
 
   for(size_t i = 1; i <= 3; i ++) {
     RaftEntry entry(0, {"set", SSTR("k" << i), SSTR("v" << i) } );
-    ASSERT_EQ(entries[i-1], entry);
+    ASSERT_EQ(entries[i-1].entry, entry);
+    ASSERT_EQ(entries[i-1].index, (int) i);
   }
 
   ASSERT_OK(journal(0)->scanContents(0, 300, "*k2*", entries, cursor));
@@ -2179,19 +2180,22 @@ TEST_F(Raft_e2e, JournalScanning) {
   ASSERT_EQ(cursor, 0);
 
   RaftEntry entry(0, {"set", "k2", "v2"});
-  ASSERT_EQ(entries[0], entry);
+  ASSERT_EQ(entries[0].entry, entry);
+  ASSERT_EQ(entries[0].index, 2);
 
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   ASSERT_REPLY_DESCRIBE(tunnel(0)->exec("raft-journal-scan", "next:1", "COUNT", "2").get(),
     "1) \"next:3\"\n"
-    "2) 1) 1) \"0\"\n"
-    "      2) 1) \"set\"\n"
+    "2) 1) 1) \"INDEX: 1\"\n"
+    "      2) \"TERM: 0\"\n"
+    "      3) 1) \"set\"\n"
     "         2) \"k1\"\n"
     "         3) \"v1\"\n"
-    "   2) 1) \"0\"\n"
-    "      2) 1) \"set\"\n"
+    "   2) 1) \"INDEX: 2\"\n"
+    "      2) \"TERM: 0\"\n"
+    "      3) 1) \"set\"\n"
     "         2) \"k2\"\n"
     "         3) \"v2\"\n"
   );

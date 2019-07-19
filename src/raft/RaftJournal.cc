@@ -544,7 +544,7 @@ rocksdb::Status RaftJournal::checkpoint(const std::string &path) {
 //------------------------------------------------------------------------------
 // Scan through the contents of the journal, starting from the given index
 //------------------------------------------------------------------------------
-rocksdb::Status RaftJournal::scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntry> &out, LogIndex &nextCursor) {
+rocksdb::Status RaftJournal::scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntryWithIndex> &out, LogIndex &nextCursor) {
   out.clear();
   RaftJournal::Iterator iter = getIterator(startingPoint);
 
@@ -559,7 +559,7 @@ rocksdb::Status RaftJournal::scanContents(LogIndex startingPoint, size_t count, 
     if(match.empty() || stringmatchlen(match.data(), match.length(), item.data(), item.length(), 0) == 1) {
       RaftEntry entry;
       RaftEntry::deserialize(entry, item);
-      out.emplace_back(entry);
+      out.emplace_back(entry, iter.getCurrentIndex());
     }
 
     iter.next();

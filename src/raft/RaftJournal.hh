@@ -104,7 +104,7 @@ public:
   };
 
   Iterator getIterator(LogIndex startingPoint);
-  rocksdb::Status scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntry> &out, LogIndex &nextCursor);
+  rocksdb::Status scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntryWithIndex> &out, LogIndex &nextCursor);
 
 private:
   void openDB(const std::string &path);

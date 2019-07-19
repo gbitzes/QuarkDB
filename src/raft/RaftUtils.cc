@@ -28,6 +28,7 @@
 #include "RaftLease.hh"
 #include "RaftContactDetails.hh"
 #include "../utils/ParseUtils.hh"
+#include "../utils/StringUtils.hh"
 
 namespace quarkdb {
 
@@ -296,6 +297,9 @@ bool RaftParser::fetchResponse(redisReply *source, RaftEntry &entry) {
   }
 
   std::string_view tmp(source->element[0]->str, source->element[0]->len);
+  if(!StringUtils::startsWith(tmp, "TERM: ")) return false;
+  tmp = std::string_view(tmp.data()+ 6, tmp.size()-6);
+
   if(!ParseUtils::parseInt64(tmp, entry.term)) return false;
 
   entry.request.clear();
