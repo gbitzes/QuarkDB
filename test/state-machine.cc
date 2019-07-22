@@ -654,30 +654,37 @@ TEST_F(State_Machine, scan) {
   ASSERT_EQ(keys, make_vec("key1", "key2"));
   ASSERT_EQ(newcursor, "key3");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan(newcursor, "key*", 2, newcursor, keys));
   ASSERT_EQ(keys, make_vec("key3", "key4"));
   ASSERT_EQ(newcursor, "key5");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan(newcursor, "key*", 2, newcursor, keys));
   ASSERT_EQ(keys, make_vec("key5", "key6"));
   ASSERT_EQ(newcursor, "");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan("", "*key1", 2, newcursor, keys));
   ASSERT_EQ(keys, make_vec("key1"));
   ASSERT_EQ(newcursor, "key3");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
   ASSERT_TRUE(keys.empty());
   ASSERT_EQ(newcursor, "key5");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
   ASSERT_TRUE(keys.empty());
   ASSERT_EQ(newcursor, "otherkey1");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
   ASSERT_EQ(keys, make_vec("otherkey1"));
   ASSERT_EQ(newcursor, "otherkey3");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan(newcursor, "*key1", 2, newcursor, keys));
   ASSERT_TRUE(keys.empty());
   ASSERT_EQ(newcursor, "");
@@ -687,20 +694,24 @@ TEST_F(State_Machine, scan) {
   ASSERT_OK(stateMachine()->set("abc", "8"));
   ASSERT_OK(stateMachine()->set("abcd", "8"));
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan("", "ab?", 3, newcursor, keys));
   ASSERT_EQ(keys, make_vec("aba", "abb", "abc"));
   ASSERT_EQ(newcursor, "abcd");
 
+  keys.clear();
   ASSERT_OK(stateMachine()->scan(newcursor, "ab?", 3, newcursor, keys));
   ASSERT_TRUE(keys.empty());
   ASSERT_EQ(newcursor, "");
 
   // Using a non-sense cursor
+  keys.clear();
   ASSERT_OK(stateMachine()->scan("zz", "ab?", 100, newcursor, keys));
   ASSERT_TRUE(keys.empty());
   ASSERT_EQ(newcursor, "");
 
   // Match only a single key
+  keys.clear();
   ASSERT_OK(stateMachine()->scan("", "abc", 100, newcursor, keys));
   ASSERT_EQ(keys, make_vec("abc"));
   ASSERT_EQ(newcursor, "");

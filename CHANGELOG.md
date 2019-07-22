@@ -9,6 +9,9 @@ causing all writes to stall). From now on, similar kind of corruption should onl
 take out a single node, and not spread to the entire cluster.
 - Add command ``RAFT-JOURNAL-SCAN`` to make searching through the contents of the
 raft journal easier.
+- ``KEYS`` is now implemented in terms of ``SCAN``, making prefix scanning of the
+keyspace just as efficient as with ``SCAN``. (Note: The use of ``KEYS`` is still
+generally discouraged due to potentially huge response size, don't use in production)
 
 ## 0.3.8 (2019-05-27)
 - Prevent elections from hanging on the TCP timeout when one of the member hosts

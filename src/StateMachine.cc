@@ -1700,24 +1700,24 @@ rocksdb::Status StateMachine::exists(StagingArea &stagingArea, const ReqIterator
 rocksdb::Status StateMachine::keys(StagingArea &stagingArea, std::string_view pattern, std::vector<std::string> &result) {
   result.clear();
 
-  bool allkeys = (pattern.length() == 1 && pattern[0] == '*');
-  IteratorPtr iter(stagingArea.getIterator());
+  std::string oldCursor;
+  std::string newCursor;
 
-  std::string searchPrefix(1, char(InternalKeyType::kDescriptor));
-  for(iter->Seek(searchPrefix); iter->Valid(); iter->Next()) {
-    std::string rkey = iter->key().ToString();
-    if(rkey.size() == 0 || rkey[0] != char(InternalKeyType::kDescriptor)) break;
+  while(true) {
+    rocksdb::Status st = scan(stagingArea, oldCursor, pattern, std::numeric_limits<size_t>::max()-1, newCursor, result);
+    if(!st.ok()) return st;
 
-    if(allkeys || stringmatchlen(pattern.data(), pattern.length(), rkey.data()+1, rkey.length()-1, 0)) {
-      result.push_back(rkey.substr(1));
+    if(newCursor.empty()) {
+      break;
     }
+
+    oldCursor = newCursor;
   }
 
   return rocksdb::Status::OK();
 }
 
 rocksdb::Status StateMachine::scan(StagingArea &stagingArea, std::string_view cursor, std::string_view pattern, size_t count, std::string &newcursor, std::vector<std::string> &results) {
-  results.clear();
 
   // Any hits *must* start with patternPrefix. This will allow us in many
   // circumstances to eliminate checking large parts of the keyspace, without
