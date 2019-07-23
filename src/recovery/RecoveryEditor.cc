@@ -25,6 +25,7 @@
 #include "RecoveryEditor.hh"
 #include "../Utils.hh"
 #include "../utils/StringUtils.hh"
+#include "../storage/InternalKeyParsing.hh"
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/utilities/checkpoint.h>
@@ -95,4 +96,36 @@ rocksdb::Status RecoveryEditor::del(std::string_view key) {
   }
 
   return db->Delete(rocksdb::WriteOptions(), key);
+}
+
+using IteratorPtr = std::unique_ptr<rocksdb::Iterator>;
+
+rocksdb::Status RecoveryEditor::scan(std::string_view key, size_t count, std::string &nextCursor, std::vector<std::string> &elements) {
+  rocksdb::ReadOptions opts;
+  opts.iter_start_seqnum = 1;
+
+  IteratorPtr iter(db->NewIterator(opts));
+  iter->Seek(key);
+
+  size_t processed = 0;
+  while(iter->Valid()) {
+    std::string_view currentKey = iter->key().ToStringView();
+
+    std::string internalKeyType = getInternalKeyType(currentKey);
+    currentKey.remove_suffix(8u);
+
+    if(processed >= count) {
+      nextCursor = currentKey;
+      break;
+    }
+
+    elements.emplace_back(SSTR("TYPE: " << internalKeyType));
+    elements.emplace_back(SSTR("KEY: " << currentKey));
+    elements.emplace_back(SSTR("VALUE: " << iter->value().ToStringView()));
+
+    processed++;
+    iter->Next();
+  }
+
+  return rocksdb::Status::OK();
 }

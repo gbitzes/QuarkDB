@@ -136,6 +136,26 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
       "__clock: NotFound: "
     };
 
+    ASSERT_REPLY_DESCRIBE(qcl.exec("recovery-scan", "0", "COUNT", "2").get(),\
+      "1) \"next:E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x02\"\n"
+      "2) 1) \"TYPE: value\"\n"
+      "   2) \"KEY: E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\"\n"
+      "   3) \"VALUE: \\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x16\\x00\\x00\\x00\\x00\\x00\\x00\\x00JOURNAL_UPDATE_MEMBERS!\\x00\\x00\\x00\\x00\\x00\\x00\\x00localhost:1234,asdf:2345,aaa:999|\\x0F\\x00\\x00\\x00\\x00\\x00\\x00\\x00some-cluster-id\"\n"
+      "   4) \"TYPE: value\"\n"
+      "   5) \"KEY: E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x01\"\n"
+      "   6) \"VALUE: \\x01\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00set\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00abc\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00cdf\"\n"
+    );
+
+    ASSERT_REPLY_DESCRIBE(qcl.exec("recovery-scan", "next:E\x00\x00\x00\x00\x00\x00\x00\x02", "COUNT", "2").get(),\
+      "1) \"next:RAFT_COMMIT_INDEX\"\n"
+      "2) 1) \"TYPE: deletion\"\n"
+      "   2) \"KEY: E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x02\"\n"
+      "   3) \"VALUE: \"\n"
+      "   4) \"TYPE: value\"\n"
+      "   5) \"KEY: RAFT_CLUSTER_ID\"\n"
+      "   6) \"VALUE: different-cluster-id\"\n"
+    );
+
     ASSERT_REPLY(qcl.exec("recovery-info"), rep);
 
     ASSERT_REPLY(qcl.exec("recovery-force-reconfigure-journal", "test", "123"), "ERR cannot parse new members");

@@ -12,6 +12,8 @@ raft journal easier.
 - ``KEYS`` is now implemented in terms of ``SCAN``, making prefix scanning of the
 keyspace just as efficient as with ``SCAN``. (Note: The use of ``KEYS`` is still
 generally discouraged due to potentially huge response size, don't use in production)
+- Add ``RECOVERY-SCAN`` command for scanning through complete keyspace, including
+internal rocksdb keys.
 
 ## 0.3.8 (2019-05-27)
 - Prevent elections from hanging on the TCP timeout when one of the member hosts

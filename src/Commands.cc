@@ -159,6 +159,7 @@ struct cmdMapInit {
     redis_cmd_map["recovery_get"] = {RedisCommand::RECOVERY_GET, CommandType::RECOVERY};
     redis_cmd_map["recovery_del"] = {RedisCommand::RECOVERY_DEL, CommandType::RECOVERY};
     redis_cmd_map["recovery_force_reconfigure_journal"] = {RedisCommand::RECOVERY_FORCE_RECONFIGURE_JOURNAL, CommandType::RECOVERY};
+    redis_cmd_map["recovery_scan"] = {RedisCommand::RECOVERY_SCAN, CommandType::RECOVERY};
 
     redis_cmd_map["convert_string_to_int"] = {RedisCommand::CONVERT_STRING_TO_INT, CommandType::CONTROL};
     redis_cmd_map["convert_int_to_string"] = {RedisCommand::CONVERT_INT_TO_STRING, CommandType::CONTROL};

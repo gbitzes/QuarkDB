@@ -23,6 +23,7 @@
 
 #include "InternalKeyParsing.hh"
 #include <string.h>
+#include <string>
 
 namespace quarkdb {
 
@@ -65,14 +66,88 @@ static uint64_t DecodeFixed64(const char* ptr) {
   return result;
 }
 
-bool isTombstone(std::string_view internalKey) {
-  if(internalKey.size() < 8) return false;
-
+static ValueType getValueType(std::string_view internalKey) {
   uint64_t num = DecodeFixed64(internalKey.data() + internalKey.size() - 8);
   unsigned char c = num & 0xff;
-  ValueType valueType = static_cast<ValueType>(c);
+  return static_cast<ValueType>(c);
+}
+
+bool isTombstone(std::string_view internalKey) {
+  if(internalKey.size() < 8) return false;
+  ValueType valueType = getValueType(internalKey);
 
   return valueType == kTypeDeletion || valueType == kTypeSingleDeletion;
+}
+
+std::string getInternalKeyType(std::string_view internalKey) {
+  if(internalKey.size() < 8) return "(invalid key type)";
+  ValueType valueType = getValueType(internalKey);
+
+  switch(valueType) {
+    case kTypeDeletion: {
+      return "deletion";
+    }
+    case kTypeValue: {
+      return "value";
+    }
+    case kTypeMerge: {
+      return "merge";
+    }
+    case kTypeLogData: {
+      return "log data";
+    }
+    case kTypeColumnFamilyDeletion: {
+      return "column family deletion";
+    }
+    case kTypeColumnFamilyValue: {
+      return "column family value";
+    }
+    case kTypeColumnFamilyMerge: {
+      return "column family merge";
+    }
+    case kTypeSingleDeletion: {
+      return "single deletion";
+    }
+    case kTypeColumnFamilySingleDeletion: {
+      return "column family single deletion";
+    }
+    case kTypeBeginPrepareXID: {
+      return "begin prepare xid";
+    }
+    case kTypeEndPrepareXID: {
+      return "end prepare xid";
+    }
+    case kTypeCommitXID: {
+      return "commit xid";
+    }
+    case kTypeRollbackXID: {
+      return "rollback xid";
+    }
+    case kTypeNoop: {
+      return "noop";
+    }
+    case kTypeColumnFamilyRangeDeletion: {
+      return "column family range deletion";
+    }
+    case kTypeRangeDeletion: {
+      return "range deletion";
+    }
+    case kTypeColumnFamilyBlobIndex: {
+      return "column family blob index";
+    }
+    case kTypeBlobIndex: {
+      return "blob index";
+    }
+    case kTypeBeginPersistedPrepareXID: {
+      return "begin persisted prepare xid";
+    }
+    case kTypeBeginUnprepareXID: {
+      return "begin unprepare xid";
+    }
+    default: {
+      return "(cannot determine key type)";
+    }
+  }
 }
 
 }

@@ -29,6 +29,7 @@
 namespace quarkdb {
 
 bool isTombstone(std::string_view internalKey);
+std::string getInternalKeyType(std::string_view internalKey);
 
 }
 

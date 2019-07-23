@@ -42,6 +42,7 @@ public:
   rocksdb::Status get(std::string_view key, std::string &value);
   rocksdb::Status set(std::string_view key, std::string_view value);
   rocksdb::Status del(std::string_view key);
+  rocksdb::Status scan(std::string_view key, size_t count, std::string &nextCursor, std::vector<std::string> &elements);
 
 private:
   std::string path;

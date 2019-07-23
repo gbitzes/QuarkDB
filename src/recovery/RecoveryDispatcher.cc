@@ -27,6 +27,7 @@
 #include "../utils/IntToBinaryString.hh"
 #include "../storage/KeyConstants.hh"
 #include "../raft/RaftMembers.hh"
+#include "../utils/CommandParsing.hh"
 using namespace quarkdb;
 
 RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {
@@ -107,6 +108,22 @@ RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
       editor.del(KeyConstants::kJournal_PreviousMembershipEpoch);
 
       return Formatter::ok();
+    }
+    case RedisCommand::RECOVERY_SCAN: {
+      if(request.size() < 2) return Formatter::errArgs(request[0]);
+
+      ScanCommandArguments args = parseScanCommand(request.begin()+1, request.end());
+      if(!args.error.empty()) {
+        return Formatter::err(args.error);
+      }
+
+      std::string nextCursor;
+      std::vector<std::string> results;
+      editor.scan(args.cursor, args.count, nextCursor, results);
+
+      if(nextCursor == "") nextCursor = "0";
+      else nextCursor = "next:" + nextCursor;
+      return Formatter::scan(nextCursor, results);
     }
     default: {
       qdb_throw("should never reach here");
