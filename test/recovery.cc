@@ -112,7 +112,25 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
     ASSERT_REPLY(qcl.exec("recovery-del", SSTR("E" << intToBinaryString(2))), "OK");
 
     ASSERT_REPLY_DESCRIBE(qcl.exec("recovery-get-all-versions", SSTR("E" << intToBinaryString(2))).get(),
-      "(empty list or set)\n");
+      "1) \"KEY: E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x02\"\n"
+      "2) \"VALUE: \"\n"
+      "3) \"SEQUENCE: 21\"\n"
+      "4) \"TYPE: 0\"\n"
+      "5) \"KEY: E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x02\"\n"
+      "6) \"VALUE: \\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00set\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00abc\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00cdf\"\n"
+      "7) \"SEQUENCE: 16\"\n"
+      "8) \"TYPE: 1\"\n");
+
+
+    ASSERT_REPLY_DESCRIBE(qcl.exec("recovery-get-all-versions", KeyConstants::kJournal_ClusterID).get(),
+      "1) \"KEY: RAFT_CLUSTER_ID\"\n"
+      "2) \"VALUE: different-cluster-id\"\n"
+      "3) \"SEQUENCE: 18\"\n"
+      "4) \"TYPE: 1\"\n"
+      "5) \"KEY: RAFT_CLUSTER_ID\"\n"
+      "6) \"VALUE: some-cluster-id\"\n"
+      "7) \"SEQUENCE: 4\"\n"
+      "8) \"TYPE: 1\"\n");
 
     std::vector<std::string> rep = {
       "RAFT_CURRENT_TERM",

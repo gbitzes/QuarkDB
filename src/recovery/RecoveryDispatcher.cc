@@ -129,7 +129,7 @@ RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
       if(request.size() != 2) return Formatter::errArgs(request[0]);
 
       std::vector<std::string> results;
-      editor.getAllVersions(request[0], results);
+      editor.getAllVersions(request[1], results);
       return Formatter::vector(results);
     }
     default: {
