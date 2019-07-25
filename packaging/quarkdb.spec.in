@@ -93,3 +93,4 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/quarkdb-bench
 %{_bindir}/quarkdb-create
 %{_bindir}/quarkdb-recovery
+%{_bindir}/quarkdb-sst-inspect

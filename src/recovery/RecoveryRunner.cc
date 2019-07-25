@@ -21,7 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include <rocksdb/sst_dump_tool.h>
 #include "RecoveryRunner.hh"
+
 using namespace quarkdb;
 
 RecoveryRunner::RecoveryRunner(const std::string &path, int port)
@@ -47,3 +49,9 @@ RedisEncodedResponse RecoveryRunner::issueOneOffCommand(const std::string &path,
   RecoveryDispatcher dispatcher(editor);
   return dispatcher.dispatch(req);
 }
+
+void RecoveryRunner::DumpTool(int argc, char** argv) {
+  rocksdb::SSTDumpTool tool;
+  tool.Run(argc, argv);
+}
+
