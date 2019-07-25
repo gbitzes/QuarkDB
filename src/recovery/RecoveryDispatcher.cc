@@ -125,6 +125,13 @@ RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
       else nextCursor = "next:" + nextCursor;
       return Formatter::scan(nextCursor, results);
     }
+    case RedisCommand::RECOVERY_GET_ALL_VERSIONS: {
+      if(request.size() != 2) return Formatter::errArgs(request[0]);
+
+      std::vector<std::string> results;
+      editor.getAllVersions(request[0], results);
+      return Formatter::vector(results);
+    }
     default: {
       qdb_throw("should never reach here");
     }

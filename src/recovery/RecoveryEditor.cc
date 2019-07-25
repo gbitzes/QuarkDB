@@ -31,6 +31,7 @@
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
+#include <rocksdb/utilities/debug.h>
 
 using namespace quarkdb;
 
@@ -129,3 +130,18 @@ rocksdb::Status RecoveryEditor::scan(std::string_view key, size_t count, std::st
 
   return rocksdb::Status::OK();
 }
+
+rocksdb::Status RecoveryEditor::getAllVersions(std::string_view key, std::vector<std::string> &output) {
+  std::vector<rocksdb::KeyVersion> versions;
+  rocksdb::GetAllKeyVersions(db.get(), key, key, std::numeric_limits<size_t>::max(), &versions);
+
+  for(const rocksdb::KeyVersion& ver : versions) {
+    output.emplace_back(SSTR("KEY: " << ver.user_key));
+    output.emplace_back(SSTR("VALUE: " << ver.value));
+    output.emplace_back(SSTR("SEQUENCE: " << ver.sequence));
+    output.emplace_back(SSTR("TYPE: " << ver.type));
+  }
+
+  return rocksdb::Status::OK();
+}
+

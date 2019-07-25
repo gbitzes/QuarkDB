@@ -111,6 +111,9 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
     ASSERT_REPLY(qcl.exec("recovery-get", SSTR("E" << intToBinaryString(2))), RaftEntry(4, "set", "abc", "cdf").serialize());
     ASSERT_REPLY(qcl.exec("recovery-del", SSTR("E" << intToBinaryString(2))), "OK");
 
+    ASSERT_REPLY_DESCRIBE(qcl.exec("recovery-get-all-versions", SSTR("E" << intToBinaryString(2))).get(),
+      "(empty list or set)\n");
+
     std::vector<std::string> rep = {
       "RAFT_CURRENT_TERM",
       intToBinaryString(4),
