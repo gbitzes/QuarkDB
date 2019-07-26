@@ -485,6 +485,10 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
       << " Leader attempted to overwrite a committed entry with one with different contents.");
     }
 
+    if(firstInconsistency <= stateMachine.getLastApplied()) {
+      qdb_throw("raft invariant violation: Attempted to remove already applied entries as inconsistent. (first inconsistency: " << firstInconsistency << ", last applied: " << stateMachine.getLastApplied());
+    }
+
     journal.removeEntries(firstInconsistency);
 
     for(size_t i = appendFrom; i < req.entries.size(); i++) {

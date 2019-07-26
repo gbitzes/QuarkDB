@@ -133,7 +133,7 @@ rocksdb::Status RecoveryEditor::scan(std::string_view key, size_t count, std::st
 
 rocksdb::Status RecoveryEditor::getAllVersions(std::string_view key, std::vector<std::string> &output) {
   std::vector<rocksdb::KeyVersion> versions;
-  rocksdb::GetAllKeyVersions(db.get(), key, key, 100, &versions);
+  rocksdb::GetAllKeyVersions(db.get(), key, key, std::numeric_limits<size_t>::max(), &versions);
 
   for(const rocksdb::KeyVersion& ver : versions) {
     output.emplace_back(SSTR("KEY: " << ver.user_key));
