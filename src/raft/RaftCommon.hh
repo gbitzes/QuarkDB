@@ -221,6 +221,11 @@ struct ReplicaStatus {
   RaftServer target;
   bool online;
   LogIndex nextIndex;
+  std::string version;
+
+  ReplicaStatus() {}
+  ReplicaStatus(const RaftServer &trg, bool onl, LogIndex indx, const std::string &ver = "N/A")
+  : target(trg), online(onl), nextIndex(indx), version(ver) {}
 
   bool upToDate(LogIndex leaderLogSize) {
     return online && (leaderLogSize - nextIndex < 30000);
@@ -361,6 +366,7 @@ struct RaftInfo {
         }
 
         ss << "NEXT-INDEX " << it->nextIndex;
+        ss << " | VERSION " << it->version;
       }
       else {
         ss << "OFFLINE";

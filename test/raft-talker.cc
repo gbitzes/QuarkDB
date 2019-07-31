@@ -75,6 +75,15 @@ TEST(RaftTalker, T1) {
 
   while( (rc = parser.fetch(req)) == 0) ;
   ASSERT_EQ(rc, 1);
+
+  tmp = {"QUARKDB_VERSION"};
+  ASSERT_EQ(req, tmp);
+  link.Send("$6\r\n1.33.7\r\n");
+
+  while( talker.getNodeVersion() != "1.33.7" ) ;
+
+  while( (rc = parser.fetch(req)) == 0) ;
+  ASSERT_EQ(rc, 1);
   tmp = {"RAFT_APPEND_ENTRIES", "its_me_ur_leader:1337",
          intToBinaryString(12) + intToBinaryString(7) + intToBinaryString(11) +
          intToBinaryString(3) + intToBinaryString(3),

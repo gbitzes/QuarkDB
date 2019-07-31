@@ -389,13 +389,15 @@ void RaftReplicaTracker::updateStatus(bool online, LogIndex nextIndex) {
 }
 
 ReplicaStatus RaftReplicaTracker::getStatus() {
-  return { target, statusOnline, statusNextIndex };
+  return { target, statusOnline, statusNextIndex, statusNodeVersion.get() };
 }
 
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
   RaftTalker talker(target, contactDetails);
 
   while(!assistant.terminationRequested() && shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
+    statusNodeVersion.set(talker.getNodeVersion());
+
     std::chrono::steady_clock::time_point contact = std::chrono::steady_clock::now();
     std::future<redisReplyPtr> fut = talker.heartbeat(snapshot->term, state.getMyself());
     RaftHeartbeatResponse resp;

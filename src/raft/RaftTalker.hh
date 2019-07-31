@@ -36,6 +36,8 @@ namespace quarkdb {
 using namespace qclient;
 
 class RaftTimeouts; class RaftContactDetails;
+class VersionHandshake;
+
 using ResilveringEventID = std::string;
 
 class RaftTalker {
@@ -55,9 +57,12 @@ public:
 
   std::future<redisReplyPtr> heartbeat(RaftTerm term, const RaftServer &leader);
   RaftServer getServer() { return server; }
+  std::string getNodeVersion();
+
 private:
   RaftServer server;
   std::unique_ptr<QClient> qcl;
+  VersionHandshake *versionHandshake = nullptr;
 };
 
 }

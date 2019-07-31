@@ -28,7 +28,7 @@
 #include "../Version.hh"
 #include <qclient/Logger.hh>
 
-using namespace quarkdb;
+namespace quarkdb {
 
 class RaftHandshake : public qclient::Handshake {
 public:
@@ -69,6 +69,59 @@ private:
   const RaftContactDetails &contactDetails;
 };
 
+//------------------------------------------------------------------------------
+// VersionHandshake is used to determine which QDB version a node is at.
+//------------------------------------------------------------------------------
+class VersionHandshake : public qclient::Handshake {
+public:
+
+  VersionHandshake() {
+    version = "N/A";
+  }
+
+  virtual std::vector<std::string> provideHandshake() override {
+    return {"QUARKDB_VERSION"};
+  }
+
+  virtual Status validateResponse(const redisReplyPtr &reply) override {
+    std::unique_lock<std::mutex> lock(mtx);
+    version = "N/A";
+
+    if(!reply) {
+      return Status::INVALID;
+    }
+
+    if(reply->type != REDIS_REPLY_STRING) {
+      // cannot parse output of quarkdb-version.. maybe the other node
+      // is running a really old version without support for quarkdb-version
+      // command.
+      // TODO(gbitzes): Eventually make this an error, and refuse to communicate
+      // if the other node is *that* old.
+      return Status::VALID_COMPLETE;
+    }
+
+    version = std::string(reply->str, reply->len);
+    return Status::VALID_COMPLETE;
+  }
+
+  virtual void restart() override {
+    std::unique_lock<std::mutex> lock(mtx);
+    version = "N/A";
+  }
+
+  std::string getVersion() const {
+    std::unique_lock<std::mutex> lock(mtx);
+    return version;
+  }
+
+  virtual std::unique_ptr<Handshake> clone() const {
+    return std::unique_ptr<Handshake>(new VersionHandshake());
+  }
+
+private:
+  mutable std::mutex mtx;
+  std::string version;
+};
 
 class QuarkDBLogger : public qclient::Logger {
 public:
@@ -95,7 +148,16 @@ RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &cont
   opts.chainHmacHandshake(contactDetails.getPassword());
   opts.chainHandshake(std::unique_ptr<Handshake>(new RaftHandshake(contactDetails)));
 
+  // Make a version handshake - capture ownership inside QClient, but keep pointer
+  // to it here.
+  versionHandshake = new VersionHandshake();
+  opts.chainHandshake(std::unique_ptr<Handshake>(versionHandshake));
+
   qcl.reset(new QClient(server.hostname, server.port, std::move(opts)));
+}
+
+std::string RaftTalker::getNodeVersion() {
+  return versionHandshake->getVersion();
 }
 
 std::future<redisReplyPtr> RaftTalker::heartbeat(RaftTerm term, const RaftServer &leader) {
@@ -175,4 +237,6 @@ std::future<redisReplyPtr> RaftTalker::resilveringFinish(const ResilveringEventI
 
 std::future<redisReplyPtr> RaftTalker::resilveringCancel(const ResilveringEventID &id, const std::string &reason) {
   return qcl->exec("quarkdb_cancel_resilvering");
+}
+
 }
