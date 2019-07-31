@@ -4,9 +4,6 @@ find_package (Threads)
 add_executable(quarkdb-journal quarkdb-journal.cc)
 target_link_libraries(quarkdb-journal XrdQuarkDB)
 
-add_executable(quarkdb-scrub quarkdb-scrub.cc)
-target_link_libraries(quarkdb-scrub XrdQuarkDB)
-
 add_executable(quarkdb-create quarkdb-create.cc)
 target_link_libraries(quarkdb-create XrdQuarkDB)
 
@@ -25,6 +22,6 @@ include_directories(
 )
 
 install(
-  TARGETS quarkdb-journal quarkdb-scrub quarkdb-create quarkdb-recovery quarkdb-sst-inspect
+  TARGETS quarkdb-journal quarkdb-create quarkdb-recovery quarkdb-sst-inspect
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )

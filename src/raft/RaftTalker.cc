@@ -98,10 +98,6 @@ RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &cont
   qcl.reset(new QClient(server.hostname, server.port, std::move(opts)));
 }
 
-RaftTalker::RaftTalker(const RaftServer &server_)
-: server(server_), qcl(new QClient(server.hostname, server.port, {} )) {
-}
-
 std::future<redisReplyPtr> RaftTalker::heartbeat(RaftTerm term, const RaftServer &leader) {
   RedisRequest payload;
 

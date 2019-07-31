@@ -3,18 +3,19 @@ All notable changes to this project will be documented in this file.
 
 ## Unreleased
 - Add convenience command ``DEQUE-CLEAR``.
-- Protection for a strange suspected case of memory bitflip which brought down
-a development test cluster (last-applied jumped ahead of commit-index by 1024,
-causing all writes to stall). From now on, similar kind of corruption should only
-take out a single node, and not spread to the entire cluster.
+- Protection for a strange case of corruption which brought down a development
+test cluster. (last-applied jumped ahead of commit-index by 1024, causing all
+writes to stall). From now on, similar kind of corruption should only take out
+a single node, and not spread to the entire cluster.
 - Add command ``RAFT-JOURNAL-SCAN`` to make searching through the contents of the
 raft journal easier.
-- ``KEYS`` is now implemented in terms of ``SCAN``, making prefix scanning of the
+- ``KEYS`` is now implemented in terms of ``SCAN``, making prefix matching of the
 keyspace just as efficient as with ``SCAN``. (Note: The use of ``KEYS`` is still
-generally discouraged due to potentially huge response size, don't use in production)
+generally discouraged due to potentially huge response size)
 - Add ``RECOVERY-SCAN`` command for scanning through complete keyspace, including
 internal rocksdb keys.
 - Add tool ``quarkdb-sst-inspect`` to allow low-level inspection of SST files.
+- Removed unused tool ``quarkdb-scrub``.
 
 ## 0.3.8 (2019-05-27)
 - Prevent elections from hanging on the TCP timeout when one of the member hosts
