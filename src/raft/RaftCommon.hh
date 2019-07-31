@@ -319,6 +319,7 @@ struct RaftInfo {
   size_t blockedWrites;
   int64_t lastStateChange;
   ReplicationStatus replicationStatus;
+  std::string myVersion;
 
   std::vector<std::string> toVector() {
     std::vector<std::string> ret;
@@ -334,6 +335,7 @@ struct RaftInfo {
 
     ret.push_back("----------");
     ret.push_back(SSTR("MYSELF " << myself.toString()));
+    ret.push_back(SSTR("VERSION " << myVersion));
     ret.push_back(SSTR("STATUS " << statusToString(status)));
 
     ret.push_back("----------");

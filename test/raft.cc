@@ -31,6 +31,7 @@
 #include "raft/RaftJournal.hh"
 #include "raft/RaftLease.hh"
 #include "raft/RaftContactDetails.hh"
+#include "Version.hh"
 #include "Poller.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
@@ -207,6 +208,7 @@ TEST_F(Raft_Dispatcher, validate_initial_state) {
   ASSERT_TRUE(info.observers.empty());
   ASSERT_EQ(info.nodes, nodes());
   ASSERT_EQ(info.membershipEpoch, 0);
+  ASSERT_EQ(info.myVersion, VERSION_FULL_STRING);
 
   RaftEntry entry;
   ASSERT_TRUE(dispatcher()->fetch(0, entry));

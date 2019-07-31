@@ -32,6 +32,7 @@
 #include "../Formatter.hh"
 #include "../utils/ParseUtils.hh"
 #include "../utils/CommandParsing.hh"
+#include "../Version.hh"
 
 #include <random>
 #include <sys/stat.h>
@@ -645,7 +646,7 @@ RaftInfo RaftDispatcher::info() {
   return {journal.getClusterID(), state.getMyself(), snapshot->leader, membership.epoch, membership.nodes, membership.observers, snapshot->term, journal.getLogStart(),
           journal.getLogSize(), snapshot->status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size(),
           std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - snapshot->timeCreated).count(),
-          replicationStatus
+          replicationStatus, VERSION_FULL_STRING
         };
 }
 
