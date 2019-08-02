@@ -641,7 +641,53 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
 // Return health information
 //------------------------------------------------------------------------------
 std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
-  return stateMachine.getHealthIndicators();
+  std::vector<HealthIndicator> indicators = stateMachine.getHealthIndicators();
+
+  //----------------------------------------------------------------------------
+  // Am I currently part of the quorum?
+  //----------------------------------------------------------------------------
+  RaftStateSnapshotPtr snapshot = state.getSnapshot();
+  if(snapshot->leader.empty()) {
+    indicators.emplace_back(HealthStatus::kRed, "Part of cluster", "No, I don't know who the cluster leader is, node is unavailable");
+  }
+  else {
+    indicators.emplace_back(HealthStatus::kGreen, "Part of cluster", SSTR("Yes, current leader is " << snapshot->leader.toString()));
+  }
+
+  //----------------------------------------------------------------------------
+  // Leader? If so, show replication status
+  //----------------------------------------------------------------------------
+  if(snapshot->status == RaftStatus::LEADER) {
+    ReplicationStatus replicationStatus = replicator.getStatus();
+    LogIndex logSize = journal.getLogSize();
+
+    for(auto it = replicationStatus.replicas.begin(); it != replicationStatus.replicas.end(); it++) {
+      HealthStatus replicaStatus = HealthStatus::kGreen;
+
+      std::stringstream ss;
+      if(it->online) {
+        ss << "ONLINE | ";
+        if(it->upToDate(logSize)) {
+          ss << "UP-TO-DATE | ";
+        }
+        else {
+          ss << "LAGGING    | ";
+          replicaStatus = HealthStatus::kYellow;
+        }
+
+        ss << "NEXT-INDEX " << it->nextIndex;
+        ss << " | VERSION " << it->version;
+      }
+      else {
+        ss << "OFFLINE";
+        replicaStatus = HealthStatus::kRed;
+      }
+
+      indicators.emplace_back(replicaStatus, SSTR("Replica " << it->target.toString()), ss.str());
+    }
+  }
+
+  return indicators;
 }
 
 RaftInfo RaftDispatcher::info() {
