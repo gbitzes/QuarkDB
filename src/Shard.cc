@@ -29,6 +29,7 @@
 #include "raft/RaftDispatcher.hh"
 #include "redis/LeaseFilter.hh"
 #include "utils/ScopedAdder.hh"
+#include "utils/VectorUtils.hh"
 
 using namespace quarkdb;
 
@@ -219,6 +220,22 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       }
 
       return conn->status(ss.str());
+    }
+    case RedisCommand::QUARKDB_HEALTH_LOCAL: {
+      if(req.size() != 1) return conn->errArgs(req[0]);
+
+      InFlightRegistration registration(inFlightTracker);
+      if(!registration.ok()) {
+        return conn->err("unavailable");
+      }
+
+      std::vector<HealthIndicator> healthIndicators;
+      VectorUtils::appendToVector(healthIndicators, stateMachine->getHealthIndicators());
+
+      std::vector<std::string> outVector;
+      VectorUtils::appendToVector(outVector, healthIndicatorsAsStrings(healthIndicators));
+
+      return conn->statusVector(outVector);
     }
     case RedisCommand::COMMAND_STATS: {
       if(req.size() != 1) return conn->errArgs(req[0]);

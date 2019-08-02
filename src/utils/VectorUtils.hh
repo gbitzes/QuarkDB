@@ -40,6 +40,13 @@ bool checkEquality(const T& one, const T& two) {
   return true;
 }
 
+template<typename T>
+void appendToVector(std::vector<T> &target, const std::vector<T> &source) {
+  for(size_t i = 0; i < source.size(); i++) {
+    target.emplace_back(source[i]);
+  }
+}
+
 } }
 
 

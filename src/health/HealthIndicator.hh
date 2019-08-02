@@ -24,9 +24,10 @@
 #ifndef QUARKDB_HEALTH_INDICATOR_HH
 #define QUARKDB_HEALTH_INDICATOR_HH
 
+#include "../utils/Macros.hh"
 #include <string>
 #include <string_view>
-#include "../utils/Macros.hh"
+#include <vector>
 
 namespace quarkdb {
 
@@ -99,6 +100,16 @@ private:
   const std::string description;
   const std::string message;
 };
+
+inline std::vector<std::string> healthIndicatorsAsStrings(const std::vector<HealthIndicator> &source) {
+  std::vector<std::string> out;
+
+  for(size_t i = 0; i < source.size(); i++) {
+    out.emplace_back(source[i].toString());
+  }
+
+  return out;
+}
 
 }
 

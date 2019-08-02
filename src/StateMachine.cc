@@ -42,6 +42,7 @@
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>
 #include <thread>
+#include <sys/vfs.h>
 
 #define RETURN_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) return st2; }
 #define THROW_ON_ERROR(st) { rocksdb::Status st2 = st; if(!st2.ok()) qdb_throw(st2.ToString()); }
@@ -1820,6 +1821,42 @@ Statistics StateMachine::commandStats() {
 rocksdb::Status StateMachine::noop(LogIndex index) {
   StagingArea stagingArea(*this);
   return stagingArea.commit(index);
+}
+
+//------------------------------------------------------------------------------
+// Return health information about the state machine
+//------------------------------------------------------------------------------
+std::vector<HealthIndicator> StateMachine::getHealthIndicators() {
+  std::string description = "Free space in state-machine filesystem";
+
+  struct statfs out;
+  if(statfs(filename.c_str(), &out) != 0) {
+    return { HealthIndicator(HealthStatus::kRed, description, SSTR("Could not statfs '" << filename << "'")) };
+  }
+
+  HealthStatus status = HealthStatus::kGreen;
+  constexpr int64_t bytesInGiB = 1024 * 1024 * 1024;
+
+  int64_t freeBytes = out.f_bavail * out.f_bsize;
+  double percentFree = 100 - (100.0 * (double) (out.f_blocks - out.f_bfree) / (double) (out.f_blocks - out.f_bfree + out.f_bavail));
+
+  // Red if less than 1 GiB, yellow if less than 5 GiB, green otherwise
+  if(freeBytes <= bytesInGiB) {
+    status = chooseWorstHealth(status, HealthStatus::kRed);
+  }
+  else if(freeBytes <= 5 * bytesInGiB) {
+    status = chooseWorstHealth(status, HealthStatus::kYellow);
+  }
+
+  // Red if less than 3% of total capacity, yellow if less than 10%, green otherwise
+  if(percentFree <= 3) {
+    status = chooseWorstHealth(status, HealthStatus::kRed);
+  }
+  else if(percentFree <= 10) {
+    status = chooseWorstHealth(status, HealthStatus::kYellow);
+  }
+
+  return { HealthIndicator(status, description, SSTR(freeBytes << " bytes (" << percentFree << "%)")) };
 }
 
 rocksdb::Status StateMachine::manualCompaction() {

@@ -34,6 +34,7 @@
 #include "storage/ConsistencyScanner.hh"
 #include "storage/KeyConstants.hh"
 #include "storage/LeaseInfo.hh"
+#include "health/HealthIndicator.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/write_batch_with_index.h>
 #include <rocksdb/utilities/debug.h>
@@ -251,6 +252,11 @@ public:
   bool inBulkLoad() const {
     return bulkLoad;
   }
+
+  //----------------------------------------------------------------------------
+  // Return health information about the state machine
+  //----------------------------------------------------------------------------
+  std::vector<HealthIndicator> getHealthIndicators();
 
   rocksdb::Status manualCompaction();
   void finalizeBulkload();
