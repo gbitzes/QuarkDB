@@ -42,11 +42,13 @@ TEST(Raft_Lease, basic_sanity_with_2_endpoints) {
   t1.heartbeat(p1);
 
   ASSERT_EQ(lease.getDeadline(), p1 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p1 + leaseDuration);
 
   steady_clock::time_point p2 = p0 + milliseconds(501);
 
   t1.heartbeat(p2);
   ASSERT_EQ(lease.getDeadline(), p2 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p2 + leaseDuration);
 }
 
 TEST(Raft_Lease, basic_sanity_with_3_endpoints) {
@@ -69,17 +71,21 @@ TEST(Raft_Lease, basic_sanity_with_3_endpoints) {
   t2.heartbeat(p2);
 
   ASSERT_EQ(lease.getDeadline(), p2 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p1 + leaseDuration);
 
   t1.heartbeat(p0 + milliseconds(750));
   ASSERT_EQ(lease.getDeadline(), p2 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p0 + milliseconds(750) + leaseDuration);
 
   steady_clock::time_point p3 = p0 + milliseconds(1500);
   t1.heartbeat(p3);
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p2 + leaseDuration);
 
   steady_clock::time_point p4 = p0 + milliseconds(2000);
   t2.heartbeat(p4);
   ASSERT_EQ(lease.getDeadline(), p4 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p3 + leaseDuration);
 }
 
 TEST(Raft_Lease, basic_sanity_with_5_endpoints) {
@@ -111,18 +117,21 @@ TEST(Raft_Lease, basic_sanity_with_5_endpoints) {
 
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
 
-
   t1.heartbeat(p0 + milliseconds(600));
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p2 + leaseDuration);
 
   t1.heartbeat(p0 + milliseconds(700));
   ASSERT_EQ(lease.getDeadline(), p3 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p2 + leaseDuration);
 
   steady_clock::time_point p5 = p0 + milliseconds(801);
   t1.heartbeat(p5);
   ASSERT_EQ(lease.getDeadline(), p5 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p3 + leaseDuration);
 
   steady_clock::time_point p6 = p0 + milliseconds(10000);
   t2.heartbeat(p6);
   ASSERT_EQ(lease.getDeadline(), p4 + leaseDuration);
+  ASSERT_EQ(lease.getShakyQuorumDeadline(), p5 + leaseDuration);
 }

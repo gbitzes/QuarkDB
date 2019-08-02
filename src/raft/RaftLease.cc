@@ -87,12 +87,10 @@ RaftLastContact& RaftLease::getHandler(const RaftServer &srv) {
 }
 
 //------------------------------------------------------------------------------
-// Only consider the targets when determining the deadline, and not any other
-// registered endpoints. (they might be observers, which don't affect leases)
+// Retrieve nth lease, starting from the end as sorted by most recent
+// heartbeat. Assumes mtx is locked when calling this function!
 //------------------------------------------------------------------------------
-std::chrono::steady_clock::time_point RaftLease::getDeadline() {
-  std::lock_guard<std::mutex> lock(mtx);
-
+std::chrono::steady_clock::time_point RaftLease::getNthLease(size_t n) {
   if(quorumSize == 1) {
     // Special case: There's only a single node in our raft "cluster" - us.
     return std::chrono::steady_clock::now() + leaseDuration;
@@ -105,6 +103,29 @@ std::chrono::steady_clock::time_point RaftLease::getDeadline() {
   }
 
   std::sort(leases.begin(), leases.end());
-  size_t threshold = (leases.size()+1) - quorumSize;
+  int threshold = (leases.size()+1) - n;
+
+  if(threshold < 0) {
+    threshold = 0;
+  }
   return leases[threshold] + leaseDuration;
+}
+
+//------------------------------------------------------------------------------
+// Only consider the targets when determining the deadline, and not any other
+// registered endpoints. (they might be observers, which don't affect leases)
+//------------------------------------------------------------------------------
+std::chrono::steady_clock::time_point RaftLease::getDeadline() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return getNthLease(quorumSize);
+}
+
+//------------------------------------------------------------------------------
+// Return the timepoint at which the quorum would become shaky, meaning the
+// loss of a single more node would cause the lease to expire and the cluster
+// to go offline.
+//------------------------------------------------------------------------------
+steady_clock::time_point RaftLease::getShakyQuorumDeadline() {
+  std::lock_guard<std::mutex> lock(mtx);
+  return getNthLease(quorumSize + 1);
 }

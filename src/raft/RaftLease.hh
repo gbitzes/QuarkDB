@@ -52,8 +52,22 @@ public:
   ~RaftLease();
   RaftLastContact& getHandler(const RaftServer &srv);
   steady_clock::time_point getDeadline();
+
+  //----------------------------------------------------------------------------
+  // Return the timepoint at which the quorum would become shaky, meaning the
+  // loss of a single more node would cause the lease to expire and the cluster
+  // to go offline.
+  //----------------------------------------------------------------------------
+  steady_clock::time_point getShakyQuorumDeadline();
+
 private:
   RaftLastContact& getHandlerInternal(const RaftServer &srv);
+
+  //----------------------------------------------------------------------------
+  // Retrieve nth lease, starting from the end as sorted by most recent
+  // heartbeat. Assumes mtx is locked when calling this function!
+  //----------------------------------------------------------------------------
+  steady_clock::time_point getNthLease(size_t n);
 
   std::mutex mtx;
   std::map<RaftServer, RaftLastContact*> targets;

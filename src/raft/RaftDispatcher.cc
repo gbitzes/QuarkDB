@@ -661,6 +661,8 @@ std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
     ReplicationStatus replicationStatus = replicator.getStatus();
     LogIndex logSize = journal.getLogSize();
 
+    // size_t onlineReplicas = 0u;
+
     for(auto it = replicationStatus.replicas.begin(); it != replicationStatus.replicas.end(); it++) {
       HealthStatus replicaStatus = HealthStatus::kGreen;
 
@@ -680,7 +682,7 @@ std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
       }
       else {
         ss << "OFFLINE";
-        replicaStatus = HealthStatus::kRed;
+        replicaStatus = HealthStatus::kYellow;
       }
 
       indicators.emplace_back(replicaStatus, SSTR("Replica " << it->target.toString()), ss.str());
