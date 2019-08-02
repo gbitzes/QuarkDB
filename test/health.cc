@@ -32,6 +32,23 @@ TEST(HealthStatus, ToString) {
   ASSERT_EQ(healthStatusAsString(HealthStatus::kRed), "RED");
 }
 
+TEST(HealthStatus, ChooseWorst) {
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kGreen, HealthStatus::kGreen), HealthStatus::kGreen);
+
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kYellow, HealthStatus::kGreen), HealthStatus::kYellow);
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kGreen, HealthStatus::kYellow), HealthStatus::kYellow);
+
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kYellow, HealthStatus::kYellow), HealthStatus::kYellow);
+
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kRed, HealthStatus::kYellow), HealthStatus::kRed);
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kYellow, HealthStatus::kRed), HealthStatus::kRed);
+
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kRed, HealthStatus::kGreen), HealthStatus::kRed);
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kGreen, HealthStatus::kRed), HealthStatus::kRed);
+
+  ASSERT_EQ(chooseWorstHealth(HealthStatus::kRed, HealthStatus::kRed), HealthStatus::kRed);
+}
+
 TEST(HealthIndicator, BasicSanity) {
   HealthIndicator ind1(HealthStatus::kGreen, "Available space", "120 GB");
   ASSERT_EQ(ind1.getStatus(), HealthStatus::kGreen);
@@ -40,3 +57,4 @@ TEST(HealthIndicator, BasicSanity) {
 
   ASSERT_EQ(ind1.toString(), "[GREEN] Available space: 120 GB");
 }
+

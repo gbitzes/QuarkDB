@@ -36,6 +36,26 @@ enum class HealthStatus {
   kRed
 };
 
+//------------------------------------------------------------------------------
+// Out of two health values, return the one that is the worst, ie:
+// red, yellow => red
+// red, green => red
+// yellow, green => yellow
+// green, green => green
+//------------------------------------------------------------------------------
+inline HealthStatus chooseWorstHealth(HealthStatus h1, HealthStatus h2) {
+  if(h1 == HealthStatus::kGreen) {
+    return h2;
+  }
+
+  if(h1 == HealthStatus::kYellow) {
+    if(h2 == HealthStatus::kRed) return h2;
+    return h1;
+  }
+
+  return h1;
+}
+
 inline std::string healthStatusAsString(HealthStatus st) {
   switch(st) {
     case HealthStatus::kGreen: {
