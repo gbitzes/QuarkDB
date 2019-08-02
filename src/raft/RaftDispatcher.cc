@@ -637,6 +637,13 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   return {snapshot->term, RaftVote::GRANTED};
 }
 
+//------------------------------------------------------------------------------
+// Return health information
+//------------------------------------------------------------------------------
+std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
+  return stateMachine.getHealthIndicators();
+}
+
 RaftInfo RaftDispatcher::info() {
   std::lock_guard<std::mutex> lock(raftCommand);
   RaftStateSnapshotPtr snapshot = state.getSnapshot();

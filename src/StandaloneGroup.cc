@@ -53,6 +53,13 @@ Dispatcher* StandaloneGroup::getDispatcher() {
   return dispatcher.get();
 }
 
+//------------------------------------------------------------------------------
+// Return health information
+//------------------------------------------------------------------------------
+std::vector<HealthIndicator> StandaloneGroup::getHealthIndicators() {
+  return stateMachine->getHealthIndicators();
+}
+
 StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm, Publisher &pub)
 : stateMachine(&sm), dispatcher(sm), publisher(&pub) {}
 

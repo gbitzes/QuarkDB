@@ -26,6 +26,7 @@
 
 #include "../Dispatcher.hh"
 #include "../pubsub/Publisher.hh"
+#include "../health/HealthIndicator.hh"
 #include "RaftUtils.hh"
 #include "RaftTimeouts.hh"
 #include "RaftBlockedWrites.hh"
@@ -60,6 +61,12 @@ public:
   RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req);
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
   RaftVoteResponse requestVote(RaftVoteRequest &req);
+
+  //----------------------------------------------------------------------------
+  // Return health information
+  //----------------------------------------------------------------------------
+  std::vector<HealthIndicator> getHealthIndicators();
+
 private:
   RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req, RaftStateSnapshotPtr &snapshot);
   LinkStatus service(Connection *conn, Transaction &tx);

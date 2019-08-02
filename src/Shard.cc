@@ -230,7 +230,12 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       }
 
       std::vector<HealthIndicator> healthIndicators;
-      VectorUtils::appendToVector(healthIndicators, stateMachine->getHealthIndicators());
+      if(standaloneGroup) {
+        VectorUtils::appendToVector(healthIndicators, standaloneGroup->getHealthIndicators());
+      }
+      else if(raftGroup) {
+        VectorUtils::appendToVector(healthIndicators, raftGroup->dispatcher()->getHealthIndicators());
+      }
 
       std::vector<std::string> outVector;
       VectorUtils::appendToVector(outVector, healthIndicatorsAsStrings(healthIndicators));

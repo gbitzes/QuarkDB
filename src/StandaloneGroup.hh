@@ -27,6 +27,7 @@
 #include <memory>
 #include "Dispatcher.hh"
 #include "pubsub/Publisher.hh"
+#include "health/HealthIndicator.hh"
 
 namespace quarkdb {
 
@@ -55,6 +56,11 @@ public:
 
   StateMachine* getStateMachine();
   Dispatcher* getDispatcher();
+
+  //----------------------------------------------------------------------------
+  // Return health information
+  //----------------------------------------------------------------------------
+  std::vector<HealthIndicator> getHealthIndicators();
 
 private:
   ShardDirectory &shardDirectory;
