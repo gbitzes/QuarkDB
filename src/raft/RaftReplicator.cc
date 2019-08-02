@@ -617,6 +617,7 @@ ReplicationStatus RaftReplicator::getStatus() {
     ret.addReplica(it->second->getStatus());
   }
 
+  ret.shakyQuorum = lease.getShakyQuorumDeadline() < std::chrono::steady_clock::now();
   return ret;
 }
 

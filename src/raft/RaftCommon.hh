@@ -234,6 +234,7 @@ struct ReplicaStatus {
 
 struct ReplicationStatus {
   std::vector<ReplicaStatus> replicas;
+  bool shakyQuorum = false;
 
   size_t replicasOnline() {
     size_t ret = 0;
