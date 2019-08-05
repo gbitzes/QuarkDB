@@ -47,12 +47,24 @@ RedisEncodedResponse Formatter::pong() {
   return RedisEncodedResponse(SSTR("+PONG\r\n"));
 }
 
+void Formatter::string(std::ostringstream &ss, std::string_view str) {
+  ss  << "$" << str.length() << "\r\n" << str << "\r\n";
+}
+
 RedisEncodedResponse Formatter::string(std::string_view str) {
-  return RedisEncodedResponse(SSTR("$" << str.length() << "\r\n" << str << "\r\n"));
+  std::ostringstream ss;
+  Formatter::string(ss, str);
+  return RedisEncodedResponse(ss.str());
+}
+
+void Formatter::status(std::ostringstream &ss, std::string_view str) {
+  ss << "+" << str << "\r\n";
 }
 
 RedisEncodedResponse Formatter::status(std::string_view str) {
-  return RedisEncodedResponse(SSTR("+" << str << "\r\n"));
+  std::ostringstream ss;
+  status(ss, str);
+  return RedisEncodedResponse(ss.str());
 }
 
 RedisEncodedResponse Formatter::ok() {
@@ -63,8 +75,14 @@ RedisEncodedResponse Formatter::null() {
   return RedisEncodedResponse("$-1\r\n");
 }
 
+void Formatter::integer(std::ostringstream &ss, int64_t number) {
+  ss << ":" << number << "\r\n";
+}
+
 RedisEncodedResponse Formatter::integer(int64_t number) {
-  return RedisEncodedResponse(SSTR(":" << number << "\r\n"));
+  std::ostringstream ss;
+  integer(ss, number);
+  return RedisEncodedResponse(ss.str());
 }
 
 RedisEncodedResponse Formatter::fromStatus(const rocksdb::Status &status) {
@@ -82,12 +100,16 @@ RedisEncodedResponse Formatter::vector(const std::vector<std::string> &vec) {
   return RedisEncodedResponse(ss.str());
 }
 
-RedisEncodedResponse Formatter::statusVector(const std::vector<std::string> &vec) {
-  std::stringstream ss;
+void Formatter::statusVector(std::ostringstream &ss, const std::vector<std::string> &vec) {
   ss << "*" << vec.size() << "\r\n";
   for(std::vector<std::string>::const_iterator it = vec.begin(); it != vec.end(); it++) {
     ss << "+" << *it << "\r\n";
   }
+}
+
+RedisEncodedResponse Formatter::statusVector(const std::vector<std::string> &vec) {
+  std::ostringstream ss;
+  statusVector(ss, vec);
   return RedisEncodedResponse(ss.str());
 }
 
@@ -299,10 +321,18 @@ RedisEncodedResponse Formatter::pmessage(std::string_view pattern, std::string_v
 RedisEncodedResponse Formatter::strstrint(std::string_view str1, std::string_view str2, int num) {
   std::ostringstream ss;
   ss << "*3\r\n";
-  ss << "$" << str1.size() << "\r\n";
-  ss << str1 << "\r\n";
-  ss << "$" << str2.size() << "\r\n";
-  ss << str2 << "\r\n";
-  ss << ":" << num << "\r\n";
+  Formatter::string(ss, str1);
+  Formatter::string(ss, str2);
+  Formatter::integer(ss, num);
   return RedisEncodedResponse(ss.str());
 }
+
+RedisEncodedResponse Formatter::localHealth(const std::string &version, const std::vector<HealthIndicator> &indicator) {
+  std::ostringstream ss;
+  ss << "*3\r\n";
+  status(ss, SSTR("OVERALL-HEALTH " << healthStatusAsString(chooseWorstHealth(indicator))));
+  status(ss, SSTR("VERSION " << version));
+  statusVector(ss, healthIndicatorsAsStrings(indicator));
+  return RedisEncodedResponse(ss.str());
+}
+

@@ -174,3 +174,22 @@ TEST(Formatter, VectorOfVectors) {
     "      2) five\n"
     "      3) six\n");
 }
+
+TEST(Formatter, LocalHealth) {
+  std::vector<HealthIndicator> indicators;
+  indicators.emplace_back(HealthStatus::kRed, "Chicken invasion", "Imminent");
+  indicators.emplace_back(HealthStatus::kGreen, "Bears", "Sleeping");
+
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::localHealth("1.33.7", indicators).val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) OVERALL-HEALTH RED\n"
+    "2) VERSION 1.33.7\n"
+    "3) 1) [RED] Chicken invasion: Imminent\n"
+    "   2) [GREEN] Bears: Sleeping\n"
+  );
+}

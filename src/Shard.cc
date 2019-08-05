@@ -30,6 +30,7 @@
 #include "redis/LeaseFilter.hh"
 #include "utils/ScopedAdder.hh"
 #include "utils/VectorUtils.hh"
+#include "Version.hh"
 
 using namespace quarkdb;
 
@@ -237,10 +238,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         VectorUtils::appendToVector(healthIndicators, raftGroup->dispatcher()->getHealthIndicators());
       }
 
-      std::vector<std::string> outVector;
-      VectorUtils::appendToVector(outVector, healthIndicatorsAsStrings(healthIndicators));
-
-      return conn->statusVector(outVector);
+      return conn->raw(Formatter::localHealth(VERSION_FULL_STRING, healthIndicators));
     }
     case RedisCommand::COMMAND_STATS: {
       if(req.size() != 1) return conn->errArgs(req[0]);

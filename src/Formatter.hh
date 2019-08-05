@@ -26,6 +26,7 @@
 
 #include <rocksdb/status.h>
 #include "redis/RedisEncodedResponse.hh"
+#include "health/HealthIndicator.hh"
 #include "Utils.hh"
 
 namespace quarkdb {
@@ -37,6 +38,17 @@ struct Statistics;
 
 class Formatter {
 public:
+  //----------------------------------------------------------------------------
+  // Composable overloads
+  //----------------------------------------------------------------------------
+  static void statusVector(std::ostringstream &ss, const std::vector<std::string> &vec);
+  static void status(std::ostringstream &ss, std::string_view str);
+  static void string(std::ostringstream &ss, std::string_view str);
+  static void integer(std::ostringstream &ss, int64_t number);
+
+  //----------------------------------------------------------------------------
+  // One-shot overloads
+  //----------------------------------------------------------------------------
   static RedisEncodedResponse moved(int64_t shardId, const RaftServer &srv);
   static RedisEncodedResponse err(std::string_view msg);
   static RedisEncodedResponse errArgs(std::string_view cmd);
@@ -69,6 +81,7 @@ public:
   static RedisEncodedResponse multiply(const RedisEncodedResponse &resp, size_t factor);
   static RedisEncodedResponse vectorsWithHeaders(const std::vector<std::string> &headers, const std::vector<std::vector<std::string>> &data);
   static RedisEncodedResponse stats(const Statistics &stats);
+  static RedisEncodedResponse localHealth(const std::string &version, const std::vector<HealthIndicator> &indicator);
 
 private:
   static RedisEncodedResponse strstrint(std::string_view str1, std::string_view str2, int num);

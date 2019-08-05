@@ -111,6 +111,18 @@ inline std::vector<std::string> healthIndicatorsAsStrings(const std::vector<Heal
   return out;
 }
 
+//------------------------------------------------------------------------------
+// Out of many health indicators, return the worst health status.
+//------------------------------------------------------------------------------
+inline HealthStatus chooseWorstHealth(const std::vector<HealthIndicator> &vec) {
+  HealthStatus val = HealthStatus::kGreen;
+  for(size_t i = 0; i < vec.size(); i++) {
+    val = chooseWorstHealth(val, vec[i].getStatus());
+  }
+
+  return val;
+}
+
 }
 
 #endif

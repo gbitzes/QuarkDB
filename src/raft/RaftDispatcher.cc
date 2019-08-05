@@ -662,10 +662,10 @@ std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
     LogIndex logSize = journal.getLogSize();
 
     if(replicationStatus.shakyQuorum) {
-      indicators.emplace_back(HealthStatus::kYellow, "Shaky quorum", "Quorum is shaky");
+      indicators.emplace_back(HealthStatus::kYellow, "Quorum stability", "Shaky");
     }
     else {
-      indicators.emplace_back(HealthStatus::kGreen, "Shaky quorum", "Quorum looks safe");
+      indicators.emplace_back(HealthStatus::kGreen, "Quorum stability", "Good");
     }
 
     for(auto it = replicationStatus.replicas.begin(); it != replicationStatus.replicas.end(); it++) {
