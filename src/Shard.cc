@@ -231,7 +231,6 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
 
       LocalHealth localHealth;
 
-      std::vector<HealthIndicator> healthIndicators;
       if(standaloneGroup) {
         localHealth = standaloneGroup->getLocalHealth();
       }
@@ -239,7 +238,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         localHealth = raftGroup->dispatcher()->getLocalHealth();
       }
 
-      return conn->raw(Formatter::localHealth(localHealth.getVersion(), localHealth.getNode(), localHealth.getIndicators()));
+      return conn->raw(Formatter::localHealth(localHealth));
     }
     case RedisCommand::COMMAND_STATS: {
       if(req.size() != 1) return conn->errArgs(req[0]);

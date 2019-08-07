@@ -180,8 +180,10 @@ TEST(Formatter, LocalHealth) {
   indicators.emplace_back(HealthStatus::kRed, "Chicken invasion", "Imminent");
   indicators.emplace_back(HealthStatus::kGreen, "Bears", "Sleeping");
 
+  LocalHealth localHealth("1.33.7", "example.com:7777", indicators);
+
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::localHealth("1.33.7", "example.com:7777", indicators).val);
+  builder.feed(Formatter::localHealth(localHealth).val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
