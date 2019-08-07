@@ -181,15 +181,16 @@ TEST(Formatter, LocalHealth) {
   indicators.emplace_back(HealthStatus::kGreen, "Bears", "Sleeping");
 
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::localHealth("1.33.7", indicators).val);
+  builder.feed(Formatter::localHealth("1.33.7", "example.com:7777", indicators).val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
 
   ASSERT_EQ(qclient::describeRedisReply(ans),
-    "1) OVERALL-HEALTH RED\n"
-    "2) VERSION 1.33.7\n"
-    "3) 1) [RED] Chicken invasion: Imminent\n"
+    "1) NODE-HEALTH RED\n"
+    "2) NODE example.com:7777\n"
+    "3) VERSION 1.33.7\n"
+    "4) 1) [RED] Chicken invasion: Imminent\n"
     "   2) [GREEN] Bears: Sleeping\n"
   );
 }

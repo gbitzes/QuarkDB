@@ -238,7 +238,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         VectorUtils::appendToVector(healthIndicators, raftGroup->dispatcher()->getHealthIndicators());
       }
 
-      return conn->raw(Formatter::localHealth(VERSION_FULL_STRING, healthIndicators));
+      return conn->raw(Formatter::localHealth(VERSION_FULL_STRING, "", healthIndicators));
     }
     case RedisCommand::COMMAND_STATS: {
       if(req.size() != 1) return conn->errArgs(req[0]);

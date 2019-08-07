@@ -327,10 +327,11 @@ RedisEncodedResponse Formatter::strstrint(std::string_view str1, std::string_vie
   return RedisEncodedResponse(ss.str());
 }
 
-RedisEncodedResponse Formatter::localHealth(const std::string &version, const std::vector<HealthIndicator> &indicator) {
+RedisEncodedResponse Formatter::localHealth(const std::string &version, const std::string &node, const std::vector<HealthIndicator> &indicator) {
   std::ostringstream ss;
-  ss << "*3\r\n";
-  status(ss, SSTR("OVERALL-HEALTH " << healthStatusAsString(chooseWorstHealth(indicator))));
+  ss << "*4\r\n";
+  status(ss, SSTR("NODE-HEALTH " << healthStatusAsString(chooseWorstHealth(indicator))));
+  status(ss, SSTR("NODE " << node));
   status(ss, SSTR("VERSION " << version));
   statusVector(ss, healthIndicatorsAsStrings(indicator));
   return RedisEncodedResponse(ss.str());

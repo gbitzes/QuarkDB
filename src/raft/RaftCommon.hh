@@ -227,8 +227,35 @@ struct ReplicaStatus {
   ReplicaStatus(const RaftServer &trg, bool onl, LogIndex indx, const std::string &ver = "N/A")
   : target(trg), online(onl), nextIndex(indx), version(ver) {}
 
-  bool upToDate(LogIndex leaderLogSize) {
+  bool upToDate(LogIndex leaderLogSize) const {
     return online && (leaderLogSize - nextIndex < 30000);
+  }
+
+  std::string toString(LogIndex currentLogSize) const {
+    std::ostringstream ss;
+    toString(ss, currentLogSize);
+    return ss.str();
+  }
+
+  void toString(std::ostringstream &ss, LogIndex currentLogSize) const {
+    ss << target.toString() << " ";
+
+    if(online) {
+      ss << "ONLINE | ";
+
+      if(upToDate(currentLogSize)) {
+        ss << "UP-TO-DATE | ";
+      }
+      else {
+        ss << "LAGGING    | ";
+      }
+
+      ss << "NEXT-INDEX " << nextIndex;
+      ss << " | VERSION " << version;
+    }
+    else {
+      ss << "OFFLINE";
+    }
   }
 };
 
@@ -355,23 +382,9 @@ struct RaftInfo {
     }
 
     for(auto it = replicationStatus.replicas.begin(); it != replicationStatus.replicas.end(); it++) {
-      std::stringstream ss;
-      ss << "REPLICA " << it->target.toString() << " ";
-      if(it->online) {
-        ss << "ONLINE | ";
-        if(it->upToDate(logSize)) {
-          ss << "UP-TO-DATE | ";
-        }
-        else {
-          ss << "LAGGING    | ";
-        }
-
-        ss << "NEXT-INDEX " << it->nextIndex;
-        ss << " | VERSION " << it->version;
-      }
-      else {
-        ss << "OFFLINE";
-      }
+      std::ostringstream ss;
+      ss << "REPLICA ";
+      it->toString(ss, logSize);
 
       ret.push_back(ss.str());
     }

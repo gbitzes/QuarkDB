@@ -671,26 +671,14 @@ std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
     for(auto it = replicationStatus.replicas.begin(); it != replicationStatus.replicas.end(); it++) {
       HealthStatus replicaStatus = HealthStatus::kGreen;
 
-      std::stringstream ss;
-      if(it->online) {
-        ss << "ONLINE | ";
-        if(it->upToDate(logSize)) {
-          ss << "UP-TO-DATE | ";
-        }
-        else {
-          ss << "LAGGING    | ";
-          replicaStatus = HealthStatus::kYellow;
-        }
-
-        ss << "NEXT-INDEX " << it->nextIndex;
-        ss << " | VERSION " << it->version;
+      if(!it->online) {
+        replicaStatus = HealthStatus::kYellow;
       }
-      else {
-        ss << "OFFLINE";
+      else if(!it->upToDate(logSize)) {
         replicaStatus = HealthStatus::kYellow;
       }
 
-      indicators.emplace_back(replicaStatus, SSTR("Replica " << it->target.toString()), ss.str());
+      indicators.emplace_back(replicaStatus, "Replica", it->toString(logSize));
     }
   }
 
