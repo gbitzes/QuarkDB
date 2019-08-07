@@ -123,6 +123,38 @@ inline HealthStatus chooseWorstHealth(const std::vector<HealthIndicator> &vec) {
   return val;
 }
 
+//------------------------------------------------------------------------------
+// LocalHealth: Describe health of a single node. Applicable to both raft and
+// standalone modes.
+//------------------------------------------------------------------------------
+class LocalHealth {
+public:
+  LocalHealth() {}
+
+  LocalHealth(const std::string &ver, const std::string &nod, const std::vector<HealthIndicator> &ind)
+  : version(ver), node(nod), indicators(ind) {}
+
+  LocalHealth(const std::string &ver, const std::vector<HealthIndicator> &ind)
+  : version(ver), indicators(ind) {}
+
+  std::string getVersion() const {
+    return version;
+  }
+
+  std::string getNode() const {
+    return node;
+  }
+
+  std::vector<HealthIndicator> getIndicators() const {
+    return indicators;
+  }
+
+private:
+  std::string version;
+  std::string node;
+  std::vector<HealthIndicator> indicators;
+};
+
 }
 
 #endif

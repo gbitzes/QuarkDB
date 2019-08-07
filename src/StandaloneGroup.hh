@@ -60,7 +60,7 @@ public:
   //----------------------------------------------------------------------------
   // Return health information
   //----------------------------------------------------------------------------
-  std::vector<HealthIndicator> getHealthIndicators();
+  LocalHealth getLocalHealth();
 
 private:
   ShardDirectory &shardDirectory;

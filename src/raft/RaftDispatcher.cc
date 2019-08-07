@@ -640,7 +640,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
 //------------------------------------------------------------------------------
 // Return health information
 //------------------------------------------------------------------------------
-std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
+LocalHealth RaftDispatcher::getLocalHealth() {
   std::vector<HealthIndicator> indicators = stateMachine.getHealthIndicators();
 
   //----------------------------------------------------------------------------
@@ -682,7 +682,7 @@ std::vector<HealthIndicator> RaftDispatcher::getHealthIndicators() {
     }
   }
 
-  return indicators;
+  return LocalHealth(VERSION_FULL_STRING, state.getMyself().toString(), indicators);
 }
 
 RaftInfo RaftDispatcher::info() {

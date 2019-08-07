@@ -65,7 +65,7 @@ public:
   //----------------------------------------------------------------------------
   // Return health information
   //----------------------------------------------------------------------------
-  std::vector<HealthIndicator> getHealthIndicators();
+  LocalHealth getLocalHealth();
 
 private:
   RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req, RaftStateSnapshotPtr &snapshot);

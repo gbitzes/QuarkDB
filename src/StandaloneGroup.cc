@@ -26,6 +26,7 @@
 #include "StateMachine.hh"
 #include "redis/LeaseFilter.hh"
 #include "Dispatcher.hh"
+#include "Version.hh"
 using namespace quarkdb;
 
 StandaloneGroup::StandaloneGroup(ShardDirectory& dir, bool bulk)
@@ -56,8 +57,8 @@ Dispatcher* StandaloneGroup::getDispatcher() {
 //------------------------------------------------------------------------------
 // Return health information
 //------------------------------------------------------------------------------
-std::vector<HealthIndicator> StandaloneGroup::getHealthIndicators() {
-  return stateMachine->getHealthIndicators();
+LocalHealth StandaloneGroup::getLocalHealth() {
+  return LocalHealth(VERSION_FULL_STRING, stateMachine->getHealthIndicators());
 }
 
 StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm, Publisher &pub)
