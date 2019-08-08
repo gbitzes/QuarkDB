@@ -34,7 +34,7 @@ using namespace qclient;
 class Multi : public TestCluster3NodesFixture {};
 
 TEST_F(Multi, Dispatching) {
-  RedisDispatcher dispatcher(*stateMachine());
+  RedisDispatcher dispatcher(*stateMachine(), *publisher());
 
   Transaction tx1;
   tx1.emplace_back("GET", "aaa");

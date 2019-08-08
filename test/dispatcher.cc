@@ -24,6 +24,7 @@
 #include "Dispatcher.hh"
 #include "BufferedReader.hh"
 #include "StateMachine.hh"
+#include "pubsub/Publisher.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
@@ -37,7 +38,7 @@ protected:
   : store("/tmp/rocksdb-testdb"),
     conn(&link),
     reader(&link),
-    dispatcher(store) {
+    dispatcher(store, publisher) {
 
     store.flushall();
     conn.setResponseBuffering(false);
@@ -54,6 +55,7 @@ protected:
   Link link;
   Connection conn;
   BufferedReader reader;
+  Publisher publisher;
   RedisDispatcher dispatcher;
   std::string buffer;
 };

@@ -62,7 +62,7 @@ LocalHealth StandaloneGroup::getLocalHealth() {
 }
 
 StandaloneDispatcher::StandaloneDispatcher(StateMachine &sm, Publisher &pub)
-: stateMachine(&sm), dispatcher(sm), publisher(&pub) {}
+: stateMachine(&sm), dispatcher(sm, pub), publisher(&pub) {}
 
 void StandaloneDispatcher::notifyDisconnect(Connection *conn) {
   publisher->notifyDisconnect(conn);

@@ -215,6 +215,10 @@ RaftTrimmer* TestCluster::trimmer(int id) {
   return node(id)->group()->trimmer();
 }
 
+Publisher* TestCluster::publisher(int id) {
+  return node(id)->group()->publisher();
+}
+
 void TestCluster::killTunnel(int id) {
   return node(id)->killTunnel();
 }

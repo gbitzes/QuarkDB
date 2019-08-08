@@ -30,8 +30,8 @@
 #include "Utils.hh"
 using namespace quarkdb;
 
-RaftWriteTracker::RaftWriteTracker(RaftJournal &jr, StateMachine &sm)
-: journal(jr), stateMachine(sm), redisDispatcher(sm) {
+RaftWriteTracker::RaftWriteTracker(RaftJournal &jr, StateMachine &sm, Publisher &pub)
+: journal(jr), stateMachine(sm), redisDispatcher(sm, pub) {
   commitApplier = std::thread(&RaftWriteTracker::applyCommits, this);
 }
 

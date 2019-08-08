@@ -35,7 +35,7 @@ using namespace qclient;
 class tPoller : public TestCluster3NodesFixture {};
 
 TEST_F(tPoller, T1) {
-  RedisDispatcher dispatcher(*stateMachine());
+  RedisDispatcher dispatcher(*stateMachine(), *publisher());
 
   Poller smPoller(myself().port, &dispatcher);
 
@@ -83,7 +83,7 @@ private:
 };
 
 TEST_F(tPoller, test_reconnect) {
-  RedisDispatcher dispatcher(*stateMachine());
+  RedisDispatcher dispatcher(*stateMachine(), *publisher());
 
   std::shared_ptr<ReconnectionCounter> listener = std::make_shared<ReconnectionCounter>();
 

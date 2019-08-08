@@ -176,7 +176,7 @@ public:
       executor = new ExecutorHelper<TestcaseProvider>(params.events, stateMachine());
     }
     else if(params.mode == Mode::kRedisStandalone) {
-      customDispatcher = new RedisDispatcher(*stateMachine());
+      customDispatcher = new RedisDispatcher(*stateMachine(), *publisher());
       customPoller = new Poller(34567, customDispatcher);
       executor = new ExecutorHelper<TestcaseProvider>(params.events, {"localhost", 34567}, "");
     }

@@ -45,10 +45,11 @@ public:
 };
 
 class StateMachine; class StagingArea;
+class Publisher;
 
 class RedisDispatcher : public Dispatcher {
 public:
-  RedisDispatcher(StateMachine &rocksdb);
+  RedisDispatcher(StateMachine &rocksdb, Publisher &publisher);
   virtual LinkStatus dispatch(Connection *conn, RedisRequest &req) override final;
   virtual LinkStatus dispatch(Connection *conn, Transaction &req) override final;
   virtual void notifyDisconnect(Connection *conn) override final {}
@@ -66,13 +67,14 @@ private:
   RedisEncodedResponse errArgs(RedisRequest &request);
   RedisEncodedResponse dispatchingError(RedisRequest &request, LogIndex commit);
 
-  StateMachine &store;
-
   RedisEncodedResponse dispatchHGET(StagingArea &stagingArea, std::string_view key, std::string_view field);
   RedisEncodedResponse dispatchLHGET(StagingArea &stagingArea, std::string_view key,  std::string_view field, std::string_view hint);
   RedisEncodedResponse dispatchLHSET(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string_view value);
   RedisEncodedResponse dispatchHDEL(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end);
   RedisEncodedResponse dispatchLHDEL(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end);
+
+  StateMachine &store;
+  Publisher &publisher;
 };
 
 }

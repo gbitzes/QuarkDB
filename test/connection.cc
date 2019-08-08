@@ -34,7 +34,7 @@ class tConnection : public TestCluster3NodesFixture {};
 TEST_F(tConnection, basic_sanity) {
   const int BUFFER_SIZE = 1024;
   char buffer[BUFFER_SIZE];
-  RedisDispatcher dispatcher(*stateMachine());
+  RedisDispatcher dispatcher(*stateMachine(), *publisher());
 
   Link link;
   Connection conn(&link);

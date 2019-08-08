@@ -40,7 +40,7 @@
 using namespace quarkdb;
 
 RaftDispatcher::RaftDispatcher(RaftJournal &jour, StateMachine &sm, RaftState &st, RaftHeartbeatTracker &rht, RaftWriteTracker &wt, RaftReplicator &rep, Publisher &pub)
-: journal(jour), stateMachine(sm), state(st), heartbeatTracker(rht), redisDispatcher(sm), writeTracker(wt), replicator(rep), publisher(pub) {
+: journal(jour), stateMachine(sm), state(st), heartbeatTracker(rht), redisDispatcher(sm, pub), writeTracker(wt), replicator(rep), publisher(pub) {
 }
 
 void RaftDispatcher::notifyDisconnect(Connection *conn) {

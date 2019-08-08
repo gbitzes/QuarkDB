@@ -189,6 +189,7 @@ public:
   RaftConfig *raftconfig(int id = 0);
   RaftTrimmer* trimmer(int id = 0);
   const RaftContactDetails* contactDetails(int id = 0);
+  Publisher* publisher(int id = 0);
   RaftTimeouts timeouts();
 
   qclient::Options makeNoRedirectOptions(int id = 0);

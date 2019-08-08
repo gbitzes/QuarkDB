@@ -169,7 +169,7 @@ RaftCommitTracker* RaftGroup::commitTracker() {
 RaftWriteTracker* RaftGroup::writeTracker() {
   std::lock_guard<std::recursive_mutex> lock(mtx);
   if(wtptr == nullptr) {
-    wtptr = new RaftWriteTracker(*journal(), *stateMachine());
+    wtptr = new RaftWriteTracker(*journal(), *stateMachine(), *publisher());
   }
   return wtptr;
 }

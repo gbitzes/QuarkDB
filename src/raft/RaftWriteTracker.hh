@@ -21,10 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_WRITE_TRACKER_H__
-#define __QUARKDB_RAFT_WRITE_TRACKER_H__
+#ifndef QUARKDB_RAFT_WRITE_TRACKER_HH
+#define QUARKDB_RAFT_WRITE_TRACKER_HH
 
-#include <qclient/QClient.hh>
 #include "raft/RaftCommon.hh"
 #include "Dispatcher.hh"
 
@@ -34,15 +33,15 @@ namespace quarkdb {
 // Forward declarations
 //------------------------------------------------------------------------------
 class RaftJournal; class StateMachine;
-class RedisEncodedResponse;
+class RedisEncodedResponse; class Publisher;
 
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 // We track the state of pending writes, and apply them to the state machine
 // when necessary.
-//----------------------------------------------------------------------------
+//------------------------------------------------------------------------------
 class RaftWriteTracker {
 public:
-  RaftWriteTracker(RaftJournal &jr, StateMachine &sm);
+  RaftWriteTracker(RaftJournal &jr, StateMachine &sm, Publisher &pub);
   ~RaftWriteTracker();
 
   bool append(LogIndex index, RaftTerm term, Transaction &&tx, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher);

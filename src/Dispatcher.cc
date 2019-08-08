@@ -26,6 +26,7 @@
 #include "utils/ParseUtils.hh"
 #include "redis/Transaction.hh"
 #include "redis/ArrayResponseBuilder.hh"
+#include "pubsub/Publisher.hh"
 #include "StateMachine.hh"
 #include "Dispatcher.hh"
 #include "Utils.hh"
@@ -82,7 +83,8 @@ RedisEncodedResponse Dispatcher::handlePing(RedisRequest &request) {
   return Formatter::string(request[1]);
 }
 
-RedisDispatcher::RedisDispatcher(StateMachine &rocksdb) : store(rocksdb) {
+RedisDispatcher::RedisDispatcher(StateMachine &rocksdb, Publisher &pub) : store(rocksdb),
+  publisher(pub) {
 }
 
 LinkStatus RedisDispatcher::dispatch(Connection *conn, Transaction &transaction) {
