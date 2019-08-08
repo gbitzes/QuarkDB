@@ -1313,6 +1313,10 @@ rocksdb::Status StateMachine::vhset(StagingArea &stagingArea, std::string_view k
     descriptor.setStartIndex(version);
   }
 
+  VersionedHashRevision &revision = stagingArea.getRevisionTracker().forKey(key);
+  revision.setRevisionNumber(version);
+  revision.addUpdate(field, value);
+
   return operation.finalize(newsize, true);
 }
 
@@ -1322,8 +1326,11 @@ rocksdb::Status StateMachine::vhdel(StagingArea &stagingArea, std::string_view k
   WriteOperation operation(stagingArea, key, KeyType::kVersionedHash);
   if(!operation.valid()) return wrong_type();
 
+  VersionedHashRevision &revision = stagingArea.getRevisionTracker().forKey(key);
+
   for(ReqIterator it = start; it != end; it++) {
     removed += operation.deleteField(*it);
+    revision.addUpdate(*it, "");
   }
 
   // Have we modified this key in the same write batch already?
@@ -1339,6 +1346,8 @@ rocksdb::Status StateMachine::vhdel(StagingArea &stagingArea, std::string_view k
     version++;
     descriptor.setStartIndex(version);
   }
+
+  revision.setRevisionNumber(version);
 
   int64_t newsize = operation.keySize() - removed;
   return operation.finalize(newsize, true);

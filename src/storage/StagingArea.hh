@@ -27,8 +27,9 @@
 #include <mutex>
 #include <string_view>
 #include "KeyDescriptor.hh"
-#include "../utils/SmartBuffer.hh"
-#include "../StateMachine.hh"
+#include "utils/SmartBuffer.hh"
+#include "storage/VersionedHashRevisionTracker.hh"
+#include "StateMachine.hh"
 
 namespace quarkdb {
 
@@ -185,6 +186,10 @@ public:
     );
   }
 
+  VersionedHashRevisionTracker& getRevisionTracker() {
+    return revisionTracker;
+  }
+
 private:
   friend class StateMachine;
   StateMachine &stateMachine;
@@ -194,6 +199,7 @@ private:
   std::unique_ptr<StateMachine::Snapshot> snapshot;
   rocksdb::WriteBatch writeBatch;
   rocksdb::WriteBatchWithIndex writeBatchWithIndex;
+  VersionedHashRevisionTracker revisionTracker;
 };
 
 }
