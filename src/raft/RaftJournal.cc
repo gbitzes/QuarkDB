@@ -21,17 +21,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "raft/RaftJournal.hh"
+#include "raft/RaftMembers.hh"
+#include "storage/KeyConstants.hh"
+#include "Common.hh"
+#include "Utils.hh"
+#include "utils/IntToBinaryString.hh"
+#include "utils/StaticBuffer.hh"
+#include "utils/StringUtils.hh"
+#include "../deps/StringMatchLen.h"
+#include "raft/RaftState.hh"
+
 #include <algorithm>
-#include "RaftJournal.hh"
-#include "RaftMembers.hh"
-#include "../storage/KeyConstants.hh"
-#include "../Common.hh"
-#include "../Utils.hh"
-#include "../utils/IntToBinaryString.hh"
-#include "../utils/StaticBuffer.hh"
-#include "../utils/StringUtils.hh"
-#include "../../deps/StringMatchLen.h"
-#include "RaftState.hh"
 #include <rocksdb/utilities/checkpoint.h>
 #include <rocksdb/filter_policy.h>
 #include <rocksdb/table.h>

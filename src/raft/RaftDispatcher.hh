@@ -24,12 +24,12 @@
 #ifndef QUARKDB_RAFT_DISPATCHER_HH
 #define QUARKDB_RAFT_DISPATCHER_HH
 
-#include "../Dispatcher.hh"
-#include "../pubsub/Publisher.hh"
-#include "../health/HealthIndicator.hh"
-#include "RaftUtils.hh"
-#include "RaftTimeouts.hh"
-#include "RaftBlockedWrites.hh"
+#include "Dispatcher.hh"
+#include "pubsub/Publisher.hh"
+#include "health/HealthIndicator.hh"
+#include "raft/RaftUtils.hh"
+#include "raft/RaftTimeouts.hh"
+#include "raft/RaftBlockedWrites.hh"
 #include <thread>
 #include <chrono>
 

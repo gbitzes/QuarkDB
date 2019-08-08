@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../utils/Macros.hh"
-#include "ArrayResponseBuilder.hh"
+#include "utils/Macros.hh"
+#include "redis/ArrayResponseBuilder.hh"
 using namespace quarkdb;
 
 ArrayResponseBuilder::ArrayResponseBuilder(size_t size, bool phant)

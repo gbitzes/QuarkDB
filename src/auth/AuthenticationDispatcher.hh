@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_AUTHENTICATION_DISPATCHER_H
-#define QUARKDB_AUTHENTICATION_DISPATCHER_H
+#ifndef QUARKDB_AUTHENTICATION_DISPATCHER_HH
+#define QUARKDB_AUTHENTICATION_DISPATCHER_HH
 
-#include "../Dispatcher.hh"
+#include "Dispatcher.hh"
 
 namespace quarkdb {
 

@@ -27,7 +27,7 @@
 #include <mutex>
 #include <memory>
 #include <map>
-#include "RaftCommon.hh"
+#include "raft/RaftCommon.hh"
 
 namespace quarkdb {
 

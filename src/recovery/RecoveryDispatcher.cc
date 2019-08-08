@@ -21,13 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RecoveryDispatcher.hh"
-#include "../Formatter.hh"
-#include "../utils/CommandParsing.hh"
-#include "../utils/IntToBinaryString.hh"
-#include "../storage/KeyConstants.hh"
-#include "../raft/RaftMembers.hh"
-#include "../utils/CommandParsing.hh"
+#include "recovery/RecoveryDispatcher.hh"
+#include "Formatter.hh"
+#include "utils/CommandParsing.hh"
+#include "utils/IntToBinaryString.hh"
+#include "storage/KeyConstants.hh"
+#include "raft/RaftMembers.hh"
+#include "utils/CommandParsing.hh"
 using namespace quarkdb;
 
 RecoveryDispatcher::RecoveryDispatcher(RecoveryEditor &ed) : editor(ed) {

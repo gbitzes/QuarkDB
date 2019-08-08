@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "Transaction.hh"
-#include "../utils/Macros.hh"
-#include "../utils/IntToBinaryString.hh"
+#include "redis/Transaction.hh"
+#include "utils/Macros.hh"
+#include "utils/IntToBinaryString.hh"
 using namespace quarkdb;
 
 Transaction::Transaction(RedisRequest &&req) {

@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include <rocksdb/sst_dump_tool.h>
 #include "RecoveryRunner.hh"
+#include <rocksdb/sst_dump_tool.h>
 
 using namespace quarkdb;
 

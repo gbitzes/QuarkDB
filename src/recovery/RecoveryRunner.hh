@@ -21,12 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RECOVERY_RUNNER_H__
-#define __QUARKDB_RECOVERY_RUNNER_H__
+#ifndef QUARKDB_RECOVERY_RUNNER_HH
+#define QUARKDB_RECOVERY_RUNNER_HH
 
-#include "RecoveryRunner.hh"
-#include "RecoveryDispatcher.hh"
-#include "../Poller.hh"
+#include "recovery/RecoveryRunner.hh"
+#include "recovery/RecoveryDispatcher.hh"
+#include "Poller.hh"
 
 #include <vector>
 #include <rocksdb/db.h>

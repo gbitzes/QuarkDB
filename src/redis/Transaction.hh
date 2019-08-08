@@ -24,7 +24,7 @@
 #ifndef QUARKDB_REDIS_TRANSACTION_H
 #define QUARKDB_REDIS_TRANSACTION_H
 
-#include "../RedisRequest.hh"
+#include "RedisRequest.hh"
 
 namespace quarkdb {
 

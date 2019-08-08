@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_REDIS_LEASE_FILTER_H
-#define QUARKDB_REDIS_LEASE_FILTER_H
+#ifndef QUARKDB_REDIS_LEASE_FILTER_HH
+#define QUARKDB_REDIS_LEASE_FILTER_HH
 
 namespace quarkdb {
 

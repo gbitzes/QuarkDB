@@ -24,8 +24,8 @@
 #ifndef QUARKDB_REDIS_MULTIHANDLER_H
 #define QUARKDB_REDIS_MULTIHANDLER_H
 
-#include "Transaction.hh"
-#include "RedisEncodedResponse.hh"
+#include "redis/Transaction.hh"
+#include "redis/RedisEncodedResponse.hh"
 
 namespace quarkdb {
 

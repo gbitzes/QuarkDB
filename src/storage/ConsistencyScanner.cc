@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "ConsistencyScanner.hh"
-#include "../StateMachine.hh"
-#include "../utils/ParseUtils.hh"
+#include "storage/ConsistencyScanner.hh"
+#include "StateMachine.hh"
+#include "utils/ParseUtils.hh"
 
 using namespace quarkdb;
 

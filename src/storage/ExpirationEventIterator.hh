@@ -24,9 +24,9 @@
 #ifndef QUARKDB_EXPIRATION_EVENT_ITERATOR_H
 #define QUARKDB_EXPIRATION_EVENT_ITERATOR_H
 
+#include "StateMachine.hh"
 #include <vector>
 #include <string_view>
-#include "../StateMachine.hh"
 
 namespace quarkdb {
 

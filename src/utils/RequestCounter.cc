@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../Utils.hh"
-#include "RequestCounter.hh"
-#include "../Commands.hh"
-#include "../redis/Transaction.hh"
+#include "Utils.hh"
+#include "utils/RequestCounter.hh"
+#include "Commands.hh"
+#include "redis/Transaction.hh"
 using namespace quarkdb;
 
 RequestCounter::RequestCounter(std::chrono::seconds intv)

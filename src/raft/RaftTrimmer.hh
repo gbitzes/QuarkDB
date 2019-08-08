@@ -24,10 +24,10 @@
 #ifndef __QUARKDB_RAFT_TRIMMER_H__
 #define __QUARKDB_RAFT_TRIMMER_H__
 
-#include "../utils/AssistedThread.hh"
+#include "utils/AssistedThread.hh"
+#include "raft/RaftCommon.hh"
 #include <atomic>
 #include <limits>
-#include "RaftCommon.hh"
 
 namespace quarkdb {
 

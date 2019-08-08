@@ -21,10 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RECOVERY_EDITOR_H__
-#define __QUARKDB_RECOVERY_EDITOR_H__
+#ifndef QUARKDB_RECOVERY_EDITOR_HH
+#define QUARKDB_RECOVERY_EDITOR_HH
 
 #include <vector>
+#include <memory>
 #include <rocksdb/db.h>
 
 namespace quarkdb {

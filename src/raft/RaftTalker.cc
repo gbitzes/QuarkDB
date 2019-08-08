@@ -21,11 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../utils/IntToBinaryString.hh"
-#include "RaftTalker.hh"
-#include "RaftContactDetails.hh"
-#include "RaftTimeouts.hh"
-#include "../Version.hh"
+#include "utils/IntToBinaryString.hh"
+#include "raft/RaftTalker.hh"
+#include "raft/RaftContactDetails.hh"
+#include "raft/RaftTimeouts.hh"
+#include "Version.hh"
 #include <qclient/Logger.hh>
 
 namespace quarkdb {

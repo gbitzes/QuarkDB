@@ -24,9 +24,9 @@
 #ifndef QUARKDB_PUBLISHER_HH
 #define QUARKDB_PUBLISHER_HH
 
-#include "SimplePatternMatcher.hh"
-#include "../Connection.hh"
-#include "../Dispatcher.hh"
+#include "pubsub/SimplePatternMatcher.hh"
+#include "Connection.hh"
+#include "Dispatcher.hh"
 #include <map>
 #include <mutex>
 #include <memory>

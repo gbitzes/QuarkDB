@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftTrimmer.hh"
-#include "RaftJournal.hh"
-#include "RaftConfig.hh"
-#include "../StateMachine.hh"
+#include "raft/RaftTrimmer.hh"
+#include "raft/RaftJournal.hh"
+#include "raft/RaftConfig.hh"
+#include "StateMachine.hh"
 
 using namespace quarkdb;
 

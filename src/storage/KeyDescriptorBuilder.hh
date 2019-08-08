@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_DESCRIPTOR_BUILDER_H__
-#define __QUARKDB_DESCRIPTOR_BUILDER_H__
+#ifndef QUARKDB_DESCRIPTOR_BUILDER_HH
+#define QUARKDB_DESCRIPTOR_BUILDER_HH
 
 #include <mutex>
 

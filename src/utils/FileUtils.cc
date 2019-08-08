@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "FileUtils.hh"
-#include "../Utils.hh"
+#include "utils/FileUtils.hh"
+#include "Utils.hh"
 #include <sys/stat.h>
 #include <string.h>
 

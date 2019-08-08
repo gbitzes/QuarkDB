@@ -21,12 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_REQUEST_COUNTER_H__
-#define __QUARKDB_REQUEST_COUNTER_H__
+#ifndef QUARKDB_REQUEST_COUNTER_HH
+#define QUARKDB_REQUEST_COUNTER_HH
 
+#include "utils/AssistedThread.hh"
+#include "utils/Statistics.hh"
 #include <atomic>
-#include "AssistedThread.hh"
-#include "Statistics.hh"
 
 namespace quarkdb {
 

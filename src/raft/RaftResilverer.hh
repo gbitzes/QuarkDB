@@ -25,9 +25,9 @@
 #define __QUARKDB_RAFT_RESILVERER_H__
 
 #include <qclient/QClient.hh>
-#include "../utils/AssistedThread.hh"
-#include "../Common.hh"
-#include "RaftTalker.hh"
+#include "utils/AssistedThread.hh"
+#include "Common.hh"
+#include "raft/RaftTalker.hh"
 
 namespace quarkdb {
 

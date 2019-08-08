@@ -24,11 +24,12 @@
 #ifndef __QUARKDB_RAFT_STATE_H__
 #define __QUARKDB_RAFT_STATE_H__
 
+#include "Common.hh"
+#include "raft/RaftCommon.hh"
+
 #include <mutex>
 #include <condition_variable>
 #include <memory>
-#include "../Common.hh"
-#include "RaftCommon.hh"
 
 namespace quarkdb {
 

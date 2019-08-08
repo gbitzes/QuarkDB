@@ -21,14 +21,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_COMMAND_PARSING_H__
-#define __QUARKDB_COMMAND_PARSING_H__
+#ifndef QUARKDB_COMMAND_PARSING_HH
+#define QUARKDB_COMMAND_PARSING_HH
 
-#include <dirent.h>
+#include "utils/StringUtils.hh"
+#include "RedisRequest.hh"
+#include "utils/ParseUtils.hh"
+
 #include <string>
-#include "StringUtils.hh"
-#include "../RedisRequest.hh"
-#include "../utils/ParseUtils.hh"
+#include <dirent.h>
 
 namespace quarkdb {
 

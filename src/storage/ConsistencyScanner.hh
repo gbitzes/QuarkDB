@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_CONSISTENCY_SCANNER_H__
-#define __QUARKDB_CONSISTENCY_SCANNER_H__
+#ifndef QUARKDB_CONSISTENCY_SCANNER_HH
+#define QUARKDB_CONSISTENCY_SCANNER_HH
 
-#include "../utils/AssistedThread.hh"
+#include "utils/AssistedThread.hh"
 
 namespace quarkdb {
 

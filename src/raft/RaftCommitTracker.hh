@@ -21,12 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_COMMIT_TRACKER_H__
-#define __QUARKDB_RAFT_COMMIT_TRACKER_H__
+#ifndef QUARKDB_RAFT_COMMIT_TRACKER_HH
+#define QUARKDB_RAFT_COMMIT_TRACKER_HH
 
+#include "utils/AssistedThread.hh"
+#include "Common.hh"
 #include <mutex>
-#include "../utils/AssistedThread.hh"
-#include "../Common.hh"
 
 namespace quarkdb {
 

@@ -21,13 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_RAFT_UTILS_H__
-#define __QUARKDB_RAFT_UTILS_H__
+#ifndef QUARKDB_RAFT_UTILS_HH
+#define QUARKDB_RAFT_UTILS_HH
 
+#include "raft/RaftCommon.hh"
+#include "Common.hh"
+#include "raft/RaftTimeouts.hh"
 #include <qclient/QClient.hh>
-#include "RaftCommon.hh"
-#include "../Common.hh"
-#include "RaftTimeouts.hh"
 
 namespace quarkdb {
 

@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "Publisher.hh"
-#include "../Formatter.hh"
-#include "../storage/PatternMatching.hh"
+#include "pubsub/Publisher.hh"
+#include "Formatter.hh"
+#include "storage/PatternMatching.hh"
 
 using namespace quarkdb;
 

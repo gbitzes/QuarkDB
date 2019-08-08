@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftBlockedWrites.hh"
-#include "../Connection.hh"
+#include "raft/RaftBlockedWrites.hh"
+#include "Connection.hh"
 using namespace quarkdb;
 
 std::shared_ptr<PendingQueue> RaftBlockedWrites::popIndex(LogIndex index) {

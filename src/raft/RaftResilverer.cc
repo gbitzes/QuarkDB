@@ -21,15 +21,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftResilverer.hh"
-#include "RaftTrimmer.hh"
-#include "RaftContactDetails.hh"
-#include "../ShardDirectory.hh"
-#include "../Utils.hh"
+#include "raft/RaftResilverer.hh"
+#include "raft/RaftTrimmer.hh"
+#include "raft/RaftContactDetails.hh"
+#include "ShardDirectory.hh"
+#include "Utils.hh"
+#include "utils/Uuid.hh"
+#include "utils/DirectoryIterator.hh"
 #include <dirent.h>
 #include <fstream>
-#include "../utils/Uuid.hh"
-#include "../utils/DirectoryIterator.hh"
 
 using namespace quarkdb;
 

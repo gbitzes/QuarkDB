@@ -21,14 +21,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
- #include "../utils/IntToBinaryString.hh"
+#include "utils/IntToBinaryString.hh"
 #include "RaftUtils.hh"
 #include "RaftTalker.hh"
 #include "RaftState.hh"
 #include "RaftLease.hh"
 #include "RaftContactDetails.hh"
-#include "../utils/ParseUtils.hh"
-#include "../utils/StringUtils.hh"
+#include "utils/ParseUtils.hh"
+#include "utils/StringUtils.hh"
 
 namespace quarkdb {
 

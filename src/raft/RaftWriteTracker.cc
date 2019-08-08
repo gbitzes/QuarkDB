@@ -21,13 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftBlockedWrites.hh"
-#include "RaftWriteTracker.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
-#include "../Formatter.hh"
-#include "../StateMachine.hh"
-#include "../Utils.hh"
+#include "raft/RaftBlockedWrites.hh"
+#include "raft/RaftWriteTracker.hh"
+#include "raft/RaftJournal.hh"
+#include "raft/RaftState.hh"
+#include "Formatter.hh"
+#include "StateMachine.hh"
+#include "Utils.hh"
 using namespace quarkdb;
 
 RaftWriteTracker::RaftWriteTracker(RaftJournal &jr, StateMachine &sm)

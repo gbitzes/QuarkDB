@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_PARSING_UTILS_H__
-#define __QUARKDB_PARSING_UTILS_H__
+#ifndef QUARKDB_PARSING_UTILS_HH
+#define QUARKDB_PARSING_UTILS_HH
 
-#include "../Utils.hh"
+#include "Utils.hh"
 
 #include <climits>
 

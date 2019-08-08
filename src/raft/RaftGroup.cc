@@ -21,19 +21,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftJournal.hh"
-#include "RaftDispatcher.hh"
-#include "RaftTimeouts.hh"
-#include "RaftDirector.hh"
-#include "RaftReplicator.hh"
-#include "RaftLease.hh"
-#include "../StateMachine.hh"
-#include "RaftGroup.hh"
-#include "RaftWriteTracker.hh"
-#include "RaftTrimmer.hh"
-#include "RaftConfig.hh"
-#include "../utils/FileUtils.hh"
-#include "../ShardDirectory.hh"
+#include "raft/RaftJournal.hh"
+#include "raft/RaftDispatcher.hh"
+#include "raft/RaftTimeouts.hh"
+#include "raft/RaftDirector.hh"
+#include "raft/RaftReplicator.hh"
+#include "raft/RaftLease.hh"
+#include "StateMachine.hh"
+#include "raft/RaftGroup.hh"
+#include "raft/RaftWriteTracker.hh"
+#include "raft/RaftTrimmer.hh"
+#include "raft/RaftConfig.hh"
+#include "utils/FileUtils.hh"
+#include "ShardDirectory.hh"
 
 using namespace quarkdb;
 

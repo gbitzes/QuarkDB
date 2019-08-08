@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "ExpirationEventIterator.hh"
-#include "StagingArea.hh"
-#include "KeyLocators.hh"
-#include "../utils/IntToBinaryString.hh"
+#include "storage/ExpirationEventIterator.hh"
+#include "storage/StagingArea.hh"
+#include "storage/KeyLocators.hh"
+#include "utils/IntToBinaryString.hh"
 
 using namespace quarkdb;
 

@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../utils/Macros.hh"
-#include "AuthenticationDispatcher.hh"
-#include "../Formatter.hh"
+#include "utils/Macros.hh"
+#include "auth/AuthenticationDispatcher.hh"
+#include "Formatter.hh"
 using namespace quarkdb;
 
 AuthenticationDispatcher::AuthenticationDispatcher(std::string_view secr)

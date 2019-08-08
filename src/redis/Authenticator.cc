@@ -21,12 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include <sstream>
-#include "Authenticator.hh"
-#include "../utils/Macros.hh"
-#include "../utils/Random.hh"
-#include "../utils/StringUtils.hh"
+#include "redis/Authenticator.hh"
+#include "utils/Macros.hh"
+#include "utils/Random.hh"
+#include "utils/StringUtils.hh"
 
+#include <sstream>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 

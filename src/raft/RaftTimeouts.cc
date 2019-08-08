@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftTimeouts.hh"
-#include "../Utils.hh"
-#include "../utils/ParseUtils.hh"
+#include "raft/RaftTimeouts.hh"
+#include "Utils.hh"
+#include "utils/ParseUtils.hh"
 #include <random>
 
 using namespace quarkdb;

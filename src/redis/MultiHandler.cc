@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../utils/Macros.hh"
-#include "MultiHandler.hh"
-#include "../Dispatcher.hh"
-#include "../Connection.hh"
+#include "utils/Macros.hh"
+#include "redis/MultiHandler.hh"
+#include "Dispatcher.hh"
+#include "Connection.hh"
 using namespace quarkdb;
 
 MultiHandler::MultiHandler() {

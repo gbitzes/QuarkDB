@@ -25,8 +25,8 @@
 #define __QUARKDB_RAFT_WRITE_TRACKER_H__
 
 #include <qclient/QClient.hh>
-#include "RaftCommon.hh"
-#include "../Dispatcher.hh"
+#include "raft/RaftCommon.hh"
+#include "Dispatcher.hh"
 
 namespace quarkdb {
 

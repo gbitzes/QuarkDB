@@ -21,11 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_UTILS_STATIC_BUFFER_H__
-#define __QUARKDB_UTILS_STATIC_BUFFER_H__
+#ifndef QUARKDB_UTILS_STATIC_BUFFER_HH
+#define QUARKDB_UTILS_STATIC_BUFFER_HH
 
+#include "Utils.hh"
 #include <rocksdb/slice.h>
-#include "../Utils.hh"
 
 namespace quarkdb {
 

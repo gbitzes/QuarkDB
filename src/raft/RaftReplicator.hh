@@ -27,11 +27,11 @@
 #include "RaftTimeouts.hh"
 #include <mutex>
 #include <queue>
-#include "RaftTalker.hh"
-#include "RaftState.hh"
-#include "RaftTrimmer.hh"
-#include "../utils/AssistedThread.hh"
-#include "../utils/ThreadSafeString.hh"
+#include "raft/RaftTalker.hh"
+#include "raft/RaftState.hh"
+#include "raft/RaftTrimmer.hh"
+#include "utils/AssistedThread.hh"
+#include "utils/ThreadSafeString.hh"
 
 namespace quarkdb {
 

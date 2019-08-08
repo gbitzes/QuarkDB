@@ -25,8 +25,8 @@
 #define __QUARKDB_RAFT_CONFIG_H__
 
 #include <stdint.h>
-#include "../Link.hh"
-#include "../RedisRequest.hh"
+#include "Link.hh"
+#include "RedisRequest.hh"
 
 namespace quarkdb {
 

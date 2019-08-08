@@ -21,10 +21,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../Utils.hh"
-#include "Resilvering.hh"
-#include "VectorUtils.hh"
-#include "ParseUtils.hh"
+#include "Utils.hh"
+#include "utils/Resilvering.hh"
+#include "utils/VectorUtils.hh"
+#include "utils/ParseUtils.hh"
 using namespace quarkdb;
 
 ResilveringEvent::ResilveringEvent()

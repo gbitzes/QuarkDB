@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftUtils.hh"
-#include "RaftCommitTracker.hh"
-#include "RaftJournal.hh"
+#include "raft/RaftUtils.hh"
+#include "raft/RaftCommitTracker.hh"
+#include "raft/RaftJournal.hh"
 #include <random>
 #include <algorithm>
 using namespace quarkdb;

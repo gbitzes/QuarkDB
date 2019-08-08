@@ -27,7 +27,7 @@
 #include <chrono>
 #include <random>
 #include <mutex>
-#include "../Utils.hh"
+#include "Utils.hh"
 
 namespace quarkdb {
 using std::chrono::milliseconds;

@@ -21,11 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftDirector.hh"
-#include "RaftUtils.hh"
-#include "RaftReplicator.hh"
-#include "RaftLease.hh"
-#include "../Dispatcher.hh"
+#include "raft/RaftDirector.hh"
+#include "raft/RaftUtils.hh"
+#include "raft/RaftReplicator.hh"
+#include "raft/RaftLease.hh"
+#include "raft/RaftJournal.hh"
+#include "Dispatcher.hh"
+#include "StateMachine.hh"
 
 namespace quarkdb {
 

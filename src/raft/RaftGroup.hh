@@ -24,8 +24,8 @@
 #ifndef __QUARKDB_RAFT_GROUP_H__
 #define __QUARKDB_RAFT_GROUP_H__
 
-#include "../Utils.hh"
-#include "RaftContactDetails.hh"
+#include "Utils.hh"
+#include "raft/RaftContactDetails.hh"
 
 namespace quarkdb {
 

@@ -23,19 +23,19 @@
 
 #include <thread>
 #include <algorithm>
-#include "RaftReplicator.hh"
-#include "RaftTalker.hh"
-#include "RaftUtils.hh"
-#include "RaftResilverer.hh"
-#include "RaftConfig.hh"
-#include "RaftState.hh"
-#include "RaftJournal.hh"
-#include "RaftCommitTracker.hh"
-#include "RaftTimeouts.hh"
-#include "RaftLease.hh"
-#include "RaftTrimmer.hh"
-#include "RaftContactDetails.hh"
-#include "../utils/FileUtils.hh"
+#include "raft/RaftReplicator.hh"
+#include "raft/RaftTalker.hh"
+#include "raft/RaftUtils.hh"
+#include "raft/RaftResilverer.hh"
+#include "raft/RaftConfig.hh"
+#include "raft/RaftState.hh"
+#include "raft/RaftJournal.hh"
+#include "raft/RaftCommitTracker.hh"
+#include "raft/RaftTimeouts.hh"
+#include "raft/RaftLease.hh"
+#include "raft/RaftTrimmer.hh"
+#include "raft/RaftContactDetails.hh"
+#include "utils/FileUtils.hh"
 #include <dirent.h>
 #include <fstream>
 

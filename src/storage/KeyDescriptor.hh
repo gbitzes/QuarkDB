@@ -21,12 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_KEY_DESCRIPTOR_H
-#define QUARKDB_KEY_DESCRIPTOR_H
+#ifndef QUARKDB_KEY_DESCRIPTOR_HH
+#define QUARKDB_KEY_DESCRIPTOR_HH
 
-#include "../utils/IntToBinaryString.hh"
-#include "../utils/StaticBuffer.hh"
-#include "../Utils.hh"
+#include "utils/IntToBinaryString.hh"
+#include "utils/StaticBuffer.hh"
+#include "Utils.hh"
 
 namespace quarkdb {
 

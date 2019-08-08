@@ -24,7 +24,7 @@
 #ifndef QUARKDB_HEALTH_INDICATOR_HH
 #define QUARKDB_HEALTH_INDICATOR_HH
 
-#include "../utils/Macros.hh"
+#include "utils/Macros.hh"
 #include <string>
 #include <string_view>
 #include <vector>

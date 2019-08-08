@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "CommandMonitor.hh"
-#include "../Formatter.hh"
-#include "../Link.hh"
+#include "redis/CommandMonitor.hh"
+#include "Formatter.hh"
+#include "Link.hh"
 using namespace quarkdb;
 
 CommandMonitor::CommandMonitor() {

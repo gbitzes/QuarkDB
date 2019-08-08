@@ -21,12 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftCommon.hh"
-#include "../Utils.hh"
-#include "../Common.hh"
+#ifndef QUARKDB_RAFT_MEMBERS_HH
+#define QUARKDB_RAFT_MEMBERS_HH
 
-#ifndef __QUARKDB_RAFT_MEMBERS_H__
-#define __QUARKDB_RAFT_MEMBERS_H__
+#include "raft/RaftCommon.hh"
+#include "Utils.hh"
+#include "Common.hh"
 
 namespace quarkdb {
 

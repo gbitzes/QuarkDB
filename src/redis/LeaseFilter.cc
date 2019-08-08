@@ -21,13 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../RedisRequest.hh"
-#include "LeaseFilter.hh"
-#include "../Commands.hh"
-#include "../redis/Transaction.hh"
-#include "../utils/Macros.hh"
-#include "../utils/IntToBinaryString.hh"
-#include "../Formatter.hh"
+#include "RedisRequest.hh"
+#include "redis/LeaseFilter.hh"
+#include "Commands.hh"
+#include "redis/Transaction.hh"
+#include "utils/Macros.hh"
+#include "utils/IntToBinaryString.hh"
+#include "Formatter.hh"
 
 using namespace quarkdb;
 

@@ -21,11 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "../storage/KeyConstants.hh"
-#include "RecoveryEditor.hh"
-#include "../Utils.hh"
-#include "../utils/StringUtils.hh"
-#include "../storage/InternalKeyParsing.hh"
+#include "recovery/RecoveryEditor.hh"
+#include "storage/KeyConstants.hh"
+#include "Utils.hh"
+#include "utils/StringUtils.hh"
+#include "storage/InternalKeyParsing.hh"
 #include <rocksdb/status.h>
 #include <rocksdb/merge_operator.h>
 #include <rocksdb/utilities/checkpoint.h>

@@ -21,18 +21,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "RaftDispatcher.hh"
-#include "RaftUtils.hh"
-#include "RaftJournal.hh"
-#include "RaftWriteTracker.hh"
-#include "RaftState.hh"
-#include "RaftReplicator.hh"
-#include "../redis/LeaseFilter.hh"
-#include "../StateMachine.hh"
-#include "../Formatter.hh"
-#include "../utils/ParseUtils.hh"
-#include "../utils/CommandParsing.hh"
-#include "../Version.hh"
+#include "raft/RaftDispatcher.hh"
+#include "raft/RaftUtils.hh"
+#include "raft/RaftJournal.hh"
+#include "raft/RaftWriteTracker.hh"
+#include "raft/RaftState.hh"
+#include "raft/RaftReplicator.hh"
+#include "redis/LeaseFilter.hh"
+#include "StateMachine.hh"
+#include "Formatter.hh"
+#include "utils/ParseUtils.hh"
+#include "utils/CommandParsing.hh"
+#include "Version.hh"
 
 #include <random>
 #include <sys/stat.h>

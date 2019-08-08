@@ -24,9 +24,9 @@
 #ifndef QUARKDB_KEY_LOCATORS_H
 #define QUARKDB_KEY_LOCATORS_H
 
-#include "KeyDescriptor.hh"
-#include "../utils/SmartBuffer.hh"
-#include "../utils/StringUtils.hh"
+#include "storage/KeyDescriptor.hh"
+#include "utils/SmartBuffer.hh"
+#include "utils/StringUtils.hh"
 
 namespace quarkdb {
 

@@ -21,11 +21,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_COMMAND_MONITOR_H
-#define QUARKDB_COMMAND_MONITOR_H
+#ifndef QUARKDB_COMMAND_MONITOR_HH
+#define QUARKDB_COMMAND_MONITOR_HH
 
+#include "Connection.hh"
 #include <list>
-#include "../Connection.hh"
 
 namespace quarkdb {
 

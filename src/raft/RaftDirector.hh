@@ -24,21 +24,20 @@
 #ifndef QUARKDB_RAFT_DIRECTOR_HH
 #define QUARKDB_RAFT_DIRECTOR_HH
 
-#include "../StateMachine.hh"
-#include "RaftJournal.hh"
-#include "RaftState.hh"
-#include "RaftTimeouts.hh"
-#include "RaftDispatcher.hh"
-#include "RaftLease.hh"
-#include "RaftCommitTracker.hh"
-#include "RaftWriteTracker.hh"
+#include "raft/RaftState.hh"
+#include "raft/RaftTimeouts.hh"
+#include "raft/RaftDispatcher.hh"
+#include "raft/RaftLease.hh"
+#include "raft/RaftCommitTracker.hh"
+#include "raft/RaftWriteTracker.hh"
 #include <thread>
 
 namespace quarkdb {
 
 class RaftTrimmer; class ShardDirectory; class RaftConfig; class RaftReplicator;
 class RaftContactDetails; class Publisher;
-class RaftHeartbeatTracker;
+class RaftHeartbeatTracker; class RaftJournal;
+class StateMachine;
 
 class RaftDirector {
 public:

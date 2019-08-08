@@ -21,9 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "KeyDescriptorBuilder.hh"
-#include "ReverseLocator.hh"
-#include "../StateMachine.hh"
+#include "storage/KeyDescriptorBuilder.hh"
+#include "storage/ReverseLocator.hh"
+#include "StateMachine.hh"
 
 
 using namespace quarkdb;

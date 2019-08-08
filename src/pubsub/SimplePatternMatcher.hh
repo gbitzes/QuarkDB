@@ -25,7 +25,7 @@
 #define QUARKDB_PUBSUB_SIMPLE_PATTERN_MATCHER_HH
 
 #include "../../deps/StringMatchLen.h"
-#include "ThreadSafeMultiMap.hh"
+#include "pubsub/ThreadSafeMultiMap.hh"
 #include <map>
 #include <set>
 
