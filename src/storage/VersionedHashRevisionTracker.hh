@@ -46,6 +46,11 @@ public:
   //----------------------------------------------------------------------------
   void addUpdate(std::string_view field, std::string_view value);
 
+  //----------------------------------------------------------------------------
+  // Serialize contents
+  //----------------------------------------------------------------------------
+  std::string serialize() const;
+
 private:
   uint64_t currentRevision = 0;
   std::vector<std::pair<std::string_view, std::string_view>> updateBatch;
@@ -61,6 +66,13 @@ public:
   // Get revision for a specific key
   //----------------------------------------------------------------------------
   VersionedHashRevision& forKey(std::string_view key);
+
+  //----------------------------------------------------------------------------
+  // Is it empty?
+  //----------------------------------------------------------------------------
+  bool empty() const {
+    return contents.empty();
+  }
 
   //----------------------------------------------------------------------------
   // Iterate through contents

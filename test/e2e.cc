@@ -2063,6 +2063,14 @@ TEST_F(Raft_e2e, vhset) {
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
 
+  qclient::SubscriptionOptions opts;
+  opts.handshake = makeQClientHandshake();
+  qclient::Subscriber subscriber(members(), std::move(opts));
+
+  std::unique_ptr<Subscription> subscription = subscriber.subscribe("key-1");
+  ASSERT_TRUE(subscription->empty());
+  RETRY_ASSERT_TRUE(subscription->acknowledged());
+
   std::vector<std::future<redisReplyPtr>> replies;
   replies.emplace_back(tunnel(leaderID)->exec("set", "key-0", "val"));
   replies.emplace_back(tunnel(leaderID)->exec("vhset", "key-0", "f1", "v1"));
@@ -2071,6 +2079,17 @@ TEST_F(Raft_e2e, vhset) {
   ASSERT_REPLY(replies[0], "OK");
   ASSERT_REPLY(replies[1], "ERR Invalid argument: WRONGTYPE Operation against a key holding the wrong kind of value");
   ASSERT_REPLY(replies[2], 1);
+
+  qclient::Message msg;
+
+  RETRY_ASSERT_TRUE(subscription->size() == 1u);
+  ASSERT_TRUE(subscription->front(msg));
+  ASSERT_EQ(
+    qclient::describeRedisReply(msg.getPayload()),
+    "1) (integer) 1\n"
+    "2) \"f1\"\n"
+    "3) \"v1\"\n"
+  );
 
   ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f2", "v2"), 2);
   ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f3", "v3"), 3);

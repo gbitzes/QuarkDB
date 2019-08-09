@@ -45,6 +45,7 @@ public:
   static void status(std::ostringstream &ss, std::string_view str);
   static void string(std::ostringstream &ss, std::string_view str);
   static void integer(std::ostringstream &ss, int64_t number);
+  static void uint64(std::ostringstream &ss, uint64_t number);
 
   //----------------------------------------------------------------------------
   // One-shot overloads
@@ -67,6 +68,7 @@ public:
   static RedisEncodedResponse journalScan(LogIndex cursor, const std::vector<RaftEntryWithIndex> &entries);
   static RedisEncodedResponse noauth(std::string_view str);
   static RedisEncodedResponse versionedVector(uint64_t num, const std::vector<std::string> &vec);
+  static RedisEncodedResponse vhashRevision(uint64_t rev, const std::vector<std::pair<std::string_view, std::string_view>> &contents);
 
   static RedisEncodedResponse subscribe(std::string_view channel, size_t active);
   static RedisEncodedResponse psubscribe(std::string_view pattern, size_t active);

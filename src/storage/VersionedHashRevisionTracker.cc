@@ -23,6 +23,7 @@
 
 #include "VersionedHashRevisionTracker.hh"
 #include "utils/Macros.hh"
+#include "Formatter.hh"
 
 namespace quarkdb {
 
@@ -44,6 +45,13 @@ void VersionedHashRevision::setRevisionNumber(uint64_t rev) {
 //------------------------------------------------------------------------------
 void VersionedHashRevision::addUpdate(std::string_view field, std::string_view value) {
   updateBatch.emplace_back(field, value);
+}
+
+//------------------------------------------------------------------------------
+// Serialize contents
+//------------------------------------------------------------------------------
+std::string VersionedHashRevision::serialize() const {
+  return Formatter::vhashRevision(currentRevision, updateBatch).val;
 }
 
 //------------------------------------------------------------------------------

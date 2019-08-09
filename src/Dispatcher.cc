@@ -134,6 +134,11 @@ RedisEncodedResponse RedisDispatcher::dispatch(Transaction &transaction, LogInde
 
   if(transaction.containsWrites()) {
     stagingArea.commit(commit);
+
+    VersionedHashRevisionTracker &revisionTracker = stagingArea.getRevisionTracker();
+    if(!revisionTracker.empty()) {
+      publisher.schedulePublishing(std::move(revisionTracker));
+    }
   }
 
   store.getRequestCounter().account(transaction);

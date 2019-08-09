@@ -196,3 +196,16 @@ TEST(Formatter, LocalHealth) {
     "   2) [GREEN] Bears: Sleeping\n"
   );
 }
+
+TEST(Formatter, VHashRevision) {
+  std::vector<std::string> contents = { "key1", "value1", "key2", "value2" };
+  std::vector<std::pair<std::string_view, std::string_view>> batch = { {contents[0], contents[1]}, {contents[2], contents[3]} };
+
+  ASSERT_EQ(qclient::ResponseBuilder::parseAndDescribeRedisEncodedString(Formatter::vhashRevision(5, batch).val),
+    "1) (integer) 5\n"
+    "2) \"key1\"\n"
+    "3) \"value1\"\n"
+    "4) \"key2\"\n"
+    "5) \"value2\"\n"
+  );
+}

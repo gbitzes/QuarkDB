@@ -79,6 +79,10 @@ void Formatter::integer(std::ostringstream &ss, int64_t number) {
   ss << ":" << number << "\r\n";
 }
 
+void Formatter::uint64(std::ostringstream &ss, uint64_t number) {
+  ss << ":" << number << "\r\n";
+}
+
 RedisEncodedResponse Formatter::integer(int64_t number) {
   std::ostringstream ss;
   integer(ss, number);
@@ -211,7 +215,7 @@ RedisEncodedResponse Formatter::noauth(std::string_view str) {
 }
 
 RedisEncodedResponse Formatter::versionedVector(uint64_t num, const std::vector<std::string> &vec) {
-  std::stringstream ss;
+  std::ostringstream ss;
   ss << "*2\r\n";
   ss << ":" << num << "\r\n";
 
@@ -219,6 +223,20 @@ RedisEncodedResponse Formatter::versionedVector(uint64_t num, const std::vector<
   for(auto it = vec.begin(); it != vec.end(); it++) {
     ss << "$" << it->length() << "\r\n";
     ss << *it << "\r\n";
+  }
+
+  return RedisEncodedResponse(ss.str());
+}
+
+RedisEncodedResponse Formatter::vhashRevision(uint64_t rev, const std::vector<std::pair<std::string_view, std::string_view>> &contents) {
+  std::ostringstream ss;
+
+  ss << "*" << contents.size()*2 + 1 << "\r\n";
+  Formatter::uint64(ss, rev);
+
+  for(size_t i = 0; i < contents.size(); i++) {
+    Formatter::string(ss, contents[i].first);
+    Formatter::string(ss, contents[i].second);
   }
 
   return RedisEncodedResponse(ss.str());

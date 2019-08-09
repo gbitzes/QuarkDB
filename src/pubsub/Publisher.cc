@@ -27,7 +27,32 @@
 
 using namespace quarkdb;
 
+// Constructor
+Publisher::Publisher() {
+  asyncPublishingThread.reset(&Publisher::asyncPublisher, this);
+}
+
+void Publisher::asyncPublisher(ThreadAssistant &assistant) {
+  auto frontier = revisionQueue.begin();
+
+  while(!assistant.terminationRequested()) {
+    VersionedHashRevisionTracker *nextItem = frontier.getItemBlockOrNull();
+    if(!nextItem) continue;
+
+    for(auto it = nextItem->begin(); it != nextItem->end(); it++) {
+      publish(it->first, it->second.serialize());
+    }
+
+    frontier.next();
+    revisionQueue.pop_front();
+  }
+}
+
 Publisher::~Publisher() {
+  asyncPublishingThread.stop();
+  revisionQueue.setBlockingMode(false);
+  asyncPublishingThread.join();
+
   purgeListeners(Formatter::err("unavailable"));
 }
 
@@ -170,6 +195,10 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
       qdb_throw("should never reach here");
     }
   }
+}
+
+void Publisher::schedulePublishing(VersionedHashRevisionTracker &&revisionTracker) {
+  revisionQueue.emplace_back(std::move(revisionTracker));
 }
 
 LinkStatus Publisher::dispatch(Connection *conn, Transaction &tx) {

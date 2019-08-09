@@ -27,6 +27,9 @@
 #include "pubsub/SimplePatternMatcher.hh"
 #include "Connection.hh"
 #include "Dispatcher.hh"
+#include "storage/VersionedHashRevisionTracker.hh"
+#include "utils/AssistedThread.hh"
+#include <qclient/queueing/WaitableQueue.hh>
 #include <map>
 #include <mutex>
 #include <memory>
@@ -39,6 +42,9 @@ class RedisRequest;
 
 class Publisher : public Dispatcher {
 public:
+  // Constructor
+  Publisher();
+
   // Destructor
   ~Publisher();
 
@@ -54,11 +60,18 @@ public:
   virtual LinkStatus dispatch(Connection *conn, Transaction &tx) override final;
   virtual void notifyDisconnect(Connection *conn) override final {}
 
+  void schedulePublishing(VersionedHashRevisionTracker &&revisionTracker);
+
 private:
   int publishChannels(const std::string &channel, std::string_view payload);
   int publishPatterns(const std::string &channel, std::string_view payload);
   bool unsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view channel);
   bool punsubscribe(std::shared_ptr<PendingQueue> connection, std::string_view pattern);
+  void asyncPublisher(ThreadAssistant &assistant);
+
+  // Queue to publish vhash updates
+  qclient::WaitableQueue<VersionedHashRevisionTracker, 100> revisionQueue;
+  AssistedThread asyncPublishingThread;
 
   // Map of subscribed-to channels
   ThreadSafeMultiMap<std::string, std::shared_ptr<PendingQueue>> channelSubscriptions;
