@@ -77,6 +77,8 @@ public:
   bool addMessageIfAttached(const std::string &channel, RedisEncodedResponse &&raw);
   bool addPatternMessageIfAttached(const std::string &pattern, RedisEncodedResponse &&raw);
 
+  void activatePushTypes();
+
 private:
   LinkStatus appendResponseNoLock(RedisEncodedResponse &&raw);
   Connection *conn;
@@ -110,6 +112,7 @@ private:
   LogIndex lastIndex = -1;
   std::queue<PendingRequest> pending;
   SubscriptionTracker subscriptionTracker;
+  bool supportsPushTypes = false;
 };
 
 //------------------------------------------------------------------------------
@@ -186,6 +189,7 @@ public:
     Connection *conn;
   };
 
+  void activatePushTypes();
   static void setPhantomBatchLimit(size_t newval);
 private:
   BufferedWriter writer;

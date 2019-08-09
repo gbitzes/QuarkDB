@@ -128,6 +128,10 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::CLIENT_ID: {
       return conn->status(conn->getID());
     }
+    case RedisCommand::ACTIVATE_PUSH_TYPES: {
+      conn->activatePushTypes();
+      return conn->ok();
+    }
     case RedisCommand::QUARKDB_INFO: {
       return conn->statusVector(this->info().toVector());
     }

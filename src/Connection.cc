@@ -175,6 +175,10 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
   return -1;
 }
 
+void PendingQueue::activatePushTypes() {
+  supportsPushTypes = true;
+}
+
 size_t phantomBatchLimit = 100;
 
 void Connection::setPhantomBatchLimit(size_t newval) {
@@ -341,4 +345,8 @@ void Connection::flush() {
 
 std::string Connection::describe() const {
   return description;
+}
+
+void Connection::activatePushTypes() {
+  pendingQueue->activatePushTypes();
 }

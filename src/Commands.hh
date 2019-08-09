@@ -36,6 +36,7 @@ enum class RedisCommand {
   MONITOR,
   CLIENT_ID,
   COMMAND_STATS,
+  ACTIVATE_PUSH_TYPES,
 
   FLUSHALL,
 
