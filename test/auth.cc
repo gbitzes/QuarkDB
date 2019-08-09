@@ -128,14 +128,11 @@ TEST(AuthenticationDispatcher, ChallengesBasicSanity) {
   ASSERT_FALSE(authorized);
 
   // parse..
-  redisReader* reader = redisReaderCreate();
-  redisReaderFeed(reader, resp.val.c_str(), resp.val.size());
+  qclient::ResponseBuilder responseBuilder;
+  responseBuilder.feed(resp.val);
 
-  void* reply = nullptr;
-  ASSERT_EQ(redisReaderGetReply(reader, &reply), REDIS_OK);
-  ASSERT_TRUE(reply != nullptr);
-
-  redisReplyPtr rr = redisReplyPtr(redisReplyPtr((redisReply*) reply, freeReplyObject));
+  redisReplyPtr rr;
+  ASSERT_EQ(responseBuilder.pull(rr), qclient::ResponseBuilder::Status::kOk);
 
   ASSERT_EQ(rr->type, REDIS_REPLY_STRING);
   std::string challengeString = std::string(rr->str, rr->len);
@@ -143,8 +140,6 @@ TEST(AuthenticationDispatcher, ChallengesBasicSanity) {
   resp = dispatcher.dispatch(make_req("HMAC-AUTH-VALIDATE-CHALLENGE", Authenticator::generateSignature(challengeString, secretKey)), authorized, authenticator1);
   ASSERT_EQ(Formatter::ok(), resp);
   ASSERT_TRUE(authorized);
-
-  redisReaderFree(reader);
 }
 
 qclient::redisReplyPtr strResponse(const std::string &str) {
