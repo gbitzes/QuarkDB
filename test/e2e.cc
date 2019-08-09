@@ -2041,9 +2041,10 @@ TEST_F(Raft_e2e, Subscriber) {
 
   std::unique_ptr<Subscription> subscription = subscriber.subscribe("test-channel");
   ASSERT_TRUE(subscription->empty());
+  RETRY_ASSERT_TRUE(subscription->acknowledged());
 
-  RETRY_ASSERT_TRUE(
-    qclient::describeRedisReply(tunnel(leaderID)->exec("publish", "test-channel", "giraffes").get()) == "(integer) 1");
+  ASSERT_EQ(qclient::describeRedisReply(tunnel(leaderID)->exec("publish", "test-channel", "giraffes").get()),
+    "(integer) 1");
 
   while(true) {
     tunnel(leaderID)->exec("publish", "test-channel", "giraffes");
