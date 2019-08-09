@@ -2067,7 +2067,7 @@ TEST_F(Raft_e2e, vhset) {
   opts.handshake = makeQClientHandshake();
   qclient::Subscriber subscriber(members(), std::move(opts));
 
-  std::unique_ptr<Subscription> subscription = subscriber.subscribe("key-1");
+  std::unique_ptr<Subscription> subscription = subscriber.subscribe(SSTR("__vhash@" << "key-1"));
   ASSERT_TRUE(subscription->empty());
   RETRY_ASSERT_TRUE(subscription->acknowledged());
 

@@ -40,7 +40,7 @@ void Publisher::asyncPublisher(ThreadAssistant &assistant) {
     if(!nextItem) continue;
 
     for(auto it = nextItem->begin(); it != nextItem->end(); it++) {
-      publish(it->first, it->second.serialize());
+      publish(SSTR("__vhash@" << it->first), it->second.serialize());
     }
 
     frontier.next();
