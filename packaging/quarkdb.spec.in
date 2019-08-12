@@ -34,8 +34,6 @@ BuildRequires: cmake >= 3.3
 BuildRequires: cmake3 >= 3.3
 %define cmake_cmd cmake3
 %endif
-BuildRequires: hiredis
-BuildRequires: hiredis-devel
 BuildRequires: bzip2-devel
 BuildRequires: python
 BuildRequires: zlib-static

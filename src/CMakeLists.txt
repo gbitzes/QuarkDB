@@ -2,7 +2,6 @@ include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${BACKWARD_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIRS}
-  ${HIREDIS_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/deps/qclient/include
   "."
 )
@@ -129,7 +128,6 @@ target_link_libraries(
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${BACKWARD_LIBRARIES}
-  ${HIREDIS_LIBRARIES}
   ${UUID_LIBRARIES}
   ${GCOV_LIBS}
 )

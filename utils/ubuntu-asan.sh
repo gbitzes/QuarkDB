@@ -2,7 +2,7 @@
 set -ex
 
 apt update
-apt install -y git g++ cmake zlib1g-dev openssl libssl-dev libhiredis-dev python libbz2-dev lcov uuid-dev
+apt install -y git g++ cmake zlib1g-dev openssl libssl-dev python libbz2-dev lcov uuid-dev
 
 git submodule update --init --recursive
 

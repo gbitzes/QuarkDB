@@ -143,7 +143,7 @@ TEST(AuthenticationDispatcher, ChallengesBasicSanity) {
 }
 
 qclient::redisReplyPtr strResponse(const std::string &str) {
-  qclient::redisReplyPtr reply((redisReply*) malloc(sizeof(redisReply)), freeReplyObject);
+  qclient::redisReplyPtr reply(new redisReply());
   reply->type = REDIS_REPLY_STRING;
 
   reply->str = (char*) malloc(str.size());
