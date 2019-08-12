@@ -2221,3 +2221,55 @@ TEST_F(Raft_e2e, JournalScanning) {
   );
 
 }
+
+TEST_F(Raft_e2e, PushTypes) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  std::shared_ptr<qclient::MessageQueue> mq = std::make_shared<qclient::MessageQueue>();
+
+  qclient::Options opts;
+  opts.handshake = makeQClientHandshake();
+  opts.chainHandshake(std::unique_ptr<Handshake>(new qclient::ActivatePushTypesHandshake()));
+  opts.transparentRedirects = true;
+  opts.messageListener = mq;
+  opts.exclusivePubsub = false;
+
+  qclient::QClient qcl(myself(leaderID).hostname, myself(leaderID).port, std::move(opts));
+
+  std::vector<std::future<qclient::redisReplyPtr>> replies;
+  replies.emplace_back(qcl.exec("SET", "aaa", "bbb"));
+  replies.emplace_back(qcl.exec("SUBSCRIBE", "__vhash@key-1"));
+  replies.emplace_back(qcl.exec("GET", "aaa"));
+
+  ASSERT_REPLY_DESCRIBE(replies[0].get(), "OK");
+  ASSERT_REPLY_DESCRIBE(replies[1].get(), "OK");
+  ASSERT_REPLY_DESCRIBE(replies[2].get(), "\"bbb\"");
+
+  replies.emplace_back(qcl.exec("VHSET", "key-1", "field-1", "v999"));
+  ASSERT_REPLY_DESCRIBE(replies[3].get(),
+    "(integer) 1");
+
+  RETRY_ASSERT_TRUE(mq->size() == 2);
+
+  auto it = mq->begin();
+  Message *msg = it.getItemBlockOrNull();
+  ASSERT_NE(msg, nullptr);
+
+  ASSERT_EQ(msg->getMessageType(), MessageType::kSubscribe);
+  ASSERT_EQ(msg->getChannel(), "__vhash@key-1");
+  ASSERT_EQ(msg->getActiveSubscriptions(), 1);
+
+  it.next();
+  msg = it.getItemBlockOrNull();
+  ASSERT_NE(msg, nullptr);
+
+  ASSERT_EQ(msg->getMessageType(), MessageType::kMessage);
+  ASSERT_EQ(msg->getChannel(), "__vhash@key-1");
+  ASSERT_EQ(qclient::describeRedisReply(msg->getPayload()),
+    "1) (integer) 1\n"
+    "2) \"field-1\"\n"
+    "3) \"v999\"\n"
+  );
+}

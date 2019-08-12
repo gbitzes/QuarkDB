@@ -58,7 +58,7 @@ TEST(ArrayResponseBuilder, BasicSanity) {
 
 TEST(Formatter, subscribe) {
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::subscribe("channel-name", 3).val);
+  builder.feed(Formatter::subscribe(false, "channel-name", 3).val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
@@ -69,9 +69,24 @@ TEST(Formatter, subscribe) {
     "3) (integer) 3\n");
 }
 
+TEST(Formatter, PushSubscribe) {
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::subscribe(true, "channel-name", 3).val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+  ASSERT_EQ(ans->type, REDIS_REPLY_PUSH);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) \"pubsub\"\n"
+    "2) \"subscribe\"\n"
+    "3) \"channel-name\"\n"
+    "4) (integer) 3\n");
+}
+
 TEST(Formatter, psubscribe) {
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::psubscribe("channel-*", 4).val);
+  builder.feed(Formatter::psubscribe(false, "channel-*", 4).val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
@@ -82,9 +97,25 @@ TEST(Formatter, psubscribe) {
     "3) (integer) 4\n");
 }
 
+TEST(Formatter, PushPsubscribe) {
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::psubscribe(true, "channel-*", 4).val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+  ASSERT_EQ(ans->type, REDIS_REPLY_PUSH);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) \"pubsub\"\n"
+    "2) \"psubscribe\"\n"
+    "3) \"channel-*\"\n"
+    "4) (integer) 4\n");
+}
+
+
 TEST(Formatter, unsubscribe) {
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::unsubscribe("channel-name", 5).val);
+  builder.feed(Formatter::unsubscribe(false, "channel-name", 5).val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
@@ -95,9 +126,25 @@ TEST(Formatter, unsubscribe) {
     "3) (integer) 5\n");
 }
 
+TEST(Formatter, PushUnsubscribe) {
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::unsubscribe(true, "channel-name", 5).val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+  ASSERT_EQ(ans->type, REDIS_REPLY_PUSH);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) \"pubsub\"\n"
+    "2) \"unsubscribe\"\n"
+    "3) \"channel-name\"\n"
+    "4) (integer) 5\n");
+}
+
+
 TEST(Formatter, message) {
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::message("channel", "payload").val);
+  builder.feed(Formatter::message(false, "channel", "payload").val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
@@ -108,9 +155,24 @@ TEST(Formatter, message) {
     "3) \"payload\"\n");
 }
 
+TEST(Formatter, PushMessage) {
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::message(true, "channel", "payload").val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+  ASSERT_EQ(ans->type, REDIS_REPLY_PUSH);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) \"pubsub\"\n"
+    "2) \"message\"\n"
+    "3) \"channel\"\n"
+    "4) \"payload\"\n");
+}
+
 TEST(Formatter, pmessage) {
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::pmessage("pattern", "channel", "payload").val);
+  builder.feed(Formatter::pmessage(false, "pattern", "channel", "payload").val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
@@ -120,6 +182,22 @@ TEST(Formatter, pmessage) {
     "2) \"pattern\"\n"
     "3) \"channel\"\n"
     "4) \"payload\"\n");
+}
+
+TEST(Formatter, PushPMessage) {
+  qclient::ResponseBuilder builder;
+  builder.feed(Formatter::pmessage(true, "pattern", "channel", "payload").val);
+
+  redisReplyPtr ans;
+  ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);
+  ASSERT_EQ(ans->type, REDIS_REPLY_PUSH);
+
+  ASSERT_EQ(qclient::describeRedisReply(ans),
+    "1) \"pubsub\"\n"
+    "2) \"pmessage\"\n"
+    "3) \"pattern\"\n"
+    "4) \"channel\"\n"
+    "5) \"payload\"\n");
 }
 
 TEST(Formatter, VersionedVector) {

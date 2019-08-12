@@ -66,6 +66,7 @@ public:
   LinkStatus addPendingTransaction(RedisDispatcher *dispatcher, Transaction &&tx, LogIndex index = -1);
   LogIndex dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex);
   bool appendIfAttached(RedisEncodedResponse &&raw);
+  bool appendIfAttachedNoLock(RedisEncodedResponse &&raw);
   size_t subscriptions = 0u;
 
   void subscribe(const std::string &item);
@@ -74,10 +75,11 @@ public:
   void unsubscribe(const std::string &item);
   void punsubscribe(const std::string &item);
 
-  bool addMessageIfAttached(const std::string &channel, RedisEncodedResponse &&raw);
-  bool addPatternMessageIfAttached(const std::string &pattern, RedisEncodedResponse &&raw);
+  bool addMessageIfAttached(const std::string &channel, std::string_view payload);
+  bool addPatternMessageIfAttached(const std::string &pattern, std::string_view channel, std::string_view payload);
 
   void activatePushTypes();
+  bool hasPushTypesActive() const;
 
 private:
   LinkStatus appendResponseNoLock(RedisEncodedResponse &&raw);
@@ -112,7 +114,7 @@ private:
   LogIndex lastIndex = -1;
   std::queue<PendingRequest> pending;
   SubscriptionTracker subscriptionTracker;
-  bool supportsPushTypes = false;
+  std::atomic<bool> supportsPushTypes {false};
 };
 
 //------------------------------------------------------------------------------
@@ -190,6 +192,8 @@ public:
   };
 
   void activatePushTypes();
+  bool hasPushTypesActive() const;
+
   static void setPhantomBatchLimit(size_t newval);
 private:
   BufferedWriter writer;

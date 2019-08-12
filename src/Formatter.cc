@@ -296,25 +296,48 @@ RedisEncodedResponse Formatter::stats(const Statistics &stats) {
   return statusVector(arr);
 }
 
-RedisEncodedResponse Formatter::subscribe(std::string_view channel, size_t active) {
+RedisEncodedResponse Formatter::subscribe(bool pushType, std::string_view channel, size_t active) {
+  if(pushType) {
+    return pushStrstrstrint("pubsub", "subscribe", channel, active);
+  }
+
   return strstrint("subscribe", channel, active);
 }
 
-RedisEncodedResponse Formatter::psubscribe(std::string_view pattern, size_t active) {
+RedisEncodedResponse Formatter::psubscribe(bool pushType, std::string_view pattern, size_t active) {
+  if(pushType) {
+    return pushStrstrstrint("pubsub", "psubscribe", pattern, active);
+  }
+
   return strstrint("psubscribe", pattern, active);
 }
 
-RedisEncodedResponse Formatter::unsubscribe(std::string_view channel, size_t active) {
+RedisEncodedResponse Formatter::unsubscribe(bool pushType, std::string_view channel, size_t active) {
+  if(pushType) {
+    return pushStrstrstrint("pubsub", "unsubscribe", channel, active);
+  }
+
   return strstrint("unsubscribe", channel, active);
 }
 
-RedisEncodedResponse Formatter::punsubscribe(std::string_view pattern, size_t active) {
+RedisEncodedResponse Formatter::punsubscribe(bool pushType, std::string_view pattern, size_t active) {
+  if(pushType) {
+    return pushStrstrstrint("pubsub", "punsubscribe", pattern, active);
+  }
+
   return strstrint("punsubscribe", pattern, active);
 }
 
-RedisEncodedResponse Formatter::message(std::string_view channel, std::string_view payload) {
+RedisEncodedResponse Formatter::message(bool pushType, std::string_view channel, std::string_view payload) {
   std::ostringstream ss;
-  ss << "*3\r\n";
+
+  if(pushType) {
+    ss << ">4\r\n" "$6\r\npubsub\r\n";
+  }
+  else {
+    ss << "*3\r\n";
+  }
+
   ss << "$7\r\nmessage\r\n";
   ss << "$" << channel.size() << "\r\n";
   ss << channel << "\r\n";
@@ -323,9 +346,16 @@ RedisEncodedResponse Formatter::message(std::string_view channel, std::string_vi
   return RedisEncodedResponse(ss.str());
 }
 
-RedisEncodedResponse Formatter::pmessage(std::string_view pattern, std::string_view channel, std::string_view payload) {
+RedisEncodedResponse Formatter::pmessage(bool pushType, std::string_view pattern, std::string_view channel, std::string_view payload) {
   std::ostringstream ss;
-  ss << "*4\r\n";
+
+  if(pushType) {
+    ss << ">5\r\n" "$6\r\npubsub\r\n";
+  }
+  else {
+    ss << "*4\r\n";
+  }
+
   ss << "$8\r\npmessage\r\n";
   ss << "$" << pattern.size() << "\r\n";
   ss << pattern << "\r\n";
@@ -341,6 +371,16 @@ RedisEncodedResponse Formatter::strstrint(std::string_view str1, std::string_vie
   ss << "*3\r\n";
   Formatter::string(ss, str1);
   Formatter::string(ss, str2);
+  Formatter::integer(ss, num);
+  return RedisEncodedResponse(ss.str());
+}
+
+RedisEncodedResponse Formatter::pushStrstrstrint(std::string_view str1, std::string_view str2, std::string_view str3, int num) {
+  std::ostringstream ss;
+  ss << ">4\r\n";
+  Formatter::string(ss, str1);
+  Formatter::string(ss, str2);
+  Formatter::string(ss, str3);
   Formatter::integer(ss, num);
   return RedisEncodedResponse(ss.str());
 }

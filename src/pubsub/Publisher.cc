@@ -93,7 +93,7 @@ int Publisher::publishChannels(const std::string &channel, std::string_view payl
 
   // publish to matching channels
   for(auto it = channelSubscriptions.findMatching(std::string(channel)); it.valid(); it.next()) {
-    bool stillAlive = it.getValue()->addMessageIfAttached(channel, Formatter::message(channel, payload));
+    bool stillAlive = it.getValue()->addMessageIfAttached(channel, payload);
 
     if(!stillAlive) {
       it.erase();
@@ -111,7 +111,7 @@ int Publisher::publishPatterns(const std::string& channel, std::string_view payl
 
   // publish to matching patterns
   for(auto it = patternMatcher.find(std::string(channel)); it.valid(); it.next()) {
-    bool stillAlive = it.getValue()->addPatternMessageIfAttached(it.getPattern(), Formatter::pmessage(it.getPattern(), channel, payload));
+    bool stillAlive = it.getValue()->addPatternMessageIfAttached(it.getPattern(), channel, payload);
 
     if(!stillAlive) {
       it.erase();
@@ -129,6 +129,8 @@ int Publisher::publish(const std::string &channel, std::string_view payload) {
 }
 
 LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
+  bool pushTypes = conn->hasPushTypesActive();
+
   switch(req.getCommand()) {
     case RedisCommand::SUBSCRIBE: {
       if(req.size() <= 1) return conn->errArgs(req[0]);
@@ -138,7 +140,7 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         conn->getQueue()->subscriptions += subscribe(conn->getQueue(), req[i]);
 
         if(retval >= 0) {
-          retval = conn->raw(Formatter::subscribe(req[i], conn->getQueue()->subscriptions));
+          retval = conn->raw(Formatter::subscribe(pushTypes, req[i], conn->getQueue()->subscriptions));
         }
       }
 
@@ -152,7 +154,7 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         conn->getQueue()->subscriptions += psubscribe(conn->getQueue(), req[i]);
 
         if(retval >= 0) {
-          retval = conn->raw(Formatter::psubscribe(req[i], conn->getQueue()->subscriptions));
+          retval = conn->raw(Formatter::psubscribe(pushTypes, req[i], conn->getQueue()->subscriptions));
         }
       }
 
@@ -166,7 +168,7 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         conn->getQueue()->subscriptions -= unsubscribe(conn->getQueue(), req[i]);
 
         if(retval >= 0) {
-          retval = conn->raw(Formatter::unsubscribe(req[i], conn->getQueue()->subscriptions));
+          retval = conn->raw(Formatter::unsubscribe(pushTypes, req[i], conn->getQueue()->subscriptions));
         }
       }
 
@@ -180,7 +182,7 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         conn->getQueue()->subscriptions -= punsubscribe(conn->getQueue(), req[i]);
 
         if(retval >= 0) {
-          retval = conn->raw(Formatter::punsubscribe(req[i], conn->getQueue()->subscriptions));
+          retval = conn->raw(Formatter::punsubscribe(pushTypes, req[i], conn->getQueue()->subscriptions));
         }
       }
 

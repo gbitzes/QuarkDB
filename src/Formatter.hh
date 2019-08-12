@@ -70,12 +70,12 @@ public:
   static RedisEncodedResponse versionedVector(uint64_t num, const std::vector<std::string> &vec);
   static RedisEncodedResponse vhashRevision(uint64_t rev, const std::vector<std::pair<std::string_view, std::string_view>> &contents);
 
-  static RedisEncodedResponse subscribe(std::string_view channel, size_t active);
-  static RedisEncodedResponse psubscribe(std::string_view pattern, size_t active);
-  static RedisEncodedResponse unsubscribe(std::string_view channel, size_t active);
-  static RedisEncodedResponse punsubscribe(std::string_view channel, size_t active);
-  static RedisEncodedResponse message(std::string_view channel, std::string_view payload);
-  static RedisEncodedResponse pmessage(std::string_view pattern, std::string_view channel, std::string_view payload);
+  static RedisEncodedResponse subscribe(bool pushType, std::string_view channel, size_t active);
+  static RedisEncodedResponse psubscribe(bool pushType, std::string_view pattern, size_t active);
+  static RedisEncodedResponse unsubscribe(bool pushType, std::string_view channel, size_t active);
+  static RedisEncodedResponse punsubscribe(bool pushType, std::string_view channel, size_t active);
+  static RedisEncodedResponse message(bool pushType, std::string_view channel, std::string_view payload);
+  static RedisEncodedResponse pmessage(bool pushType, std::string_view pattern, std::string_view channel, std::string_view payload);
 
   static RedisEncodedResponse simpleRedisRequest(const RedisRequest &req);
   static RedisEncodedResponse redisRequest(const RedisRequest &req);
@@ -87,6 +87,7 @@ public:
 
 private:
   static RedisEncodedResponse strstrint(std::string_view str1, std::string_view str2, int num);
+  static RedisEncodedResponse pushStrstrstrint(std::string_view str1, std::string_view str2, std::string_view str3, int num);
 };
 
 }

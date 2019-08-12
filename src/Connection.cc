@@ -49,38 +49,57 @@ LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
 void PendingQueue::subscribe(const std::string &item) {
   std::lock_guard<std::mutex> lock(mtx);
   subscriptionTracker.addChannel(item);
+  if(supportsPushTypes) {
+    appendIfAttachedNoLock(Formatter::ok());
+  }
 }
 
 void PendingQueue::psubscribe(const std::string &item) {
   std::lock_guard<std::mutex> lock(mtx);
   subscriptionTracker.addPattern(item);
+  if(supportsPushTypes) {
+    appendIfAttachedNoLock(Formatter::ok());
+  }
 }
 
 void PendingQueue::unsubscribe(const std::string &item) {
   std::lock_guard<std::mutex> lock(mtx);
   subscriptionTracker.removeChannel(item);
+  if(supportsPushTypes) {
+    appendIfAttachedNoLock(Formatter::ok());
+  }
 }
 
 void PendingQueue::punsubscribe(const std::string &item) {
   std::lock_guard<std::mutex> lock(mtx);
   subscriptionTracker.removePattern(item);
+  if(supportsPushTypes) {
+    appendIfAttachedNoLock(Formatter::ok());
+  }
 }
 
-bool PendingQueue::addMessageIfAttached(const std::string &channel, RedisEncodedResponse &&raw) {
+bool PendingQueue::addMessageIfAttached(const std::string &channel, std::string_view payload) {
   std::lock_guard<std::mutex> lock(mtx);
   if(!conn) return false;
 
   if(!subscriptionTracker.hasChannel(channel)) return true;
   Connection::FlushGuard guard(conn);
-  appendResponseNoLock(std::move(raw));
+  appendResponseNoLock(Formatter::message(supportsPushTypes, channel, payload));
   return true;
 }
 
-bool PendingQueue::addPatternMessageIfAttached(const std::string &pattern, RedisEncodedResponse &&raw) {
+bool PendingQueue::addPatternMessageIfAttached(const std::string &pattern, std::string_view channel, std::string_view payload) {
   std::lock_guard<std::mutex> lock(mtx);
   if(!conn) return false;
 
   if(!subscriptionTracker.hasPattern(pattern)) return true;
+  Connection::FlushGuard guard(conn);
+  appendResponseNoLock(Formatter::pmessage(supportsPushTypes, pattern, channel, payload));
+  return true;
+}
+
+bool PendingQueue::appendIfAttachedNoLock(RedisEncodedResponse &&raw) {
+  if(!conn) return false;
   Connection::FlushGuard guard(conn);
   appendResponseNoLock(std::move(raw));
   return true;
@@ -88,11 +107,7 @@ bool PendingQueue::addPatternMessageIfAttached(const std::string &pattern, Redis
 
 bool PendingQueue::appendIfAttached(RedisEncodedResponse &&raw) {
   std::lock_guard<std::mutex> lock(mtx);
-
-  if(!conn) return false;
-  Connection::FlushGuard guard(conn);
-  appendResponseNoLock(std::move(raw));
-  return true;
+  return appendIfAttachedNoLock(std::move(raw));
 }
 
 LinkStatus PendingQueue::appendResponseNoLock(RedisEncodedResponse &&raw) {
@@ -177,6 +192,10 @@ LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex com
 
 void PendingQueue::activatePushTypes() {
   supportsPushTypes = true;
+}
+
+bool PendingQueue::hasPushTypesActive() const {
+  return supportsPushTypes;
 }
 
 size_t phantomBatchLimit = 100;
@@ -350,3 +369,8 @@ std::string Connection::describe() const {
 void Connection::activatePushTypes() {
   pendingQueue->activatePushTypes();
 }
+
+bool Connection::hasPushTypesActive() const {
+  return pendingQueue->hasPushTypesActive();
+}
+
