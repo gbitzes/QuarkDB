@@ -6,6 +6,7 @@ set -e
 ## step.
 ##------------------------------------------------------------------------------
 
+yum install -y https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/p/python36-3.6.8-1.el7.x86_64.rpm https://dl.fedoraproject.org/pub/epel/7/x86_64/Packages/p/python36-libs-3.6.8-1.el7.x86_64.rpm
 yum install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils
 
 ##------------------------------------------------------------------------------
