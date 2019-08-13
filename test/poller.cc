@@ -87,10 +87,8 @@ TEST_F(tPoller, test_reconnect) {
 
   std::shared_ptr<ReconnectionCounter> listener = std::make_shared<ReconnectionCounter>();
 
-  qclient::Options opts;
-  opts.reconnectionListener = listener;
-
-  QClient tunnel(myself().hostname, myself().port, std::move(opts));
+  QClient tunnel(myself().hostname, myself().port, qclient::Options());
+  tunnel.attachListener(listener.get());
 
   for(size_t reconnects = 0; reconnects < 5; reconnects++) {
     Poller rocksdbpoller(myself().port, &dispatcher);
