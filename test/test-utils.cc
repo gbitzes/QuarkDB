@@ -273,6 +273,12 @@ int TestCluster::getLeaderID() {
   return getServerID(state(0)->getSnapshot()->leader);
 }
 
+qclient::SubscriptionOptions TestCluster::reasonableSubscriptionOptions() {
+  qclient::SubscriptionOptions opts;
+  opts.handshake = makeQClientHandshake();
+  return opts;
+}
+
 RaftTimeouts TestCluster::timeouts() {
   return clusterTimeouts;
 }

@@ -1894,9 +1894,7 @@ TEST_F(Raft_e2e, pubsub) {
   int leaderID = getLeaderID();
 
   std::shared_ptr<qclient::MessageQueue> mq = std::make_shared<qclient::MessageQueue>();
-  qclient::SubscriptionOptions opts;
-  opts.handshake = makeQClientHandshake();
-  qclient::BaseSubscriber subscriber(members(), mq, std::move(opts));
+  qclient::BaseSubscriber subscriber(members(), mq, reasonableSubscriptionOptions());
 
   ASSERT_REPLY(tunnel(leaderID)->exec("publish", "test-channel", "giraffes"), 0);
   subscriber.subscribe( {"test-channel"} );
@@ -1956,20 +1954,13 @@ TEST_F(Raft_e2e, SharedDeque) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
-  qclient::Options opts;
-  opts.handshake = makeQClientHandshake();
-  opts.transparentRedirects = true;
-  opts.retryStrategy = qclient::RetryStrategy::WithTimeout(std::chrono::seconds(30));
-
   qclient::SubscriptionOptions subopts;
   subopts.handshake = makeQClientHandshake();
 
-  qclient::SharedManager sm(members(), std::move(opts), std::move(subopts));
+  qclient::SharedManager sm(members(), std::move(subopts));
 
-  opts.handshake = makeQClientHandshake();
   subopts.handshake = makeQClientHandshake();
-
-  qclient::SharedManager sm2(members(), std::move(opts), std::move(subopts));
+  qclient::SharedManager sm2(members(), std::move(subopts));
 
   qclient::SharedDeque deque1(&sm, "shared-deque");
   qclient::SharedDeque deque2(&sm2, "shared-deque");
@@ -1987,19 +1978,13 @@ TEST_F(Raft_e2e, TransientSharedHash) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
-  qclient::Options opts;
-  opts.handshake = makeQClientHandshake();
-  opts.transparentRedirects = true;
-
   qclient::SubscriptionOptions subopts;
   subopts.handshake = makeQClientHandshake();
 
-  qclient::SharedManager sm(members(), std::move(opts), std::move(subopts));
-
-  opts.handshake = makeQClientHandshake();
+  qclient::SharedManager sm(members(), std::move(subopts));
   subopts.handshake = makeQClientHandshake();
 
-  qclient::SharedManager sm2(members(), std::move(opts), std::move(subopts));
+  qclient::SharedManager sm2(members(), std::move(subopts));
 
   std::unique_ptr<TransientSharedHash> hash1 = sm.makeTransientSharedHash("hash1");
   std::unique_ptr<TransientSharedHash> hash2 = sm2.makeTransientSharedHash("hash1");
@@ -2031,10 +2016,7 @@ TEST_F(Raft_e2e, Subscriber) {
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
 
-  qclient::SubscriptionOptions opts;
-  opts.handshake = makeQClientHandshake();
-  qclient::Subscriber subscriber(members(), std::move(opts));
-
+  qclient::Subscriber subscriber(members(), reasonableSubscriptionOptions());
   ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("publish", "test-channel", "giraffes").get(),
     "(integer) 0");
 

@@ -352,6 +352,9 @@ public:
   int getServerID(const RaftServer &srv);
   std::vector<RaftServer> retrieveLeaders();
   int getLeaderID();
+
+  qclient::SubscriptionOptions reasonableSubscriptionOptions();
+
 private:
   std::string rocksdbPath(int id = 0);
 
