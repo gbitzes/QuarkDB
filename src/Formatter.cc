@@ -231,9 +231,10 @@ RedisEncodedResponse Formatter::versionedVector(uint64_t num, const std::vector<
 RedisEncodedResponse Formatter::vhashRevision(uint64_t rev, const std::vector<std::pair<std::string_view, std::string_view>> &contents) {
   std::ostringstream ss;
 
-  ss << "*" << contents.size()*2 + 1 << "\r\n";
+  ss << "*2\r\n";
   Formatter::uint64(ss, rev);
 
+  ss << "*" << contents.size()*2 << "\r\n";
   for(size_t i = 0; i < contents.size(); i++) {
     Formatter::string(ss, contents[i].first);
     Formatter::string(ss, contents[i].second);
