@@ -2069,8 +2069,8 @@ TEST_F(Raft_e2e, vhset) {
   ASSERT_EQ(
     qclient::describeRedisReply(msg.getPayload()),
     "1) (integer) 1\n"
-    "2) \"f1\"\n"
-    "3) \"v1\"\n"
+    "2) 1) \"f1\"\n"
+    "   2) \"v1\"\n"
   );
 
   ASSERT_REPLY(tunnel(leaderID)->exec("vhset", "key-1", "f2", "v2"), 2);
@@ -2251,8 +2251,8 @@ TEST_F(Raft_e2e, PushTypes) {
   ASSERT_EQ(msg->getChannel(), "__vhash@key-1");
   ASSERT_EQ(qclient::describeRedisReply(msg->getPayload()),
     "1) (integer) 1\n"
-    "2) \"field-1\"\n"
-    "3) \"v999\"\n"
+    "2) 1) \"field-1\"\n"
+    "   2) \"v999\"\n"
   );
 }
 

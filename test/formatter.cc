@@ -281,9 +281,9 @@ TEST(Formatter, VHashRevision) {
 
   ASSERT_EQ(qclient::ResponseBuilder::parseAndDescribeRedisEncodedString(Formatter::vhashRevision(5, batch).val),
     "1) (integer) 5\n"
-    "2) \"key1\"\n"
-    "3) \"value1\"\n"
-    "4) \"key2\"\n"
-    "5) \"value2\"\n"
+    "2) 1) \"key1\"\n"
+    "   2) \"value1\"\n"
+    "   3) \"key2\"\n"
+    "   4) \"value2\"\n"
   );
 }
