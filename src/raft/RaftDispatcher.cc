@@ -627,13 +627,24 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
     return {snapshot->term, RaftVote::REFUSED};
   }
 
-  // grant vote
+  // Grant vote - be generous with the heartbeats to increase robustness.
+  // A heartbeat that is registered only _after_ grantVote has been called suffers
+  // from the following race:
+  // - RaftDirector followerLoop is sleeping in state.wait
+  // - grantVote triggers RaftDirector to wake up
+  // - HeartbeatTracker has timed-out - followerLoop attempts to start an election,
+  //   and all this happens before we reach heartbeatTracker.heartbeat in this thread.
+  //
+  // ... even though we JUST voted for a different node!
+  //
+  // Therefore, register the heartbeat twice just to be sure.
+  heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
   if(!state.grantVote(req.term, req.candidate)) {
     qdb_warn("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term << " - probably benign race condition?");
     return {snapshot->term, RaftVote::REFUSED};
   }
-
   heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
+
   return {snapshot->term, RaftVote::GRANTED};
 }
 
