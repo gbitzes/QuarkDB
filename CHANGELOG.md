@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## Unreleased
+- A race condition was sometimes causing elections to fail spuriously, making
+the election of a stable leader to require slightly more rounds than it should have.
 - Add convenience command ``DEQUE-CLEAR``.
 - Protection for a strange case of corruption which brought down a development
 test cluster. (last-applied jumped ahead of commit-index by 1024, causing all

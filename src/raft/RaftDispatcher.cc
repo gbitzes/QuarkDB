@@ -275,6 +275,10 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       return conn->ok();
     }
     case RedisCommand::RAFT_JOURNAL_SCAN: {
+      if(req.size() <= 1) {
+        return conn->errArgs(req[0]);
+      }
+
       ScanCommandArguments args = parseScanCommand(req.begin()+1, req.end());
       if(!args.error.empty()) {
         return conn->err(args.error);

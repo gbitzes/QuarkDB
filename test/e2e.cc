@@ -2202,6 +2202,8 @@ TEST_F(Raft_e2e, JournalScanning) {
     "         3) \"v2\"\n"
   );
 
+  ASSERT_REPLY_DESCRIBE(tunnel(0)->exec("raft-journal-scan").get(),
+    "(error) ERR wrong number of arguments for 'raft-journal-scan' command");
 }
 
 TEST_F(Raft_e2e, PushTypes) {
