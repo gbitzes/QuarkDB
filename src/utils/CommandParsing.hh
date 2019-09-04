@@ -37,10 +37,11 @@ struct ScanCommandArguments {
   std::string cursor;
   int64_t count = 100;
   std::string match;
+  std::string matchloc;
   std::string error;
 };
 
-inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator &begin, const RedisRequest::const_iterator &end, bool supportMatch) {
+inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator &begin, const RedisRequest::const_iterator &end, bool supportMatch, bool supportMatchloc = false) {
   qdb_assert(begin != end);
 
   ScanCommandArguments args;
@@ -81,6 +82,9 @@ inline ScanCommandArguments parseScanCommand(const RedisRequest::const_iterator 
     }
     else if(caseInsensitiveEquals(*pos, "match") && supportMatch) {
       args.match = *(pos+1);
+    }
+    else if(caseInsensitiveEquals(*pos, "matchloc") && supportMatchloc) {
+      args.matchloc = *(pos+1);
     }
     else {
       // Unknown argument

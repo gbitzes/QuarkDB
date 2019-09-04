@@ -326,9 +326,25 @@ TEST(ScanParsing, EmptySubcommand) {
   ASSERT_EQ(args.error, "syntax error");
 }
 
-TEST(ScanParsing, ForbiddenMatches) {
+TEST(ScanParsing, ForbiddenMatch) {
   RedisRequest req { "next:someItem", "COUNT", "1337", "MATCH", "asdf" };
   ScanCommandArguments args = parseScanCommand(req.begin(), req.end(), false);
+  ASSERT_EQ(args.error, "syntax error");
+}
+
+TEST(ScanParsing, MatchLoc) {
+  RedisRequest req { "next:someItem", "COUNT", "1337", "MATCHLOC", "asdf" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end(), false, true);
+  ASSERT_TRUE(args.error.empty());
+  ASSERT_EQ(args.cursor, "someItem");
+  ASSERT_EQ(args.count, 1337);
+  ASSERT_EQ(args.matchloc, "asdf");
+  ASSERT_TRUE(args.match.empty());
+}
+
+TEST(ScanParsing, ForbiddenMatchLoc) {
+  RedisRequest req { "next:someItem", "COUNT", "1337", "MATCHLOC", "asdf" };
+  ScanCommandArguments args = parseScanCommand(req.begin(), req.end(), true, false);
   ASSERT_EQ(args.error, "syntax error");
 }
 
