@@ -81,7 +81,7 @@ fedora-tsan-test:
     - dnf -y install fedora-tsan/RPMS/*
     - export QDB_TEST_TIMEOUT="default"
     - quarkdb-tests
-    - export GTEST_TOTAL_SHARDS=10
+    - export GTEST_TOTAL_SHARDS=100
     - MAX_SHARD=$((GTEST_TOTAL_SHARDS - 1))
     - for i in $(seq 0 ${MAX_SHARD}); do export GTEST_SHARD_INDEX=$i; quarkdb-stress-tests; done
 
