@@ -279,7 +279,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         return conn->errArgs(req[0]);
       }
 
-      ScanCommandArguments args = parseScanCommand(req.begin()+1, req.end());
+      ScanCommandArguments args = parseScanCommand(req.begin()+1, req.end(), true);
       if(!args.error.empty()) {
         return conn->err(args.error);
       }

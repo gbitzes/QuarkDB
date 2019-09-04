@@ -514,7 +514,7 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
     case RedisCommand::SCAN: {
       if(request.size() < 2) return errArgs(request);
 
-      ScanCommandArguments args = parseScanCommand(request.begin()+1, request.end());
+      ScanCommandArguments args = parseScanCommand(request.begin()+1, request.end(), true);
       if(!args.error.empty()) {
         return Formatter::err(args.error);
       }
@@ -569,14 +569,9 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
     case RedisCommand::HSCAN: {
       if(request.size() < 3) return errArgs(request);
 
-      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end(), false);
       if(!args.error.empty()) {
         return Formatter::err(args.error);
-      }
-
-      // No support for MATCH here, maybe add later
-      if(!args.match.empty()) {
-        return Formatter::err("syntax error");
       }
 
       std::string newcursor;
@@ -612,14 +607,9 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
     case RedisCommand::SSCAN: {
       if(request.size() < 3) return errArgs(request);
 
-      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end(), false);
       if(!args.error.empty()) {
         return Formatter::err(args.error);
-      }
-
-      // No support for MATCH here, maybe add later
-      if(!args.match.empty()) {
-        return Formatter::err("syntax error");
       }
 
       std::string newcursor;
@@ -641,14 +631,9 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
     case RedisCommand::DEQUE_SCAN_BACK: {
       if(request.size() < 3) return errArgs(request);
 
-      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end(), false);
       if(!args.error.empty()) {
         return Formatter::err(args.error);
-      }
-
-      // No support for MATCH here, maybe add later
-      if(!args.match.empty()) {
-        return Formatter::err("syntax error");
       }
 
       std::string newcursor;
@@ -690,14 +675,9 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
     case RedisCommand::LHSCAN: {
       if(request.size() < 3) return errArgs(request);
 
-      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end());
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end(), false);
       if(!args.error.empty()) {
         return Formatter::err(args.error);
-      }
-
-      // No support for MATCH here, maybe add later
-      if(!args.match.empty()) {
-        return Formatter::err("syntax error");
       }
 
       std::string newcursor;

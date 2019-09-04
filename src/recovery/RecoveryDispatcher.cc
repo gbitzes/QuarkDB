@@ -112,7 +112,7 @@ RedisEncodedResponse RecoveryDispatcher::dispatch(RedisRequest &request) {
     case RedisCommand::RECOVERY_SCAN: {
       if(request.size() < 2) return Formatter::errArgs(request[0]);
 
-      ScanCommandArguments args = parseScanCommand(request.begin()+1, request.end());
+      ScanCommandArguments args = parseScanCommand(request.begin()+1, request.end(), false);
       if(!args.error.empty()) {
         return Formatter::err(args.error);
       }
