@@ -133,7 +133,7 @@ public:
   // locality hashes
   rocksdb::Status lhget(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, std::string &value);
   rocksdb::Status lhlen(StagingArea &stagingArea, std::string_view key, size_t &len);
-  rocksdb::Status lhscan(StagingArea &stagingArae, std::string_view key, std::string_view cursor, size_t count, std::string &newcursor, std::vector<std::string> &results);
+  rocksdb::Status lhscan(StagingArea &stagingArae, std::string_view key, std::string_view cursor, std::string_view matchloc, size_t count, std::string &newcursor, std::vector<std::string> &results);
 
   // deque
   rocksdb::Status dequeLen(StagingArea &stagingArea, std::string_view key, size_t &len);

@@ -1713,6 +1713,106 @@ TEST_F(Raft_e2e, LocalityHash) {
   );
 }
 
+TEST_F(Raft_e2e, LHSCAN) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> replies;
+
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "mykey", "f1", "hint1111", "v1"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "mykey", "f2", "hint1112", "v2"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "mykey", "f3", "hint1212", "v3"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "mykey", "f4", "hint3212", "v4"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhset", "mykey", "f5", "hint1212", "v5"));
+
+  for(size_t i = 0; i < replies.size(); i++) {
+    ASSERT_REPLY(replies[i], 1);
+  }
+
+  replies.clear();
+
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0", "MATCHLOC", "hint1212"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0", "MATCHLOC", "hint1212", "COUNT", "1"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "next:hint1212##f5", "MATCHLOC", "hint1212", "COUNT", "1"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0", "MATCHLOC", "hint1*"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0", "MATCHLOC", "hint1*", "COUNT", "2"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "next:hint1212##f3", "MATCHLOC", "hint1*", "COUNT", "2"));
+  replies.emplace_back(tunnel(leaderID)->exec("lhscan", "mykey", "0", "MATCHLOC", "hint3*", "COUNT", "2"));
+
+  size_t count = 0;
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"0\"\n"
+    "2) 1) \"hint1212\"\n"
+    "   2) \"f3\"\n"
+    "   3) \"v3\"\n"
+    "   4) \"hint1212\"\n"
+    "   5) \"f5\"\n"
+    "   6) \"v5\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"next:hint1212##f5\"\n"
+    "2) 1) \"hint1212\"\n"
+    "   2) \"f3\"\n"
+    "   3) \"v3\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"0\"\n"
+    "2) 1) \"hint1212\"\n"
+    "   2) \"f5\"\n"
+    "   3) \"v5\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"0\"\n"
+    "2) 1) \"hint1111\"\n"
+    "   2) \"f1\"\n"
+    "   3) \"v1\"\n"
+    "   4) \"hint1112\"\n"
+    "   5) \"f2\"\n"
+    "   6) \"v2\"\n"
+    "   7) \"hint1212\"\n"
+    "   8) \"f3\"\n"
+    "   9) \"v3\"\n"
+    "   10) \"hint1212\"\n"
+    "   11) \"f5\"\n"
+    "   12) \"v5\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"next:hint1212##f3\"\n"
+    "2) 1) \"hint1111\"\n"
+    "   2) \"f1\"\n"
+    "   3) \"v1\"\n"
+    "   4) \"hint1112\"\n"
+    "   5) \"f2\"\n"
+    "   6) \"v2\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"0\"\n"
+    "2) 1) \"hint1212\"\n"
+    "   2) \"f3\"\n"
+    "   3) \"v3\"\n"
+    "   4) \"hint1212\"\n"
+    "   5) \"f5\"\n"
+    "   6) \"v5\"\n"
+  );
+
+  ASSERT_REPLY_DESCRIBE(replies[count++],
+    "1) \"0\"\n"
+    "2) 1) \"hint3212\"\n"
+    "   2) \"f4\"\n"
+    "   3) \"v4\"\n"
+  );
+
+}
+
+
 TEST_F(Raft_e2e, RawGetAllVersions) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));

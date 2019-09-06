@@ -675,14 +675,14 @@ RedisEncodedResponse RedisDispatcher::dispatchRead(StagingArea &stagingArea, Red
     case RedisCommand::LHSCAN: {
       if(request.size() < 3) return errArgs(request);
 
-      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end(), false);
+      ScanCommandArguments args = parseScanCommand(request.begin()+2, request.end(), false, true);
       if(!args.error.empty()) {
         return Formatter::err(args.error);
       }
 
       std::string newcursor;
       std::vector<std::string> vec;
-      rocksdb::Status st = store.lhscan(stagingArea, request[1], args.cursor, args.count, newcursor, vec);
+      rocksdb::Status st = store.lhscan(stagingArea, request[1], args.cursor, args.matchloc, args.count, newcursor, vec);
       if(!st.ok()) return Formatter::fromStatus(st);
 
       if(newcursor == "") newcursor = "0";

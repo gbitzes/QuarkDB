@@ -677,7 +677,7 @@ rocksdb::Status StateMachine::hscan(StagingArea &stagingArea, std::string_view k
   return rocksdb::Status::OK();
 }
 
-rocksdb::Status StateMachine::lhscan(StagingArea &stagingArea, std::string_view key, std::string_view cursor, size_t count, std::string &newCursor, std::vector<std::string> &results) {
+rocksdb::Status StateMachine::lhscan(StagingArea &stagingArea, std::string_view key, std::string_view cursor, std::string_view matchloc, size_t count, std::string &newCursor, std::vector<std::string> &results) {
   if(!assertKeyType(stagingArea, key, KeyType::kLocalityHash)) return wrong_type();
 
   std::string_view cursorHint;
@@ -686,8 +686,13 @@ rocksdb::Status StateMachine::lhscan(StagingArea &stagingArea, std::string_view 
   LocalityFieldLocator locator(key);
   results.clear();
 
+  std::string patternPrefix = extractPatternPrefix(matchloc);
+  bool emptyPattern = (matchloc.empty() || matchloc == "*");
+
   // Any rocksdb keys we touch must have this prefix.
+  size_t keyPrefixSize = locator.toView().size();
   std::string requiredPrefix(locator.toView());
+  std::string_view scanStart = requiredPrefix;
 
   if(!cursor.empty()) {
     // Decompose cursor into hint + field.
@@ -701,12 +706,28 @@ rocksdb::Status StateMachine::lhscan(StagingArea &stagingArea, std::string_view 
 
     // We start from the given hint + field.
     locator.resetHint(cursorHint);
+
+    if(!patternPrefix.empty()) {
+      requiredPrefix = locator.toView();
+    }
+
     locator.resetField(cursorField);
+    scanStart = locator.toView();
+  }
+  else if(!patternPrefix.empty()) {
+    locator.resetHint(patternPrefix);
+    requiredPrefix += patternPrefix;
+    scanStart = locator.toView();
+
+    if(patternPrefix.size() != matchloc.size()) {
+      scanStart.remove_suffix(2);
+    }
   }
 
   newCursor = "";
   IteratorPtr iter(stagingArea.getIterator());
-  for(iter->Seek(locator.toView()); iter->Valid(); iter->Next()) {
+
+  for(iter->Seek(scanStart); iter->Valid(); iter->Next()) {
     std::string_view rocksdbKey = iter->key().ToStringView();
 
     if(!StringUtils::startsWith(rocksdbKey, requiredPrefix)) {
@@ -716,7 +737,7 @@ rocksdb::Status StateMachine::lhscan(StagingArea &stagingArea, std::string_view 
 
     // Split hint + field
     std::string_view hintPlusField = rocksdbKey;
-    hintPlusField.remove_prefix(requiredPrefix.size());
+    hintPlusField.remove_prefix(keyPrefixSize);
 
     EscapedPrefixExtractor splitter;
     qdb_assert(splitter.parse(hintPlusField));
@@ -727,10 +748,14 @@ rocksdb::Status StateMachine::lhscan(StagingArea &stagingArea, std::string_view 
       break;
     }
 
+    std::string_view localityHint = splitter.getOriginalPrefix();
+
     // Populate new entry consisting of three items
-    results.emplace_back(splitter.getOriginalPrefix());
-    results.emplace_back(splitter.getRawSuffix());
-    results.emplace_back(iter->value().ToStringView());
+    if(emptyPattern || stringmatchlen(matchloc.data(), matchloc.length(), localityHint.data(), localityHint.length(), 0)) {
+      results.emplace_back(splitter.getOriginalPrefix());
+      results.emplace_back(splitter.getRawSuffix());
+      results.emplace_back(iter->value().ToStringView());
+    }
   }
 
   return rocksdb::Status::OK();
