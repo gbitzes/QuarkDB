@@ -54,7 +54,7 @@ Requires: elfutils-devel
 
 Requires: jemalloc
 BuildRequires: jemalloc-devel
-Requires: (xrootd or eos-xrootd)
+Requires: xrootd
 
 %description
 A highly available key-value store.
