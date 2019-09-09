@@ -37,6 +37,7 @@ add_library(XrdQuarkDB SHARED
   Timekeeper.cc                           Timekeeper.hh
 
   auth/AuthenticationDispatcher.cc        auth/AuthenticationDispatcher.hh
+  config/ConfigurationReader.cc           config/ConfigurationReader.hh
 
                                           health/HealthIndicator.hh
 

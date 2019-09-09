@@ -22,9 +22,73 @@
  ************************************************************************/
 
 #include "Configuration.hh"
+#include "config/ConfigurationReader.hh"
 #include <gtest/gtest.h>
 
 using namespace quarkdb;
+
+TEST(ConfigurationReader, BasicSanity) {
+  ConfigurationReader cr(
+      "if         exec                              xrootd\n"
+      "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
+      "redis.mode raft\n"
+      "redis.database /home/user/mydb\n"
+      "redis.myself server1:7776\n"
+      "redis.trace debug\n"
+      "redis.write_ahead_log true\n"
+      "redis.password_file /tmp/quarkdb-tests/password-file\n"
+      "redis.require_password_for_localhost true\n"
+      "fi\n");
+
+  ASSERT_FALSE(cr.eof());
+  ASSERT_EQ(cr.getCurrentWord(), "if");
+  cr.advanceWord();
+  ASSERT_EQ(cr.getCurrentWord(), "exec");
+  ASSERT_EQ(cr.getCurrentWord(), "exec");
+  cr.advanceWord();
+
+  ASSERT_EQ(cr.getCurrentWord(), "xrootd");
+  cr.advanceWord();
+
+  ASSERT_EQ(cr.getCurrentWord(), "xrd.protocol");
+  cr.advanceWord();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis:7776");
+  cr.advanceWord();
+
+  ASSERT_EQ(cr.getCurrentWord(), "libXrdQuarkDB.so");
+  cr.advanceWord();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis.mode");
+  cr.advanceWord();
+
+  ASSERT_EQ(cr.getCurrentWord(), "raft");
+  cr.advanceLine();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis.database");
+  cr.advanceLine();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis.myself");
+  cr.advanceLine();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis.trace");
+  cr.advanceLine();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis.write_ahead_log");
+  cr.advanceLine();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis.password_file");
+  cr.advanceLine();
+
+  ASSERT_EQ(cr.getCurrentWord(), "redis.require_password_for_localhost");
+  cr.advanceLine();
+
+  ASSERT_FALSE(cr.eof());
+  ASSERT_EQ(cr.getCurrentWord(), "fi");
+  cr.advanceLine();
+
+  ASSERT_TRUE(cr.eof());
+}
 
 TEST(Configuration, T1) {
   Configuration config;

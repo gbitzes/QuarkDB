@@ -26,7 +26,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 
-#include "XrdOuc/XrdOucEnv.hh"
 #include "Configuration.hh"
 #include "utils/Macros.hh"
 #include "utils/FileUtils.hh"
@@ -37,7 +36,6 @@ using namespace quarkdb;
 bool Configuration::fromFile(const std::string &filename, Configuration &out) {
   qdb_log("Reading configuration file from " << filename);
 
-  XrdOucEnv myEnv;
   XrdOucStream stream(NULL, getenv("XRDINSTANCE"), NULL, "=====> ");
 
   int fd;
