@@ -27,12 +27,12 @@
 #include <string>
 #include <vector>
 
-#include <XrdOuc/XrdOucStream.hh>
-
 #include "Common.hh"
 #include "utils/Macros.hh"
 
 namespace quarkdb {
+
+class ConfigurationReader;
 
 enum class Mode {
   standalone = 0,
@@ -56,8 +56,8 @@ inline std::string modeToString(const Mode &mode) {
 class Configuration {
 public:
   static bool fromFile(const std::string &filename, Configuration &out);
-  static bool fromStream(XrdOucStream &stream, Configuration &out);
   static bool fromString(const std::string &str, Configuration &out);
+  static bool fromReader(ConfigurationReader &reader, Configuration &out);
   bool isValid();
 
   Mode getMode() const { return mode; }

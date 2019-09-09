@@ -4,7 +4,12 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 - A race condition was sometimes causing elections to fail spuriously, making
 the election of a stable leader to require slightly more rounds than it should have.
+- Implementation of health indicators through ``QUARKDB-HEALTH-LOCAL`` command.
+- Added support for RESPv3 push types, activated on a per-client basis through
+``ACTIVATE-PUSH-TYPES`` command.
 - Add convenience command ``DEQUE-CLEAR``.
+- Add support for ``MATCHLOC`` in ``LHSCAN``, used to filter out results based
+on locality hint.
 - Protection for a strange case of corruption which brought down a development
 test cluster. (last-applied jumped ahead of commit-index by 1024, causing all
 writes to stall). From now on, similar kind of corruption should only take out

@@ -26,9 +26,11 @@
 #include <unistd.h>
 #include <fcntl.h>
 
+#include "config/ConfigurationReader.hh"
 #include "Configuration.hh"
 #include "utils/Macros.hh"
 #include "utils/FileUtils.hh"
+#include "utils/StringUtils.hh"
 #include "Utils.hh"
 
 using namespace quarkdb;
@@ -36,27 +38,28 @@ using namespace quarkdb;
 bool Configuration::fromFile(const std::string &filename, Configuration &out) {
   qdb_log("Reading configuration file from " << filename);
 
-  XrdOucStream stream(NULL, getenv("XRDINSTANCE"), NULL, "=====> ");
-
-  int fd;
-
-  if ((fd = open(filename.c_str(), O_RDONLY, 0)) < 0) {
-    qdb_log("config: error " << errno << " when opening " << filename);
+  std::string contents;
+  if(!readFile(filename, contents)) {
+    qdb_error("Could not read configuration file: " << filename);
     return false;
   }
 
-  stream.Attach(fd);
-  out.configurationPath = filename;
-  return Configuration::fromStream(stream, out);
+  return Configuration::fromString(contents, out);
 }
 
-static bool fetchSingle(XrdOucStream &stream, std::string &dest) {
-  char *val;
-  if (!(val = stream.GetWord())) {
+static bool fetchSingle(ConfigurationReader &reader, std::string &dest) {
+  reader.advanceWord();
+
+  if(reader.eof()) {
     return false;
   }
 
-  dest = val;
+  dest = reader.getCurrentWord();
+
+  if(dest.empty()) {
+    return false;
+  }
+
   return true;
 }
 
@@ -116,78 +119,71 @@ static bool parseTraceLevel(const std::string &buffer, TraceLevel &trace) {
   return true;
 }
 
-bool Configuration::fromStream(XrdOucStream &stream, Configuration &out) {
-  std::string buffer;
-  char *option;
+bool Configuration::fromReader(ConfigurationReader &reader, Configuration &out) {
 
-  while ((option = stream.GetMyFirstWord())) {
-    bool ismine;
-    if ((ismine = !strncmp("redis.", option, 6)) && option[6]) option += 6;
+  while(!reader.eof()) {
+    std::string current = reader.getCurrentWord();
+    bool isMine = StringUtils::startsWith(current, "redis.");
 
-    if(ismine) {
-      bool success;
-
-      if(!strcmp("mode", option)) {
-        success = fetchSingle(stream, buffer) && parseMode(buffer, out.mode);
-      }
-      else if(!strcmp("database", option)) {
-        success = fetchSingle(stream, out.database);
-      }
-      else if(!strcmp("myself", option)) {
-        success = fetchSingle(stream, buffer) && parseServer(buffer, out.myself);
-      }
-      else if(!strcmp("trace", option)) {
-        success = fetchSingle(stream, buffer) && parseTraceLevel(buffer, out.trace);
-      }
-      else if(!strcmp("certificate", option)) {
-        success = fetchSingle(stream, out.certificatePath);
-      }
-      else if(!strcmp("certificate_key", option)) {
-        success = fetchSingle(stream, out.certificateKeyPath);
-      }
-      else if(!strcmp("write_ahead_log", option)) {
-        success = fetchSingle(stream, buffer) && parseBool(buffer, out.writeAheadLog);
-      }
-      else if(!strcmp("password_file", option)) {
-        success = fetchSingle(stream, out.passwordFilePath);
-      }
-      else if(!strcmp("password", option)) {
-        success = fetchSingle(stream, out.password);
-      }
-      else if(!strcmp("require_password_for_localhost", option)) {
-        success = fetchSingle(stream, buffer) && parseBool(buffer, out.requirePasswordForLocalhost);
-      }
-      else {
-        qdb_warn("Error when parsing configuration - unknown option " << quotes(option));
-        return false;
-      }
-
-      if(!success) {
-        qdb_warn("Error when parsing configuration option " << quotes("redis." << option));
-        return false;
-      }
-
+    if(!isMine) {
+      reader.advanceLine();
+      continue;
     }
+
+    current = std::string(current.begin()+6, current.end());
+
+    bool success = false;
+    std::string buffer;
+
+    if(StringUtils::startsWith("mode", current)) {
+      success = fetchSingle(reader, buffer) && parseMode(buffer, out.mode);
+    }
+    else if(StringUtils::startsWith(current, "database")) {
+      success = fetchSingle(reader, out.database);
+    }
+    else if(StringUtils::startsWith(current, "myself")) {
+      success = fetchSingle(reader, buffer) && parseServer(buffer, out.myself);
+    }
+    else if(StringUtils::startsWith(current, "trace")) {
+      success = fetchSingle(reader, buffer) && parseTraceLevel(buffer, out.trace);
+    }
+    else if(StringUtils::startsWith(current, "certificate")) {
+      success = fetchSingle(reader, out.certificatePath);
+    }
+    else if(StringUtils::startsWith(current, "certificate_key")) {
+      success = fetchSingle(reader, out.certificateKeyPath);
+    }
+    else if(StringUtils::startsWith(current, "write_ahead_log")) {
+      success = fetchSingle(reader, buffer) && parseBool(buffer, out.writeAheadLog);
+    }
+    else if(StringUtils::startsWith(current, "password_file")) {
+      success = fetchSingle(reader, out.passwordFilePath);
+    }
+    else if(StringUtils::startsWith(current, "password")) {
+      success = fetchSingle(reader, out.password);
+    }
+    else if(StringUtils::startsWith(current, "require_password_for_localhost")) {
+      success = fetchSingle(reader, buffer) && parseBool(buffer, out.requirePasswordForLocalhost);
+    }
+    else {
+      qdb_warn("Error when parsing configuration - unknown option " << quotes(current));
+      return false;
+    }
+
+    if(!success) {
+      qdb_warn("Error when parsing configuration option " << quotes("redis." << current));
+      return false;
+    }
+
+    reader.advanceLine();
   }
 
   return out.isValid();
 }
 
 bool Configuration::fromString(const std::string &str, Configuration &out) {
-  XrdOucStream stream(NULL, getenv("XRDINSTANCE"), NULL, "=====> ");
-
-  int fd[2];
-  if(pipe(fd) != 0) {
-    throw FatalException("unable to create pipe");
-  }
-
-  if(write(fd[1], str.c_str(), str.size()) < 0) {
-    throw FatalException("unable to write to pipe");
-  }
-
-  close(fd[1]);
-  stream.Attach(fd[0]);
-  return Configuration::fromStream(stream, out);
+  ConfigurationReader reader(str);
+  return Configuration::fromReader(reader, out);
 }
 
 bool Configuration::isValid() {
