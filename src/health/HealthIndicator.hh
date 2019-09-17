@@ -92,7 +92,7 @@ public:
   }
 
   std::string toString() const {
-    return SSTR("[" <<  healthStatusAsString(status) << "] " << description << ": " << message);
+    return SSTR("[" <<  healthStatusAsString(status) << "] " << description << " " << message);
   }
 
 private:
@@ -147,6 +147,10 @@ public:
 
   std::vector<HealthIndicator> getIndicators() const {
     return indicators;
+  }
+
+  size_t getIndicatorsSize() const {
+    return indicators.size();
   }
 
 private:

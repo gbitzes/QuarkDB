@@ -255,8 +255,8 @@ TEST(Formatter, VectorOfVectors) {
 
 TEST(Formatter, LocalHealth) {
   std::vector<HealthIndicator> indicators;
-  indicators.emplace_back(HealthStatus::kRed, "Chicken invasion", "Imminent");
-  indicators.emplace_back(HealthStatus::kGreen, "Bears", "Sleeping");
+  indicators.emplace_back(HealthStatus::kRed, "CHICKEN-INVASION", "Imminent");
+  indicators.emplace_back(HealthStatus::kGreen, "BEARS", "Sleeping");
 
   LocalHealth localHealth("1.33.7", "example.com:7777", indicators);
 
@@ -270,8 +270,9 @@ TEST(Formatter, LocalHealth) {
     "1) NODE-HEALTH RED\n"
     "2) NODE example.com:7777\n"
     "3) VERSION 1.33.7\n"
-    "4) 1) [RED] Chicken invasion: Imminent\n"
-    "   2) [GREEN] Bears: Sleeping\n"
+    "4) ----------\n"
+    "5) [RED] CHICKEN-INVASION Imminent\n"
+    "6) [GREEN] BEARS Sleeping\n"
   );
 }
 

@@ -663,10 +663,10 @@ LocalHealth RaftDispatcher::getLocalHealth() {
   //----------------------------------------------------------------------------
   RaftStateSnapshotPtr snapshot = state.getSnapshot();
   if(snapshot->leader.empty()) {
-    indicators.emplace_back(HealthStatus::kRed, "Part of cluster", "No, I don't know who the cluster leader is, node is unavailable");
+    indicators.emplace_back(HealthStatus::kRed, "PART-OF-QUORUM", "No, I don't know who the cluster leader is, node is unavailable");
   }
   else {
-    indicators.emplace_back(HealthStatus::kGreen, "Part of cluster", SSTR("Yes, current leader is " << snapshot->leader.toString()));
+    indicators.emplace_back(HealthStatus::kGreen, "PART-OF-QUORUM", SSTR("Yes | LEADER " << snapshot->leader.toString()));
   }
 
   //----------------------------------------------------------------------------
@@ -677,10 +677,10 @@ LocalHealth RaftDispatcher::getLocalHealth() {
     LogIndex logSize = journal.getLogSize();
 
     if(replicationStatus.shakyQuorum) {
-      indicators.emplace_back(HealthStatus::kYellow, "Quorum stability", "Shaky");
+      indicators.emplace_back(HealthStatus::kYellow, "QUORUM-STABILITY", "Shaky");
     }
     else {
-      indicators.emplace_back(HealthStatus::kGreen, "Quorum stability", "Good");
+      indicators.emplace_back(HealthStatus::kGreen, "QUORUM-STABILITY", "Good");
     }
 
     for(auto it = replicationStatus.replicas.begin(); it != replicationStatus.replicas.end(); it++) {
@@ -693,7 +693,7 @@ LocalHealth RaftDispatcher::getLocalHealth() {
         replicaStatus = HealthStatus::kYellow;
       }
 
-      indicators.emplace_back(replicaStatus, "Replica", it->toString(logSize));
+      indicators.emplace_back(replicaStatus, "REPLICA", it->toString(logSize));
     }
   }
 

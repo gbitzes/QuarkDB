@@ -240,7 +240,7 @@ struct ReplicaStatus {
     ss << target.toString() << " ";
 
     if(online) {
-      ss << "ONLINE | ";
+      ss << "| ONLINE | ";
 
       if(upToDate(currentLogSize)) {
         ss << "UP-TO-DATE | ";
@@ -253,7 +253,7 @@ struct ReplicaStatus {
       ss << " | VERSION " << version;
     }
     else {
-      ss << "OFFLINE";
+      ss << "| OFFLINE";
     }
   }
 };

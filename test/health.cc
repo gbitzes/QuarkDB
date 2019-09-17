@@ -50,11 +50,11 @@ TEST(HealthStatus, ChooseWorst) {
 }
 
 TEST(HealthIndicator, BasicSanity) {
-  HealthIndicator ind1(HealthStatus::kGreen, "Available space", "120 GB");
+  HealthIndicator ind1(HealthStatus::kGreen, "AVAILABLE-SPACE", "120 GB");
   ASSERT_EQ(ind1.getStatus(), HealthStatus::kGreen);
-  ASSERT_EQ(ind1.getDescription(), "Available space");
+  ASSERT_EQ(ind1.getDescription(), "AVAILABLE-SPACE");
   ASSERT_EQ(ind1.getMessage(), "120 GB");
 
-  ASSERT_EQ(ind1.toString(), "[GREEN] Available space: 120 GB");
+  ASSERT_EQ(ind1.toString(), "[GREEN] AVAILABLE-SPACE 120 GB");
 }
 

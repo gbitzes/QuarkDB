@@ -1861,7 +1861,7 @@ rocksdb::Status StateMachine::noop(LogIndex index) {
 // Return health information about the state machine
 //------------------------------------------------------------------------------
 std::vector<HealthIndicator> StateMachine::getHealthIndicators() {
-  std::string description = "Free space in state-machine filesystem";
+  std::string description = "FREE-SPACE-SM";
 
   struct statfs out;
   if(statfs(filename.c_str(), &out) != 0) {
