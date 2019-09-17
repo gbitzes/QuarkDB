@@ -221,7 +221,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->status(ss.str());
     }
-    case RedisCommand::QUARKDB_HEALTH_LOCAL: {
+    case RedisCommand::QUARKDB_HEALTH: {
       if(req.size() != 1) return conn->errArgs(req[0]);
 
       InFlightRegistration registration(inFlightTracker);
@@ -232,10 +232,10 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       LocalHealth localHealth;
 
       if(standaloneGroup) {
-        localHealth = standaloneGroup->getLocalHealth();
+        localHealth = standaloneGroup->getHealth();
       }
       else if(raftGroup) {
-        localHealth = raftGroup->dispatcher()->getLocalHealth();
+        localHealth = raftGroup->dispatcher()->getHealth();
       }
 
       return conn->raw(Formatter::localHealth(localHealth));

@@ -60,7 +60,7 @@ public:
   //----------------------------------------------------------------------------
   // Return health information
   //----------------------------------------------------------------------------
-  LocalHealth getLocalHealth();
+  LocalHealth getHealth();
 
 private:
   ShardDirectory &shardDirectory;

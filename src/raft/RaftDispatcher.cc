@@ -655,7 +655,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
 //------------------------------------------------------------------------------
 // Return health information
 //------------------------------------------------------------------------------
-LocalHealth RaftDispatcher::getLocalHealth() {
+LocalHealth RaftDispatcher::getHealth() {
   std::vector<HealthIndicator> indicators = stateMachine.getHealthIndicators();
 
   //----------------------------------------------------------------------------
@@ -663,7 +663,7 @@ LocalHealth RaftDispatcher::getLocalHealth() {
   //----------------------------------------------------------------------------
   RaftStateSnapshotPtr snapshot = state.getSnapshot();
   if(snapshot->leader.empty()) {
-    indicators.emplace_back(HealthStatus::kRed, "PART-OF-QUORUM", "No, I don't know who the cluster leader is, node is unavailable");
+    indicators.emplace_back(HealthStatus::kRed, "PART-OF-QUORUM", "No");
   }
   else {
     indicators.emplace_back(HealthStatus::kGreen, "PART-OF-QUORUM", SSTR("Yes | LEADER " << snapshot->leader.toString()));

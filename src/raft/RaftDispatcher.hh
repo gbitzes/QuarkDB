@@ -65,7 +65,7 @@ public:
   //----------------------------------------------------------------------------
   // Return health information
   //----------------------------------------------------------------------------
-  LocalHealth getLocalHealth();
+  LocalHealth getHealth();
 
 private:
   RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req, RaftStateSnapshotPtr &snapshot);

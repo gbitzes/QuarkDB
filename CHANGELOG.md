@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 - A race condition was sometimes causing elections to fail spuriously, making
 the election of a stable leader to require slightly more rounds than it should have.
-- Implementation of health indicators through ``QUARKDB-HEALTH-LOCAL`` command.
+- Implementation of health indicators through ``QUARKDB-HEALTH`` command.
 - Added support for RESPv3 push types, activated on a per-client basis through
 ``ACTIVATE-PUSH-TYPES`` command.
 - Add convenience command ``DEQUE-CLEAR``.

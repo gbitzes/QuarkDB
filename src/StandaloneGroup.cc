@@ -57,7 +57,7 @@ Dispatcher* StandaloneGroup::getDispatcher() {
 //------------------------------------------------------------------------------
 // Return health information
 //------------------------------------------------------------------------------
-LocalHealth StandaloneGroup::getLocalHealth() {
+LocalHealth StandaloneGroup::getHealth() {
   return LocalHealth(VERSION_FULL_STRING, stateMachine->getHealthIndicators());
 }
 
