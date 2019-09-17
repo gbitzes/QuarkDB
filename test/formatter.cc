@@ -253,15 +253,15 @@ TEST(Formatter, VectorOfVectors) {
     "      3) six\n");
 }
 
-TEST(Formatter, LocalHealth) {
+TEST(Formatter, NodeHealth) {
   std::vector<HealthIndicator> indicators;
   indicators.emplace_back(HealthStatus::kRed, "CHICKEN-INVASION", "Imminent");
   indicators.emplace_back(HealthStatus::kGreen, "BEARS", "Sleeping");
 
-  LocalHealth localHealth("1.33.7", "example.com:7777", indicators);
+  NodeHealth nodeHealth("1.33.7", "example.com:7777", indicators);
 
   qclient::ResponseBuilder builder;
-  builder.feed(Formatter::localHealth(localHealth).val);
+  builder.feed(Formatter::nodeHealth(nodeHealth).val);
 
   redisReplyPtr ans;
   ASSERT_EQ(builder.pull(ans), qclient::ResponseBuilder::Status::kOk);

@@ -83,7 +83,7 @@ public:
   static RedisEncodedResponse multiply(const RedisEncodedResponse &resp, size_t factor);
   static RedisEncodedResponse vectorsWithHeaders(const std::vector<std::string> &headers, const std::vector<std::vector<std::string>> &data);
   static RedisEncodedResponse stats(const Statistics &stats);
-  static RedisEncodedResponse localHealth(const LocalHealth &lh);
+  static RedisEncodedResponse nodeHealth(const NodeHealth &nh);
 
 private:
   static RedisEncodedResponse strstrint(std::string_view str1, std::string_view str2, int num);

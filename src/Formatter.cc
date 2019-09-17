@@ -386,19 +386,19 @@ RedisEncodedResponse Formatter::pushStrstrstrint(std::string_view str1, std::str
   return RedisEncodedResponse(ss.str());
 }
 
-RedisEncodedResponse Formatter::localHealth(const LocalHealth &lh) {
+RedisEncodedResponse Formatter::nodeHealth(const NodeHealth &nh) {
 
   std::vector<std::string> output;
-  output.emplace_back(SSTR("NODE-HEALTH " << healthStatusAsString(chooseWorstHealth(lh.getIndicators()))));
+  output.emplace_back(SSTR("NODE-HEALTH " << healthStatusAsString(chooseWorstHealth(nh.getIndicators()))));
 
-  if(!lh.getNode().empty()) {
-    output.emplace_back(SSTR("NODE " << lh.getNode()));
+  if(!nh.getNode().empty()) {
+    output.emplace_back(SSTR("NODE " << nh.getNode()));
   }
 
-  output.emplace_back(SSTR("VERSION " << lh.getVersion()));
+  output.emplace_back(SSTR("VERSION " << nh.getVersion()));
   output.emplace_back("----------");
 
-  std::vector<std::string> indicators = healthIndicatorsAsStrings(lh.getIndicators());
+  std::vector<std::string> indicators = healthIndicatorsAsStrings(nh.getIndicators());
   output.insert(output.end(), indicators.begin(), indicators.end());
   return statusVector(output);
 }

@@ -229,16 +229,16 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
         return conn->err("unavailable");
       }
 
-      LocalHealth localHealth;
+      NodeHealth nodeHealth;
 
       if(standaloneGroup) {
-        localHealth = standaloneGroup->getHealth();
+        nodeHealth = standaloneGroup->getHealth();
       }
       else if(raftGroup) {
-        localHealth = raftGroup->dispatcher()->getHealth();
+        nodeHealth = raftGroup->dispatcher()->getHealth();
       }
 
-      return conn->raw(Formatter::localHealth(localHealth));
+      return conn->raw(Formatter::nodeHealth(nodeHealth));
     }
     case RedisCommand::COMMAND_STATS: {
       if(req.size() != 1) return conn->errArgs(req[0]);
