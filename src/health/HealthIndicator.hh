@@ -92,7 +92,7 @@ public:
   }
 
   std::string toString() const {
-    return SSTR("[" <<  healthStatusAsString(status) << "] " << description << " " << message);
+    return SSTR(healthStatusAsString(status) << " | " << description << " " << message);
   }
 
 private:

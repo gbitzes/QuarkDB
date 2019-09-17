@@ -55,6 +55,6 @@ TEST(HealthIndicator, BasicSanity) {
   ASSERT_EQ(ind1.getDescription(), "AVAILABLE-SPACE");
   ASSERT_EQ(ind1.getMessage(), "120 GB");
 
-  ASSERT_EQ(ind1.toString(), "[GREEN] AVAILABLE-SPACE 120 GB");
+  ASSERT_EQ(ind1.toString(), "GREEN | AVAILABLE-SPACE 120 GB");
 }
 
