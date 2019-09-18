@@ -266,6 +266,12 @@ TEST(StringUtils, Base16Encode) {
   ASSERT_EQ(StringUtils::base16Encode("@!!#$SDFGJSFXBV>?<adsf';l1093 (╯°□°）╯︵ ┻━┻) "), "4021212324534446474a53465842563e3f3c61647366273b6c313039332028e295afc2b0e296a1c2b0efbc89e295afefb8b520e294bbe29481e294bb2920");
 }
 
+TEST(StringUtils, RightPad) {
+  ASSERT_EQ(StringUtils::rightPad("aaa", 2, ' '), "aaa");
+  ASSERT_EQ(StringUtils::rightPad("bb", 4, ' '), "bb  ");
+  ASSERT_EQ(StringUtils::rightPad("ccc", 10, '-'), "ccc-------");
+}
+
 TEST(ScanParsing, BasicSanity) {
   RedisRequest req { "0" };
   ScanCommandArguments args = parseScanCommand(req.begin(), req.end(), true);

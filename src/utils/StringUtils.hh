@@ -95,6 +95,7 @@ inline std::string escapeNonPrintable(std::string_view str) {
 }
 
 std::string base16Encode(std::string_view source);
+std::string rightPad(std::string_view source, size_t targetSize, char padder);
 
 } }
 

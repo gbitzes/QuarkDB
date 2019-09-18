@@ -57,4 +57,17 @@ std::string base16Encode(std::string_view source) {
   return ret;
 }
 
+std::string rightPad(std::string_view source, size_t targetSize, char padder) {
+  std::ostringstream ss;
+  ss << source;
+
+  size_t currentSize = source.size();
+  while(currentSize < targetSize) {
+    ss << padder;
+    currentSize++;
+  }
+
+  return ss.str();
+}
+
 } }
