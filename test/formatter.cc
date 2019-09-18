@@ -271,8 +271,8 @@ TEST(Formatter, NodeHealth) {
     "2) NODE example.com:7777\n"
     "3) VERSION 1.33.7\n"
     "4) ----------\n"
-    "5) RED | CHICKEN-INVASION Imminent\n"
-    "6) GREEN | BEARS Sleeping\n"
+    "5) RED    >> CHICKEN-INVASION Imminent\n"
+    "6) GREEN  >> BEARS Sleeping\n"
   );
 }
 

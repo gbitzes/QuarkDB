@@ -25,6 +25,7 @@
 #define QUARKDB_HEALTH_INDICATOR_HH
 
 #include "utils/Macros.hh"
+#include "utils/StringUtils.hh"
 #include <string>
 #include <string_view>
 #include <vector>
@@ -92,7 +93,7 @@ public:
   }
 
   std::string toString() const {
-    return SSTR(healthStatusAsString(status) << " | " << description << " " << message);
+    return SSTR(StringUtils::rightPad(healthStatusAsString(status), 7, ' ') << ">> " << description << " " << message);
   }
 
 private:
