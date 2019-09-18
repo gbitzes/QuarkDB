@@ -99,8 +99,8 @@ std::vector<option::Option> parse_args(int argc, char** argv) {
     std::cerr << "   $ quarkdb-create --path /directory/where/you/want/the/db" << std::endl << std::endl;
 
     std::cerr << " - To create a brand new raft instance, run the following on _all_ participating nodes." << std::endl;
-    std::cerr << "   --cluster-ID and --nodes needs to be _identical_ across all invocations." << std::endl;
-    std::cerr << "   $ quarkdb-create --path /db/directory --cluster-ID unique-string-that-identifies-cluster --nodes host1:port1,host2:port2,host3:port3" << std::endl << std::endl;
+    std::cerr << "   --clusterID and --nodes needs to be _identical_ across all invocations." << std::endl;
+    std::cerr << "   $ quarkdb-create --path /db/directory --clusterID unique-string-that-identifies-cluster --nodes host1:port1,host2:port2,host3:port3" << std::endl << std::endl;
 
     std::cerr << " - To create a new cluster out of a bulkloaded instance:" << std::endl;
     std::cerr << "  1. Shut down the bulkload node, if currently running." << std::endl;
