@@ -621,7 +621,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
     "   3) \"9\"\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) 1) \"1\"\n"
     "   2) \"2\"\n"
     "   3) \"3\"\n"
@@ -640,13 +640,13 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
   );
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) 1) \"1\"\n"
     "   2) \"2\"\n"
     "   3) \"3\"\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) 1) \"1\"\n"
     "   2) \"2\"\n"
     "   3) \"3\"\n");
@@ -657,27 +657,27 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
     "   2) \"3\"\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) 1) \"1\"\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) 1) \"1\"\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) (empty list or set)\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) (empty list or set)\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) (empty list or set)\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) (empty list or set)\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
@@ -699,7 +699,7 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
     "   3) \"9\"\n");
 
   ASSERT_REPLY_DESCRIBE(futures[i++],
-    "1) \"next:0\"\n"
+    "1) \"0\"\n"
     "2) (empty list or set)\n");
 
   // Now test qclient callbacks, ensure things stay reasonable when we mix them

@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## Unreleased
+- ``deque-scan-back`` was returning wrong cursor to signal end of iteration: ``next:0``
+while it should have been ``0``.
 - A race condition was sometimes causing elections to fail spuriously, making
 the election of a stable leader to require slightly more rounds than it should have.
 - Implementation of health indicators through ``QUARKDB-HEALTH`` command.

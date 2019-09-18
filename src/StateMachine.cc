@@ -792,7 +792,7 @@ rocksdb::Status StateMachine::dequeScanBack(StagingArea &stagingArea, std::strin
   if(isWrongType(keyinfo, KeyType::kDeque)) return wrong_type();
 
   if(keyinfo.getSize() == 0) {
-    newCursor = "0";
+    newCursor = "";
     return rocksdb::Status::OK();
   }
 
@@ -813,7 +813,7 @@ rocksdb::Status StateMachine::dequeScanBack(StagingArea &stagingArea, std::strin
   uint64_t startingMarker = cursorMarker - count;
 
   if(startingMarker <= keyinfo.getStartIndex() + 1) {
-    newCursor = "0";
+    newCursor = "";
     startingMarker = keyinfo.getStartIndex() + 1;
   }
   else {
