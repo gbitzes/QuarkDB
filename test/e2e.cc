@@ -1809,9 +1809,25 @@ TEST_F(Raft_e2e, LHSCAN) {
     "   2) \"f4\"\n"
     "   3) \"v4\"\n"
   );
-
 }
 
+TEST_F(Raft_e2e, lhlocdel) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhset", "myhash", "f1", "h1", "v1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "myhash", "f1"), "v1");
+
+  // wrong locality hint, no deletion
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlocdel", "myhash", "f1", "h2"), 0);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "myhash", "f1"), "v1");
+
+  // correct locality hint, bye bye
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhlocdel", "myhash", "f1", "h1"), 1);
+  ASSERT_REPLY(tunnel(leaderID)->exec("lhget", "myhash", "f1"), "");
+}
 
 TEST_F(Raft_e2e, RawGetAllVersions) {
   spinup(0); spinup(1); spinup(2);

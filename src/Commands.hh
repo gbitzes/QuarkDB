@@ -72,6 +72,7 @@ enum class RedisCommand {
   LHGET,
   LHLEN,
   LHDEL,
+  LHLOCDEL,
   LHSCAN,
 
   LHGET_WITH_FALLBACK,

@@ -97,6 +97,7 @@ struct cmdMapInit {
     redis_cmd_map["config_set"] = {RedisCommand::CONFIG_SET, CommandType::WRITE};
     redis_cmd_map["lhset"] = {RedisCommand::LHSET, CommandType::WRITE};
     redis_cmd_map["lhdel"] = {RedisCommand::LHDEL, CommandType::WRITE};
+    redis_cmd_map["lhlocdel"] = {RedisCommand::LHLOCDEL, CommandType::WRITE};
     redis_cmd_map["lhmset"] = {RedisCommand::LHMSET, CommandType::WRITE};
     redis_cmd_map["lhdel_with_fallback"] = {RedisCommand::LHDEL_WITH_FALLBACK, CommandType::WRITE};
     redis_cmd_map["lhset_and_del_fallback"] = {RedisCommand::LHSET_AND_DEL_FALLBACK, CommandType::WRITE};

@@ -416,6 +416,27 @@ rocksdb::Status StateMachine::lhset(StagingArea &stagingArea, std::string_view k
   return operation.finalize(operation.keySize() + fieldcreated);
 }
 
+rocksdb::Status StateMachine::lhlocdel(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view hint, int64_t &removed) {
+  if(!assertKeyType(stagingArea, key, KeyType::kLocalityHash)) return wrong_type();
+
+  LocalityFieldLocator locator(key, hint, field);
+
+  rocksdb::Status st = stagingArea.exists(locator.toView());
+  ASSERT_OK_OR_NOTFOUND(st);
+  if(st.ok()) {
+    // Yes, we got a match, field + locality hint match, proceed to deletion.
+    RedisRequest req;
+    req.push_back(field);
+
+    rocksdb::Status st = lhdel(stagingArea, key, req.begin(), req.end(), removed);
+    qdb_assert(removed == 1);
+    return st;
+  }
+
+  removed = 0;
+  return rocksdb::Status::OK();
+}
+
 rocksdb::Status StateMachine::lhdel(StagingArea &stagingArea, std::string_view key, const ReqIterator &start, const ReqIterator &end, int64_t &removed) {
   removed = 0;
 

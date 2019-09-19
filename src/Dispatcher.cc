@@ -327,6 +327,13 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(request.size() <= 2) return errArgs(request);
       return dispatchLHDEL(stagingArea, request[1], request.begin()+2, request.end());
     }
+    case RedisCommand::LHLOCDEL: {
+      if(request.size() != 4) return errArgs(request);
+      int64_t itemsRemoved;
+      rocksdb::Status st = store.lhlocdel(stagingArea, request[1], request[2], request[3], itemsRemoved);
+      if(!st.ok()) return Formatter::fromStatus(st);
+      return Formatter::integer(itemsRemoved);
+    }
     case RedisCommand::LHMSET: {
       if(request.size() <= 4 || (request.size()-2) % 3 != 0) return Formatter::errArgs(request[0]);
       rocksdb::Status st = store.lhmset(stagingArea, request[1], request.begin()+2, request.end());

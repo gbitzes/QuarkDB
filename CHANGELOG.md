@@ -1,17 +1,27 @@
 # Changelog
-All notable changes to this project will be documented in this file.
 
 ## Unreleased
-- ``deque-scan-back`` was returning wrong cursor to signal end of iteration: ``next:0``
-while it should have been ``0``.
+
+### Bug fixes
+- ``deque-scan-back`` was returning the wrong cursor to signal end of
+iteration: ``next:0`` while it should have been ``0``.
 - A race condition was sometimes causing elections to fail spuriously, making
 the election of a stable leader to require slightly more rounds than it should have.
+
+### New features
 - Implementation of health indicators through ``QUARKDB-HEALTH`` command.
 - Added support for RESPv3 push types, activated on a per-client basis through
 ``ACTIVATE-PUSH-TYPES`` command.
+- Implementation of ``LHLOCDEL`` command for conditionally deleting a locality hash
+field, only if the provided hint matches.
 - Add convenience command ``DEQUE-CLEAR``.
 - Add support for ``MATCHLOC`` in ``LHSCAN``, used to filter out results based
 on locality hint.
+- Add ``RECOVERY-SCAN`` command for scanning through complete keyspace, including
+internal rocksdb keys.
+- Add tool ``quarkdb-sst-inspect`` to allow low-level inspection of SST files.
+
+### Improvements
 - Protection for a strange case of corruption which brought down a development
 test cluster. (last-applied jumped ahead of commit-index by 1024, causing all
 writes to stall). From now on, similar kind of corruption should only take out
@@ -21,10 +31,9 @@ raft journal easier.
 - ``KEYS`` is now implemented in terms of ``SCAN``, making prefix matching of the
 keyspace just as efficient as with ``SCAN``. (Note: The use of ``KEYS`` is still
 generally discouraged due to potentially huge response size)
-- Add ``RECOVERY-SCAN`` command for scanning through complete keyspace, including
-internal rocksdb keys.
-- Add tool ``quarkdb-sst-inspect`` to allow low-level inspection of SST files.
 - Removed unused tool ``quarkdb-scrub``.
+
+
 
 ## 0.3.8 (2019-05-27)
 - Prevent elections from hanging on the TCP timeout when one of the member hosts
