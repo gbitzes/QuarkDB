@@ -96,7 +96,7 @@ bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
   payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
   entries.resize(payloadSize);
 
-  RaftJournal::Iterator iterator = journal.getIterator(nextIndex);
+  RaftJournal::Iterator iterator = journal.getIterator(nextIndex, true);
   RaftTerm entryTerm = -1;
 
   for(int64_t i = nextIndex; i < nextIndex+payloadSize; i++) {

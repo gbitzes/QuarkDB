@@ -174,6 +174,13 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_OK(journal.fetch(3, tmp));
   ASSERT_THROW(journal.trimUntil(4), FatalException); // commit index is 3
 
+  RaftJournal::Iterator it = journal.getIterator(2, true);
+  ASSERT_FALSE(it.valid());
+
+  it = journal.getIterator(2, false);
+  ASSERT_TRUE(it.valid());
+  ASSERT_EQ(it.getCurrentIndex(), 3);
+
   journal.setCommitIndex(6);
   journal.trimUntil(5);
 

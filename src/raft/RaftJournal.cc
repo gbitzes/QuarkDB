@@ -51,6 +51,19 @@ static std::string encodeEntryKey(LogIndex index) {
   return SSTR("E" << intToBinaryString(index));
 }
 
+static bool parseEntryKey(std::string_view key, LogIndex &index) {
+  if(key.size() != 1 + sizeof(index)) {
+    return false;
+  }
+
+  if(key[0] != 'E') {
+    return false;
+  }
+
+  index = binaryStringToInt(key.data() + 1);
+  return true;
+}
+
 QDB_ALWAYS_INLINE
 inline void encodeEntryKey(LogIndex index, KeyBuffer &key) {
   key.data()[0] = 'E';
@@ -547,7 +560,7 @@ rocksdb::Status RaftJournal::checkpoint(const std::string &path) {
 //------------------------------------------------------------------------------
 rocksdb::Status RaftJournal::scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntryWithIndex> &out, LogIndex &nextCursor) {
   out.clear();
-  RaftJournal::Iterator iter = getIterator(startingPoint);
+  RaftJournal::Iterator iter = getIterator(startingPoint, false);
 
   for(size_t i = 0; i < count; i++) {
     if(!iter.valid()) {
@@ -579,26 +592,38 @@ rocksdb::Status RaftJournal::scanContents(LogIndex startingPoint, size_t count, 
 //------------------------------------------------------------------------------
 // Iterator
 //------------------------------------------------------------------------------
-RaftJournal::Iterator RaftJournal::getIterator(LogIndex startingPoint) {
+RaftJournal::Iterator RaftJournal::getIterator(LogIndex startingPoint, bool mustMatchStartingPoint) {
   rocksdb::ReadOptions readOpts;
   readOpts.total_order_seek = true;
 
   std::unique_ptr<rocksdb::Iterator> it;
   it.reset(db->NewIterator(readOpts));
 
-  return RaftJournal::Iterator(std::move(it), startingPoint);
+  return RaftJournal::Iterator(std::move(it), startingPoint, mustMatchStartingPoint);
 }
 
-RaftJournal::Iterator::Iterator(std::unique_ptr<rocksdb::Iterator> it, LogIndex startingPoint) {
+RaftJournal::Iterator::Iterator(std::unique_ptr<rocksdb::Iterator> it, LogIndex startingPoint, bool mustMatchStartingPoint) {
   iter = std::move(it);
   currentIndex = startingPoint;
   iter->Seek(encodeEntryKey(currentIndex));
 
-  // Maybe the startingPoint does not exist.. return an empty iterator in
-  // such case.
-  if(!this->valid() || iter->key() != encodeEntryKey(currentIndex)) {
+  if(!this->valid()) {
     iter.reset();
     return;
+  }
+
+  // Maybe the startingPoint does not exist.. return an empty iterator in
+  // such case.
+  if(mustMatchStartingPoint && iter->key() != encodeEntryKey(currentIndex)) {
+    iter.reset();
+    return;
+  }
+  else {
+    // Figure out which index we ended up on
+    if(!parseEntryKey(iter->key().ToStringView(), currentIndex)) {
+      iter.reset();
+      return;
+    }
   }
 
   validate();

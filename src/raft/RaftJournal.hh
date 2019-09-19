@@ -92,7 +92,7 @@ public:
 
   class Iterator {
   public:
-    Iterator(std::unique_ptr<rocksdb::Iterator> iter, LogIndex startingPoint);
+    Iterator(std::unique_ptr<rocksdb::Iterator> iter, LogIndex startingPoint, bool mustMatchStartingPoint);
     bool valid();
     void next();
     void current(RaftSerializedEntry &entry);
@@ -103,7 +103,7 @@ public:
     std::unique_ptr<rocksdb::Iterator> iter;
   };
 
-  Iterator getIterator(LogIndex startingPoint);
+  Iterator getIterator(LogIndex startingPoint, bool mustMatchStartingPoint);
   rocksdb::Status scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntryWithIndex> &out, LogIndex &nextCursor);
 
 private:

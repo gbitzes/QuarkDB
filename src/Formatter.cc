@@ -195,7 +195,14 @@ RedisEncodedResponse Formatter::raftEntries(const std::vector<RaftEntry> &entrie
 }
 
 RedisEncodedResponse Formatter::journalScan(LogIndex cursor, const std::vector<RaftEntryWithIndex> &entries) {
-  std::string marker(SSTR("next:" << cursor));
+  std::string marker;
+
+  if(cursor == 0) {
+    marker = "0";
+  }
+  else {
+    marker = SSTR("next:" << cursor);
+  }
 
   std::stringstream ss;
   ss << "*2\r\n";

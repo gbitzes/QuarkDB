@@ -1006,7 +1006,7 @@ TEST_F(Raft_JournalIterator, basic_sanity) {
     ASSERT_TRUE(journal(0)->append(i+1, tempEntry)) << i;
   }
 
-  RaftJournal::Iterator it = journal(0)->getIterator(1);
+  RaftJournal::Iterator it = journal(0)->getIterator(1, true);
   ASSERT_TRUE(it.valid());
 
   for(size_t i = 0; i < testreqs.size(); i++) {
