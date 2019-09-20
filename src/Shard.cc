@@ -30,6 +30,7 @@
 #include "redis/LeaseFilter.hh"
 #include "utils/ScopedAdder.hh"
 #include "utils/VectorUtils.hh"
+#include "Version.hh"
 
 using namespace quarkdb;
 
@@ -115,6 +116,26 @@ LinkStatus Shard::dispatch(Connection *conn, Transaction &transaction) {
   }
 
   return dispatcher->dispatch(conn, transaction);
+}
+
+NodeHealth Shard::getHealth() {
+  NodeHealth nodeHealth;
+
+  InFlightRegistration registration(inFlightTracker);
+  if(!registration.ok()) {
+    std::vector<HealthIndicator> indicators;
+    indicators.emplace_back(HealthStatus::kRed, "BACKEND-GROUP-ATTACHED", "No");
+    return NodeHealth(VERSION_FULL_STRING, indicators);
+  }
+
+  if(standaloneGroup) {
+    return standaloneGroup->getHealth();
+  }
+  else if(raftGroup) {
+    return raftGroup->dispatcher()->getHealth();
+  }
+
+  qdb_throw("should never reach here");
 }
 
 LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
@@ -223,22 +244,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
     }
     case RedisCommand::QUARKDB_HEALTH: {
       if(req.size() != 1) return conn->errArgs(req[0]);
-
-      InFlightRegistration registration(inFlightTracker);
-      if(!registration.ok()) {
-        return conn->err("unavailable");
-      }
-
-      NodeHealth nodeHealth;
-
-      if(standaloneGroup) {
-        nodeHealth = standaloneGroup->getHealth();
-      }
-      else if(raftGroup) {
-        nodeHealth = raftGroup->dispatcher()->getHealth();
-      }
-
-      return conn->raw(Formatter::nodeHealth(nodeHealth));
+      return conn->raw(Formatter::nodeHealth(getHealth()));
     }
     case RedisCommand::COMMAND_STATS: {
       if(req.size() != 1) return conn->errArgs(req[0]);

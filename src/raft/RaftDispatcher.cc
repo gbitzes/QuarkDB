@@ -705,8 +705,9 @@ RaftInfo RaftDispatcher::info() {
   RaftStateSnapshotPtr snapshot = state.getSnapshot();
   RaftMembership membership = journal.getMembership();
   ReplicationStatus replicationStatus = replicator.getStatus();
+  HealthStatus nodeHealthStatus = chooseWorstHealth(getHealth().getIndicators());
 
-  return {journal.getClusterID(), state.getMyself(), snapshot->leader, membership.epoch, membership.nodes, membership.observers, snapshot->term, journal.getLogStart(),
+  return {journal.getClusterID(), state.getMyself(), snapshot->leader, nodeHealthStatus, membership.epoch, membership.nodes, membership.observers, snapshot->term, journal.getLogStart(),
           journal.getLogSize(), snapshot->status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size(),
           std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - snapshot->timeCreated).count(),
           replicationStatus, VERSION_FULL_STRING

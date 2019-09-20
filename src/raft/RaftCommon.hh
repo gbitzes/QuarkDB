@@ -28,6 +28,7 @@
 #include "utils/TimeFormatting.hh"
 #include "Common.hh"
 #include "utils/Macros.hh"
+#include "health/HealthIndicator.hh"
 #include "Utils.hh"
 
 namespace quarkdb {
@@ -339,6 +340,7 @@ struct RaftInfo {
   RaftClusterID clusterID;
   RaftServer myself;
   RaftServer leader;
+  HealthStatus nodeHealthStatus;
   LogIndex membershipEpoch;
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;
@@ -369,7 +371,7 @@ struct RaftInfo {
     ret.push_back(SSTR("MYSELF " << myself.toString()));
     ret.push_back(SSTR("VERSION " << myVersion));
     ret.push_back(SSTR("STATUS " << statusToString(status)));
-
+    ret.push_back(SSTR("NODE-HEALTH " << healthStatusAsString(nodeHealthStatus)));
     ret.push_back("----------");
     ret.push_back(SSTR("MEMBERSHIP-EPOCH " << membershipEpoch));
     ret.push_back(SSTR("NODES " << serializeNodes(nodes)));

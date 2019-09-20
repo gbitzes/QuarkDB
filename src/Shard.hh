@@ -29,6 +29,7 @@
 #include "Configuration.hh"
 #include "redis/CommandMonitor.hh"
 #include "utils/InFlightTracker.hh"
+#include "health/HealthIndicator.hh"
 
 namespace quarkdb {
 
@@ -46,6 +47,7 @@ public:
   virtual LinkStatus dispatch(Connection *conn, Transaction &transaction) override final;
   virtual void notifyDisconnect(Connection *conn) override final {}
   size_t monitors() { return commandMonitor.size(); }
+  NodeHealth getHealth();
 
 private:
   void detach();

@@ -162,7 +162,7 @@ QuarkDBInfo QuarkDBNode::info() {
   return {configuration.getMode(), configuration.getDatabase(),
     configuration.getConfigurationPath(),
     VERSION_FULL_STRING, SSTR(ROCKSDB_MAJOR << "." << ROCKSDB_MINOR << "." << ROCKSDB_PATCH),
-    SSTR(XrdVERSION),
+    SSTR(XrdVERSION), chooseWorstHealth(shard->getHealth().getIndicators()),
     shard->monitors(), std::chrono::duration_cast<std::chrono::seconds>(bootEnd - bootStart).count(), std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - bootEnd).count()
   };
 }
@@ -175,6 +175,7 @@ std::vector<std::string> QuarkDBInfo::toVector() const {
   ret.emplace_back(SSTR("QUARKDB-VERSION " << version));
   ret.emplace_back(SSTR("ROCKSDB-VERSION " << rocksdbVersion));
   ret.emplace_back(SSTR("XROOTD-HEADERS " << xrootdHeaders));
+  ret.emplace_back(SSTR("NODE-HEALTH " << healthStatusAsString(nodeHealthStatus)));
   ret.emplace_back(SSTR("MONITORS " << monitors));
   ret.emplace_back(SSTR("BOOT-TIME " << bootTime << " (" << formatTime(std::chrono::seconds(bootTime)) << ")"));
   ret.emplace_back(SSTR("UPTIME " << uptime << " (" << formatTime(std::chrono::seconds(uptime)) << ")"));

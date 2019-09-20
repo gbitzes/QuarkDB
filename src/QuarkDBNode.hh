@@ -30,6 +30,7 @@
 #include "Configuration.hh"
 #include "raft/RaftTimeouts.hh"
 #include "auth/AuthenticationDispatcher.hh"
+#include "health/HealthIndicator.hh"
 
 namespace quarkdb {
 
@@ -40,6 +41,8 @@ struct QuarkDBInfo {
   std::string version;
   std::string rocksdbVersion;
   std::string xrootdHeaders;
+  HealthStatus nodeHealthStatus;
+
   size_t monitors;
   int64_t bootTime;
   int64_t uptime;
