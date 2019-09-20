@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.9 (2019-09-20)
 
 ### Bug fixes
 - ``DEQUE-SCAN-BACK`` was returning the wrong cursor to signal end of
