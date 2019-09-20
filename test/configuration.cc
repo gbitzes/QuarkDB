@@ -32,7 +32,7 @@ TEST(ConfigurationReader, BasicSanity) {
       "if         exec                              xrootd\n"
       "xrd.protocol redis:7776 libXrdQuarkDB.so\n"
       "redis.mode raft\n"
-      "redis.database /home/user/mydb\n"
+      "    redis.database /home/user/mydb\n"
       "redis.myself server1:7776\n"
       "redis.trace debug\n"
       "redis.write_ahead_log true\n"

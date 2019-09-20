@@ -58,6 +58,15 @@ std::string ConfigurationReader::getCurrentWord() const {
 }
 
 //------------------------------------------------------------------------------
+// Advance to next word, if we're currently sitting on whitespace
+//------------------------------------------------------------------------------
+void ConfigurationReader::advanceWordIfOnWhitespace() {
+  if(!mContents.empty() && isspace(mContents[mPosition])) {
+    advanceWord();
+  }
+}
+
+//------------------------------------------------------------------------------
 // Advance to next word
 //------------------------------------------------------------------------------
 void ConfigurationReader::advanceWord() {
@@ -73,6 +82,7 @@ void ConfigurationReader::advanceLine() {
     mPosition++;
     if(mContents[mPosition] == '\n') {
       mPosition++;
+      advanceWordIfOnWhitespace();
       break;
     }
   }

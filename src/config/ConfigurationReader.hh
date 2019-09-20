@@ -69,7 +69,10 @@ private:
   //----------------------------------------------------------------------------
   size_t findNextNonWhitespace() const;
 
-
+  //----------------------------------------------------------------------------
+  // Advance to next word, if we're currently sitting on whitespace
+  //----------------------------------------------------------------------------
+  void advanceWordIfOnWhitespace();
 
   std::string mContents;
   size_t mPosition = 0;

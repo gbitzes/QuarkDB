@@ -3,10 +3,11 @@
 ## Unreleased
 
 ### Bug fixes
-- ``deque-scan-back`` was returning the wrong cursor to signal end of
+- ``DEQUE-SCAN-BACK`` was returning the wrong cursor to signal end of
 iteration: ``next:0`` while it should have been ``0``.
-- A race condition was sometimes causing elections to fail spuriously, making
-the election of a stable leader to require slightly more rounds than it should have.
+- A race condition was sometimes causing elections to fail spuriously.
+Establishing a stable quorum would occasionally require slightly more election
+rounds than it should have.
 
 ### New features
 - Implementation of health indicators through ``QUARKDB-HEALTH`` command.
@@ -20,19 +21,18 @@ on locality hint.
 - Add ``RECOVERY-SCAN`` command for scanning through complete keyspace, including
 internal rocksdb keys.
 - Add tool ``quarkdb-sst-inspect`` to allow low-level inspection of SST files.
+- Add command ``RAFT-JOURNAL-SCAN`` to make searching through the contents of the
+raft journal easier.
 
 ### Improvements
 - Protection for a strange case of corruption which brought down a development
 test cluster. (last-applied jumped ahead of commit-index by 1024, causing all
 writes to stall). From now on, similar kind of corruption should only take out
 a single node, and not spread to the entire cluster.
-- Add command ``RAFT-JOURNAL-SCAN`` to make searching through the contents of the
-raft journal easier.
 - ``KEYS`` is now implemented in terms of ``SCAN``, making prefix matching of the
 keyspace just as efficient as with ``SCAN``. (Note: The use of ``KEYS`` is still
 generally discouraged due to potentially huge response size)
 - Removed unused tool ``quarkdb-scrub``.
-
 
 
 ## 0.3.8 (2019-05-27)
