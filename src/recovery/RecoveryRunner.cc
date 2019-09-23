@@ -27,7 +27,7 @@
 using namespace quarkdb;
 
 RecoveryRunner::RecoveryRunner(const std::string &path, int port)
-: editor(path), dispatcher(editor), poller(port, &dispatcher)  {
+: editor(path), dispatcher(editor), poller(port, 3, &dispatcher)  {
   qdb_event("RECOVERY MODE is now active: Issue requests to port " << port << " through redis-cli.");
   qdb_info("\nUseful commands: \n"
   "  RECOVERY_GET, RECOVERY_SET, RECOVERY_DEL:\n"

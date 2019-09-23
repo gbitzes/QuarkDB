@@ -26,6 +26,7 @@
 #include "raft/RaftConfig.hh"
 #include "ShardDirectory.hh"
 #include "StateMachine.hh"
+#include "Connection.hh"
 #include "raft/RaftResilverer.hh"
 #include "raft/RaftJournal.hh"
 

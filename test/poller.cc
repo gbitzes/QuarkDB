@@ -21,7 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include "Poller.hh"
+#include "Dispatcher.hh"
 #include "netio/AsioPoller.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
@@ -34,14 +34,13 @@ using namespace qclient;
 #define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
 
 class tPoller : public TestCluster3NodesFixture {};
-class tAsioPoller : public TestCluster3NodesFixture {};
 
-TEST_F(tAsioPoller, SimpleConstruction) {
+TEST_F(tPoller, SimpleConstruction) {
   RedisDispatcher dispatcher(*stateMachine(), *publisher());
   AsioPoller smPoller(myself().port, 3, &dispatcher);
 }
 
-TEST_F(tAsioPoller, OneRequest) {
+TEST_F(tPoller, OneRequest) {
   RedisDispatcher dispatcher(*stateMachine(), *publisher());
   AsioPoller smPoller(myself().port, 3, &dispatcher);
 
@@ -54,7 +53,7 @@ TEST_F(tAsioPoller, OneRequest) {
 TEST_F(tPoller, T1) {
   RedisDispatcher dispatcher(*stateMachine(), *publisher());
 
-  Poller smPoller(myself().port, &dispatcher);
+  AsioPoller smPoller(myself().port, 3, &dispatcher);
 
   // start first connection
   QClient tunnel(myself().hostname, myself().port, {} );
@@ -108,7 +107,7 @@ TEST_F(tPoller, test_reconnect) {
   tunnel.attachListener(listener.get());
 
   for(size_t reconnects = 0; reconnects < 5; reconnects++) {
-    Poller rocksdbpoller(myself().port, &dispatcher);
+    AsioPoller rocksdbpoller(myself().port, 3, &dispatcher);
 
     bool success = false;
     for(size_t i = 0; i < 30; i++) {

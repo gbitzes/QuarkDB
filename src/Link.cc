@@ -63,7 +63,6 @@ Link::Link(asio::ip::tcp::socket &socket, qclient::TlsConfig tlsconfig_)
 : Link(tlsconfig_) {
   asioSocket = &socket;
   uuid = generateUuid();
-  host = "N/A";
   if(connectionLogging) qdb_info("New link from " << describe());
 }
 
@@ -168,8 +167,8 @@ LinkStatus Link::asioRecv(char *buff, int blen, int timeout) {
 }
 
 LinkStatus Link::asioSend(const char *buff, int blen) {
-  int retval = asioSocket->send(asio::buffer(buff, blen));
-  return retval;
+  asio::error_code ec;
+  return asioSocket->send(asio::buffer(buff, blen), 0, ec);
 }
 
 LinkStatus Link::asioClose(int defer) {

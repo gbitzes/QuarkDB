@@ -23,6 +23,7 @@
 
 #include "raft/RaftContactDetails.hh"
 #include "StateMachine.hh"
+#include "Dispatcher.hh"
 #include "../test-utils.hh"
 #include "bench-utils.hh"
 #include <gtest/gtest.h>
@@ -177,7 +178,7 @@ public:
     }
     else if(params.mode == Mode::kRedisStandalone) {
       customDispatcher = new RedisDispatcher(*stateMachine(), *publisher());
-      customPoller = new Poller(34567, customDispatcher);
+      customPoller = new AsioPoller(34567, 10, customDispatcher);
       executor = new ExecutorHelper<TestcaseProvider>(params.events, {"localhost", 34567}, "");
     }
     else if(params.mode == Mode::kConsensus) {
@@ -188,7 +189,7 @@ public:
   }
 protected:
   RedisDispatcher *customDispatcher {nullptr};
-  Poller *customPoller {nullptr};
+  AsioPoller *customPoller {nullptr};
   Executor *executor {nullptr};
 };
 

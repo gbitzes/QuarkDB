@@ -29,7 +29,6 @@
 #include "raft/RaftContactDetails.hh"
 #include "ShardDirectory.hh"
 #include "Version.hh"
-#include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
 #include "test-utils.hh"

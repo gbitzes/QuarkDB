@@ -159,7 +159,7 @@ RaftState* TestCluster::state(int id) {
   return node(id)->group()->state();
 }
 
-Poller* TestCluster::poller(int id) {
+AsioPoller* TestCluster::poller(int id) {
   return node(id)->poller();
 }
 
@@ -348,9 +348,9 @@ qclient::Members TestNode::members() {
   return memb;
 }
 
-Poller* TestNode::poller() {
+AsioPoller* TestNode::poller() {
   if(pollerptr == nullptr) {
-    pollerptr = new Poller(myself().port, quarkdbNode());
+    pollerptr = new AsioPoller(myself().port, 5, quarkdbNode());
   }
   return pollerptr;
 }

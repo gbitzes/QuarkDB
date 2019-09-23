@@ -26,7 +26,7 @@
 
 #include "recovery/RecoveryRunner.hh"
 #include "recovery/RecoveryDispatcher.hh"
-#include "Poller.hh"
+#include "netio/AsioPoller.hh"
 
 #include <vector>
 #include <rocksdb/db.h>
@@ -42,7 +42,7 @@ public:
 private:
   RecoveryEditor editor;
   RecoveryDispatcher dispatcher;
-  Poller poller;
+  AsioPoller poller;
 };
 
 }

@@ -32,7 +32,6 @@
 #include "raft/RaftLease.hh"
 #include "raft/RaftContactDetails.hh"
 #include "Version.hh"
-#include "Poller.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
 #include <gtest/gtest.h>

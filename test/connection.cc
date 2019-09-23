@@ -24,6 +24,7 @@
 #include "Connection.hh"
 #include "RedisParser.hh"
 #include "StateMachine.hh"
+#include "Dispatcher.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
 

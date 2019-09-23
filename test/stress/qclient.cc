@@ -26,7 +26,6 @@
 #include "raft/RaftTimeouts.hh"
 #include "raft/RaftCommitTracker.hh"
 #include "raft/RaftReplicator.hh"
-#include "Poller.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
 #include "../test-utils.hh"

@@ -27,7 +27,6 @@ add_library(XrdQuarkDB SHARED
                                           EventFD.hh
   Formatter.cc                            Formatter.hh
   Link.cc                                 Link.hh
-  Poller.cc                               Poller.hh
   QuarkDBNode.cc                          QuarkDBNode.hh
   RedisParser.cc                          RedisParser.hh
   RedisRequest.cc                         RedisRequest.hh

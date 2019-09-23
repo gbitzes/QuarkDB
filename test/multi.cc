@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "Dispatcher.hh"
 #include "redis/Transaction.hh"
 #include "raft/RaftContactDetails.hh"
 #include "test-utils.hh"

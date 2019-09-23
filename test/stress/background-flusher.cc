@@ -22,12 +22,13 @@
  ************************************************************************/
 
 #include "raft/RaftJournal.hh"
-#include "qclient/BackgroundFlusher.hh"
-#include "qclient/RocksDBPersistency.hh"
+#include "Connection.hh"
+#include <qclient/BackgroundFlusher.hh>
+#include <qclient/RocksDBPersistency.hh>
 #include "../test-utils.hh"
 #include "RedisParser.hh"
-#include <gtest/gtest.h>
 #include "../test-reply-macros.hh"
+#include <gtest/gtest.h>
 
 using namespace quarkdb;
 

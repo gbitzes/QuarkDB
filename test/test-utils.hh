@@ -28,7 +28,7 @@
 #include <sys/un.h>
 #include <vector>
 #include "Common.hh"
-#include "Poller.hh"
+#include "netio/AsioPoller.hh"
 #include "raft/RaftState.hh"
 #include <qclient/QClient.hh>
 #include <gtest/gtest.h>
@@ -53,6 +53,7 @@ class Shard; class RaftGroup; class ShardDirectory; class RaftJournal;
 class RaftDispatcher; class RaftLease; class RaftDirector;
 class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
 class QuarkDBNode; class RaftContactDetails;
+class Publisher;
 
 #define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
   bool ok = false; \
@@ -140,7 +141,7 @@ public:
   ShardDirectory* shardDirectory();
   Shard* shard();
   RaftGroup* group();
-  Poller *poller();
+  AsioPoller *poller();
   qclient::QClient *tunnel();
   qclient::Options makeNoRedirectOptions();
   std::unique_ptr<qclient::Handshake> makeQClientHandshake();
@@ -159,7 +160,7 @@ private:
 
   QuarkDBNode *qdbnodeptr = nullptr;
   ShardDirectory *sharddirptr = nullptr;
-  Poller *pollerptr = nullptr;
+  AsioPoller *pollerptr = nullptr;
   qclient::QClient *tunnelptr = nullptr;
 };
 
@@ -179,7 +180,7 @@ public:
   RaftJournal* journal(int id = 0);
   RaftDispatcher *dispatcher(int id = 0);
   RaftState *state(int id = 0);
-  Poller *poller(int id = 0);
+  AsioPoller *poller(int id = 0);
   RaftServer myself(int id = 0);
   RaftDirector *director(int id = 0);
   qclient::QClient *tunnel(int id = 0);

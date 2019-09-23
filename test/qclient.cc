@@ -21,11 +21,13 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "test-utils.hh"
+#include "test-reply-macros.hh"
+#include "Link.hh"
+#include "RedisParser.hh"
 #include <gtest/gtest.h>
 #include <sys/socket.h>
 #include <sys/un.h>
-#include "test-utils.hh"
-#include "test-reply-macros.hh"
 
 using namespace quarkdb;
 using namespace qclient;
