@@ -52,7 +52,7 @@ void ShardDirectory::parseResilveringHistory() {
   }
 
   if(!ResilveringHistory::deserialize(tmp, resilveringHistory)) {
-    qdb_throw("Unable to parse resilvering history from " << q(historyPath));
+    qdb_throw("Unable to parse resilvering history from '" << historyPath << "'");
   }
 }
 

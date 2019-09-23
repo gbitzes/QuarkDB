@@ -10,3 +10,6 @@
 [submodule "deps/qclient"]
 	path = deps/qclient
 	url = https://gitlab.cern.ch/eos/qclient.git
+[submodule "deps/asio"]
+	path = deps/asio
+	url = https://github.com/chriskohlhoff/asio

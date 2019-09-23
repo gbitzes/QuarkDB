@@ -22,6 +22,7 @@
  ************************************************************************/
 
 #include "Poller.hh"
+#include "netio/AsioPoller.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>
 #include <qclient/QClient.hh>
@@ -33,6 +34,22 @@ using namespace qclient;
 #define ASSERT_REPLY(reply, val) { ASSERT_NE(reply, nullptr); ASSERT_EQ(std::string(((reply))->str, ((reply))->len), val); }
 
 class tPoller : public TestCluster3NodesFixture {};
+class tAsioPoller : public TestCluster3NodesFixture {};
+
+TEST_F(tAsioPoller, SimpleConstruction) {
+  RedisDispatcher dispatcher(*stateMachine(), *publisher());
+  AsioPoller smPoller(myself().port, 3, &dispatcher);
+}
+
+TEST_F(tAsioPoller, OneRequest) {
+  RedisDispatcher dispatcher(*stateMachine(), *publisher());
+  AsioPoller smPoller(myself().port, 3, &dispatcher);
+
+  QClient tunnel(myself().hostname, myself().port, {} );
+
+  redisReplyPtr reply = tunnel.exec("set", "abc", "1234").get();
+  ASSERT_REPLY(reply, "OK");
+}
 
 TEST_F(tPoller, T1) {
   RedisDispatcher dispatcher(*stateMachine(), *publisher());

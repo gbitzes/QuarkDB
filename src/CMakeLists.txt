@@ -3,6 +3,7 @@ include_directories(
   ${BACKWARD_INCLUDE_DIRS}
   ${ROCKSDB_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/deps/qclient/include
+  ${CMAKE_SOURCE_DIR}/deps/asio/asio/include
   "."
 )
 
@@ -40,6 +41,8 @@ add_library(XrdQuarkDB SHARED
   config/ConfigurationReader.cc           config/ConfigurationReader.hh
 
                                           health/HealthIndicator.hh
+
+  netio/AsioPoller.cc                     netio/AsioPoller.hh
 
                                           pubsub/SimplePatternMatcher.hh
   pubsub/Publisher.cc                     pubsub/Publisher.hh

@@ -27,6 +27,7 @@
 #include <sstream>
 #include "Xrd/XrdLink.hh"
 #include <qclient/QClient.hh>
+#include <asio.hpp>
 
 namespace quarkdb {
 
@@ -43,9 +44,9 @@ using LinkStatus = int;
 // Our link class either directly maps to an XrdLink, or to an internal buffer.
 // Needed for unit tests.
 //------------------------------------------------------------------------------
-
 class Link {
 public:
+  Link(asio::ip::tcp::socket &socket, qclient::TlsConfig tlsconfig_);
   Link(const qclient::TlsConfig &tlsconfig_);
 
   Link(XrdLink *lp, qclient::TlsConfig tlsconfig = {} );
@@ -81,10 +82,16 @@ private:
   XrdLink *link = nullptr;
   bool dead = false;
   int fd = -1;
+  asio::ip::tcp::socket *asioSocket = nullptr;
+
   bool xrdLinkCloseDisabled = false;
 
   std::string uuid;
   std::string host;
+
+  LinkStatus asioRecv(char *buff, int blen, int timeout);
+  LinkStatus asioSend(const char *buff, int blen);
+  LinkStatus asioClose(int defer = 0);
 
   LinkStatus streamRecv(char *buff, int blen, int timeout);
   LinkStatus streamSend(const char *buff, int blen);

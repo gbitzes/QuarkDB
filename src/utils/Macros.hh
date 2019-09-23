@@ -59,7 +59,6 @@ extern std::mutex logMutex;
   std::cerr << "[" << TIME_NOW << "] " << message << std::endl; }
 
 #define DBG(message) ___log(__FILE__ << ":" << __LINE__ << " -- " << #message << " = " << message)
-#define q(message) SSTR("'" << message << "'")
 
 // temporary solution for now
 #define qdb_log(message) ___log(message)

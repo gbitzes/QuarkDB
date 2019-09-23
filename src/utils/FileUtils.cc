@@ -192,12 +192,12 @@ void rename_directory_or_die(const std::string &source, const std::string &desti
 
   std::string tmp;
   if(!directoryExists(source, tmp)) {
-    qdb_throw("Tried to rename " << q(source) << " to " << q(destination) << ", but " << q(source) << " did not exist.");
+    qdb_throw("Tried to rename '" << source << "' to '" << destination << "', but '" << source << "' did not exist.");
   }
 
   int ret = rename(source.c_str(), destination.c_str());
   if(ret != 0) {
-    qdb_throw("Tried to rename " << q(source) << " to " << q(destination) << ", but ::rename failed: " << strerror(errno));
+    qdb_throw("Tried to rename '" << source << "' to '" << destination << "', but ::rename failed: " << strerror(errno));
   }
 }
 

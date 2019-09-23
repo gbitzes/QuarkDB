@@ -28,6 +28,7 @@
 #include "Common.hh"
 #include "Utils.hh"
 #include "utils/Uuid.hh"
+#include "utils/Stacktrace.hh"
 #include <openssl/ssl.h>
 #include <openssl/err.h>
 
@@ -56,6 +57,14 @@ qclient::RecvStatus Link::recvStatus(char *buff, int blen, int timeout) {
 Link::Link(const qclient::TlsConfig &tlsconfig_)
 : tlsconfig(tlsconfig_), tlsfilter(tlsconfig, qclient::FilterType::SERVER, std::bind(&Link::recvStatus, this, _1, _2, _3), std::bind(&Link::rawSend, this, _1, _2)) {
   uuid = generateUuid();
+}
+
+Link::Link(asio::ip::tcp::socket &socket, qclient::TlsConfig tlsconfig_)
+: Link(tlsconfig_) {
+  asioSocket = &socket;
+  uuid = generateUuid();
+  host = "N/A";
+  if(connectionLogging) qdb_info("New link from " << describe());
 }
 
 Link::Link(int fd_, qclient::TlsConfig tlsconfig_)
@@ -89,6 +98,7 @@ void Link::preventXrdLinkClose() {
 
 LinkStatus Link::rawRecv(char *buff, int blen, int timeout) {
   if(link) return link->Recv(buff, blen, timeout);
+  if(asioSocket) return asioRecv(buff, blen, timeout);
   if(fd >= 0) return fdRecv(buff, blen, timeout);
   return streamRecv(buff, blen, timeout);
 }
@@ -108,12 +118,14 @@ LinkStatus Link::Close(int defer) {
     if(xrdLinkCloseDisabled) return 1;
     return link->Close(defer);
   }
+  if(asioSocket) return asioClose(defer);
   if(fd >= 0) return fdClose(defer);
   return streamClose(defer);
 }
 
 LinkStatus Link::rawSend(const char *buff, int blen) {
   if(link) return link->Send(buff, blen);
+  if(asioSocket) return asioSend(buff, blen);
   if(fd >= 0) return fdSend(buff, blen);
   return streamSend(buff, blen);
 }
@@ -137,6 +149,33 @@ LinkStatus Link::Send(const char *buff, int blen) {
 
 LinkStatus Link::Send(const std::string &str) {
   return Send(str.c_str(), str.size());
+}
+
+LinkStatus Link::asioRecv(char *buff, int blen, int timeout) {
+  asio::mutable_buffer asioBuff(buff, blen);
+
+  std::error_code ec;
+  int len = asioSocket->receive(asioBuff, 0, ec);
+
+  if(ec.value() == 0) {
+    return len;
+  }
+  else if(ec.value() == EAGAIN || ec.value() == EWOULDBLOCK) {
+    return 0;
+  }
+
+  return - ec.value();
+}
+
+LinkStatus Link::asioSend(const char *buff, int blen) {
+  int retval = asioSocket->send(asio::buffer(buff, blen));
+  return retval;
+}
+
+LinkStatus Link::asioClose(int defer) {
+  asio::error_code ignored_ec;
+  asioSocket->shutdown(asio::ip::tcp::socket::shutdown_both, ignored_ec);
+  return 0;
 }
 
 LinkStatus Link::streamSend(const char *buff, int blen) {

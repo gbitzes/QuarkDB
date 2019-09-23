@@ -138,7 +138,7 @@ endif()
 #-------------------------------------------------------------------------------
 # Compiler options
 #-------------------------------------------------------------------------------
-add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++17 -g -fPIC)
+add_definitions(-Wall -Wextra -Werror -Wno-unused-parameter -std=c++17 -g -fPIC -DASIO_STANDALONE)
 
 #-------------------------------------------------------------------------------
 # Build source and tests
