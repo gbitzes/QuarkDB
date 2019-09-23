@@ -71,12 +71,15 @@ private:
   //----------------------------------------------------------------------------
   // Request next async accept
   //----------------------------------------------------------------------------
-  void requestAccept();
+  void requestAccept4();
+  void requestAccept6();
 
   //----------------------------------------------------------------------------
   // Handle incoming TCP connect
   //----------------------------------------------------------------------------
-  void handleAccept(const std::error_code& ec);
+  void handleAccept(asio::ip::tcp::socket socket);
+  void handleAccept4(const std::error_code& ec);
+  void handleAccept6(const std::error_code& ec);
 
   //----------------------------------------------------------------------------
   // Handle wait
@@ -95,8 +98,11 @@ private:
   InFlightTracker mInFlightTracker;
 
   asio::io_context mContext;
-  asio::ip::tcp::acceptor mAcceptor;
-  asio::ip::tcp::socket mNextSocket;
+  asio::ip::tcp::acceptor mAcceptor4;
+  asio::ip::tcp::acceptor mAcceptor6;
+
+  asio::ip::tcp::socket mNextSocket4;
+  asio::ip::tcp::socket mNextSocket6;
 
   std::map<ActiveEntry*, std::unique_ptr<ActiveEntry>> mEntries;
 };

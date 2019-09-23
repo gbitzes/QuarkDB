@@ -33,14 +33,30 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 AsioPoller::AsioPoller(int port, size_t threadPoolSize, Dispatcher *disp)
 : mPort(port), mThreadPoolSize(threadPoolSize), mDispatcher(disp),
-  mAcceptor(mContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), mPort)),
-  mNextSocket(mContext)
+  mAcceptor4(mContext),
+  mAcceptor6(mContext),
+  mNextSocket4(mContext),
+  mNextSocket6(mContext)
  {
 
-  asio::socket_base::reuse_address option(true);
-  mAcceptor.set_option(option);
+  std::error_code ec;
+  mAcceptor4.open(asio::ip::tcp::v4(), ec);
+  if(ec.value() == 0) {
+    mAcceptor4.set_option(asio::socket_base::reuse_address(true));
+    mAcceptor4.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v4(), mPort));
+    mAcceptor4.listen();
+  }
 
-  requestAccept();
+  mAcceptor6.open(asio::ip::tcp::v6(), ec);
+  if(ec.value() == 0) {
+    mAcceptor6.set_option(asio::socket_base::reuse_address(true));
+    mAcceptor6.set_option(asio::ip::v6_only(true), ec);
+    mAcceptor6.bind(asio::ip::tcp::endpoint(asio::ip::tcp::v6(), mPort));
+    mAcceptor6.listen();
+  }
+
+  requestAccept4();
+  requestAccept6();
 
   for(size_t i = 0; i < mThreadPoolSize; i++) {
     mThreadPool.emplace_back(&AsioPoller::workerThread, this);
@@ -52,7 +68,10 @@ AsioPoller::AsioPoller(int port, size_t threadPoolSize, Dispatcher *disp)
 //------------------------------------------------------------------------------
 AsioPoller::~AsioPoller() {
   mShutdown = true;
-  mAcceptor.close();
+
+  mAcceptor4.close();
+  mAcceptor6.close();
+
   mContext.stop();
 
   for(size_t i = 0; i < mThreadPool.size(); i++) {
@@ -72,38 +91,54 @@ void AsioPoller::workerThread(ThreadAssistant &assistant) {
 //------------------------------------------------------------------------------
 // Request next async accept
 //------------------------------------------------------------------------------
-void AsioPoller::requestAccept() {
-  mNextSocket = asio::ip::tcp::socket(mContext);
-  mAcceptor.async_accept(
-    mNextSocket,
-    std::bind(&AsioPoller::handleAccept, this, std::placeholders::_1)
-  );
+void AsioPoller::requestAccept4() {
+  mNextSocket4 = asio::ip::tcp::socket(mContext);
+  mAcceptor4.async_accept(mNextSocket4, std::bind(&AsioPoller::handleAccept4, this, std::placeholders::_1));
+}
+
+void AsioPoller::requestAccept6() {
+  mNextSocket6 = asio::ip::tcp::socket(mContext);
+  mAcceptor6.async_accept(mNextSocket6, std::bind(&AsioPoller::handleAccept6, this, std::placeholders::_1));
 }
 
 //------------------------------------------------------------------------------
 // Handle incoming TCP connect
 //------------------------------------------------------------------------------
-void AsioPoller::handleAccept(const std::error_code& ec) {
+void AsioPoller::handleAccept4(const std::error_code& ec) {
   if(!ec) {
-    mNextSocket.non_blocking(true);
-
-    std::unique_ptr<ActiveEntry> activeEntry;
-    activeEntry.reset(new ActiveEntry(std::move(mNextSocket)));
-
-    qclient::TlsConfig tlsconfig;
-    activeEntry->link = new Link(activeEntry->socket, tlsconfig);
-    activeEntry->conn = new Connection(activeEntry->link);
-
-    ActiveEntry *ptr = activeEntry.get();
-    mEntries[ptr] = std::move(activeEntry);
-
-    ptr->socket.async_wait(asio::ip::tcp::socket::wait_read,
-      std::bind(&AsioPoller::handleWait, this, ptr, std::placeholders::_1));
+    handleAccept(std::move(mNextSocket4));
   }
 
   if(!mShutdown) {
-    requestAccept();
+    requestAccept4();
   }
+}
+
+void AsioPoller::handleAccept6(const std::error_code& ec) {
+  if(!ec) {
+    handleAccept(std::move(mNextSocket6));
+  }
+
+  if(!mShutdown) {
+    requestAccept6();
+  }
+}
+
+void AsioPoller::handleAccept(asio::ip::tcp::socket socket) {
+  socket.non_blocking(true);
+
+  std::unique_ptr<ActiveEntry> activeEntry;
+  activeEntry.reset(new ActiveEntry(std::move(socket)));
+
+  qclient::TlsConfig tlsconfig;
+  activeEntry->link = new Link(activeEntry->socket, tlsconfig);
+  activeEntry->conn = new Connection(activeEntry->link);
+
+  ActiveEntry *ptr = activeEntry.get();
+  mEntries[ptr] = std::move(activeEntry);
+
+  ptr->socket.async_wait(asio::ip::tcp::socket::wait_read,
+    std::bind(&AsioPoller::handleWait, this, ptr, std::placeholders::_1));
 }
 
 //------------------------------------------------------------------------------
