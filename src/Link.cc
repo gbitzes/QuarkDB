@@ -168,7 +168,12 @@ LinkStatus Link::asioRecv(char *buff, int blen, int timeout) {
 
 LinkStatus Link::asioSend(const char *buff, int blen) {
   asio::error_code ec;
-  return asioSocket->send(asio::buffer(buff, blen), 0, ec);
+  int bytesWritten = asio::write(*asioSocket, asio::buffer(buff, blen), ec);
+  if(ec.value() != 0) {
+    return -1;
+  }
+
+  return bytesWritten;
 }
 
 LinkStatus Link::asioClose(int defer) {
