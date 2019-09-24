@@ -73,6 +73,7 @@ AsioPoller::~AsioPoller() {
   mAcceptor6.close();
 
   mContext.stop();
+  mInFlightTracker.setAcceptingRequests(false);
 
   for(size_t i = 0; i < mThreadPool.size(); i++) {
     mThreadPool[i].join();
