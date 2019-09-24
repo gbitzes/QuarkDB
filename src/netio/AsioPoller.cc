@@ -135,8 +135,9 @@ void AsioPoller::handleAccept(asio::ip::tcp::socket socket) {
   activeEntry->conn = new Connection(activeEntry->link);
 
   ActiveEntry *ptr = activeEntry.get();
-  mEntries[ptr] = std::move(activeEntry);
 
+  std::lock_guard<std::mutex> lock(mEntriesMtx);
+  mEntries[ptr] = std::move(activeEntry);
   ptr->socket.async_wait(asio::ip::tcp::socket::wait_read,
     std::bind(&AsioPoller::handleWait, this, ptr, std::placeholders::_1));
 }
@@ -159,6 +160,7 @@ void AsioPoller::handleWait(ActiveEntry *entry, const std::error_code& ec) {
       std::bind(&AsioPoller::handleWait, this, entry, std::placeholders::_1));
   }
   else {
+    std::lock_guard<std::mutex> lock(mEntriesMtx);
     mEntries.erase(entry);
   }
 }

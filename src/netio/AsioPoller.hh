@@ -104,6 +104,7 @@ private:
   asio::ip::tcp::socket mNextSocket4;
   asio::ip::tcp::socket mNextSocket6;
 
+  std::mutex mEntriesMtx;
   std::map<ActiveEntry*, std::unique_ptr<ActiveEntry>> mEntries;
 };
 
