@@ -46,7 +46,7 @@ using LinkStatus = int;
 //------------------------------------------------------------------------------
 class Link {
 public:
-  Link(asio::ip::tcp::socket &socket, qclient::TlsConfig tlsconfig_);
+  Link(asio::ip::tcp::socket &socket, const std::string &hostname, qclient::TlsConfig tlsconfig_);
   Link(const qclient::TlsConfig &tlsconfig_);
 
   Link(XrdLink *lp, qclient::TlsConfig tlsconfig = {} );

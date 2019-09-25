@@ -1139,14 +1139,14 @@ TEST_F(Raft_e2e, monitor) {
   tunnel(leaderID)->exec("set", "abc", "aaaa" "\xab" "bbb");
   response.clear();
 
-  std::string expectedReply = SSTR("+ [" << connID << "]: \"set\" \"abc\" \"aaaa\\xABbbb\"\r\n");
+  std::string expectedReply = SSTR("+localhost [" << connID << "]: \"set\" \"abc\" \"aaaa\\xABbbb\"\r\n");
   RETRY_ASSERT_TRUE(reader.consume(expectedReply.size(), response));
   ASSERT_EQ(response, expectedReply);
 
   tunnel(leaderID)->exec("get", "abc");
   response.clear();
 
-  expectedReply = SSTR("+ [" << connID << "]: \"get\" \"abc\"\r\n");
+  expectedReply = SSTR("+localhost [" << connID << "]: \"get\" \"abc\"\r\n");
   RETRY_ASSERT_TRUE(reader.consume(expectedReply.size(), response));
   ASSERT_EQ(response, expectedReply);
 }

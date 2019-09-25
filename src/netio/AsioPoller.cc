@@ -33,6 +33,7 @@ namespace quarkdb {
 //------------------------------------------------------------------------------
 AsioPoller::AsioPoller(int port, size_t threadPoolSize, Dispatcher *disp)
 : mPort(port), mThreadPoolSize(threadPoolSize), mDispatcher(disp),
+  mResolver(mContext),
   mAcceptor4(mContext),
   mAcceptor6(mContext),
   mNextSocket4(mContext),
@@ -128,11 +129,36 @@ void AsioPoller::handleAccept6(const std::error_code& ec) {
 void AsioPoller::handleAccept(asio::ip::tcp::socket socket) {
   socket.non_blocking(true);
 
+  std::error_code ec;
+  asio::ip::tcp::endpoint remoteEndpoint = socket.remote_endpoint(ec);
+
+  std::shared_ptr<asio::ip::tcp::socket> socketPtr;
+  socketPtr.reset(new asio::ip::tcp::socket(std::move(socket)));
+
+  mResolver.async_resolve(remoteEndpoint,
+    std::bind(&AsioPoller::handleResolve, this, socketPtr, std::placeholders::_1, std::placeholders::_2));
+}
+
+//------------------------------------------------------------------------------
+// Handle resolve
+//------------------------------------------------------------------------------
+void AsioPoller::handleResolve(std::shared_ptr<asio::ip::tcp::socket> socketPtr, const std::error_code &ec,
+  asio::ip::tcp::resolver::iterator resultIterator) {
+
+  std::string resolvedHostname = "N/A";
+
+  asio::ip::tcp::resolver::iterator end;
+  if(resultIterator != end) {
+    resolvedHostname = resultIterator->host_name();
+  }
+
+  asio::ip::tcp::socket socket = std::move(*socketPtr.get());
+
   std::unique_ptr<ActiveEntry> activeEntry;
   activeEntry.reset(new ActiveEntry(std::move(socket)));
 
   qclient::TlsConfig tlsconfig;
-  activeEntry->link = new Link(activeEntry->socket, tlsconfig);
+  activeEntry->link = new Link(activeEntry->socket, resolvedHostname, tlsconfig);
   activeEntry->conn = new Connection(activeEntry->link);
 
   ActiveEntry *ptr = activeEntry.get();

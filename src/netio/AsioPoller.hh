@@ -82,6 +82,12 @@ private:
   void handleAccept6(const std::error_code& ec);
 
   //----------------------------------------------------------------------------
+  // Handle resolve
+  //----------------------------------------------------------------------------
+  void handleResolve(std::shared_ptr<asio::ip::tcp::socket> socketPtr, const std::error_code &ec,
+    asio::ip::tcp::resolver::iterator resultIterator);
+
+  //----------------------------------------------------------------------------
   // Handle wait
   //----------------------------------------------------------------------------
   void handleWait(ActiveEntry *entry, const std::error_code& ec);
@@ -98,6 +104,8 @@ private:
   InFlightTracker mInFlightTracker;
 
   asio::io_context mContext;
+  asio::ip::tcp::resolver mResolver;
+
   asio::ip::tcp::acceptor mAcceptor4;
   asio::ip::tcp::acceptor mAcceptor6;
 

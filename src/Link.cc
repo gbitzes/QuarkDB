@@ -59,10 +59,11 @@ Link::Link(const qclient::TlsConfig &tlsconfig_)
   uuid = generateUuid();
 }
 
-Link::Link(asio::ip::tcp::socket &socket, qclient::TlsConfig tlsconfig_)
+Link::Link(asio::ip::tcp::socket &socket, const std::string &hostname, qclient::TlsConfig tlsconfig_)
 : Link(tlsconfig_) {
   asioSocket = &socket;
   uuid = generateUuid();
+  host = hostname;
   if(connectionLogging) qdb_info("New link from " << describe());
 }
 
