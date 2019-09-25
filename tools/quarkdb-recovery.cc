@@ -27,74 +27,13 @@
 #include "utils/AssistedThread.hh"
 #include "recovery/RecoveryRunner.hh"
 #include "Common.hh"
-#include "OptionUtils.hh"
 #include "utils/ParseUtils.hh"
 #include "Utils.hh"
 #include "qclient/QClient.hh"
+#include "utils/FileUtils.hh"
+#include "../deps/CLI11.hpp"
 
-namespace Opt {
-enum  Type { UNKNOWN, HELP, PATH, PORT, COMMAND };
-}
-
-bool verify_options_sane(option::Parser &parse, std::vector<option::Option> &options) {
-  if(parse.error()) {
-    std::cout << "Parsing error" << std::endl;
-    return false;
-  }
-
-  if(options[Opt::HELP]) {
-    return false;
-  }
-
-  if(!options[Opt::PATH]) {
-    std::cout << "--path is required." << std::endl;
-    return false;
-  }
-
-  if(!options[Opt::PORT] && !options[Opt::COMMAND]) {
-    std::cout << "either --port or --command is required." << std::endl;
-    return false;
-  }
-
-  for(option::Option* opt = options[Opt::UNKNOWN]; opt; opt = opt->next()) {
-    std::cout << "Unknown option: " << std::string(opt->name,opt->namelen) << "\n";
-    return false;
-  }
-
-  for(int i = 0; i < parse.nonOptionsCount(); ++i) {
-    std::cout << "Non-option #" << i << ": " << parse.nonOption(i) << "\n";
-    return false;
-  }
-
-  return true;
-}
-
-
-std::vector<option::Option> parse_args(int argc, char** argv) {
-  const option::Descriptor usage[] = {
-    {Opt::UNKNOWN, 0, "", "", option::Arg::None, "Low-level access to QuarkDB databases.\n"
-                                                 "USAGE: quarkdb-recovery [options]\n\n" "Options:" },
-    {Opt::HELP, 0, "", "help", option::Arg::None, " --help \tPrint usage and exit." },
-    {Opt::PATH, 0, "", "path", Opt::nonempty, " --path \tthe directory where the state-machine or journal lives in."},
-    {Opt::PORT, 0, "", "port", Opt::numeric, " --port \tthe port to listen to."},
-    {Opt::COMMAND, 0, "", "command", Opt::nonempty, " --command \tone-off command to run"},
-
-    {0,0,0,0,0,0}
-  };
-
-  option::Stats stats(usage, argc, argv);
-  std::vector<option::Option> options(stats.options_max);
-  std::vector<option::Option> buffer(stats.buffer_max);
-  option::Parser parse(usage, argc, argv, &options[0], &buffer[0]);
-
-  if(!verify_options_sane(parse, options)) {
-    option::printUsage(std::cout, usage);
-    exit(1);
-  }
-  return options;
-}
-
-void run(std::string path, int port, quarkdb::ThreadAssistant &assistant) {
+void run(const std::string &path, int port, quarkdb::ThreadAssistant &assistant) {
   quarkdb::RecoveryRunner runner(path, port);
 
   while(!assistant.terminationRequested()) {
@@ -126,23 +65,67 @@ void oneOffCommand(const std::string &path, const std::string &cmd) {
   std::cout << qclient::describeRedisReply(reply) << std::endl;
 }
 
+struct ExistenceValidator : public CLI::Validator {
+  ExistenceValidator() : Validator("PATH") {
+    func_ = [](const std::string &path) {
+
+      std::string err;
+      if(!quarkdb::directoryExists(path, err)) {
+        return SSTR("Path '" << path << "' does not exist.");
+      }
+
+      return std::string();
+    };
+  }
+};
+
+
 int main(int argc, char** argv) {
-  std::vector<option::Option> opts = parse_args(argc-1, argv+1);
-  std::string path = opts[Opt::PATH].arg;
+  //----------------------------------------------------------------------------
+  // Setup variables
+  //----------------------------------------------------------------------------
+  CLI::App app("Tool for low-level inspection of QuarkDB databases.");
+  ExistenceValidator existenceValidator;
 
-  if(opts[Opt::PORT]) {
-    int64_t port = 0;
-    quarkdb::ParseUtils::parseInt64(opts[Opt::PORT].arg, port);
+  std::string optPath;
+  int optPort;
+  std::string optOneOffCommand;
 
-    th.reset(run, path, port);
+  //----------------------------------------------------------------------------
+  // Setup options
+  //----------------------------------------------------------------------------
+  app.add_option("--path", optPath, "The path to the rocksdb directory to inspect")
+    ->required()
+    ->check(existenceValidator);
+
+  auto actionGroup = app.add_option_group("Action", "Specify what action to take with the specified database directory");
+  actionGroup->add_option("--port", optPort, "Launch a server listening for redis commands at this port, supporting special debugging and recovery commands.");
+  actionGroup->add_option("--command", optOneOffCommand, "Instead of launching a server, issue a quick one-off recovery command.");
+  actionGroup->require_option(1, 1);
+
+  //----------------------------------------------------------------------------
+  // Parse..
+  //----------------------------------------------------------------------------
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::ParseError &e) {
+    return app.exit(e);
+  }
+
+  //----------------------------------------------------------------------------
+  // All good, let's roll.
+  //----------------------------------------------------------------------------
+  if(!optOneOffCommand.empty()) {
+    oneOffCommand(optPath, optOneOffCommand);
+    return 0;
+  }
+  else {
+    th.reset(run, optPath, optPort);
 
     signal(SIGINT, handle_sigint);
     signal(SIGTERM, handle_sigint);
 
     th.blockUntilThreadJoins();
-  }
-  else {
-    oneOffCommand(path, opts[Opt::COMMAND].arg);
   }
 
   return 0;
