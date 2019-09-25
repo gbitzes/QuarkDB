@@ -32,6 +32,7 @@ std::string pathJoin(std::string_view part1, std::string_view part2);
 bool mkpath(const std::string &path, mode_t mode, std::string &err);
 void mkpath_or_die(const std::string &path, mode_t mode);
 bool directoryExists(const std::string &path, std::string &err);
+bool fileExists(const std::string &path, std::string &err);
 bool readFile(FILE *f, std::string &contents);
 bool readFile(const std::string &path, std::string &contents);
 bool write_file(std::string_view path, std::string_view contents, std::string &err);

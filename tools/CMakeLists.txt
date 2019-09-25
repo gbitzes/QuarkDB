@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 2.6)
 find_package (Threads)
 
+add_executable(quarkdb-server quarkdb-server.cc)
+target_link_libraries(quarkdb-server XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT} )
+
 add_executable(quarkdb-create quarkdb-create.cc)
 target_link_libraries(quarkdb-create XrdQuarkDB)
 
@@ -21,6 +24,6 @@ include_directories(
 )
 
 install(
-  TARGETS quarkdb-create quarkdb-recovery quarkdb-sst-inspect
+  TARGETS quarkdb-create quarkdb-recovery quarkdb-sst-inspect quarkdb-server
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )

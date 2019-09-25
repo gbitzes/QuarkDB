@@ -76,6 +76,22 @@ bool directoryExists(const std::string &path, std::string &err) {
   return true;
 }
 
+bool fileExists(const std::string &path, std::string &err) {
+  struct stat sb;
+
+  if(stat(path.c_str(), &sb) != 0) {
+    err = SSTR("Cannot stat " << path);
+    return false;
+  }
+
+  if(!S_ISREG(sb.st_mode)) {
+    err = SSTR(path << " is not a directory");
+    return false;
+  }
+
+  return true;
+}
+
 bool readFile(FILE *f, std::string &contents) {
   bool retvalue = true;
   std::ostringstream ss;
