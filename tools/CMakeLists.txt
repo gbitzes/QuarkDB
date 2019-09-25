@@ -20,6 +20,7 @@ include_directories(
   ${ROCKSDB_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/deps/qclient/include
   ${CMAKE_SOURCE_DIR}/deps/asio/asio/include
+  ${CMAKE_SOURCE_DIR}/deps/CLI11/include
 )
 
 install(

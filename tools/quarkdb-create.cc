@@ -21,111 +21,149 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#include <iostream>
 #include "ShardDirectory.hh"
 #include "raft/RaftJournal.hh"
 #include "Common.hh"
-#include "OptionUtils.hh"
 #include "utils/FileUtils.hh"
 #include "StateMachine.hh"
+#include "../deps/CLI11.hpp"
+#include "utils/FileUtils.hh"
+#include <iostream>
 
-namespace Opt {
-enum  Type { UNKNOWN, HELP, PATH, MODE, CLUSTERID, NODES, STEAL_STATE_MACHINE };
-}
+struct PathValidator : public CLI::Validator {
+  PathValidator() : Validator("PATH") {
+    func_ = [](const std::string &path) {
 
-bool verify_options_sane(option::Parser &parse, std::vector<option::Option> &options) {
-  if(parse.error()) {
-    std::cout << "Parsing error" << std::endl;
-    return false;
+      std::string err;
+      if(quarkdb::directoryExists(path, err)) {
+        return SSTR("'" << path << "' already exists.");
+      }
+
+      return std::string();
+    };
   }
+};
 
-  if(options[Opt::HELP]) {
-    return false;
+struct StealStateMachineValidator : public CLI::Validator {
+  StealStateMachineValidator() : Validator("PATH") {
+    func_ = [](const std::string &path) {
+
+      std::string err;
+      if(!quarkdb::directoryExists(path, err)) {
+        return SSTR("Path '" << path << "' does not exist.");
+      }
+
+      return std::string();
+    };
   }
+};
 
-  if(!options[Opt::PATH]) {
-    std::cout << "--path is required." << std::endl;
-    return false;
+struct NodeValidator : public CLI::Validator {
+  NodeValidator() : Validator("NODES") {
+    func_ = [](const std::string &str) {
+
+      std::vector<quarkdb::RaftServer> servers;
+      if(!quarkdb::parseServers(str, servers)) {
+        return SSTR("Could not parse '" << str << "'. Expected format is a comma-separated list of servers: example1:1111,example2:2222");
+      }
+
+      return std::string();
+    };
   }
-
-  if( (!options[Opt::CLUSTERID] && options[Opt::NODES]) ) {
-    std::cout << "--nodes requires specifying --clusterID as well." << std::endl;
-    return false;
-  }
-
-  std::vector<quarkdb::RaftServer> servers;
-  if(options[Opt::NODES] && !quarkdb::parseServers(options[Opt::NODES].arg, servers)) {
-    std::cout << "Error parsing --nodes. Example of valid entry: server1:9000,server2:9000,server3:9000" << std::endl;
-    return false;
-  }
-
-  for(option::Option* opt = options[Opt::UNKNOWN]; opt; opt = opt->next()) {
-    std::cout << "Unknown option: " << std::string(opt->name,opt->namelen) << "\n";
-    return false;
-  }
-
-  for(int i = 0; i < parse.nonOptionsCount(); ++i) {
-    std::cout << "Non-option #" << i << ": " << parse.nonOption(i) << "\n";
-    return false;
-  }
-
-  return true;
-}
-
-
-std::vector<option::Option> parse_args(int argc, char** argv) {
-  const option::Descriptor usage[] = {
-    {Opt::UNKNOWN, 0, "", "", option::Arg::None, "Tool to initialize new quarkdb nodes.\n"
-                                                 "USAGE: quarkdb-create [options]\n\n" "Options:" },
-    {Opt::HELP, 0, "", "help", option::Arg::None, " --help \tPrint usage and exit." },
-    {Opt::PATH, 0, "", "path", Opt::nonempty, " --path \tthe directory where the journal lives in."},
-    {Opt::CLUSTERID, 0, "", "clusterID", Opt::nonempty, " --clusterID \tspecify the identifier for the new cluster - should be globally unique."},
-    {Opt::NODES, 0, "", "nodes", Opt::nonempty, " --nodes \tspecify the initial members of the new cluster. If not specified, quarkdb will start in standalone mode."},
-    {Opt::STEAL_STATE_MACHINE, 0, "", "steal-state-machine", Opt::nonempty, " --steal-state-machine \t Create the new node with the given pre-populated state-machine, which will be moved from the original folder, and not copied."},
-
-    {0,0,0,0,0,0}
-  };
-
-  option::Stats stats(usage, argc, argv);
-  std::vector<option::Option> options(stats.options_max);
-  std::vector<option::Option> buffer(stats.buffer_max);
-  option::Parser parse(usage, argc, argv, &options[0], &buffer[0]);
-
-  if(!verify_options_sane(parse, options)) {
-    option::printUsage(std::cout, usage);
-
-    std::cerr << "Recipes:" << std::endl;
-    std::cerr << " - To create a brand new standalone instance, run:" << std::endl;
-    std::cerr << "   $ quarkdb-create --path /directory/where/you/want/the/db" << std::endl << std::endl;
-
-    std::cerr << " - To create a brand new raft instance, run the following on _all_ participating nodes." << std::endl;
-    std::cerr << "   --clusterID and --nodes needs to be _identical_ across all invocations." << std::endl;
-    std::cerr << "   $ quarkdb-create --path /db/directory --clusterID unique-string-that-identifies-cluster --nodes host1:port1,host2:port2,host3:port3" << std::endl << std::endl;
-
-    std::cerr << " - To create a new cluster out of a bulkloaded instance:" << std::endl;
-    std::cerr << "  1. Shut down the bulkload node, if currently running." << std::endl;
-    std::cerr << "  2. Run $ quarkdb-create --path /db/directory --clusterID unique-string --nodes host1:port1,host2:port2,host3:port3 --steal-state-machine /path/to/bulkloaded/state/machine" << std::endl;
-    std::cerr << "  3. Using scp, stream over the network the entire contents of '/db/directory' to all of host1, host2, and host3." << std::endl;
-    std::cerr << "  4. No need to run quarkdb-create again - simply start up all nodes, they should form a quorum, and the contents will be the bulkloaded ones." << std::endl;
-
-    exit(1);
-  }
-  return options;
-}
+};
 
 int main(int argc, char** argv) {
-  std::vector<option::Option> opts = parse_args(argc-1, argv+1);
+  //----------------------------------------------------------------------------
+  // Setup variables
+  //----------------------------------------------------------------------------
+  CLI::App app("Tool to initialize new QuarkDB nodes.");
+  PathValidator pathValidator;
+  NodeValidator nodeValidator;
+  StealStateMachineValidator stealStateMachineValidator;
 
+  std::string optPath;
+  std::string optClusterID;
+  std::string optNodes;
+  std::string optStealStateMachine;
+
+  //----------------------------------------------------------------------------
+  // Setup options
+  //----------------------------------------------------------------------------
+  app.add_option("--path", optPath, "The location in which to create the new QuarkDB directory")
+    ->required()
+    ->check(pathValidator);
+
+  auto clusterID = app.add_option("--clusterID", optClusterID, "Specify the cluster identifier for a new raft node - the ID needs to be globally unique for each separate cluster");
+
+  app.add_option("--nodes", optNodes, "Specify the initial members of the new raft cluster.")
+    ->needs(clusterID)
+    ->check(nodeValidator);
+
+  app.add_option("--steal-state-machine", optStealStateMachine, "Create the new node with the given pre-populated state-machine, which will be moved from the original folder, and not copied.")
+    ->needs(clusterID)
+    ->check(stealStateMachineValidator);
+
+  //----------------------------------------------------------------------------
+  // Setup footer with usage examples
+  //----------------------------------------------------------------------------
+  std::ostringstream footer;
+
+  footer << std::endl << std::endl << "Recipes: " << std::endl;
+  footer << " - To create a brand new standalone instance, run:" << std::endl;
+  footer << "     $ quarkdb-create --path /directory/where/you/want/the/db" << std::endl << std::endl;
+
+  footer << " - To create a brand new raft instance, run the following on _all_ participating nodes." << std::endl;
+  footer << "   --clusterID and --nodes needs to be _identical_ across all invocations." << std::endl;
+  footer << "     $ quarkdb-create --path /db/directory --clusterID unique-string-that-identifies-cluster --nodes host1:port1,host2:port2,host3:port3" << std::endl << std::endl;
+
+  footer << " - To create a new cluster out of a bulkloaded instance:" << std::endl;
+  footer << "     1. Shut down the bulkload node, if currently running." << std::endl;
+  footer << "     2. Run $ quarkdb-create --path /db/directory --clusterID unique-string --nodes host1:port1,host2:port2,host3:port3 --steal-state-machine /path/to/bulkloaded/state/machine" << std::endl;
+  footer << "     3. Using scp, stream over the network the entire contents of '/db/directory' to all of host1, host2, and host3." << std::endl;
+  footer << "     4. No need to run quarkdb-create again - simply start up all nodes, they should form a quorum, and the contents will be the bulkloaded ones." << std::endl << std::endl;
+
+  footer << " - To expand an existing cluster: " << std::endl;
+  footer << "     1. Run $ quarkdb-create --path /db/directory --clusterID id-of-existing-cluster" << std::endl;
+  footer << "        Note the omission of --nodes!" << std::endl;
+  footer << "     2. Start up the node based on /db/directory. It will enter 'limbo mode', where it will sleep" << std::endl;
+  footer << "        until it is contacted by the cluster." << std::endl;
+  footer << "     3. In the current cluster leader, run redis command 'quarkdb-add-observer hostname_of_new_node:port" << std::endl;
+  footer << "        This will cause the existing cluster to contact the newly created node, make it exit limbo mode, and bring it up-to-date." << std::endl;
+
+  app.footer(footer.str());
+
+  //----------------------------------------------------------------------------
+  // Parse..
+  //----------------------------------------------------------------------------
+  try {
+    app.parse(argc, argv);
+  } catch (const CLI::ParseError &e) {
+    return app.exit(e);
+  }
+
+  //----------------------------------------------------------------------------
+  // One more quick check..
+  //----------------------------------------------------------------------------
+  if(!optStealStateMachine.empty() && !optClusterID.empty() && optNodes.empty()) {
+    // Asking to create limbo-node with pre-populated state machine, disallow
+    std::cerr << "--steal-state-machine: It makes no sense to initialize a node in limbo state with a pre-populated state machine." << std::endl;
+    std::cerr << "Run with --help for more information." << std::endl;
+    return 1;
+  }
+
+  //----------------------------------------------------------------------------
+  // All good, let's roll.
+  //----------------------------------------------------------------------------
   quarkdb::LogIndex journalStartingIndex = 0;
   std::unique_ptr<quarkdb::StateMachine> stolenStateMachine;
 
   // Are we stealing a state machine?
-  if(opts[Opt::STEAL_STATE_MACHINE]) {
+  if(!optStealStateMachine.empty()) {
     // Yes - extract its lastApplied. We'll need to sync-up the journal with this
     // number.
 
     std::string err;
-    if(!quarkdb::directoryExists(opts[Opt::STEAL_STATE_MACHINE].arg, err)) {
+    if(!quarkdb::directoryExists(optStealStateMachine, err)) {
       std::cerr << "Error accessing path given in --steal-state-machine: " << err << std::endl;
       exit(1);
     }
@@ -138,26 +176,26 @@ int main(int argc, char** argv) {
     //   the cluster will blow up and the error will be detected.
     // - If the node with all data becomes leader, it'll just resilver the rest.
     journalStartingIndex = 1111;
-    stolenStateMachine.reset(new quarkdb::StateMachine(opts[Opt::STEAL_STATE_MACHINE].arg));
+    stolenStateMachine.reset(new quarkdb::StateMachine(optStealStateMachine));
   }
 
   quarkdb::Status st;
   std::unique_ptr<quarkdb::ShardDirectory> shardDirectory;
-  if(opts[Opt::CLUSTERID]) {
+  if(!optClusterID.empty()) {
     std::vector<quarkdb::RaftServer> nodes;
 
-    if(opts[Opt::NODES]) {
-      quarkdb::parseServers(opts[Opt::NODES].arg, nodes);
+    if(!optNodes.empty()) {
+      quarkdb::parseServers(optNodes, nodes);
     }
     else {
       nodes.emplace_back(quarkdb::RaftServer::Null());
       qdb_info("--nodes were not specified. This new node will be 'in limbo' until it is contacted by an existing cluster, and cannot be used to start a new cluster from scratch. Run 'quarkdb-add-observer' on the leader of the existing cluster to add it.");
     }
 
-    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, opts[Opt::CLUSTERID].arg, "default", nodes, journalStartingIndex, std::move(stolenStateMachine), st));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(optPath, optClusterID, "default", nodes, journalStartingIndex, std::move(stolenStateMachine), st));
   }
   else {
-    shardDirectory.reset(quarkdb::ShardDirectory::create(opts[Opt::PATH].arg, "null", "default", std::move(stolenStateMachine), st));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(optPath, "null", "default", std::move(stolenStateMachine), st));
   }
 
   if(!st.ok()) {
