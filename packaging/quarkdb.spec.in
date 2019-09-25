@@ -83,7 +83,6 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(-, root, root, -)
 %{_libdir}/libXrdQuarkDB.so
-%{_bindir}/quarkdb-journal
 %{_bindir}/quarkdb-tests
 %{_bindir}/quarkdb-stress-tests
 %{_bindir}/quarkdb-sudo-tests
