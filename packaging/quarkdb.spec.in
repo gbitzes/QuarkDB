@@ -23,7 +23,6 @@ Group: Applications/File
 Source: %{name}-%{version}.tar.gz
 BuildRoot: %{_tmppath}/%{name}-root
 BuildRequires: libuuid-devel
-BuildRequires: xrootd
 BuildRequires: xrootd-server-devel
 BuildRequires: xrootd-devel
 BuildRequires: xrootd-private-devel
@@ -54,7 +53,7 @@ Requires: elfutils-devel
 
 Requires: jemalloc
 BuildRequires: jemalloc-devel
-Requires: xrootd
+Requires: xrootd-server
 
 %description
 A highly available key-value store.
