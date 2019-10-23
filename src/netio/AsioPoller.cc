@@ -127,9 +127,14 @@ void AsioPoller::handleAccept6(const std::error_code& ec) {
 }
 
 void AsioPoller::handleAccept(asio::ip::tcp::socket socket) {
-  socket.non_blocking(true);
-
   std::error_code ec;
+  socket.non_blocking(true, ec);
+  if(ec) {
+    // client connected and disconnected immediately, before we even
+    // had a chance to set the socket to non-blocking
+    return;
+  }
+
   asio::ip::tcp::endpoint remoteEndpoint = socket.remote_endpoint(ec);
 
   std::shared_ptr<asio::ip::tcp::socket> socketPtr;
