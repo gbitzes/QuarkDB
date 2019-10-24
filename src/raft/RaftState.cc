@@ -72,7 +72,7 @@ void RaftState::updateStatus(RaftStatus newstatus) {
 }
 
 bool RaftState::dropOut(RaftTerm forTerm) {
-  std::lock_guard<std::mutex> lock(update);
+  std::scoped_lock lock(update);
 
   if(status != RaftStatus::CANDIDATE) {
     return false;
@@ -88,7 +88,7 @@ bool RaftState::dropOut(RaftTerm forTerm) {
 }
 
 bool RaftState::becomeCandidate(RaftTerm forTerm) {
-  std::lock_guard<std::mutex> lock(update);
+  std::scoped_lock lock(update);
 
   if(forTerm != term) {
     // we got hit by a race.. do nothing
@@ -124,7 +124,7 @@ bool RaftState::becomeCandidate(RaftTerm forTerm) {
 }
 
 bool RaftState::ascend(RaftTerm forTerm) {
-  std::lock_guard<std::mutex> lock(update);
+  std::scoped_lock lock(update);
 
   if(forTerm != term) {
     // we got hit by a race.. do nothing
@@ -173,7 +173,7 @@ bool RaftState::ascend(RaftTerm forTerm) {
 // of the server asking a vote is at least up-to-date as ours.
 //------------------------------------------------------------------------------
 bool RaftState::grantVote(RaftTerm forTerm, const RaftServer &vote) {
-  std::lock_guard<std::mutex> lock(update);
+  std::scoped_lock lock(update);
 
   if(status != RaftStatus::FOLLOWER) {
     qdb_warn("attempted to vote for " << vote.toString() << " while in status " << statusToString(status));
@@ -210,7 +210,7 @@ bool RaftState::grantVote(RaftTerm forTerm, const RaftServer &vote) {
 }
 
 void RaftState::shutdown() {
-  std::unique_lock<std::mutex> lock(update);
+  std::scoped_lock lock(update);
   updateStatus(RaftStatus::SHUTDOWN);
   updateSnapshot();
   notifier.notify_all();
@@ -220,7 +220,7 @@ void RaftState::shutdown() {
 // Wait until the timeout expires, or we enter shutdown mode.
 //------------------------------------------------------------------------------
 void RaftState::wait(const std::chrono::milliseconds &t) {
-  std::unique_lock<std::mutex> lock(update);
+  std::unique_lock lock(update);
   if(status == RaftStatus::SHUTDOWN) return;
   notifier.wait_for(lock, t);
 }
@@ -229,7 +229,7 @@ void RaftState::wait(const std::chrono::milliseconds &t) {
 // Wait until the specified time_point, or we enter shutdown mode.
 //------------------------------------------------------------------------------
 void RaftState::wait_until(const std::chrono::steady_clock::time_point &t) {
-  std::unique_lock<std::mutex> lock(update);
+  std::unique_lock lock(update);
   if(status == RaftStatus::SHUTDOWN) return;
   notifier.wait_until(lock, t);
 }
@@ -243,7 +243,7 @@ void RaftState::updateJournal() {
 }
 
 bool RaftState::observed(RaftTerm observedTerm, const RaftServer &observedLeader) {
-  std::lock_guard<std::mutex> lock(update);
+  std::scoped_lock lock(update);
 
   // reject any changes if we're in shutdown mode
   if(status == RaftStatus::SHUTDOWN) {

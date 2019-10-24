@@ -57,7 +57,7 @@ public:
   ~PendingQueue() {}
 
   void detachConnection() {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
     conn = nullptr;
   }
 

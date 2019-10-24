@@ -70,7 +70,7 @@ void RaftWriteTracker::applySingleCommit(LogIndex index) {
 }
 
 void RaftWriteTracker::updatedCommitIndex(LogIndex commitIndex) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   for(LogIndex index = stateMachine.getLastApplied()+1; index <= commitIndex; index++) {
     applySingleCommit(index);
   }
@@ -90,12 +90,12 @@ void RaftWriteTracker::applyCommits() {
 }
 
 void RaftWriteTracker::flushQueues(const RedisEncodedResponse &response) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   blockedWrites.flush(response);
 }
 
 bool RaftWriteTracker::append(LogIndex index, RaftTerm term, Transaction &&tx, const std::shared_ptr<PendingQueue> &queue, RedisDispatcher &dispatcher) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   if(!journal.append(index, RaftEntry(term, tx.toRedisRequest()))) {
     qdb_warn("appending to journal failed for index = " << index <<

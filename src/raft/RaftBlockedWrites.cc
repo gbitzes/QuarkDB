@@ -26,7 +26,7 @@
 using namespace quarkdb;
 
 std::shared_ptr<PendingQueue> RaftBlockedWrites::popIndex(LogIndex index) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   auto it = tracker.find(index);
 
   if(it == tracker.end()) return {nullptr};
@@ -38,12 +38,12 @@ std::shared_ptr<PendingQueue> RaftBlockedWrites::popIndex(LogIndex index) {
 }
 
 void RaftBlockedWrites::insert(LogIndex index, const std::shared_ptr<PendingQueue> &item) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   tracker[index] = item;
 }
 
 void RaftBlockedWrites::flush(const RedisEncodedResponse &resp) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   for(auto it = tracker.begin(); it != tracker.end(); it++) {
     it->second->flushPending(resp);
   }
@@ -51,6 +51,6 @@ void RaftBlockedWrites::flush(const RedisEncodedResponse &resp) {
 }
 
 size_t RaftBlockedWrites::size() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return tracker.size();
 }

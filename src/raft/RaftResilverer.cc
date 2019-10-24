@@ -88,12 +88,12 @@ RaftResilverer::~RaftResilverer() {
 }
 
 ResilveringStatus RaftResilverer::getStatus() {
-  std::lock_guard<std::mutex> lock(statusMtx);
+  std::scoped_lock lock(statusMtx);
   return status;
 }
 
 void RaftResilverer::setStatus(const ResilveringState &state, const std::string &err) {
-  std::lock_guard<std::mutex> lock(statusMtx);
+  std::scoped_lock lock(statusMtx);
   status.state = state;
   status.err = err;
 

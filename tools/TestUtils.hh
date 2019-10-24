@@ -31,12 +31,12 @@
 class Cache {
 public:
   int64_t get(const std::string &key) {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
     return earliestAcceptable[key];
   }
 
   void put(const std::string &key, int64_t update) {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
 
     int64_t current = earliestAcceptable[key];
     if(current <= update) {

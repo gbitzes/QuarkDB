@@ -64,7 +64,7 @@ RaftTrimmer::RaftTrimmer(RaftJournal &jr, RaftConfig &conf, StateMachine &sm)
 }
 
 void RaftTrimmer::registerChange(RaftTrimmingBlock* block) {
-  std::lock_guard<std::mutex> guard(mtx);
+  std::scoped_lock guard(mtx);
 
   // De-register?
   if(block->getPreservationIndex() == std::numeric_limits<LogIndex>::max()) {
@@ -77,7 +77,7 @@ void RaftTrimmer::registerChange(RaftTrimmingBlock* block) {
 }
 
 bool RaftTrimmer::canTrimUntil(LogIndex threshold) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   for(auto it = blocks.begin(); it != blocks.end(); it++) {
     if((*it)->getPreservationIndex() <= threshold) {

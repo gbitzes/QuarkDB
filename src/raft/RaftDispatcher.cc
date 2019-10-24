@@ -213,7 +213,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
     case RedisCommand::RAFT_ADD_OBSERVER:
     case RedisCommand::RAFT_REMOVE_MEMBER:
     case RedisCommand::RAFT_PROMOTE_OBSERVER: {
-      std::lock_guard<std::mutex> lock(raftCommand);
+      std::scoped_lock lock(raftCommand);
       // We need to lock the journal for writes during a membership update.
       // Otherwise, a different client might race to acquire the same position
       // in the journal to place a different entry, and cause a crash.
@@ -375,7 +375,7 @@ LinkStatus RaftDispatcher::service(Connection *conn, Transaction &tx) {
   LeaseFilter::transform(tx, txTimestamp);
 
   // send request to the write tracker
-  std::lock_guard<std::mutex> lock(raftCommand);
+  std::scoped_lock lock(raftCommand);
 
   LogIndex index = journal.getLogSize();
 
@@ -441,7 +441,7 @@ RaftHeartbeatResponse RaftDispatcher::heartbeat(const RaftHeartbeatRequest &req,
 }
 
 RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest &&req) {
-  std::lock_guard<std::mutex> lock(raftCommand);
+  std::scoped_lock lock(raftCommand);
 
   //----------------------------------------------------------------------------
   // An appendEntries RPC also serves as a heartbeat. We need to preserve the
@@ -525,7 +525,7 @@ void RaftDispatcher::warnIfLagging(LogIndex leaderCommitIndex) {
 }
 
 RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
-  std::lock_guard<std::mutex> lock(raftCommand);
+  std::scoped_lock lock(raftCommand);
   if(req.candidate == state.getMyself()) {
     qdb_throw("received request vote from myself: " << state.getMyself().toString());
   }
@@ -701,7 +701,7 @@ NodeHealth RaftDispatcher::getHealth() {
 }
 
 RaftInfo RaftDispatcher::info() {
-  std::lock_guard<std::mutex> lock(raftCommand);
+  std::scoped_lock lock(raftCommand);
   RaftStateSnapshotPtr snapshot = state.getSnapshot();
   RaftMembership membership = journal.getMembership();
   ReplicationStatus replicationStatus = replicator.getStatus();

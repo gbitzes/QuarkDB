@@ -156,7 +156,7 @@ RaftJournal::RaftJournal(const std::string &filename) {
 }
 
 bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
-  std::lock_guard<std::mutex> lock(currentTermMutex);
+  std::scoped_lock lock(currentTermMutex);
 
   //----------------------------------------------------------------------------
   // Terms should never go back in time
@@ -189,7 +189,7 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
 }
 
 bool RaftJournal::setCommitIndex(LogIndex newIndex) {
-  std::lock_guard<std::mutex> lock(commitIndexMutex);
+  std::scoped_lock lock(commitIndexMutex);
   if(newIndex < commitIndex) {
     qdb_warn("attempted to set commit index in the past, from " << commitIndex << " ==> " << newIndex);
     return false;
@@ -230,17 +230,17 @@ void RaftJournal::commitBatch(rocksdb::WriteBatch &batch, LogIndex index) {
 }
 
 RaftMembers RaftJournal::getMembers() {
-  std::lock_guard<std::mutex> lock(membersMutex);
+  std::scoped_lock lock(membersMutex);
   return members;
 }
 
 RaftMembership RaftJournal::getMembership() {
-  std::lock_guard<std::mutex> lock(membersMutex);
+  std::scoped_lock lock(membersMutex);
   return {members.nodes, members.observers, membershipEpoch};
 }
 
 bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers, std::string &err) {
-  std::lock_guard<std::mutex> lock(contentMutex);
+  std::scoped_lock lock(contentMutex);
 
   if(commitIndex < membershipEpoch) {
     err = SSTR("the current membership epoch has not been committed yet: " << membershipEpoch);
@@ -308,7 +308,7 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
       qdb_event("Transitioning into a new membership epoch: " << membershipEpoch << " => " << index
       << ". Old members: " << members.toString() << ", new members: " << entry.request[1]);
 
-      std::lock_guard<std::mutex> lock(membersMutex);
+      std::scoped_lock lock(membersMutex);
       members = RaftMembers(entry.request[1]);
       membershipEpoch = index;
     }
@@ -331,7 +331,7 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
 }
 
 bool RaftJournal::append(LogIndex index, const RaftEntry &entry) {
-  std::lock_guard<std::mutex> lock(contentMutex);
+  std::scoped_lock lock(contentMutex);
   return appendNoLock(index, entry);
 }
 
@@ -360,7 +360,7 @@ void RaftJournal::trimUntil(LogIndex newLogStart) {
 }
 
 RaftServer RaftJournal::getVotedFor() {
-  std::lock_guard<std::mutex> lock(votedForMutex);
+  std::scoped_lock lock(votedForMutex);
   return votedFor;
 }
 
@@ -403,7 +403,7 @@ bool RaftJournal::removeEntries(LogIndex from) {
   //----------------------------------------------------------------------------
 
   if(from <= membershipEpoch) {
-    std::lock_guard<std::mutex> lock2(membersMutex);
+    std::scoped_lock lock2(membersMutex);
 
     LogIndex previousMembershipEpoch = this->get_int_or_die(KeyConstants::kJournal_PreviousMembershipEpoch);
     std::string previousMembers = this->get_or_die(KeyConstants::kJournal_PreviousMembers);
@@ -426,7 +426,7 @@ bool RaftJournal::removeEntries(LogIndex from) {
 
 // return the first entry which is not identical to the ones in the vector
 LogIndex RaftJournal::compareEntries(LogIndex start, const std::vector<RaftEntry> entries) {
-  std::unique_lock<std::mutex> lock(contentMutex);
+  std::scoped_lock lock(contentMutex);
 
   LogIndex endIndex = std::min(LogIndex(logSize), LogIndex(start+entries.size()));
   LogIndex startIndex = std::max(start, LogIndex(logStart));
@@ -448,7 +448,7 @@ LogIndex RaftJournal::compareEntries(LogIndex start, const std::vector<RaftEntry
 }
 
 bool RaftJournal::matchEntries(LogIndex index, RaftTerm term) {
-  std::unique_lock<std::mutex> lock(contentMutex);
+  std::scoped_lock lock(contentMutex);
 
   if(logSize <= index) {
     return false;

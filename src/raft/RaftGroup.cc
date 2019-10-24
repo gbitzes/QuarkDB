@@ -49,13 +49,13 @@ RaftGroup::~RaftGroup() {
 }
 
 void RaftGroup::spinup() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   trimmer();
   director(); // transitively initializes everything else
 }
 
 void RaftGroup::spindown() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   // Delete everything except the journal and store
   if(directorptr) {
     delete directorptr;
@@ -119,7 +119,7 @@ RaftJournal* RaftGroup::journal() {
 }
 
 RaftDispatcher* RaftGroup::dispatcher() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(dispatcherptr == nullptr) {
     dispatcherptr = new RaftDispatcher(*journal(), *stateMachine(), *state(), *heartbeatTracker(), *writeTracker(), *replicator(), *publisher());
   }
@@ -127,7 +127,7 @@ RaftDispatcher* RaftGroup::dispatcher() {
 }
 
 RaftHeartbeatTracker* RaftGroup::heartbeatTracker() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(heartbeattrackerptr == nullptr) {
     heartbeattrackerptr = new RaftHeartbeatTracker(contactDetails()->getRaftTimeouts());
   }
@@ -135,7 +135,7 @@ RaftHeartbeatTracker* RaftGroup::heartbeatTracker() {
 }
 
 RaftState* RaftGroup::state() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(stateptr == nullptr) {
     stateptr = new RaftState(*journal(), myself());
   }
@@ -143,7 +143,7 @@ RaftState* RaftGroup::state() {
 }
 
 RaftDirector* RaftGroup::director() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(directorptr == nullptr) {
     directorptr = new RaftDirector(*journal(), *stateMachine(), *state(), *lease(), *commitTracker(), *heartbeatTracker(), *writeTracker(), shardDirectory, *config(), *replicator(), *contactDetails(), *publisher());
   }
@@ -151,7 +151,7 @@ RaftDirector* RaftGroup::director() {
 }
 
 RaftLease* RaftGroup::lease() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(leaseptr == nullptr) {
     leaseptr = new RaftLease(journal()->getMembership().nodes, heartbeatTracker()->getTimeouts().getLow());
   }
@@ -159,7 +159,7 @@ RaftLease* RaftGroup::lease() {
 }
 
 RaftCommitTracker* RaftGroup::commitTracker() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(ctptr == nullptr) {
     ctptr = new RaftCommitTracker(*journal());
   }
@@ -167,7 +167,7 @@ RaftCommitTracker* RaftGroup::commitTracker() {
 }
 
 RaftWriteTracker* RaftGroup::writeTracker() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(wtptr == nullptr) {
     wtptr = new RaftWriteTracker(*journal(), *stateMachine(), *publisher());
   }
@@ -175,7 +175,7 @@ RaftWriteTracker* RaftGroup::writeTracker() {
 }
 
 RaftTrimmer* RaftGroup::trimmer() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(trimmerptr == nullptr) {
     trimmerptr = new RaftTrimmer(*journal(), *config(), *stateMachine());
   }
@@ -183,7 +183,7 @@ RaftTrimmer* RaftGroup::trimmer() {
 }
 
 RaftConfig* RaftGroup::config() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(configptr == nullptr) {
     configptr = new RaftConfig(*stateMachine());
   }
@@ -191,7 +191,7 @@ RaftConfig* RaftGroup::config() {
 }
 
 RaftReplicator* RaftGroup::replicator() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(replicatorptr == nullptr) {
     replicatorptr = new RaftReplicator(*journal(), *state(), *lease(), *commitTracker(), *trimmer(), shardDirectory, *config(), *contactDetails());
   }
@@ -199,7 +199,7 @@ RaftReplicator* RaftGroup::replicator() {
 }
 
 Publisher* RaftGroup::publisher() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(publisherptr == nullptr) {
     publisherptr = new Publisher();
   }

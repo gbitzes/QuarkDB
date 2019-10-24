@@ -36,7 +36,7 @@ ConsistencyScanner::ConsistencyScanner(StateMachine &sm) : stateMachine(sm) {
 }
 
 void ConsistencyScanner::singlePass() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   rocksdb::Status status = stateMachine.verifyChecksum();
   if(!status.ok()) {

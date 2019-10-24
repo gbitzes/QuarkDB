@@ -94,7 +94,7 @@ Shard::~Shard() {
 }
 
 RaftGroup* Shard::getRaftGroup() {
-  std::lock_guard<std::mutex> lock(raftGroupMtx);
+  std::scoped_lock lock(raftGroupMtx);
   return raftGroup.get();
 }
 
@@ -186,7 +186,7 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
 
       ResilveringEventID eventID(req[1]);
 
-      std::lock_guard<std::mutex> lock(raftGroupMtx);
+      std::scoped_lock lock(raftGroupMtx);
       detach();
 
       std::string err;

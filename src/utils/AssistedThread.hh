@@ -71,7 +71,7 @@ public:
   }
 
   void requestTermination() {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
     if(!stopFlag) {
       stopFlag = true;
       notifier.notify_all();
@@ -83,7 +83,7 @@ public:
   }
 
   void registerCallback(std::function<void()> callable) {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
     terminationCallbacks.emplace_back(std::move(callable));
 
     if(stopFlag) {
@@ -99,7 +99,7 @@ public:
   }
 
   void dropCallbacks() {
-    std::lock_guard<std::mutex> lock(mtx);
+    std::scoped_lock lock(mtx);
     terminationCallbacks.clear();
   }
 
@@ -109,7 +109,7 @@ public:
 
   template<typename T>
   void wait_for(T duration) {
-    std::unique_lock<std::mutex> lock(mtx);
+    std::unique_lock lock(mtx);
 
     if(stopFlag) return;
     notifier.wait_for(lock, duration);
@@ -117,7 +117,7 @@ public:
 
   template<typename T>
   void wait_until(T duration) {
-    std::unique_lock<std::mutex> lock(mtx);
+    std::unique_lock lock(mtx);
 
     if(stopFlag) return;
     notifier.wait_until(lock, duration);

@@ -33,7 +33,7 @@ CommandMonitor::CommandMonitor() {
 void CommandMonitor::broadcast(std::string_view linkDescription, std::string_view printableString) {
   if(!active) return;
 
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   auto it = monitors.begin();
 
   while(it != monitors.end()) {
@@ -62,7 +62,7 @@ void CommandMonitor::broadcast(std::string_view linkDescription, const Transacti
 }
 
 void CommandMonitor::addRegistration(Connection *c) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   monitors.push_back(c->getQueue());
   c->setMonitor();
@@ -70,6 +70,6 @@ void CommandMonitor::addRegistration(Connection *c) {
 }
 
 size_t CommandMonitor::size() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return monitors.size();
 }

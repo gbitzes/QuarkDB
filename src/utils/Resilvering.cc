@@ -70,12 +70,12 @@ bool ResilveringEvent::operator==(const ResilveringEvent& rhs) const {
 ResilveringHistory::ResilveringHistory() {}
 
 size_t ResilveringHistory::size() const {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return events.size();
 }
 
 std::string ResilveringHistory::serialize() const {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   std::ostringstream ss;
 
   for(size_t i = 0; i < events.size(); i++) {
@@ -86,7 +86,7 @@ std::string ResilveringHistory::serialize() const {
 }
 
 void ResilveringHistory::append(const ResilveringEvent &event) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   events.push_back(event);
 }
 
@@ -110,11 +110,11 @@ bool ResilveringHistory::operator==(const ResilveringHistory& rhs) const {
 }
 
 const ResilveringEvent& ResilveringHistory::at(size_t i) const {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return events.at(i);
 }
 
 void ResilveringHistory::clear() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   events.clear();
 }

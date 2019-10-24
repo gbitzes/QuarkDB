@@ -44,7 +44,7 @@ std::vector<std::string> Statistics::serialize() const {
 void HistoricalStatistics::push(const Statistics &stats,
   std::chrono::system_clock::time_point point) {
 
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   store.emplace_front(point, stats);
 
   if(store.size() > retentionLimit) {
@@ -58,7 +58,7 @@ void HistoricalStatistics::push(const Statistics &stats,
 void HistoricalStatistics::serialize(std::vector<std::string> &headers,
     std::vector<std::vector<std::string>> &data) {
 
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   for(auto it = store.begin(); it != store.end(); it++) {
     headers.emplace_back(SSTR("TIMESTAMP " <<

@@ -29,7 +29,7 @@
 using namespace quarkdb;
 
 LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   while(!pending.empty()) {
     if(conn) {
       if(!pending.front().rawResp.empty()) {
@@ -47,7 +47,7 @@ LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
 }
 
 void PendingQueue::subscribe(const std::string &item) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   subscriptionTracker.addChannel(item);
   if(supportsPushTypes) {
     appendIfAttachedNoLock(Formatter::ok());
@@ -55,7 +55,7 @@ void PendingQueue::subscribe(const std::string &item) {
 }
 
 void PendingQueue::psubscribe(const std::string &item) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   subscriptionTracker.addPattern(item);
   if(supportsPushTypes) {
     appendIfAttachedNoLock(Formatter::ok());
@@ -63,7 +63,7 @@ void PendingQueue::psubscribe(const std::string &item) {
 }
 
 void PendingQueue::unsubscribe(const std::string &item) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   subscriptionTracker.removeChannel(item);
   if(supportsPushTypes) {
     appendIfAttachedNoLock(Formatter::ok());
@@ -71,7 +71,7 @@ void PendingQueue::unsubscribe(const std::string &item) {
 }
 
 void PendingQueue::punsubscribe(const std::string &item) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   subscriptionTracker.removePattern(item);
   if(supportsPushTypes) {
     appendIfAttachedNoLock(Formatter::ok());
@@ -79,7 +79,7 @@ void PendingQueue::punsubscribe(const std::string &item) {
 }
 
 bool PendingQueue::addMessageIfAttached(const std::string &channel, std::string_view payload) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(!conn) return false;
 
   if(!subscriptionTracker.hasChannel(channel)) return true;
@@ -89,7 +89,7 @@ bool PendingQueue::addMessageIfAttached(const std::string &channel, std::string_
 }
 
 bool PendingQueue::addPatternMessageIfAttached(const std::string &pattern, std::string_view channel, std::string_view payload) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(!conn) return false;
 
   if(!subscriptionTracker.hasPattern(pattern)) return true;
@@ -106,7 +106,7 @@ bool PendingQueue::appendIfAttachedNoLock(RedisEncodedResponse &&raw) {
 }
 
 bool PendingQueue::appendIfAttached(RedisEncodedResponse &&raw) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return appendIfAttachedNoLock(std::move(raw));
 }
 
@@ -123,12 +123,12 @@ LinkStatus PendingQueue::appendResponseNoLock(RedisEncodedResponse &&raw) {
 }
 
 LinkStatus PendingQueue::appendResponse(RedisEncodedResponse &&raw) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return appendResponseNoLock(std::move(raw));
 }
 
 LinkStatus PendingQueue::addPendingTransaction(RedisDispatcher *dispatcher, Transaction &&tx, LogIndex index) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(!conn) qdb_throw("attempted to append a pending request to a pendingQueue while being detached from a Connection, command " << tx.toPrintableString() << ", log index: " << index);
 
   if(pending.empty() && index < 0) {
@@ -154,7 +154,7 @@ LinkStatus PendingQueue::addPendingTransaction(RedisDispatcher *dispatcher, Tran
 }
 
 LogIndex PendingQueue::dispatchPending(RedisDispatcher *dispatcher, LogIndex commitIndex) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   Connection::FlushGuard guard(conn);
   bool found = false;
 

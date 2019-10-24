@@ -586,7 +586,7 @@ nextRound:
 }
 
 void RaftReplicator::activate(RaftStateSnapshotPtr &snapshot_) {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   qdb_event("Activating replicator for term " << snapshot_->term);
 
   qdb_assert(targets.empty());
@@ -597,7 +597,7 @@ void RaftReplicator::activate(RaftStateSnapshotPtr &snapshot_) {
 }
 
 void RaftReplicator::deactivate() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   qdb_event("De-activating replicator");
 
   for(auto it = targets.begin(); it != targets.end(); it++) {
@@ -610,7 +610,7 @@ void RaftReplicator::deactivate() {
 }
 
 ReplicationStatus RaftReplicator::getStatus() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   ReplicationStatus ret;
   for(auto it = targets.begin(); it != targets.end(); it++) {
@@ -662,7 +662,7 @@ void RaftReplicator::reconfigure() {
 }
 
 void RaftReplicator::setTargets(const std::vector<RaftServer> &newTargets) {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   // add targets?
   for(size_t i = 0; i < newTargets.size(); i++) {

@@ -34,13 +34,13 @@ BufferedWriter::~BufferedWriter() {
 }
 
 void BufferedWriter::setActive(bool newval) {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   flush();
   active = newval;
 }
 
 void BufferedWriter::flush() {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   if(!link) return;
   if(bufferedBytes == 0) return;
@@ -50,7 +50,7 @@ void BufferedWriter::flush() {
 }
 
 LinkStatus BufferedWriter::send(std::string &&raw) {
-  std::lock_guard<std::recursive_mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   if(!link) return 1;
   if(!active) return link->Send(raw);

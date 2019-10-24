@@ -27,7 +27,7 @@
 using namespace quarkdb;
 
 void RaftLastContact::heartbeat(const std::chrono::steady_clock::time_point &timepoint) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   if(lastCommunication < timepoint) {
     lastCommunication = timepoint;
@@ -35,12 +35,12 @@ void RaftLastContact::heartbeat(const std::chrono::steady_clock::time_point &tim
 }
 
 std::chrono::steady_clock::time_point RaftLastContact::get() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return lastCommunication;
 }
 
 void RaftLease::updateTargets(const std::vector<RaftServer> &trgt) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   // clear the map of the old targets
   targets.clear();
@@ -82,7 +82,7 @@ RaftLastContact& RaftLease::getHandlerInternal(const RaftServer &srv) {
 }
 
 RaftLastContact& RaftLease::getHandler(const RaftServer &srv) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return getHandlerInternal(srv);
 }
 
@@ -116,7 +116,7 @@ std::chrono::steady_clock::time_point RaftLease::getNthLease(size_t n) {
 // registered endpoints. (they might be observers, which don't affect leases)
 //------------------------------------------------------------------------------
 std::chrono::steady_clock::time_point RaftLease::getDeadline() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return getNthLease(quorumSize);
 }
 
@@ -126,6 +126,6 @@ std::chrono::steady_clock::time_point RaftLease::getDeadline() {
 // to go offline.
 //------------------------------------------------------------------------------
 steady_clock::time_point RaftLease::getShakyQuorumDeadline() {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return getNthLease(quorumSize + 1);
 }

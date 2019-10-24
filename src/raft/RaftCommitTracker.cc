@@ -56,7 +56,7 @@ void RaftCommitTracker::reset() {
 }
 
 RaftMatchIndexTracker& RaftCommitTracker::getHandler(const RaftServer &srv) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   return this->getHandlerInternal(srv);
 }
 
@@ -71,7 +71,7 @@ RaftMatchIndexTracker& RaftCommitTracker::getHandlerInternal(const RaftServer &s
 }
 
 void RaftCommitTracker::updateTargets(const std::vector<RaftServer> &trgt) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
 
   // shut autoCommitter down, if running
   autoCommitter.join();
@@ -149,7 +149,7 @@ void RaftCommitTracker::recalculateCommitIndex() {
 }
 
 void RaftCommitTracker::updated(LogIndex val) {
-  std::lock_guard<std::mutex> lock(mtx);
+  std::scoped_lock lock(mtx);
   if(val <= commitIndex) return; // nothing to do, we've already notified journal of the change
   recalculateCommitIndex();
 }

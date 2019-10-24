@@ -1989,14 +1989,14 @@ bool StateMachine::waitUntilTargetLastApplied(LogIndex targetLastApplied, std::c
 // client traffic at all.
 //------------------------------------------------------------------------------
 void StateMachine::forceResetLastApplied(LogIndex newLastApplied) {
-  std::lock_guard<std::mutex> lock(lastAppliedMtx);
+  std::scoped_lock lock(lastAppliedMtx);
   qdb_info("Resetting lastApplied for state-machine stored in '" << filename << "': " << lastApplied << " => " << newLastApplied);
   THROW_ON_ERROR(db->Put(rocksdb::WriteOptions(), KeyConstants::kStateMachine_LastApplied, intToBinaryString(newLastApplied)));
   lastApplied = newLastApplied;
 }
 
 void StateMachine::commitTransaction(rocksdb::WriteBatchWithIndex &wb, LogIndex index) {
-  std::lock_guard<std::mutex> lock(lastAppliedMtx);
+  std::scoped_lock lock(lastAppliedMtx);
 
   if(index <= 0 && lastApplied > 0) qdb_throw("provided invalid index for version-tracked database: " << index << ", current last applied: " << lastApplied);
 
