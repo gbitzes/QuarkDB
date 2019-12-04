@@ -5,6 +5,8 @@
   * [Installation](INSTALLATION.md)
   * [Configuration](CONFIGURATION.md)
   * [Troubleshooting](TROUBLESHOOTING.md)
+* Operations
+  * [Journal trimming](JOURNAL-TRIMMING.md)
 * [Password authentication](AUTHENTICATION.md)
 * [Backup & restore](BACKUP.md)
 * [Bulkload mode](BULKLOAD.md)
