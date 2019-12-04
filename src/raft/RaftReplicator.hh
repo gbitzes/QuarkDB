@@ -73,6 +73,8 @@ private:
   void monitorAckReception(ThreadAssistant &assistant);
   std::mutex inFlightMtx;
   std::condition_variable inFlightCV;
+  std::condition_variable inFlightPoppedCV;
+
   std::queue<PendingResponse> inFlight;
   std::atomic<bool> streamingUpdates;
 

@@ -190,7 +190,23 @@ void RaftReplicaTracker::triggerResilvering() {
   resilverer.reset(new RaftResilverer(shardDirectory, target, contactDetails, trimmer));
 }
 
+class ConditionVariableNotifier {
+public:
+  ConditionVariableNotifier(std::mutex &mtx_, std::condition_variable &cv_)
+  : mtx(mtx_), cv(cv_) {}
+
+  ~ConditionVariableNotifier() {
+    std::unique_lock<std::mutex> lock(mtx);
+    cv.notify_one();
+  }
+
+private:
+  std::mutex &mtx;
+  std::condition_variable &cv;
+};
+
 void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
+  ConditionVariableNotifier destructionNotifier(inFlightMtx, inFlightPoppedCV);
   std::unique_lock<std::mutex> lock(inFlightMtx);
 
   while(!assistant.terminationRequested()) {
@@ -203,6 +219,7 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
     // Fetch top item
     PendingResponse item = std::move(inFlight.front());
     inFlight.pop();
+    inFlightPoppedCV.notify_one();
     lock.unlock();
 
     RaftAppendEntriesResponse response;
@@ -363,6 +380,11 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
     );
 
     inFlightCV.notify_one();
+
+    while(inFlight.size() >= 512 && shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
+      inFlightPoppedCV.wait_for(lock, contactDetails.getRaftTimeouts().getHeartbeatInterval());
+    }
+
     lock.unlock();
 
     // Assume a positive response from the target, and keep pushing
