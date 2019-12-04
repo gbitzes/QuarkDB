@@ -7,6 +7,7 @@
   * [Troubleshooting](TROUBLESHOOTING.md)
 * Operations
   * [Journal trimming](JOURNAL-TRIMMING.md)
+  * [Resilvering](RESILVERING.md)
 * [Password authentication](AUTHENTICATION.md)
 * [Backup & restore](BACKUP.md)
 * [Bulkload mode](BULKLOAD.md)
