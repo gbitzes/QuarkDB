@@ -155,6 +155,8 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       return conn->vector(resp.toVector());
     }
     case RedisCommand::RAFT_APPEND_ENTRIES: {
+      Connection::FlushGuard guard(conn);
+
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftAppendEntriesRequest dest;
       if(!RaftParser::appendEntries(std::move(req), dest)) {
