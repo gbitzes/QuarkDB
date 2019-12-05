@@ -1293,6 +1293,31 @@ TEST(EscapedPrefixExtractor, CrashCase) {
   ASSERT_EQ(ex1.getRawPrefix(), "my|");
   ASSERT_EQ(ex1.getRawSuffix(), "key");
 
+  ASSERT_TRUE(ex1.parse("m|#y|##key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "m#y|");
+  ASSERT_EQ(ex1.getRawPrefix(), "m|#y|");
+  ASSERT_EQ(ex1.getRawSuffix(), "key");
+
+  ASSERT_TRUE(ex1.parse("my|#|##key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "my#|");
+  ASSERT_EQ(ex1.getRawPrefix(), "my|#|");
+  ASSERT_EQ(ex1.getRawSuffix(), "key");
+
+  ASSERT_TRUE(ex1.parse("my|#||###key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "my#|#");
+  ASSERT_EQ(ex1.getRawPrefix(), "my|#||#");
+  ASSERT_EQ(ex1.getRawSuffix(), "key");
+
+  ASSERT_TRUE(ex1.parse("my|#||####key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "my#|#");
+  ASSERT_EQ(ex1.getRawPrefix(), "my|#||#");
+  ASSERT_EQ(ex1.getRawSuffix(), "#key");
+
+  ASSERT_TRUE(ex1.parse("my|#||###|key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "my#|#");
+  ASSERT_EQ(ex1.getRawPrefix(), "my|#||#");
+  ASSERT_EQ(ex1.getRawSuffix(), "|key");
+
   ASSERT_TRUE(ex1.parse("my|###key"));
   ASSERT_EQ(ex1.getOriginalPrefix(), "my#");
   ASSERT_EQ(ex1.getRawPrefix(), "my|#");
@@ -1300,6 +1325,9 @@ TEST(EscapedPrefixExtractor, CrashCase) {
 
   std::string strangeString("\000\000\000\000\001\261\066\210:|DeltaPhi|##28391063", 29);
   ASSERT_TRUE(ex1.parse(strangeString));
+  ASSERT_EQ(ex1.getOriginalPrefix(), std::string("\000\000\000\000\001\261\066\210:|DeltaPhi|", 19));
+  ASSERT_EQ(ex1.getRawPrefix(), std::string("\000\000\000\000\001\261\066\210:|DeltaPhi|", 19));
+  ASSERT_EQ(ex1.getRawSuffix(), "28391063");
 }
 
 TEST(EscapedPrefixExtractor, BasicSanity) {
