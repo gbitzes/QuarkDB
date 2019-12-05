@@ -42,6 +42,15 @@ inline size_t extractPrefix(std::string_view dkey, std::string &key) {
         return i+2;
       }
 
+      if(dkey[i+1] == '#' && dkey[i-1] == '|' && i+2 < dkey.size() && dkey[i+2] != '#') {
+        return i+2;
+      }
+
+      if(dkey[i+1] == '#' && dkey[i-1] == '|' && i+2 < dkey.size() && dkey[i+2] == '#') {
+        key[key.size() - 1] = '#';
+        return i+3;
+      }
+
       qdb_assert(dkey[i-1] == '|');
       // Replace previous character with '#'
       key[key.size() - 1] = '#';

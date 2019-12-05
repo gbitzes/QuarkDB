@@ -1285,6 +1285,23 @@ TEST(PatternMatching, BasicSanity) {
   ASSERT_EQ(extractPatternPrefix("?134"), "");
 }
 
+TEST(EscapedPrefixExtractor, CrashCase) {
+
+  EscapedPrefixExtractor ex1;
+  ASSERT_TRUE(ex1.parse("my|##key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "my|");
+  ASSERT_EQ(ex1.getRawPrefix(), "my|");
+  ASSERT_EQ(ex1.getRawSuffix(), "key");
+
+  ASSERT_TRUE(ex1.parse("my|###key"));
+  ASSERT_EQ(ex1.getOriginalPrefix(), "my#");
+  ASSERT_EQ(ex1.getRawPrefix(), "my|#");
+  ASSERT_EQ(ex1.getRawSuffix(), "key");
+
+  std::string strangeString("\000\000\000\000\001\261\066\210:|DeltaPhi|##28391063", 29);
+  ASSERT_TRUE(ex1.parse(strangeString));
+}
+
 TEST(EscapedPrefixExtractor, BasicSanity) {
   using namespace std::literals;
 
