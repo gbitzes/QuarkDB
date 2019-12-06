@@ -42,7 +42,84 @@ static char numToChar(int n) {
   return 'x';
 }
 
-TEST(EscapedPrefixExtractor, BruteForce5CharCombinations) {
+void produceCombinations(std::vector<std::string> &output, std::string &current, size_t pos) {
+  // Empty case
+  if(current.size() == 0) {
+    output.emplace_back("");
+    return;
+  }
+
+  // Base case, recursion is done
+  if(pos == current.size() - 1) {
+    for(size_t i = 0; i < 3; i++) {
+      current[pos] = numToChar(i);
+      output.emplace_back(current);
+    }
+
+    return;
+  }
+
+  // Recurse over all possible values for our pos
+  for(size_t i = 0; i < 3; i++) {
+    current[pos] = numToChar(i);
+    produceCombinations(output, current, pos+1);
+  }
+}
+
+std::vector<std::string> produceCombinations(size_t length) {
+  std::vector<std::string> output;
+
+  std::string current;
+  current.resize(length);
+
+  produceCombinations(output, current, 0);
+  return output;
+}
+
+TEST(ProduceCombinations, BasicSanity) {
+  std::vector<std::string> combinations = produceCombinations(1);
+  ASSERT_EQ(combinations.size(), 3u);
+  ASSERT_EQ(combinations[0], "a");
+  ASSERT_EQ(combinations[1], "#");
+  ASSERT_EQ(combinations[2], "|");
+
+  combinations = produceCombinations(2);
+  ASSERT_EQ(combinations.size(), 9u);
+  ASSERT_EQ(combinations[0], "aa");
+  ASSERT_EQ(combinations[1], "a#");
+  ASSERT_EQ(combinations[2], "a|");
+
+  ASSERT_EQ(combinations[3], "#a");
+  ASSERT_EQ(combinations[4], "##");
+  ASSERT_EQ(combinations[5], "#|");
+
+  ASSERT_EQ(combinations[6], "|a");
+  ASSERT_EQ(combinations[7], "|#");
+  ASSERT_EQ(combinations[8], "||");
+}
+
+TEST(EscapedPrefixExtractor, BruteForceUpTo15) {
+  for(size_t length = 0; length < 15; length++) {
+    std::vector<std::string> combinations = produceCombinations(length);
+    ASSERT_EQ(combinations.size(), pow(3, length));
+
+    for(size_t i = 0; i < combinations.size(); i++) {
+      std::string key = combinations[i];
+
+      FieldLocator locator(KeyType::kHash, key, "field");
+      std::string_view encoded = locator.toView();
+      encoded.remove_prefix(1);
+
+      EscapedPrefixExtractor extractor;
+      ASSERT_TRUE(extractor.parse(encoded));
+
+      ASSERT_EQ(extractor.getOriginalPrefix(), key);
+      ASSERT_EQ(extractor.getRawSuffix(), "field");
+    }
+  }
+}
+
+TEST(EscapedPrefixExtractor, BruteForce6CharCombinations) {
   for(int c1 = 0; c1 < 3; c1++) {
     for(int c2 = 0; c2 < 3; c2++) {
       for(int c3 = 0; c3 < 3; c3++) {
