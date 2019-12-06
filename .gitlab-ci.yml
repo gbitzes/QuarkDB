@@ -142,7 +142,7 @@ cc7-koji:
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
     - yum install -y koji
-    - yum install -y git rpm-build python
+    - yum install -y git rpm-build python python3
     - mkdir ~/.koji
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
