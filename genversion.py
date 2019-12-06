@@ -45,10 +45,7 @@ class SoftwareVersion:
         if self.patch == None: assert self.miniPatch == None
 
     def toString(self):
-        ret = "{0}.{1}".format(self.major, self.minor)
-
-        if self.patch or self.miniPatch:
-            ret += ".{0}".format(self.patch)
+        ret = "{0}.{1}.{2}".format(self.major, self.minor, self.patch)
 
         if self.miniPatch:
             ret += ".{0}".format(self.miniPatch)

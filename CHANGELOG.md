@@ -5,6 +5,8 @@
 ### Bug fixes
 - Locality hints ending with a pipe symbol (|) could subsequently trigger an
 assertion and crash when encountered during ``LHSCAN``, due to faulty key parsing code.
+The pipe symbol (|) has special meaning inside internal QuarkDB keys, and is used
+to escape field separators (#).
 
 ### New features
 - Addition of ``quarkdb-server`` binary to allow running QDB without XRootD.
