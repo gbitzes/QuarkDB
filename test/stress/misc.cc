@@ -24,6 +24,7 @@
 #include "storage/ReverseLocator.hh"
 #include "storage/KeyLocators.hh"
 #include <gtest/gtest.h>
+#include <random>
 
 using namespace quarkdb;
 
@@ -70,5 +71,31 @@ TEST(EscapedPrefixExtractor, BruteForce5CharCombinations) {
         }
       }
     }
+  }
+}
+
+TEST(EscapedPrefixExtractor, RandomizedTest) {
+  std::mt19937 generator(8888);
+
+  std::uniform_int_distribution<> lengthDistribution(0, 30);
+  std::uniform_int_distribution<> charDistribution(0, 2);
+
+  for(size_t round = 0; round < 5000000; round++) {
+    size_t keyLength = lengthDistribution(generator);
+
+    std::string key;
+    for(size_t i = 0; i < keyLength; i++) {
+      key.push_back(numToChar(charDistribution(generator)));
+    }
+
+    FieldLocator locator(KeyType::kHash, key, "field");
+    std::string_view encoded = locator.toView();
+    encoded.remove_prefix(1);
+
+    EscapedPrefixExtractor extractor;
+    ASSERT_TRUE(extractor.parse(encoded));
+
+    ASSERT_EQ(extractor.getOriginalPrefix(), key);
+    ASSERT_EQ(extractor.getRawSuffix(), "field");
   }
 }
