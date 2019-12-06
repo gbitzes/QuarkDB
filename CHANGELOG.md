@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.4.0 (2019-12-06)
+
+### Bug fixes
+- Locality hints ending with a pipe symbol (|) could subsequently trigger an
+assertion and crash when encountered during ``LHSCAN``, due to faulty key parsing code.
+
+### New features
+- Addition of ``quarkdb-server`` binary to allow running QDB without XRootD.
+
+### Improvements
+- Improvements to replication behaviour when one of the followers is very far behind the leader.
+Previously, an excessive number of entries were kept in the request pipeline, which
+wasted memory and could potentially trigger OOM.
+- Switch to CLI11 for command line argument parsing.
+- Upgrade rocksdb dependency to v6.2.4.
+
 ## 0.3.9 (2019-09-20)
 
 ### Bug fixes
