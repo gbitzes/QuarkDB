@@ -93,6 +93,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   // send off many requests, pipeline them
   futures.emplace_back(tunnel(leaderID)->exec("get", "asdf"));
   futures.emplace_back(tunnel(leaderID)->exec("ping"));
+  futures.emplace_back(tunnel(leaderID)->exec("client", "setname", "aaa"));
   futures.emplace_back(tunnel(leaderID)->exec("set", "asdf", "1234"));
   futures.emplace_back(tunnel(leaderID)->exec("get", "asdf"));
   futures.emplace_back(tunnel(leaderID)->exec("raft-fetch", SSTR(lastEntry+1), "raw"));
@@ -100,10 +101,11 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   ASSERT_REPLY(futures[0], "");
   ASSERT_REPLY(futures[1], "PONG");
   ASSERT_REPLY(futures[2], "OK");
-  ASSERT_REPLY(futures[3], "1234");
+  ASSERT_REPLY(futures[3], "OK");
+  ASSERT_REPLY(futures[4], "1234");
 
   RaftEntry entry;
-  ASSERT_TRUE(RaftParser::fetchResponse(futures[4].get().get(), entry));
+  ASSERT_TRUE(RaftParser::fetchResponse(futures[5].get().get(), entry));
   ASSERT_EQ(entry.term, state(0)->getSnapshot()->term);
   ASSERT_EQ(entry.request, make_req("set", "asdf", "1234"));
 

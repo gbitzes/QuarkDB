@@ -37,6 +37,7 @@ struct cmdMapInit {
     redis_cmd_map["client_id"] = {RedisCommand::CLIENT_ID, CommandType::CONTROL};
     redis_cmd_map["command_stats"] = {RedisCommand::COMMAND_STATS, CommandType::CONTROL};
     redis_cmd_map["activate_push_types"] = {RedisCommand::ACTIVATE_PUSH_TYPES, CommandType::CONTROL};
+    redis_cmd_map["client"] = {RedisCommand::CLIENT, CommandType::CONTROL};
 
     redis_cmd_map["auth"] = {RedisCommand::AUTH, CommandType::AUTHENTICATION};
     redis_cmd_map["hmac_auth_generate_challenge"] = {RedisCommand::HMAC_AUTH_GENERATE_CHALLENGE, CommandType::AUTHENTICATION};
