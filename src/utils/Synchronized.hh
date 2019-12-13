@@ -38,7 +38,7 @@ public:
   template<typename... Args>
   void set(Args&& ... args) {
     std::unique_lock<std::shared_mutex> lock(mtx);
-    contents = std::string(std::forward<Args>(args)...);
+    contents = T(std::forward<Args>(args)...);
   }
 
   T get() const {

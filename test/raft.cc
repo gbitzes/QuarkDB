@@ -355,7 +355,7 @@ TEST_F(Raft_Dispatcher, incompatible_timeouts) {
   poller(0);
   RaftContactDetails cd(clusterID(), RaftTimeouts(std::chrono::milliseconds(1), std::chrono::milliseconds(2),
     std::chrono::milliseconds(3)), "");
-  RaftTalker talker(myself(0), cd);
+  RaftTalker talker(myself(0), cd, "tests");
 
   RaftVoteRequest votereq;
   votereq.term = 1337;
@@ -372,7 +372,7 @@ TEST_F(Raft_Dispatcher, test_wrong_cluster_id) {
 
   poller(0);
   RaftContactDetails cd("random_cluster_id", timeouts(), "");
-  RaftTalker talker(myself(0), cd);
+  RaftTalker talker(myself(0), cd, "tests");
 
   RaftVoteRequest votereq;
   votereq.term = 1337;

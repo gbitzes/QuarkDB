@@ -63,7 +63,7 @@ ElectionOutcome RaftElection::perform(RaftVoteRequest votereq, RaftState &state,
   std::vector<std::future<redisReplyPtr>> futures;
   for(const RaftServer &node : state.getNodes()) {
     if(node != state.getMyself()) {
-      talkers.emplace_back(new RaftTalker(node, contactDetails));
+      talkers.emplace_back(new RaftTalker(node, contactDetails, "internal-vote-request"));
       futures.push_back(talkers.back()->requestVote(votereq));
     }
   }

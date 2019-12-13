@@ -75,7 +75,7 @@ private:
 RaftResilverer::RaftResilverer(ShardDirectory &dir, const RaftServer &trg, const RaftContactDetails &contactDetails, RaftTrimmer &trimmer)
 : shardDirectory(dir), target(trg),
   trimmingBlock(new RaftTrimmingBlock(trimmer, 0)),
-  talker(target, contactDetails) {
+  talker(target, contactDetails, "internal-resilverer") {
 
   resilveringID = generateUuid();
   setStatus(ResilveringState::INPROGRESS, "");

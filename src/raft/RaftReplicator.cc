@@ -415,7 +415,7 @@ ReplicaStatus RaftReplicaTracker::getStatus() {
 }
 
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
-  RaftTalker talker(target, contactDetails);
+  RaftTalker talker(target, contactDetails, "internal-heartbeat-sender");
 
   while(!assistant.terminationRequested() && shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
     statusNodeVersion.set(talker.getNodeVersion());
@@ -465,7 +465,7 @@ private:
 };
 
 void RaftReplicaTracker::main() {
-  RaftTalker talker(target, contactDetails);
+  RaftTalker talker(target, contactDetails, "internal-replicator");
   LogIndex nextIndex = journal.getLogSize();
 
   RaftMatchIndexTracker &matchIndex = commitTracker.getHandler(target);

@@ -42,7 +42,7 @@ using ResilveringEventID = std::string;
 
 class RaftTalker {
 public:
-  RaftTalker(const RaftServer &server, const RaftContactDetails &contactDetails);
+  RaftTalker(const RaftServer &server, const RaftContactDetails &contactDetails, std::string_view name);
   std::future<redisReplyPtr> appendEntries(RaftTerm term, RaftServer leader, LogIndex prevIndex,
                                            RaftTerm prevTerm, LogIndex commit,
                                            const std::vector<RaftSerializedEntry> &entries);

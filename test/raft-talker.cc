@@ -39,7 +39,7 @@ TEST(RaftTalker, T1) {
   RaftServer node = {"localhost", 12344};
   RaftServer myself = {"its_me_ur_leader", 1337};
   RaftContactDetails cd(clusterID, timeouts, "");
-  RaftTalker talker(node, cd);
+  RaftTalker talker(node, cd, "some-client-name");
 
   SocketListener listener(12344);
   int s2 = listener.accept();
@@ -72,6 +72,12 @@ TEST(RaftTalker, T1) {
                3, // commit index
                entries // payload
              );
+  while( (rc = parser.fetch(req)) == 0) ;
+  ASSERT_EQ(rc, 1);
+
+  tmp = {"CLIENT", "SETNAME", "some-client-name"};
+  ASSERT_EQ(req, tmp);
+  link.Send("+OK\r\n");
 
   while( (rc = parser.fetch(req)) == 0) ;
   ASSERT_EQ(rc, 1);

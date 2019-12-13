@@ -135,7 +135,7 @@ public:
   }
 };
 
-RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &contactDetails)
+RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &contactDetails, std::string_view name)
 : server(server_) {
 
   qclient::Options opts;
@@ -147,6 +147,7 @@ RaftTalker::RaftTalker(const RaftServer &server_, const RaftContactDetails &cont
 
   opts.chainHmacHandshake(contactDetails.getPassword());
   opts.chainHandshake(std::unique_ptr<Handshake>(new RaftHandshake(contactDetails)));
+  opts.chainHandshake(std::unique_ptr<Handshake>(new qclient::SetClientNameHandshake(std::string(name))));
 
   // Make a version handshake - capture ownership inside QClient, but keep pointer
   // to it here.
