@@ -31,6 +31,7 @@
 #include "redis/MultiHandler.hh"
 #include "redis/Authenticator.hh"
 #include "pubsub/SubscriptionTracker.hh"
+#include "utils/Synchronized.hh"
 #include <queue>
 
 namespace rocksdb {
@@ -195,6 +196,10 @@ public:
   bool hasPushTypesActive() const;
 
   static void setPhantomBatchLimit(size_t newval);
+
+  void setName(std::string_view name);
+  std::string getName() const;
+
 private:
   BufferedWriter writer;
 
@@ -205,6 +210,8 @@ private:
   std::string description;
   std::string uuid;
   bool localhost;
+
+  Synchronized<std::string> clientName;
 
   MultiHandler multiHandler;
   friend class PendingQueue;

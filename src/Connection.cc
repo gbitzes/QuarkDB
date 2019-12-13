@@ -204,6 +204,14 @@ void Connection::setPhantomBatchLimit(size_t newval) {
   phantomBatchLimit = newval;
 }
 
+void Connection::setName(std::string_view name) {
+  clientName.set(name);
+}
+
+std::string Connection::getName() const {
+  return clientName.get();
+}
+
 Connection::Connection(Link *l)
 : writer(l), parser(l), pendingQueue(new PendingQueue(this)),
   description(l->describe()), uuid(l->getID()), localhost(l->isLocalhost()) {

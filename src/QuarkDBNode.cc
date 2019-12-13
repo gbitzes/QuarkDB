@@ -105,14 +105,19 @@ LinkStatus QuarkDBNode::dispatch(Connection *conn, RedisRequest &req) {
       return conn->raw(handlePing(req));
     }
     case RedisCommand::CLIENT: {
-      if(req.size() != 3) return conn->errArgs(req[0]);
+      if(caseInsensitiveEquals(req[1], "setname")) {
+        if(req.size() != 3) return conn->errArgs(req[0]);
 
-      if(!caseInsensitiveEquals(req[1], "setname")) {
-        return conn->err("malformed request");
+        qdb_info("Connection with UUID " << conn->getID() << " identifying as '" << StringUtils::escapeNonPrintable(req[2]) << "'");
+        conn->setName(req[2]);
+        return conn->ok();
+      }
+      else if(caseInsensitiveEquals(req[1], "getname")) {
+        if(req.size() != 2) return conn->errArgs(req[0]);
+        return conn->string(conn->getName());
       }
 
-      qdb_info("Connection with UUID " << conn->getID() << " identifying as '" << StringUtils::escapeNonPrintable(req[2]) << "'");
-      return conn->ok();
+      return conn->err("malformed request");
     }
 
     case RedisCommand::DEBUG: {

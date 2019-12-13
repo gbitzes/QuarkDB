@@ -35,9 +35,10 @@ public:
 
   Synchronized() {}
 
-  void set(const T& t) {
+  template<typename... Args>
+  void set(Args&& ... args) {
     std::unique_lock<std::shared_mutex> lock(mtx);
-    contents = t;
+    contents = std::string(std::forward<Args>(args)...);
   }
 
   T get() const {
