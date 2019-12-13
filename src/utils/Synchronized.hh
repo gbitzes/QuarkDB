@@ -1,5 +1,5 @@
 // ----------------------------------------------------------------------
-// File: ThreadSafeString.hh
+// File: Synchronized.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
@@ -21,35 +21,35 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_THREAD_SAFE_STRING_HH
-#define QUARKDB_THREAD_SAFE_STRING_HH
+#ifndef QUARKDB_SYNCHRONIZED_HH
+#define QUARKDB_SYNCHRONIZED_HH
 
-#include <string>
 #include <shared_mutex>
 
 namespace quarkdb {
 
-class ThreadSafeString {
+template<typename T>
+class Synchronized {
 public:
-  ThreadSafeString(const std::string &val) : contents(val) {}
-  ThreadSafeString() {}
+  Synchronized(const T& t) {}
 
-  void set(const std::string &value) {
+  Synchronized() {}
+
+  void set(const T& t) {
     std::unique_lock<std::shared_mutex> lock(mtx);
-    contents = value;
+    contents = t;
   }
 
-  std::string get() const {
+  T get() const {
     std::shared_lock<std::shared_mutex> lock(mtx);
     return contents;
   }
 
 private:
+  T contents;
   mutable std::shared_mutex mtx;
-  std::string contents;
 };
 
 }
-
 
 #endif

@@ -35,6 +35,7 @@
 #include "utils/Random.hh"
 #include "utils/AssistedThread.hh"
 #include "utils/CoreLocalArray.hh"
+#include "utils/Synchronized.hh"
 #include "redis/Transaction.hh"
 #include "redis/Authenticator.hh"
 #include "redis/LeaseFilter.hh"
@@ -1095,4 +1096,11 @@ TEST(HistoricalStatistics, BasicSanity) {
   );
 
 
+}
+
+TEST(Synchronized, String) {
+  Synchronized<std::string> syncstr;
+  ASSERT_EQ(syncstr.get(), "");
+  syncstr.set("test");
+  ASSERT_EQ(syncstr.get(), "test");
 }

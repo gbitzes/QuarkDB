@@ -10,6 +10,7 @@ to escape field separators (#).
 
 ### New features
 - Addition of ``quarkdb-server`` binary to allow running QDB without XRootD.
+- Add support for ``CLIENT SETNAME`` command as aid in debugging.
 
 ### Improvements
 - Improvements to replication behaviour when one of the followers is very far behind the leader.

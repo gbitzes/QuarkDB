@@ -31,7 +31,7 @@
 #include "raft/RaftState.hh"
 #include "raft/RaftTrimmer.hh"
 #include "utils/AssistedThread.hh"
-#include "utils/ThreadSafeString.hh"
+#include "utils/Synchronized.hh"
 
 namespace quarkdb {
 
@@ -97,7 +97,7 @@ private:
   // overhead of atomics.
   std::atomic<bool> statusOnline {false};
   std::atomic<LogIndex> statusNextIndex {-1};
-  ThreadSafeString statusNodeVersion {"N/A"};
+  Synchronized<std::string> statusNodeVersion {"N/A"};
 
   RaftJournal &journal;
   RaftState &state;
