@@ -55,7 +55,7 @@ class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
 class QuarkDBNode; class RaftContactDetails;
 class Publisher;
 
-#define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
+#define RETRY_EXPECT_TRUE_3(cond, retry, waitInterval) { \
   bool ok = false; \
   size_t nretries = 0; \
   while(nretries++ < retry) { \
@@ -66,7 +66,17 @@ class Publisher;
       break; \
     } \
   } \
-  if(!ok) { ASSERT_TRUE(cond) << " - failure after " << nretries << " retries "; } \
+  if(!ok) { EXPECT_TRUE(cond) << " - failure after " << nretries << " retries "; } \
+}
+
+#define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
+  RETRY_EXPECT_TRUE_3( (cond), retry, waitInterval); \
+  ASSERT_TRUE( (cond) ); \
+}
+
+#define RETRY_ASSERT_EQ_3(eq1, eq2, retry, waitInterval) { \
+  RETRY_EXPECT_TRUE_3( (eq1) == (eq2), retry, waitInterval); \
+  ASSERT_EQ((eq1), (eq2)); \
 }
 
 #define RETRY_ASSERT_TRUE_SPIN(cond) RETRY_ASSERT_TRUE_3(cond, 100000, 0)
@@ -75,6 +85,7 @@ class Publisher;
 
 // retry every 10ms
 #define RETRY_ASSERT_TRUE(cond) RETRY_ASSERT_TRUE_3(cond, NUMBER_OF_RETRIES, 10)
+#define RETRY_ASSERT_EQ(cond1, cond2) RETRY_ASSERT_EQ_3(cond1, cond2, NUMBER_OF_RETRIES, 10)
 
 extern std::vector<RedisRequest> testreqs;
 

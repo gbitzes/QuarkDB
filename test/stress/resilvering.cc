@@ -92,8 +92,10 @@ TEST_F(Resilvering, manual) {
     ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)), "OK");
   }
 
-  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == NENTRIES+1);
-  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == NENTRIES+1);
+  LogIndex commitIndex = journal(leaderID)->getCommitIndex();
+
+  RETRY_ASSERT_EQ(journal(0)->getCommitIndex(), commitIndex);
+  RETRY_ASSERT_EQ(journal(1)->getCommitIndex(), commitIndex);
   ASSERT_EQ(journal(2)->getCommitIndex(), 0);
 
   // Stop the stable cluster and start node #2
@@ -109,7 +111,7 @@ TEST_F(Resilvering, manual) {
 
   // Let's drive the resilvering logic of #2 manually.
   RaftResilverer resilverer(*shardDirectory(0), myself(2), *contactDetails(), *trimmer(0));
-  RETRY_ASSERT_TRUE(resilverer.getStatus().state == ResilveringState::SUCCEEDED);
+  RETRY_ASSERT_EQ(resilverer.getStatus().state, ResilveringState::SUCCEEDED);
 
   // Ensure the data is there after resilvering.
   for(size_t i = 0; i < NENTRIES; i++) {
@@ -118,7 +120,7 @@ TEST_F(Resilvering, manual) {
     ASSERT_EQ(value, SSTR("value-" << i));
   }
 
-  ASSERT_TRUE(journal(2)->getCommitIndex() == NENTRIES+1);
+  ASSERT_TRUE(journal(2)->getCommitIndex() == commitIndex);
 }
 
 TEST_F(Resilvering, automatic) {
