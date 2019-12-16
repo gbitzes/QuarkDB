@@ -100,7 +100,7 @@ TEST_F(Raft_Replicator, do_simple_replication) {
   }
 
   // verify #1 recognized #0 as leader and that replication was successful
-  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == (int64_t) testreqs.size()+2);
+  RETRY_ASSERT_EQ(journal(1)->getLogSize(), (int64_t) testreqs.size()+2);
 
   RaftStateSnapshotPtr snapshot = state(1)->getSnapshot();
   ASSERT_EQ(snapshot->term, 2);
@@ -130,12 +130,12 @@ TEST_F(Raft_Replicator, test_replication_with_empty_journals) {
   ASSERT_TRUE(tracker.isRunning());
 
   // verify everything's sane
-  RETRY_ASSERT_TRUE(state(1)->getSnapshot()->leader == myself(0));
+  RETRY_ASSERT_EQ(state(1)->getSnapshot()->leader, myself(0));
   RaftStateSnapshotPtr snapshot = state(1)->getSnapshot();
   ASSERT_EQ(snapshot->term, 2);
   ASSERT_EQ(snapshot->leader, myself(0));
 
-  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == 2);
+  RETRY_ASSERT_EQ(journal(1)->getLogSize(), 2);
   RaftEntry entry;
   journal(1)->fetch_or_die(1, entry);
   ASSERT_EQ(entry.request, make_req("JOURNAL_LEADERSHIP_MARKER", SSTR(2), myself(0).toString()));
@@ -164,7 +164,7 @@ TEST_F(Raft_Replicator, follower_has_larger_journal_than_leader) {
   ASSERT_TRUE(tracker.isRunning());
 
   // verify #1 recognized #0 as leader and that replication was successful
-  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == 2);
+  RETRY_ASSERT_EQ(journal(1)->getLogSize(), 2);
 
   RaftStateSnapshotPtr snapshot = state(1)->getSnapshot();
   ASSERT_EQ(snapshot->term, 2);
@@ -764,11 +764,9 @@ TEST_F(Raft_Director, achieve_natural_election) {
 
   LogIndex expectedIndex = startingReqIndex + testreqs.size() - 1;
 
-  RETRY_ASSERT_TRUE(
-    journal(0)->getCommitIndex() == expectedIndex &&
-    journal(1)->getCommitIndex() == expectedIndex &&
-    journal(2)->getCommitIndex() == expectedIndex
-  );
+  RETRY_ASSERT_EQ(journal(0)->getCommitIndex(), expectedIndex);
+  RETRY_ASSERT_EQ(journal(1)->getCommitIndex(), expectedIndex);
+  RETRY_ASSERT_EQ(journal(2)->getCommitIndex(), expectedIndex);
 
   // verify entries one by one, for all three journals
   for(size_t i = 0; i < testreqs.size(); i++) {
@@ -918,7 +916,7 @@ TEST_F(Raft_CommitTracker, AutoCommit) {
   // Ensure commitIndex is auto-updated
   for(size_t i = 0; i < testreqs.size(); i++) {
     ASSERT_TRUE(journal()->append(i+1, RaftEntry(0, testreqs[i])));
-    RETRY_ASSERT_TRUE(journal()->getCommitIndex() == (int) i+1);
+    RETRY_ASSERT_EQ(journal()->getCommitIndex(), (int) i+1);
   }
 }
 

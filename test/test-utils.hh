@@ -55,7 +55,7 @@ class RaftCommitTracker; class RaftConfig; class RaftTrimmer;
 class QuarkDBNode; class RaftContactDetails;
 class Publisher;
 
-#define RETRY_EXPECT_TRUE_3(cond, retry, waitInterval) { \
+#define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
   bool ok = false; \
   size_t nretries = 0; \
   while(nretries++ < retry) { \
@@ -66,17 +66,21 @@ class Publisher;
       break; \
     } \
   } \
-  if(!ok) { EXPECT_TRUE(cond) << " - failure after " << nretries << " retries "; } \
+  if(!ok) { ASSERT_TRUE(cond) << " - failure after " << nretries << " retries "; } \
 }
 
-#define RETRY_ASSERT_TRUE_3(cond, retry, waitInterval) { \
-  RETRY_EXPECT_TRUE_3( (cond), retry, waitInterval); \
-  ASSERT_TRUE( (cond) ); \
-}
-
-#define RETRY_ASSERT_EQ_3(eq1, eq2, retry, waitInterval) { \
-  RETRY_EXPECT_TRUE_3( (eq1) == (eq2), retry, waitInterval); \
-  ASSERT_EQ((eq1), (eq2)); \
+#define RETRY_ASSERT_EQ_3(cond1, cond2, retry, waitInterval) { \
+  bool ok = false; \
+  size_t nretries = 0; \
+  while(nretries++ < retry) { \
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitInterval)); \
+    if( (cond1) == (cond2) ) { \
+      qdb_info("Condition '" << #cond1 << " == " << #cond2 << " is true after " << nretries << " attempts"); \
+      ok = true; \
+      break; \
+    } \
+  } \
+  if(!ok) { ASSERT_EQ(cond1, cond2) << " - failure after " << nretries << " retries "; } \
 }
 
 #define RETRY_ASSERT_TRUE_SPIN(cond) RETRY_ASSERT_TRUE_3(cond, 100000, 0)

@@ -60,7 +60,7 @@ TEST_F(Background_Flusher, basic_sanity) {
     flusher.pushRequest({"set", "key", SSTR("value-" << i)});
   }
 
-  RETRY_ASSERT_TRUE(flusher.size() == 0u);
+  RETRY_ASSERT_EQ(flusher.size(), 0u);
   RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
   ASSERT_TRUE(checkValueConsensus("key", SSTR("value-" << nentries), 0, 1, 2));
 
@@ -110,7 +110,7 @@ TEST_F(Background_Flusher, with_transition) {
     flusher.pushRequest({"set", SSTR("key-" << i), SSTR("value-" << i)});
   }
 
-  RETRY_ASSERT_TRUE(flusher.size() == 0u);
+  RETRY_ASSERT_EQ(flusher.size(), 0u);
   RETRY_ASSERT_TRUE(checkFullConsensus(follower1, follower2));
   for(size_t i = 0; i <= nentries; i++) {
     ASSERT_TRUE(checkValueConsensus(SSTR("key-" << i), SSTR("value-" << i), follower1, follower2));
@@ -149,8 +149,8 @@ TEST_F(Background_Flusher, persistency) {
   flusher.reset(new qclient::BackgroundFlusher(qclient::Members(myself(follower).hostname, myself(follower).port), std::move(opts), dummyNotifier, new qclient::RocksDBPersistency("/tmp/quarkdb-tests-flusher")));
   ASSERT_GT(flusher->size(), 0u);
 
-  RETRY_ASSERT_TRUE(flusher->size() == 0u);
-  RETRY_ASSERT_TRUE(stateMachine(follower)->getLastApplied() == stateMachine(leaderID)->getLastApplied());
+  RETRY_ASSERT_EQ(flusher->size(), 0u);
+  RETRY_ASSERT_EQ(stateMachine(follower)->getLastApplied(), stateMachine(leaderID)->getLastApplied());
   for(size_t i = 0; i <= nentries; i++) {
     ASSERT_TRUE(checkValueConsensus(SSTR("key-" << i), SSTR("value-" << i), leaderID, follower));
   }
