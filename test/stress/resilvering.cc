@@ -70,13 +70,13 @@ TEST_F(Trimming, configurable_trimming_limit) {
     ASSERT_REPLY(futures[i], "OK");
   }
 
-  RETRY_ASSERT_TRUE(journal(0)->getLogStart() == 1000);
-  RETRY_ASSERT_TRUE(journal(1)->getLogStart() == 1000);
-  RETRY_ASSERT_TRUE(journal(2)->getLogStart() == 1000);
+  RETRY_ASSERT_EQ(journal(0)->getLogStart(), 1000);
+  RETRY_ASSERT_EQ(journal(1)->getLogStart(), 1000);
+  RETRY_ASSERT_EQ(journal(2)->getLogStart(), 1000);
 
-  RETRY_ASSERT_TRUE(stateMachine(0)->getLastApplied() == 1002);
-  RETRY_ASSERT_TRUE(stateMachine(1)->getLastApplied() == 1002);
-  RETRY_ASSERT_TRUE(stateMachine(2)->getLastApplied() == 1002);
+  RETRY_ASSERT_EQ(stateMachine(0)->getLastApplied(), 1002);
+  RETRY_ASSERT_EQ(stateMachine(1)->getLastApplied(), 1002);
+  RETRY_ASSERT_EQ(stateMachine(2)->getLastApplied(), 1002);
 }
 
 TEST_F(Resilvering, manual) {
@@ -142,12 +142,12 @@ TEST_F(Resilvering, automatic) {
     ASSERT_REPLY(tunnel(leaderID)->exec("set", SSTR("key-" << i), SSTR("value-" << i)), "OK");
   }
 
-  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == NENTRIES+2);
-  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == NENTRIES+2);
+  RETRY_ASSERT_EQ(journal(0)->getCommitIndex(), NENTRIES+2);
+  RETRY_ASSERT_EQ(journal(1)->getCommitIndex(), NENTRIES+2);
   ASSERT_EQ(journal(2)->getCommitIndex(), 0);
 
-  RETRY_ASSERT_TRUE(journal(0)->getLogStart() == NENTRIES - 1000);
-  RETRY_ASSERT_TRUE(journal(1)->getLogStart() == NENTRIES - 1000);
+  RETRY_ASSERT_EQ(journal(0)->getLogStart(), NENTRIES - 1000);
+  RETRY_ASSERT_EQ(journal(1)->getLogStart(), NENTRIES - 1000);
   ASSERT_EQ(journal(2)->getLogStart(), 0);
 
   const ResilveringHistory &resilveringHistory = shardDirectory(2)->getResilveringHistory();
@@ -160,10 +160,10 @@ TEST_F(Resilvering, automatic) {
   // Attention here.. when resilvering is in progress, we can't access the journal
   // or state machine. Wait until resilvering is done.
 
-  RETRY_ASSERT_TRUE(resilveringHistory.size() == 2u);
+  RETRY_ASSERT_EQ(resilveringHistory.size(), 2u);
 
-  RETRY_ASSERT_TRUE(journal(2)->getCommitIndex() == NENTRIES+2);
-  RETRY_ASSERT_TRUE(journal(2)->getLogStart() == NENTRIES - 1000);
+  RETRY_ASSERT_EQ(journal(2)->getCommitIndex(), NENTRIES+2);
+  RETRY_ASSERT_EQ(journal(2)->getLogStart(), NENTRIES - 1000);
 
   // Ensure the data is there after resilvering.
   for(size_t i = 0; i < NENTRIES; i++) {

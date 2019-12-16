@@ -277,7 +277,7 @@ TEST_F(Replication, linearizability_during_transition) {
   spindown(leaderID);
 
   // Ensure failover happens..
-  RETRY_ASSERT_TRUE(state(node1)->getSnapshot()->term != firstTerm);
+  RETRY_ASSERT_NE(state(node1)->getSnapshot()->term, firstTerm);
   RETRY_ASSERT_TRUE(checkStateConsensus(node1, node2));
   int newLeaderID = getLeaderID();
   ASSERT_NE(leaderID, newLeaderID);
@@ -372,7 +372,7 @@ TEST_F(Membership, prevent_promotion_of_outdated_observer) {
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(4).toString()), "ERR membership update blocked, observer is not up-to-date");
   spinup(4);
 
-  RETRY_ASSERT_TRUE(journal(4)->getCommitIndex() == journal(leaderID)->getCommitIndex());
+  RETRY_ASSERT_EQ(journal(4)->getCommitIndex(), journal(leaderID)->getCommitIndex());
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(4).toString()), "OK");
 }
 
@@ -423,16 +423,16 @@ TEST_F(Replication, no_committing_entries_from_previous_terms) {
   ASSERT_TRUE(state(1)->getSnapshot()->leader == myself(2));
 
   LogIndex leadershipMarker = state(2)->getSnapshot()->leadershipMarker;
-  RETRY_ASSERT_TRUE(journal(1)->getLogSize() == leadershipMarker+1);
-  RETRY_ASSERT_TRUE(journal(1)->getCommitIndex() == leadershipMarker);
-  RETRY_ASSERT_TRUE(journal(2)->getCommitIndex() == leadershipMarker);
+  RETRY_ASSERT_EQ(journal(1)->getLogSize(), leadershipMarker+1);
+  RETRY_ASSERT_EQ(journal(1)->getCommitIndex(), leadershipMarker);
+  RETRY_ASSERT_EQ(journal(2)->getCommitIndex(), leadershipMarker);
 
   // now start node #0, too, ensure its contents are overwritten as well
   spinup(0);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   ASSERT_TRUE(state(0)->getSnapshot()->leader == myself(2));
-  RETRY_ASSERT_TRUE(journal(0)->getLogSize() == leadershipMarker+1);
-  RETRY_ASSERT_TRUE(journal(0)->getCommitIndex() == leadershipMarker);
+  RETRY_ASSERT_EQ(journal(0)->getLogSize(), leadershipMarker+1);
+  RETRY_ASSERT_EQ(journal(0)->getCommitIndex(), leadershipMarker);
 }
 
 TEST_F(Replication, TrimmingBlock) {
@@ -455,8 +455,8 @@ TEST_F(Replication, TrimmingBlock) {
   // (The replicator might have blocked such aggressive trimming)
   LogIndex logSize = journal(leaderID)->getLogSize();
 
-  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (logSize - 3));
-  RETRY_ASSERT_TRUE(journal((leaderID+2) % 3)->getLogStart() == (logSize - 3));
+  RETRY_ASSERT_EQ(journal((leaderID+1) % 3)->getLogStart(), (logSize - 3));
+  RETRY_ASSERT_EQ(journal((leaderID+2) % 3)->getLogStart(), (logSize - 3));
 
   // Put a trimming block in place for one of the followers.
   RaftTrimmingBlock trimmingBlock(*trimmer((leaderID+1)%3), 0);
@@ -469,23 +469,23 @@ TEST_F(Replication, TrimmingBlock) {
   ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (logSize - 3));
 
   LogIndex newLogSize = journal(leaderID)->getLogSize();
-  RETRY_ASSERT_TRUE(journal((leaderID+2) % 3)->getLogStart() == (newLogSize - 3));
+  RETRY_ASSERT_EQ(journal((leaderID+2) % 3)->getLogStart(), (newLogSize - 3));
 
   // Lift block, ensure journal is trimmed
   trimmingBlock.enforce(150);
-  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 149);
+  RETRY_ASSERT_EQ(journal((leaderID+1) % 3)->getLogStart(), 149);
 
   trimmingBlock.enforce(151);
-  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 150);
+  RETRY_ASSERT_EQ(journal((leaderID+1) % 3)->getLogStart(), 150);
 
   trimmingBlock.enforce(155);
-  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 154);
+  RETRY_ASSERT_EQ(journal((leaderID+1) % 3)->getLogStart(), 154);
 
   trimmingBlock.enforce(173);
-  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == 172);
+  RETRY_ASSERT_EQ(journal((leaderID+1) % 3)->getLogStart(), 172);
 
   trimmingBlock.lift();
-  RETRY_ASSERT_TRUE(journal((leaderID+1) % 3)->getLogStart() == (newLogSize - 3));
+  RETRY_ASSERT_EQ(journal((leaderID+1) % 3)->getLogStart(), (newLogSize - 3));
 }
 
 TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
@@ -527,9 +527,9 @@ TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
   }
 
   // Ensure journals are eventually trimmed.
-  RETRY_ASSERT_TRUE(journal(0)->getLogStart() == 10000);
-  RETRY_ASSERT_TRUE(journal(1)->getLogStart() == 10000);
-  RETRY_ASSERT_TRUE(journal(2)->getLogStart() == 10000);
+  RETRY_ASSERT_EQ(journal(0)->getLogStart(), 10000);
+  RETRY_ASSERT_EQ(journal(1)->getLogStart(), 10000);
+  RETRY_ASSERT_EQ(journal(2)->getLogStart(), 10000);
 
   ASSERT_TRUE(trimmer(0)->canTrimUntil(9999));
   ASSERT_TRUE(trimmer(1)->canTrimUntil(9999));
@@ -540,7 +540,7 @@ TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
 
 TEST_F(SingleNodeInitially, SingleNodeRaftMode) {
   spinup(0);
-  RETRY_ASSERT_TRUE(state(0)->getSnapshot()->status == RaftStatus::LEADER);
+  RETRY_ASSERT_EQ(state(0)->getSnapshot()->status, RaftStatus::LEADER);
 
   std::vector<std::future<redisReplyPtr>> replies;
   for(size_t i = 0; i < 100; i++) {
@@ -562,7 +562,7 @@ TEST_F(SingleNodeInitially, SingleNodeRaftMode) {
 
 TEST_F(SingleNodeInitially, BuildClusterFromSingle) {
   spinup(0);
-  RETRY_ASSERT_TRUE(state(0)->getSnapshot()->status == RaftStatus::LEADER);
+  RETRY_ASSERT_EQ(state(0)->getSnapshot()->status, RaftStatus::LEADER);
 
   std::vector<std::future<redisReplyPtr>> replies;
   for(size_t i = 0; i < 100; i++) {

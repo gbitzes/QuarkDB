@@ -119,7 +119,8 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   // make sure the log entry has been propagated to all nodes
   for(size_t i = 0; i < 3; i++) {
     std::string value;
-    RETRY_ASSERT_TRUE(stateMachine(i)->get("asdf", value).ok() && value == "3456");
+    RETRY_ASSERT_TRUE(stateMachine(i)->get("asdf", value).ok());
+    ASSERT_EQ(value, "3456");
   }
 
   ASSERT_REPLY(tunnel(leaderID)->exec("set", "qwerty", "789"), "OK");
@@ -168,7 +169,7 @@ TEST_F(Raft_e2e, simultaneous_clients) {
   std::string checkpointPath = SSTR(commonState.testdir << "/checkpoint");
 
   // Before taking a checkpoint, ensure node #0 is caught up
-  RETRY_ASSERT_TRUE(stateMachine(0)->getLastApplied() == stateMachine(leaderID)->getLastApplied());
+  RETRY_ASSERT_EQ(stateMachine(0)->getLastApplied(), stateMachine(leaderID)->getLastApplied());
 
   ASSERT_TRUE(shardDirectory()->checkpoint(checkpointPath).empty());
   ASSERT_FALSE(shardDirectory()->checkpoint(checkpointPath).empty()); // exists already
@@ -959,7 +960,7 @@ TEST_F(Raft_e2e, membership_updates) {
   RETRY_ASSERT_TRUE(checkFullConsensus(0, 1, 2));
   int index = journal(leaderID)->getLogSize() - 1;
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(victim).toString()), "OK");
-  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == index + 1);
+  RETRY_ASSERT_EQ(dispatcher(leaderID)->info().commitIndex, index + 1);
 
   // verify the cluster has not been disrupted
   ASSERT_EQ(state(leaderID)->getSnapshot()->leader, myself(leaderID));
@@ -967,9 +968,9 @@ TEST_F(Raft_e2e, membership_updates) {
   // add it back as an observer, verify consensus
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_ADD_OBSERVER", myself(victim).toString()), "OK");
 
-  RETRY_ASSERT_TRUE(dispatcher(0)->info().commitIndex == index + 2);
-  RETRY_ASSERT_TRUE(dispatcher(1)->info().commitIndex == index + 2);
-  RETRY_ASSERT_TRUE(dispatcher(2)->info().commitIndex == index + 2);
+  RETRY_ASSERT_EQ(dispatcher(0)->info().commitIndex, index + 2);
+  RETRY_ASSERT_EQ(dispatcher(1)->info().commitIndex, index + 2);
+  RETRY_ASSERT_EQ(dispatcher(2)->info().commitIndex, index + 2);
 
   ASSERT_EQ(state(victim)->getSnapshot()->status, RaftStatus::FOLLOWER);
 
@@ -985,7 +986,7 @@ TEST_F(Raft_e2e, membership_updates) {
   // add back as a full voting member
   leaderID = getServerID(state(0)->getSnapshot()->leader);
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(victim).toString()), "OK");
-  RETRY_ASSERT_TRUE(dispatcher(leaderID)->info().commitIndex == index + 3);
+  RETRY_ASSERT_EQ(dispatcher(leaderID)->info().commitIndex, index + 3);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 }
 
@@ -1006,17 +1007,17 @@ TEST_F(Raft_e2e, reject_dangerous_membership_update) {
   // Make sure we can remove the third node
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(2).toString()), "OK");
   RaftMembership membership = journal(leaderID)->getMembership();
-  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
+  RETRY_ASSERT_EQ(journal(leaderID)->getCommitIndex(), membership.epoch);
 
   // Add it back as observer
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_ADD_OBSERVER", myself(2).toString()), "OK");
   membership = journal(leaderID)->getMembership();
-  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
+  RETRY_ASSERT_EQ(journal(leaderID)->getCommitIndex(), membership.epoch);
 
   // Remove it again
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_REMOVE_MEMBER", myself(2).toString()), "OK");
   membership = journal(leaderID)->getMembership();
-  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
+  RETRY_ASSERT_EQ(journal(leaderID)->getCommitIndex(), membership.epoch);
 }
 
 TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
@@ -1032,7 +1033,7 @@ TEST_F(Raft_e2e5, membership_updates_with_disruptions) {
   RaftMembership membership = journal(leaderID)->getMembership();
   ASSERT_GT(membership.epoch, 0u);
   ASSERT_EQ(membership.nodes.size(), 4u);
-  RETRY_ASSERT_TRUE(journal(leaderID)->getCommitIndex() == membership.epoch);
+  RETRY_ASSERT_EQ(journal(leaderID)->getCommitIndex(), membership.epoch);
 
   // .. and now spinup node #4 :> Ensure it doesn't disrupt the current leader
   spinup(4);
@@ -2181,7 +2182,7 @@ TEST_F(Raft_e2e, vhset) {
 
   qclient::Message msg;
 
-  RETRY_ASSERT_TRUE(subscription->size() == 1u);
+  RETRY_ASSERT_EQ(subscription->size(), 1u);
   ASSERT_TRUE(subscription->front(msg));
   ASSERT_EQ(
     qclient::describeRedisReply(msg.getPayload()),
@@ -2352,7 +2353,7 @@ TEST_F(Raft_e2e, PushTypes) {
   ASSERT_REPLY_DESCRIBE(replies[3].get(),
     "(integer) 1");
 
-  RETRY_ASSERT_TRUE(mq->size() == 2);
+  RETRY_ASSERT_EQ(mq->size(), 2u);
 
   auto it = mq->begin();
   Message *msg = it.getItemBlockOrNull();
@@ -2392,17 +2393,17 @@ TEST_F(Raft_e2e, SharedHash) {
   qclient::SharedManager sm2(members(), std::move(subopts));
 
   qclient::SharedHash hash1(&sm, "my-shared-hash");
-  RETRY_ASSERT_TRUE(hash1.getCurrentVersion() == 1u);
+  RETRY_ASSERT_EQ(hash1.getCurrentVersion(), 1u);
 
   hash1.set("k2", "v2");
-  RETRY_ASSERT_TRUE(hash1.getCurrentVersion() == 2u);
+  RETRY_ASSERT_EQ(hash1.getCurrentVersion(), 2u);
 
   std::string tmp;
   ASSERT_TRUE(hash1.get("k2", tmp));
   ASSERT_EQ(tmp, "v2");
 
   qclient::SharedHash hash2(&sm, "my-shared-hash");
-  RETRY_ASSERT_TRUE(hash2.getCurrentVersion() == 2u);
+  RETRY_ASSERT_EQ(hash2.getCurrentVersion(), 2u);
   ASSERT_TRUE(hash2.get("k2", tmp));
   ASSERT_EQ(tmp, "v2");
 

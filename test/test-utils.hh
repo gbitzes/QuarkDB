@@ -83,13 +83,29 @@ class Publisher;
   if(!ok) { ASSERT_EQ(cond1, cond2) << " - failure after " << nretries << " retries "; } \
 }
 
+#define RETRY_ASSERT_NE_3(cond1, cond2, retry, waitInterval) { \
+  bool ok = false; \
+  size_t nretries = 0; \
+  while(nretries++ < retry) { \
+    std::this_thread::sleep_for(std::chrono::milliseconds(waitInterval)); \
+    if( (cond1) != (cond2) ) { \
+      qdb_info("Condition '" << #cond1 << " != " << #cond2 << " is true after " << nretries << " attempts"); \
+      ok = true; \
+      break; \
+    } \
+  } \
+  if(!ok) { ASSERT_NE(cond1, cond2) << " - failure after " << nretries << " retries "; } \
+}
+
 #define RETRY_ASSERT_TRUE_SPIN(cond) RETRY_ASSERT_TRUE_3(cond, 100000, 0)
+#define RETRY_ASSERT_EQ_SPIN(cond1, cond2) RETRY_ASSERT_EQ_3(cond1, cond2, 100000, 0)
 
 #define NUMBER_OF_RETRIES ( (size_t) timeouts().getLow().count() * 10)
 
 // retry every 10ms
 #define RETRY_ASSERT_TRUE(cond) RETRY_ASSERT_TRUE_3(cond, NUMBER_OF_RETRIES, 10)
 #define RETRY_ASSERT_EQ(cond1, cond2) RETRY_ASSERT_EQ_3(cond1, cond2, NUMBER_OF_RETRIES, 10)
+#define RETRY_ASSERT_NE(cond1, cond2) RETRY_ASSERT_NE_3(cond1, cond2, NUMBER_OF_RETRIES, 10)
 
 extern std::vector<RedisRequest> testreqs;
 
