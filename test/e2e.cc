@@ -882,6 +882,8 @@ TEST_F(Raft_e2e, DequeClear) {
 }
 
 TEST_F(Raft_e2e, replication_with_trimmed_journal) {
+  Connection::setPhantomBatchLimit(1);
+
   spinup(0); spinup(1);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
 
@@ -916,7 +918,7 @@ TEST_F(Raft_e2e, replication_with_trimmed_journal) {
   std::vector<RaftEntry> entryBackup;
   for(size_t i = 1; i < 5; i++) {
     RaftEntry entry;
-    ASSERT_TRUE(journal(firstSlaveID)->fetch(i, entry).ok());
+    ASSERT_TRUE(journal(firstSlaveID)->fetch(i, entry).ok()) << i;
     entryBackup.emplace_back(std::move(entry));
   }
 
