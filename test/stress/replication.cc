@@ -538,6 +538,25 @@ TEST_F(Replication, EnsureEntriesBeingReplicatedAreNotTrimmed) {
   ASSERT_FALSE(trimmer(leaderID)->canTrimUntil(10001));
 }
 
+TEST_F(SingleNodeInitially, Multi) {
+  spinup(0);
+  RETRY_ASSERT_EQ(state(0)->getSnapshot()->status, RaftStatus::LEADER);
+
+  std::deque<qclient::EncodedRequest> multi1;
+  multi1.emplace_back(qclient::EncodedRequest::make("set", "my-awesome-counter", "1"));
+  multi1.emplace_back(qclient::EncodedRequest::make("set", "other-counter", "12345"));
+  multi1.emplace_back(qclient::EncodedRequest::make("get", "other-counter"));
+  multi1.emplace_back(qclient::EncodedRequest::make("get", "my-awesome-counter"));
+
+  ASSERT_EQ(
+    qclient::describeRedisReply(tunnel(0)->execute(std::move(multi1)).get()),
+    "1) OK\n"
+    "2) OK\n"
+    "3) \"12345\"\n"
+    "4) \"1\"\n"
+  );
+}
+
 TEST_F(SingleNodeInitially, SingleNodeRaftMode) {
   spinup(0);
   RETRY_ASSERT_EQ(state(0)->getSnapshot()->status, RaftStatus::LEADER);
