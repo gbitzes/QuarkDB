@@ -40,6 +40,7 @@ namespace KeyConstants {
   constexpr char kJournal_MembershipEpoch[]          = "RAFT_MEMBERSHIP_EPOCH";
   constexpr char kJournal_PreviousMembers[]          = "RAFT_PREVIOUS_MEMBERS";
   constexpr char kJournal_PreviousMembershipEpoch[]  = "RAFT_PREVIOUS_MEMBERSHIP_EPOCH";
+  constexpr char kJournal_FsyncPolicy[]              = "RAFT_FSYNC_POLICY";
 
   constexpr char kStateMachine_Format[]              = "__format";
   constexpr char kStateMachine_LastApplied[]         = "__last-applied";

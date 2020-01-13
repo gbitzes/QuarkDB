@@ -52,26 +52,28 @@ TEST(Recovery, BasicSanity) {
 
     std::vector<std::string> magicValues = recovery.retrieveMagicValues();
 
-    ASSERT_EQ(magicValues.size(), 18u);
+    ASSERT_EQ(magicValues.size(), 19u);
 
-    ASSERT_EQ(magicValues[0], "RAFT_CURRENT_TERM: NotFound: ");
-    ASSERT_EQ(magicValues[1], "RAFT_LOG_SIZE: NotFound: ");
-    ASSERT_EQ(magicValues[2], "RAFT_LOG_START: NotFound: ");
-    ASSERT_EQ(magicValues[3], "RAFT_CLUSTER_ID: NotFound: ");
-    ASSERT_EQ(magicValues[4], "RAFT_VOTED_FOR: NotFound: ");
-    ASSERT_EQ(magicValues[5], "RAFT_COMMIT_INDEX: NotFound: ");
-    ASSERT_EQ(magicValues[6], "RAFT_MEMBERS: NotFound: ");
-    ASSERT_EQ(magicValues[7], "RAFT_MEMBERSHIP_EPOCH: NotFound: ");
-    ASSERT_EQ(magicValues[8], "RAFT_PREVIOUS_MEMBERS: NotFound: ");
-    ASSERT_EQ(magicValues[9], "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ");
-    ASSERT_EQ(magicValues[10], "__format");
-    ASSERT_EQ(magicValues[11], "0");
-    ASSERT_EQ(magicValues[12], "__last-applied");
-    ASSERT_EQ(magicValues[13], intToBinaryString(2));
-    ASSERT_EQ(magicValues[14], "__in-bulkload");
-    ASSERT_EQ(magicValues[15], boolToString(false));
-    ASSERT_EQ(magicValues[16], "__clock");
-    ASSERT_EQ(magicValues[17], unsignedIntToBinaryString(0u));
+    int i = 0;
+    ASSERT_EQ(magicValues[i++], "RAFT_CURRENT_TERM: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_LOG_SIZE: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_LOG_START: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_CLUSTER_ID: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_VOTED_FOR: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_COMMIT_INDEX: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_MEMBERS: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_MEMBERSHIP_EPOCH: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_PREVIOUS_MEMBERS: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "RAFT_FSYNC_POLICY: NotFound: ");
+    ASSERT_EQ(magicValues[i++], "__format");
+    ASSERT_EQ(magicValues[i++], "0");
+    ASSERT_EQ(magicValues[i++], "__last-applied");
+    ASSERT_EQ(magicValues[i++], intToBinaryString(2));
+    ASSERT_EQ(magicValues[i++], "__in-bulkload");
+    ASSERT_EQ(magicValues[i++], boolToString(false));
+    ASSERT_EQ(magicValues[i++], "__clock");
+    ASSERT_EQ(magicValues[i++], unsignedIntToBinaryString(0u));
   }
 
   RedisRequest req {"recovery-get", "__last-applied"};
@@ -114,18 +116,18 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
     ASSERT_REPLY_DESCRIBE(qcl.exec("recovery-get-all-versions", SSTR("E" << intToBinaryString(2))).get(),
       "1) \"KEY: E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x02\"\n"
       "2) \"VALUE: \"\n"
-      "3) \"SEQUENCE: 21\"\n"
+      "3) \"SEQUENCE: 22\"\n"
       "4) \"TYPE: 0\"\n"
       "5) \"KEY: E\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x02\"\n"
       "6) \"VALUE: \\x04\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00set\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00abc\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00cdf\"\n"
-      "7) \"SEQUENCE: 16\"\n"
+      "7) \"SEQUENCE: 17\"\n"
       "8) \"TYPE: 1\"\n");
 
 
     ASSERT_REPLY_DESCRIBE(qcl.exec("recovery-get-all-versions", KeyConstants::kJournal_ClusterID).get(),
       "1) \"KEY: RAFT_CLUSTER_ID\"\n"
       "2) \"VALUE: different-cluster-id\"\n"
-      "3) \"SEQUENCE: 18\"\n"
+      "3) \"SEQUENCE: 19\"\n"
       "4) \"TYPE: 1\"\n"
       "5) \"KEY: RAFT_CLUSTER_ID\"\n"
       "6) \"VALUE: some-cluster-id\"\n"
@@ -151,6 +153,8 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
       intToBinaryString(0),
       "RAFT_PREVIOUS_MEMBERS: NotFound: ",
       "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ",
+      "RAFT_FSYNC_POLICY",
+      "async",
       "__format: NotFound: ",
       "__last-applied: NotFound: ",
       "__in-bulkload: NotFound: ",
@@ -211,6 +215,8 @@ TEST(Recovery, RemoveJournalEntriesAndChangeClusterID) {
       intToBinaryString(0),
       "RAFT_PREVIOUS_MEMBERS: NotFound: ",
       "RAFT_PREVIOUS_MEMBERSHIP_EPOCH: NotFound: ",
+      "RAFT_FSYNC_POLICY",
+      "async",
       "__format: NotFound: ",
       "__last-applied: NotFound: ",
       "__in-bulkload: NotFound: ",

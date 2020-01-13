@@ -93,6 +93,7 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
   RaftMembers newMembers(newNodes, {});
   this->set_or_die(KeyConstants::kJournal_Members, newMembers.toString());
   this->set_int_or_die(KeyConstants::kJournal_MembershipEpoch, startIndex);
+  this->set_or_die(KeyConstants::kJournal_FsyncPolicy, fsyncPolicyToString(fsyncPolicy) );
 
   RaftEntry entry(0, "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), newClusterID);
   this->set_or_die(encodeEntryKey(startIndex), entry.serialize());

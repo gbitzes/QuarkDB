@@ -21,11 +21,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_COMMON_H__
-#define __QUARKDB_COMMON_H__
+#ifndef QUARKDB_COMMON_HH
+#define QUARKDB_COMMON_HH
 
 #include <vector>
 #include <string>
+#include "utils/Macros.hh"
 
 namespace quarkdb {
 
@@ -87,6 +88,23 @@ enum class FsyncPolicy {
   kSyncImportantUpdates,
   kAsync // async at an undefined future time
 };
+
+inline std::string fsyncPolicyToString(FsyncPolicy pol) {
+  switch(pol) {
+    case FsyncPolicy::kAlways: {
+      return "always";
+    }
+    case FsyncPolicy::kSyncImportantUpdates: {
+      return "sync-important-updates";
+    }
+    case FsyncPolicy::kAsync: {
+      return "async";
+    }
+    default: {
+      qdb_throw("Unknown FsyncPolicy, should never happen");
+    }
+  }
+}
 
 using RaftClusterID = std::string;
 using RaftTerm = int64_t;

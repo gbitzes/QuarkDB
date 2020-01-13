@@ -45,6 +45,7 @@ public:
     ADD_TO_ALLKEYS(kJournal_MembershipEpoch);
     ADD_TO_ALLKEYS(kJournal_PreviousMembers);
     ADD_TO_ALLKEYS(kJournal_PreviousMembershipEpoch);
+    ADD_TO_ALLKEYS(kJournal_FsyncPolicy);
 
     ADD_TO_ALLKEYS(kStateMachine_Format);
     ADD_TO_ALLKEYS(kStateMachine_LastApplied);
