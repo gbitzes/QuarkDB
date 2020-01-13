@@ -88,7 +88,10 @@ add_executable(quarkdb-stress-tests
 # Build test executable which requires root / sudo to run
 #-------------------------------------------------------------------------------
 add_executable(quarkdb-sudo-tests
+  sudo/main.cc
+  sudo/poweroff.cc
   sudo/qclient.cc
+  ${COMMON_TEST_SOURCES}
 )
 
 #-------------------------------------------------------------------------------
@@ -139,7 +142,7 @@ target_link_libraries(quarkdb-stress-tests
 
 target_link_libraries(quarkdb-sudo-tests
   XrdQuarkDB
-  gtest_main
+  gtest
   ${XROOTD_CL_LIBRARY}
   ${XROOTD_UTILS_LIBRARY}
   ${GCOV_LIBS}

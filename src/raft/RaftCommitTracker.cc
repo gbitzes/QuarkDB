@@ -33,7 +33,10 @@ RaftMatchIndexTracker::RaftMatchIndexTracker(RaftCommitTracker &tr, const RaftSe
 }
 
 void RaftMatchIndexTracker::update(LogIndex newMatchIndex) {
-  if(newMatchIndex < matchIndex) qdb_throw("attempted to reduce matchIndex: " << matchIndex << " ==> " << newMatchIndex);
+  if(newMatchIndex < matchIndex) {
+    qdb_critical("Detected reduction in matchIndex: Target's journal went back in time: " << matchIndex << " ==> " << newMatchIndex);
+  }
+
   matchIndex = newMatchIndex;
   tracker.updated(matchIndex);
 }

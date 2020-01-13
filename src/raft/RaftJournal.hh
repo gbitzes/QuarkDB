@@ -52,6 +52,7 @@ public:
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
   bool setCommitIndex(LogIndex index);
 
+
   RaftTerm getCurrentTerm() const { return currentTerm; }
   LogIndex getLogSize() const { return logSize; }
   LogIndex getLogStart() const { return logStart; }
@@ -89,6 +90,7 @@ public:
   bool removeMember(RaftTerm term, const RaftServer &member, std::string &err);
 
   bool appendLeadershipMarker(LogIndex index, RaftTerm term, const RaftServer &leader);
+  bool simulateDataLoss(size_t numberOfEntries);
 
   class Iterator {
   public:
@@ -108,6 +110,7 @@ public:
 
 private:
   void openDB(const std::string &path);
+  void rawSetCommitIndex(LogIndex index);
 
   rocksdb::DB* db = nullptr;
   std::string dbPath;

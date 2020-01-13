@@ -188,6 +188,16 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   return true;
 }
 
+bool RaftJournal::simulateDataLoss(size_t numberOfEntries) {
+  LogIndex newLogSize = logSize - numberOfEntries;
+
+  if(newLogSize <= commitIndex) {
+    rawSetCommitIndex(newLogSize-1);
+  }
+
+  return removeEntries(newLogSize);
+}
+
 bool RaftJournal::setCommitIndex(LogIndex newIndex) {
   std::scoped_lock lock(commitIndexMutex);
   if(newIndex < commitIndex) {
@@ -200,11 +210,15 @@ bool RaftJournal::setCommitIndex(LogIndex newIndex) {
   }
 
   if(commitIndex < newIndex) {
-    this->set_int_or_die(KeyConstants::kJournal_CommitIndex, newIndex);
-    commitIndex = newIndex;
-    commitNotifier.notify_all();
+    rawSetCommitIndex(newIndex);
   }
   return true;
+}
+
+void RaftJournal::rawSetCommitIndex(LogIndex newIndex) {
+  this->set_int_or_die(KeyConstants::kJournal_CommitIndex, newIndex);
+  commitIndex = newIndex;
+  commitNotifier.notify_all();
 }
 
 bool RaftJournal::waitForCommits(const LogIndex currentCommit) {

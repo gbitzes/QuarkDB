@@ -873,7 +873,8 @@ TEST_F(Raft_CommitTracker, basic_sanity) {
 
   matchIndex1.update(1);
   ASSERT_EQ(journal(0)->getCommitIndex(), 1);
-  ASSERT_THROW(matchIndex1.update(0), FatalException);
+  matchIndex1.update(0);
+  ASSERT_EQ(journal(0)->getCommitIndex(), 1);
 
   matchIndex2.update(1);
   ASSERT_EQ(journal(0)->getCommitIndex(), 1);
