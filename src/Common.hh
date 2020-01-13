@@ -82,6 +82,12 @@ struct RaftServer {
   }
 };
 
+enum class FsyncPolicy {
+  kAlways,
+  kSyncImportantUpdates,
+  kAsync // async at an undefined future time
+};
+
 using RaftClusterID = std::string;
 using RaftTerm = int64_t;
 using LogIndex = int64_t;

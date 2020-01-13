@@ -165,7 +165,7 @@ TEST(Bulkload, RaftJournalAtNonZeroIndex) {
 
   {
     RaftServer srv {"localhost", 2222};
-    RaftJournal journal("/tmp/quarkdb-tests-raft-journal", "some-uuid", {srv}, 1337);
+    RaftJournal journal("/tmp/quarkdb-tests-raft-journal", "some-uuid", {srv}, 1337, FsyncPolicy::kAsync);
 
     ASSERT_EQ(journal.getLogSize(), 1338);
     ASSERT_EQ(journal.getLogStart(), 1337);
@@ -198,7 +198,7 @@ TEST(Bulkload, CreateConsensusShardFromExistingSM) {
   std::unique_ptr<ShardDirectory> shardDir;
   RaftServer srv("localhost", 123);
   Status st;
-  shardDir.reset(ShardDirectory::create("/tmp/quarkdb-tests-shard-from-existing-sm/shard", "cluster-id", "shar-id", {srv}, 99, std::move(sm), st ));
+  shardDir.reset(ShardDirectory::create("/tmp/quarkdb-tests-shard-from-existing-sm/shard", "cluster-id", "shar-id", {srv}, 99, FsyncPolicy::kAsync, std::move(sm), st ));
   st.assertOk();
   ASSERT_EQ(sm.get(), nullptr);
 

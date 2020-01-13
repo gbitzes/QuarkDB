@@ -73,11 +73,11 @@ inline void encodeEntryKey(LogIndex index, KeyBuffer &key) {
 //------------------------------------------------------------------------------
 // RaftJournal
 //------------------------------------------------------------------------------
-void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes, LogIndex startIndex) {
-  RaftJournal journal(path, clusterID, nodes, startIndex);
+void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes, LogIndex startIndex, FsyncPolicy fsyncPolicy) {
+  RaftJournal journal(path, clusterID, nodes, startIndex, fsyncPolicy);
 }
 
-void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftServer> &newNodes, LogIndex startIndex) {
+void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftServer> &newNodes, LogIndex startIndex, FsyncPolicy fsyncPolicy) {
   IteratorPtr iter(db->NewIterator(rocksdb::ReadOptions()));
   for(iter->SeekToFirst(); iter->Valid(); iter->Next()) {
     db->Delete(rocksdb::WriteOptions(), iter->key().ToString());
@@ -136,9 +136,9 @@ void RaftJournal::openDB(const std::string &path) {
   if(!status.ok()) qdb_throw("Error while opening journal in " << path << ":" << status.ToString());
 }
 
-RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex) {
+RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex, FsyncPolicy fsyncPolicy) {
   openDB(filename);
-  obliterate(clusterID, nodes, startIndex);
+  obliterate(clusterID, nodes, startIndex, fsyncPolicy);
 }
 
 RaftJournal::~RaftJournal() {
@@ -557,7 +557,6 @@ std::string RaftJournal::get_or_die(const std::string &key) {
 //------------------------------------------------------------------------------
 // Checkpoint for online backup
 //------------------------------------------------------------------------------
-
 rocksdb::Status RaftJournal::checkpoint(const std::string &path) {
   rocksdb::Checkpoint *checkpoint = nullptr;
   rocksdb::Status st = rocksdb::Checkpoint::Create(db, &checkpoint);

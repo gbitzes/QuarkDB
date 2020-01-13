@@ -65,13 +65,13 @@ public:
   // Reset the contents of both the state machine and the raft journal.
   // Physical paths remain the same.
   void obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes,
-    LogIndex startIndex, std::unique_ptr<StateMachine> existingContents);
+    LogIndex startIndex, FsyncPolicy fsyncPolicy, std::unique_ptr<StateMachine> existingContents);
 
   // Create a standalone shard.
   static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, std::unique_ptr<StateMachine> sm, Status &st);
 
   // Create a consensus shard.
-  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm, Status &st);
+  static ShardDirectory* create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, FsyncPolicy fsyncPolicy, std::unique_ptr<StateMachine> sm, Status &st);
 
   std::unique_ptr<ShardSnapshot> takeSnapshot(const SnapshotID &id, std::string &err);
 

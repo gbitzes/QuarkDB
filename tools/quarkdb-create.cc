@@ -192,7 +192,7 @@ int main(int argc, char** argv) {
       qdb_info("--nodes were not specified. This new node will be 'in limbo' until it is contacted by an existing cluster, and cannot be used to start a new cluster from scratch. Run 'quarkdb-add-observer' on the leader of the existing cluster to add it.");
     }
 
-    shardDirectory.reset(quarkdb::ShardDirectory::create(optPath, optClusterID, "default", nodes, journalStartingIndex, std::move(stolenStateMachine), st));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(optPath, optClusterID, "default", nodes, journalStartingIndex, quarkdb::FsyncPolicy::kAsync, std::move(stolenStateMachine), st));
   }
   else {
     shardDirectory.reset(quarkdb::ShardDirectory::create(optPath, "null", "default", std::move(stolenStateMachine), st));

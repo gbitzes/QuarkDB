@@ -197,15 +197,15 @@ void ShardDirectory::initializeStateMachine(std::unique_ptr<StateMachine> sm, Lo
   getStateMachine()->forceResetLastApplied(initialLastApplied);
 }
 
-void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm) {
+void ShardDirectory::obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex, FsyncPolicy fsyncPolicy, std::unique_ptr<StateMachine> sm) {
   bool hasSeedSM = (sm.get() != nullptr);
   initializeStateMachine(std::move(sm), startIndex);
 
   if(!journalptr) {
-    journalptr = new RaftJournal(raftJournalPath(), clusterID, nodes, startIndex);
+    journalptr = new RaftJournal(raftJournalPath(), clusterID, nodes, startIndex, fsyncPolicy);
   }
   else {
-    getRaftJournal()->obliterate(clusterID, nodes, startIndex);
+    getRaftJournal()->obliterate(clusterID, nodes, startIndex, fsyncPolicy);
   }
 
   resilveringHistory.clear();
@@ -249,7 +249,7 @@ ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID cl
   return new ShardDirectory(path);
 }
 
-ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, std::unique_ptr<StateMachine> sm, Status &st) {
+ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID clusterID, ShardID shardID, const std::vector<RaftServer> &nodes, LogIndex startIndex, FsyncPolicy fsyncPolicy, std::unique_ptr<StateMachine> sm, Status &st) {
   st = initializeDirectory(path, clusterID, shardID);
   if(!st.ok()) {
     return nullptr;
@@ -257,7 +257,7 @@ ShardDirectory* ShardDirectory::create(const std::string &path, RaftClusterID cl
 
 
   ShardDirectory *shardDirectory = new ShardDirectory(path);
-  shardDirectory->obliterate(clusterID, nodes, startIndex, std::move(sm) );
+  shardDirectory->obliterate(clusterID, nodes, startIndex, fsyncPolicy, std::move(sm));
   return shardDirectory;
 }
 

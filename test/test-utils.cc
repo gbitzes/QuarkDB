@@ -81,12 +81,12 @@ ShardDirectory* GlobalEnv::getShardDirectory(const std::string &path, RaftCluste
   ShardDirectory *ret = shardDirCache[path];
   if(ret == nullptr) {
     Status st;
-    ret = ShardDirectory::create(path, clusterID, "default", nodes, 0, {}, st);
+    ret = ShardDirectory::create(path, clusterID, "default", nodes, 0, FsyncPolicy::kAsync, {}, st);
     st.assertOk();
     shardDirCache[path] = ret;
   }
 
-  ret->obliterate(clusterID, nodes, 0, {} );
+  ret->obliterate(clusterID, nodes, 0, FsyncPolicy::kAsync, {} );
   return ret;
 }
 
