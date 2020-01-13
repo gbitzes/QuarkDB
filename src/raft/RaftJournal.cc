@@ -71,6 +71,25 @@ inline void encodeEntryKey(LogIndex index, KeyBuffer &key) {
 }
 
 //------------------------------------------------------------------------------
+// Initialize fsync policy, if not already. Ensures compatibility with
+// pre-0.4.1 versions of QuarkDB.
+//------------------------------------------------------------------------------
+void RaftJournal::ensureFsyncPolicyInitialized() {
+  std::string tmp;
+  rocksdb::Status st = db->Get(rocksdb::ReadOptions(), KeyConstants::kJournal_FsyncPolicy, &tmp);
+
+  if(!st.ok() && !st.IsNotFound()) {
+    qdb_throw(st.ToString());
+  }
+
+  if(st.ok()) {
+    return;
+  }
+
+  this->set_or_die(KeyConstants::kJournal_FsyncPolicy, fsyncPolicyToString(FsyncPolicy::kSyncImportantUpdates));
+}
+
+//------------------------------------------------------------------------------
 // RaftJournal
 //------------------------------------------------------------------------------
 void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes, LogIndex startIndex, FsyncPolicy fsyncPolicy) {
@@ -112,6 +131,7 @@ void RaftJournal::initialize() {
 
   membershipEpoch = this->get_int_or_die(KeyConstants::kJournal_MembershipEpoch);
   members = RaftMembers(this->get_or_die(KeyConstants::kJournal_Members));
+  fsyncPolicy = parseFsyncPolicy(this->get_or_die(KeyConstants::kJournal_FsyncPolicy));
 
   if(!vote.empty() && !parseServer(vote, votedFor)) {
     qdb_throw("journal corruption, cannot parse " << KeyConstants::kJournal_VotedFor << ": " << vote);
@@ -153,6 +173,7 @@ RaftJournal::~RaftJournal() {
 
 RaftJournal::RaftJournal(const std::string &filename) {
   openDB(filename);
+  ensureFsyncPolicyInitialized();
   initialize();
 }
 
@@ -352,6 +373,19 @@ bool RaftJournal::append(LogIndex index, const RaftEntry &entry) {
 
 bool RaftJournal::appendLeadershipMarker(LogIndex index, RaftTerm term, const RaftServer &leader) {
   return append(index, RaftEntry(term, "JOURNAL_LEADERSHIP_MARKER", SSTR(term), leader.toString()));
+}
+
+void RaftJournal::setFsyncPolicy(FsyncPolicy pol) {
+  std::unique_lock lock(fsyncPolicyMutex);
+
+  if(fsyncPolicy != pol) {
+    this->set_or_die(KeyConstants::kJournal_FsyncPolicy, fsyncPolicyToString(pol));
+    fsyncPolicy = pol;
+  }
+}
+
+FsyncPolicy RaftJournal::getFsyncPolicy() {
+  return fsyncPolicy;
 }
 
 void RaftJournal::trimUntil(LogIndex newLogStart) {

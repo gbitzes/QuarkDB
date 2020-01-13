@@ -52,6 +52,8 @@ public:
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
   bool setCommitIndex(LogIndex index);
 
+  void setFsyncPolicy(FsyncPolicy pol);
+  FsyncPolicy getFsyncPolicy();
 
   RaftTerm getCurrentTerm() const { return currentTerm; }
   LogIndex getLogSize() const { return logSize; }
@@ -111,6 +113,7 @@ public:
 private:
   void openDB(const std::string &path);
   void rawSetCommitIndex(LogIndex index);
+  void ensureFsyncPolicyInitialized();
 
   rocksdb::DB* db = nullptr;
   std::string dbPath;
@@ -129,6 +132,7 @@ private:
   RaftMembers members;
   RaftServer votedFor;
   RaftClusterID clusterID;
+  std::atomic<FsyncPolicy> fsyncPolicy;
 
   std::mutex currentTermMutex;
   std::mutex lastAppliedMutex;
@@ -136,6 +140,7 @@ private:
   std::mutex contentMutex;
   std::mutex membersMutex;
   std::mutex votedForMutex;
+  std::mutex fsyncPolicyMutex;
 
   std::condition_variable commitNotifier;
   std::condition_variable logUpdated;

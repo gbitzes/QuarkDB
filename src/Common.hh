@@ -106,6 +106,21 @@ inline std::string fsyncPolicyToString(FsyncPolicy pol) {
   }
 }
 
+inline FsyncPolicy parseFsyncPolicy(std::string_view s) {
+  if(s == "always") {
+    return FsyncPolicy::kAlways;
+  }
+  else if(s == "sync-important-updates") {
+    return FsyncPolicy::kSyncImportantUpdates;
+  }
+  else if(s == "async") {
+    return FsyncPolicy::kAsync;
+  }
+  else {
+    qdb_throw("could not parse FsyncPolicy: " << s);
+  }
+}
+
 using RaftClusterID = std::string;
 using RaftTerm = int64_t;
 using LogIndex = int64_t;
