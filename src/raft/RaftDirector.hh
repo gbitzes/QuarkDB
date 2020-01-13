@@ -50,7 +50,7 @@ private:
   void leaderLoop(RaftStateSnapshotPtr &snapshot);
   void runForLeader();
   void applyCommits();
-  void assertBasicSanity();
+  bool checkBasicSanity();
 
   RaftJournal &journal;
   StateMachine &stateMachine;

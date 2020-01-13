@@ -65,12 +65,12 @@ void RaftDirector::main() {
 }
 
 void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
-  if(snapshot->leader != state.getMyself()) qdb_throw("attempted to act as leader, even though snapshot shows a different one");
+  qdb_assert(snapshot->leader == state.getMyself());
   stateMachine.getRequestCounter().setReportingStatus(true);
 
   replicator.activate(snapshot);
   while(state.isSnapshotCurrent(snapshot.get())) {
-    assertBasicSanity();
+    qdb_assert(checkBasicSanity());
 
     std::chrono::steady_clock::time_point deadline = lease.getDeadline();
     if(deadline < std::chrono::steady_clock::now()) {
@@ -86,8 +86,8 @@ void RaftDirector::leaderLoop(RaftStateSnapshotPtr &snapshot) {
   replicator.deactivate();
 }
 
-void RaftDirector::assertBasicSanity() {
-  // Assert that this node's numbers look reasonable before attempting an election.
+bool RaftDirector::checkBasicSanity() {
+  // Check that this node's numbers look reasonable before attempting an election.
   // In the unlikely scenario that my memory has somehow been corrupted, this will
   // prevent the errors from propagating to unaffected nodes.
   //
@@ -99,12 +99,25 @@ void RaftDirector::assertBasicSanity() {
   LogIndex commitIndex = journal.getCommitIndex();
   LogIndex totalSize = journal.getLogSize();
 
-  qdb_assert(commitIndex <= totalSize);
-  qdb_assert(lastApplied <= commitIndex);
+  bool sanity = true;
+  if(commitIndex > totalSize) {
+    qdb_critical("Something is very wrong with me, commitIndex is ahead of total journal size: " << commitIndex << " vs " << totalSize << ". Journal corruption?");
+    sanity = false;
+  }
+
+  if(lastApplied > commitIndex) {
+    qdb_critical("Something is very wrong with me, lastApplied is ahead of commit index: " << lastApplied << " vs " << commitIndex << ". Journal lost entries?");
+    sanity = false;
+  }
+
+  return sanity;
 }
 
 void RaftDirector::runForLeader() {
-  assertBasicSanity();
+  if(!checkBasicSanity()) {
+    qdb_warn("Not running for leader because basic sanity check failed, something's wrong with this node.");
+    return;
+  }
 
   // If we get vetoed, this ensures we stop election attempts up until the
   // point we receive a fresh heartbeat.
