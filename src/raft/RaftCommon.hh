@@ -341,6 +341,7 @@ struct RaftInfo {
   RaftServer myself;
   RaftServer leader;
   HealthStatus nodeHealthStatus;
+  FsyncPolicy fsyncPolicy;
   LogIndex membershipEpoch;
   std::vector<RaftServer> nodes;
   std::vector<RaftServer> observers;
@@ -372,6 +373,8 @@ struct RaftInfo {
     ret.push_back(SSTR("VERSION " << myVersion));
     ret.push_back(SSTR("STATUS " << statusToString(status)));
     ret.push_back(SSTR("NODE-HEALTH " << healthStatusAsString(nodeHealthStatus)));
+    ret.push_back(SSTR("JOURNAL-FSYNC-POLICY " << fsyncPolicyToString(fsyncPolicy)));
+
     ret.push_back("----------");
     ret.push_back(SSTR("MEMBERSHIP-EPOCH " << membershipEpoch));
     ret.push_back(SSTR("NODES " << serializeNodes(nodes)));

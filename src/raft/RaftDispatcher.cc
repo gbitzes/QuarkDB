@@ -499,7 +499,7 @@ RaftAppendEntriesResponse RaftDispatcher::appendEntries(RaftAppendEntriesRequest
     journal.removeEntries(firstInconsistency);
 
     for(size_t i = appendFrom; i < req.entries.size(); i++) {
-      if(!journal.append(req.prevIndex+1+i, req.entries[i])) {
+      if(!journal.append(req.prevIndex+1+i, req.entries[i], false)) {
         qdb_warn("something odd happened when adding entries to the journal.. probably a race condition, but should be harmless");
         return {snapshot->term, journal.getLogSize(), false, "Unknown error"};
       }
@@ -709,7 +709,7 @@ RaftInfo RaftDispatcher::info() {
   ReplicationStatus replicationStatus = replicator.getStatus();
   HealthStatus nodeHealthStatus = chooseWorstHealth(getHealth().getIndicators());
 
-  return {journal.getClusterID(), state.getMyself(), snapshot->leader, nodeHealthStatus, membership.epoch, membership.nodes, membership.observers, snapshot->term, journal.getLogStart(),
+  return {journal.getClusterID(), state.getMyself(), snapshot->leader, nodeHealthStatus, journal.getFsyncPolicy(), membership.epoch, membership.nodes, membership.observers, snapshot->term, journal.getLogStart(),
           journal.getLogSize(), snapshot->status, journal.getCommitIndex(), stateMachine.getLastApplied(), writeTracker.size(),
           std::chrono::duration_cast<std::chrono::seconds>(std::chrono::steady_clock::now() - snapshot->timeCreated).count(),
           replicationStatus, VERSION_FULL_STRING

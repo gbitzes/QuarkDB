@@ -90,6 +90,22 @@ void RaftJournal::ensureFsyncPolicyInitialized() {
 }
 
 //------------------------------------------------------------------------------
+// Should we sync this write?
+//------------------------------------------------------------------------------
+bool RaftJournal::shouldSync(bool important) {
+  if(fsyncPolicy == FsyncPolicy::kAlways) {
+    return true;
+  }
+
+  if(fsyncPolicy == FsyncPolicy::kAsync) {
+    return false;
+  }
+
+  qdb_assert(fsyncPolicy == FsyncPolicy::kSyncImportantUpdates);
+  return important;
+}
+
+//------------------------------------------------------------------------------
 // RaftJournal
 //------------------------------------------------------------------------------
 void RaftJournal::ObliterateAndReinitializeJournal(const std::string &path, RaftClusterID clusterID, std::vector<RaftServer> nodes, LogIndex startIndex, FsyncPolicy fsyncPolicy) {
@@ -202,11 +218,10 @@ bool RaftJournal::setCurrentTerm(RaftTerm term, RaftServer vote) {
   //----------------------------------------------------------------------------
   // Atomically update currentTerm and votedFor
   //----------------------------------------------------------------------------
-
   rocksdb::WriteBatch batch;
   THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_CurrentTerm, intToBinaryString(term)));
   THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_VotedFor, vote.toString()));
-  commitBatch(batch);
+  commitBatch(batch, -1, true);
 
   currentTerm = term;
   votedFor = vote;
@@ -254,7 +269,7 @@ bool RaftJournal::waitForCommits(const LogIndex currentCommit) {
   return true;
 }
 
-void RaftJournal::commitBatch(rocksdb::WriteBatch &batch, LogIndex index) {
+void RaftJournal::commitBatch(rocksdb::WriteBatch &batch, LogIndex index, bool important) {
   if(index >= 0 && index <= commitIndex) {
     qdb_throw("Attempted to remove committed entries by setting logSize to " << index << " while commitIndex = " << commitIndex);
   }
@@ -287,7 +302,7 @@ bool RaftJournal::membershipUpdate(RaftTerm term, const RaftMembers &newMembers,
   }
 
   RaftEntry entry(term, "JOURNAL_UPDATE_MEMBERS", newMembers.toString(), clusterID);
-  return appendNoLock(logSize, entry);
+  return appendNoLock(logSize, entry, true);
 }
 
 bool RaftJournal::addObserver(RaftTerm term, const RaftServer &observer, std::string &err) {
@@ -308,7 +323,7 @@ bool RaftJournal::promoteObserver(RaftTerm term, const RaftServer &observer, std
   return membershipUpdate(term, newMembers, err);
 }
 
-bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
+bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry, bool important) {
   if(index != logSize) {
     qdb_warn("attempted to insert journal entry at an invalid position. index = " << index << ", logSize = " << logSize);
     return false;
@@ -356,26 +371,28 @@ bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry) {
       << ". THE MEMBERSHIP UPDATE ENTRY WILL BE IGNORED. Something is either corrupted or you force-reconfigured " <<
       " the nodes recently - if it's the latter, this message is nothing to worry about.");
     }
+
+    important = true;
   }
 
   KeyBuffer keyBuffer;
   encodeEntryKey(index, keyBuffer);
   THROW_ON_ERROR(batch.Put(keyBuffer.toView(), entry.serialize()));
 
-  commitBatch(batch, index+1);
+  commitBatch(batch, index+1, important);
 
   termOfLastEntry = entry.term;
   logUpdated.notify_all();
   return true;
 }
 
-bool RaftJournal::append(LogIndex index, const RaftEntry &entry) {
+bool RaftJournal::append(LogIndex index, const RaftEntry &entry, bool important) {
   std::scoped_lock lock(contentMutex);
-  return appendNoLock(index, entry);
+  return appendNoLock(index, entry, important);
 }
 
 bool RaftJournal::appendLeadershipMarker(LogIndex index, RaftTerm term, const RaftServer &leader) {
-  return append(index, RaftEntry(term, "JOURNAL_LEADERSHIP_MARKER", SSTR(term), leader.toString()));
+  return append(index, RaftEntry(term, "JOURNAL_LEADERSHIP_MARKER", SSTR(term), leader.toString()), true);
 }
 
 void RaftJournal::setFsyncPolicy(FsyncPolicy pol) {

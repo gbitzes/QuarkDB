@@ -67,7 +67,7 @@ public:
   LogIndex getEpoch() const { return membershipEpoch; }
   RaftMembership getMembership();
 
-  bool append(LogIndex index, const RaftEntry &entry);
+  bool append(LogIndex index, const RaftEntry &entry, bool important = false);
   rocksdb::Status fetch(LogIndex index, RaftEntry &entry);
   rocksdb::Status fetch(LogIndex index, RaftTerm &term);
   rocksdb::Status fetch(LogIndex index, RaftSerializedEntry &data);
@@ -115,6 +115,7 @@ private:
   void openDB(const std::string &path);
   void rawSetCommitIndex(LogIndex index);
   void ensureFsyncPolicyInitialized();
+  bool shouldSync(bool important);
 
   rocksdb::DB* db = nullptr;
   std::string dbPath;
@@ -152,7 +153,7 @@ private:
   // Utility functions for write batches
   //----------------------------------------------------------------------------
 
-  void commitBatch(rocksdb::WriteBatch &batch, LogIndex index = -1);
+  void commitBatch(rocksdb::WriteBatch &batch, LogIndex index = -1, bool important = false);
 
   //----------------------------------------------------------------------------
   // Transient values, can always be inferred from stable storage
@@ -166,7 +167,7 @@ private:
 
   RaftMembers getMembers();
   bool membershipUpdate(RaftTerm term, const RaftMembers &newMembers, std::string &err);
-  bool appendNoLock(LogIndex index, const RaftEntry &entry);
+  bool appendNoLock(LogIndex index, const RaftEntry &entry, bool important);
 
   void set_or_die(const std::string &key, const std::string &value);
   void set_int_or_die(const std::string &key, int64_t value);
