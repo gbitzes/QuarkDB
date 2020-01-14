@@ -136,6 +136,17 @@ void RaftJournal::obliterate(RaftClusterID newClusterID, const std::vector<RaftS
   initialize();
 }
 
+void RaftJournal::initializeFsyncPolicy() {
+  std::string policyStr = this->get_or_die(KeyConstants::kJournal_FsyncPolicy);
+  FsyncPolicy tmp = FsyncPolicy::kSyncImportantUpdates;
+
+  if(!parseFsyncPolicy(policyStr, tmp)) {
+    qdb_warn("Invalid fsync policy in journal: " << policyStr);
+  }
+
+  fsyncPolicy = tmp;
+}
+
 void RaftJournal::initialize() {
   currentTerm = this->get_int_or_die(KeyConstants::kJournal_CurrentTerm);
   logSize = this->get_int_or_die(KeyConstants::kJournal_LogSize);
@@ -147,7 +158,7 @@ void RaftJournal::initialize() {
 
   membershipEpoch = this->get_int_or_die(KeyConstants::kJournal_MembershipEpoch);
   members = RaftMembers(this->get_or_die(KeyConstants::kJournal_Members));
-  fsyncPolicy = parseFsyncPolicy(this->get_or_die(KeyConstants::kJournal_FsyncPolicy));
+  initializeFsyncPolicy();
 
   if(!vote.empty() && !parseServer(vote, votedFor)) {
     qdb_throw("journal corruption, cannot parse " << KeyConstants::kJournal_VotedFor << ": " << vote);
@@ -278,7 +289,10 @@ void RaftJournal::commitBatch(rocksdb::WriteBatch &batch, LogIndex index, bool i
     THROW_ON_ERROR(batch.Put(KeyConstants::kJournal_LogSize, intToBinaryString(index)));
   }
 
-  rocksdb::Status st = db->Write(rocksdb::WriteOptions(), &batch);
+  rocksdb::WriteOptions opts;
+  opts.sync = shouldSync(important);
+
+  rocksdb::Status st = db->Write(opts, &batch);
   if(!st.ok()) qdb_throw("unable to commit journal transaction: " << st.ToString());
   if(index >= 0) logSize = index;
 }

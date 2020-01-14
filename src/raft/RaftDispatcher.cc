@@ -166,6 +166,17 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       RaftAppendEntriesResponse resp = appendEntries(std::move(dest));
       return conn->vector(resp.toVector());
     }
+    case RedisCommand::RAFT_SET_FSYNC_POLICY: {
+      if(req.size() != 2u) return conn->errArgs(req[0]);
+
+      FsyncPolicy policy;
+      if(!parseFsyncPolicy(req[1], policy)) {
+        return conn->err(SSTR("could not parse '" << req[1] << "', available choices: always,async,sync-important-updates"));
+      }
+
+      journal.setFsyncPolicy(policy);
+      return conn->ok();
+    }
     case RedisCommand::RAFT_REQUEST_VOTE: {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftVoteRequest votereq;

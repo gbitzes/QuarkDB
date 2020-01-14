@@ -293,3 +293,19 @@ TEST_F(Raft_Journal, T1) {
   ASSERT_EQ(journal.getMembership(), originalMembership);
 }
 }
+
+TEST(FsyncPolicy, Parsing) {
+  FsyncPolicy policy;
+
+  ASSERT_TRUE(parseFsyncPolicy("async", policy));
+  ASSERT_EQ(policy, FsyncPolicy::kAsync);
+
+  ASSERT_TRUE(parseFsyncPolicy("always", policy));
+  ASSERT_EQ(policy, FsyncPolicy::kAlways);
+
+  ASSERT_TRUE(parseFsyncPolicy("sync-important-updates", policy));
+  ASSERT_EQ(policy, FsyncPolicy::kSyncImportantUpdates);
+
+  ASSERT_FALSE(parseFsyncPolicy("aaaa", policy));
+  ASSERT_FALSE(parseFsyncPolicy("ALWAYS", policy));
+}

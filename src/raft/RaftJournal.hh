@@ -48,7 +48,6 @@ public:
   // should never have to be called during normal operation, only in the tests
   // assumes there's no other concurrent access to the journal
   void obliterate(RaftClusterID clusterID, const std::vector<RaftServer> &nodes, LogIndex startIndex, FsyncPolicy fscynPolicy);
-  void initialize();
 
   bool setCurrentTerm(RaftTerm term, RaftServer vote);
   bool setCommitIndex(LogIndex index);
@@ -116,6 +115,8 @@ private:
   void rawSetCommitIndex(LogIndex index);
   void ensureFsyncPolicyInitialized();
   bool shouldSync(bool important);
+  void initializeFsyncPolicy();
+  void initialize();
 
   rocksdb::DB* db = nullptr;
   std::string dbPath;
