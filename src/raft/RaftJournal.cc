@@ -136,6 +136,8 @@ void RaftJournal::initialize() {
   if(!vote.empty() && !parseServer(vote, votedFor)) {
     qdb_throw("journal corruption, cannot parse " << KeyConstants::kJournal_VotedFor << ": " << vote);
   }
+
+  fsyncThread.reset(new FsyncThread(db, std::chrono::seconds(1)));
 }
 
 void RaftJournal::openDB(const std::string &path) {
@@ -164,6 +166,7 @@ RaftJournal::RaftJournal(const std::string &filename, RaftClusterID clusterID, c
 
 RaftJournal::~RaftJournal() {
   qdb_info("Closing raft journal " << quotes(dbPath));
+  fsyncThread.reset();
 
   if(db) {
     delete db;

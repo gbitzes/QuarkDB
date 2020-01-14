@@ -96,6 +96,7 @@ add_library(XrdQuarkDB SHARED
                                           utils/CommandParsing.hh
   utils/DirectoryIterator.cc              utils/DirectoryIterator.hh
   utils/FileUtils.cc                      utils/FileUtils.hh
+  utils/FsyncThread.cc                    utils/FsyncThread.hh
                                           utils/IntToBinaryString.hh
                                           utils/ParseUtils.hh
   utils/Random.cc                         utils/Random.hh

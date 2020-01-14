@@ -30,6 +30,7 @@
 #include <condition_variable>
 #include "RaftCommon.hh"
 #include "RaftMembers.hh"
+#include "utils/FsyncThread.hh"
 
 namespace quarkdb {
 
@@ -117,6 +118,8 @@ private:
 
   rocksdb::DB* db = nullptr;
   std::string dbPath;
+
+  std::unique_ptr<FsyncThread> fsyncThread;
 
   using IteratorPtr = std::unique_ptr<rocksdb::Iterator>;
 
