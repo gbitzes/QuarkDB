@@ -141,7 +141,7 @@ void RaftJournal::initializeFsyncPolicy() {
   FsyncPolicy tmp = FsyncPolicy::kSyncImportantUpdates;
 
   if(!parseFsyncPolicy(policyStr, tmp)) {
-    qdb_warn("Invalid fsync policy in journal: " << policyStr);
+    qdb_critical("Invalid fsync policy in journal: " << policyStr);
   }
 
   fsyncPolicy = tmp;

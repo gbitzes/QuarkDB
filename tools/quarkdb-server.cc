@@ -72,7 +72,7 @@ void createTestCluster(const std::string &optConfigurationDir, int port) {
     std::unique_ptr<quarkdb::ShardDirectory> shardDirectory;
 
     quarkdb::Status st;
-    shardDirectory.reset(quarkdb::ShardDirectory::create(dataDir, clusterID, "default", nodes, 0, FsyncPolicy::kAsync, {}, st));
+    shardDirectory.reset(quarkdb::ShardDirectory::create(dataDir, clusterID, "default", nodes, 0, FsyncPolicy::kSyncImportantUpdates, {}, st));
 
     port++;
   }
