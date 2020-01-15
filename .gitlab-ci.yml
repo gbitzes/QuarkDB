@@ -8,6 +8,17 @@ stages:
 before_script:
   - export GTEST_COLOR="1"
 
+c8:
+  stage: build
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-c8
+  script:
+    - packaging/gitlab-build.sh
+    - mkdir ${CI_JOB_NAME}
+    - cp -r /root/rpmbuild/RPMS build/SRPMS ${CI_JOB_NAME}
+  artifacts:
+    paths:
+    - "$CI_JOB_NAME"
+
 cc7:
   stage: build
   image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
@@ -154,6 +165,20 @@ cc7-koji:
     - koji tag-build quarkdb7-stable ${TAG_NAME}
   only:
     - tags@eos/quarkdb
+
+c8-image:
+  stage: build-image
+  variables:
+    TO: gitlab-registry.cern.ch/eos/quarkdb/build-image-c8
+    DOCKER_FILE: ci/c8/Dockerfile
+    NO_CACHE: 1
+  script:
+  - ""
+  tags:
+  - docker-image-build
+  only:
+    variables:
+      - $BUILD_IMAGES == "1"
 
 cc7-image:
   stage: build-image
