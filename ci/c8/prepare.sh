@@ -6,7 +6,7 @@ set -e
 ## step.
 ##------------------------------------------------------------------------------
 
-dnf install -y expect gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils libtsan dnf-plugins-core
+dnf install -y expect gcc-c++ cmake3 make rpm-build which git yum-utils libtsan dnf-plugins-core python3 epel-release
 
 ##------------------------------------------------------------------------------
 ## Extract quarkdb build dependencies from its specfile.

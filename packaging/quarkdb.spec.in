@@ -34,7 +34,7 @@ BuildRequires: cmake3 >= 3.3
 %define cmake_cmd cmake3
 %endif
 BuildRequires: bzip2-devel
-BuildRequires: python
+BuildRequires: python3
 BuildRequires: zlib-static
 BuildRequires: zlib-devel
 BuildRequires: openssl-devel
