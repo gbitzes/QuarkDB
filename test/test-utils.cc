@@ -398,4 +398,13 @@ void TestNode::spindown() {
   shard()->spindown();
 }
 
+bool IptablesHelper::singleDropPackets(int port) {
+  return system(SSTR("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport " << port << " -j DROP").c_str()) == 0;
+}
+
+bool IptablesHelper::singleAcceptPackets(int port) {
+  return system(SSTR("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport " << port << " -j ACCEPT").c_str()) == 0;
+}
+
+
 }

@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### New features
+- Possibility to choose between three different journal fsync policies through
+``RAFT-SET-FSYNC-POLICY`` command.
+- Implementation of ``CLIENT GETNAME``, and automatic tagging of intercluster
+connections.
+
+### Improvements
+- Automatic fsync of the raft journal once per second.
+- Better resilience in case of sudden machine powercuts.
+
 ## 0.4.0 (2019-12-06)
 
 ### Bug fixes

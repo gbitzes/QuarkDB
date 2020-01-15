@@ -21,12 +21,17 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "../test-utils.hh"
 #include <qclient/QClient.hh>
 #include <gtest/gtest.h>
 #include <chrono>
 
+using namespace quarkdb;
+
 TEST(QClient, HostDroppingIncomingPacketsConstructor) {
-  ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j DROP"), 0);
+  IptablesHelper iptables;
+
+  ASSERT_TRUE(iptables.singleDropPackets(56789));
 
   qclient::Options opts;
   std::unique_ptr<qclient::QClient> qcl;
@@ -50,11 +55,12 @@ TEST(QClient, HostDroppingIncomingPacketsConstructor) {
   std::cout << "Destructor took " << destructorDuration.count() << " ms" << std::endl;
   ASSERT_LE(destructorDuration, std::chrono::milliseconds(50));
 
-  ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j ACCEPT"), 0);
+  ASSERT_TRUE(iptables.singleAcceptPackets(56789));
 }
 
 TEST(QClient, HostDroppingIncomingPacketsFutureTimeout) {
-  ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j DROP"), 0);
+  IptablesHelper iptables;
+  ASSERT_TRUE(iptables.singleDropPackets(56789));
 
   qclient::Options opts;
   opts.tcpTimeout = std::chrono::seconds(3);
@@ -72,6 +78,6 @@ TEST(QClient, HostDroppingIncomingPacketsFutureTimeout) {
   ASSERT_GE(dur, std::chrono::seconds(3));
   ASSERT_LE(dur, std::chrono::seconds(4));
 
-  ASSERT_EQ(system("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport 56789 -j ACCEPT"), 0);
+  ASSERT_TRUE(iptables.singleAcceptPackets(56789));
 }
 

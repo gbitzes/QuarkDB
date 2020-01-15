@@ -519,6 +519,12 @@ public:
   }
 };
 
+class IptablesHelper {
+public:
+  bool singleDropPackets(int port);
+  bool singleAcceptPackets(int port);
+
+};
 
 
 }

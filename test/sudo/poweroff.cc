@@ -30,6 +30,12 @@ using namespace quarkdb;
 class Poweroff : public TestCluster3NodesFixture {};
 
 TEST_F(Poweroff, WithDataLoss) {
+  IptablesHelper iptables;
+
+  ASSERT_TRUE(iptables.singleAcceptPackets(nodes()[0].port));
+  ASSERT_TRUE(iptables.singleAcceptPackets(nodes()[1].port));
+  ASSERT_TRUE(iptables.singleAcceptPackets(nodes()[2].port));
+
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
@@ -47,13 +53,13 @@ TEST_F(Poweroff, WithDataLoss) {
   int follower = (leaderID + 1) % 3;
   int followerPort = nodes()[follower].port;
 
-  ASSERT_EQ(system(SSTR("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport " << followerPort << " -j DROP").c_str()), 0);
+  ASSERT_TRUE(iptables.singleDropPackets(followerPort));
   spindown(follower);
 
   ASSERT_TRUE(journal(follower)->simulateDataLoss(3));
   ASSERT_EQ(journal(follower)->getLogSize(), journal(leaderID)->getLogSize() - 3);
 
-  ASSERT_EQ(system(SSTR("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport " << followerPort << " -j ACCEPT").c_str()), 0);
+  ASSERT_TRUE(iptables.singleAcceptPackets(followerPort));
   spinup(follower);
 
   // ensure the leader restores the missing entries
