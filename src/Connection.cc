@@ -49,33 +49,21 @@ LinkStatus PendingQueue::flushPending(const RedisEncodedResponse &msg) {
 void PendingQueue::subscribe(const std::string &item) {
   std::scoped_lock lock(mtx);
   subscriptionTracker.addChannel(item);
-  if(supportsPushTypes) {
-    appendIfAttachedNoLock(Formatter::ok());
-  }
 }
 
 void PendingQueue::psubscribe(const std::string &item) {
   std::scoped_lock lock(mtx);
   subscriptionTracker.addPattern(item);
-  if(supportsPushTypes) {
-    appendIfAttachedNoLock(Formatter::ok());
-  }
 }
 
 void PendingQueue::unsubscribe(const std::string &item) {
   std::scoped_lock lock(mtx);
   subscriptionTracker.removeChannel(item);
-  if(supportsPushTypes) {
-    appendIfAttachedNoLock(Formatter::ok());
-  }
 }
 
 void PendingQueue::punsubscribe(const std::string &item) {
   std::scoped_lock lock(mtx);
   subscriptionTracker.removePattern(item);
-  if(supportsPushTypes) {
-    appendIfAttachedNoLock(Formatter::ok());
-  }
 }
 
 bool PendingQueue::addMessageIfAttached(const std::string &channel, std::string_view payload) {

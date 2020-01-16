@@ -180,6 +180,10 @@ public:
     return pendingQueue;
   }
 
+  bool hasPushTypesActive() {
+    return pendingQueue->hasPushTypesActive();
+  }
+
   bool isLocalhost() const {
     return localhost;
   }

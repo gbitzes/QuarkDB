@@ -144,6 +144,10 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         }
       }
 
+      if(conn->hasPushTypesActive()) {
+        conn->ok();
+      }
+
       return retval;
     }
     case RedisCommand::PSUBSCRIBE: {
@@ -156,6 +160,10 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         if(retval >= 0) {
           retval = conn->raw(Formatter::psubscribe(pushTypes, req[i], conn->getQueue()->subscriptions));
         }
+      }
+
+      if(conn->hasPushTypesActive()) {
+        conn->ok();
       }
 
       return retval;
@@ -172,6 +180,10 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         }
       }
 
+      if(conn->hasPushTypesActive()) {
+        conn->ok();
+      }
+
       return retval;
     }
     case RedisCommand::PUNSUBSCRIBE: {
@@ -184,6 +196,10 @@ LinkStatus Publisher::dispatch(Connection *conn, RedisRequest &req) {
         if(retval >= 0) {
           retval = conn->raw(Formatter::punsubscribe(pushTypes, req[i], conn->getQueue()->subscriptions));
         }
+      }
+
+      if(conn->hasPushTypesActive()) {
+        conn->ok();
       }
 
       return retval;

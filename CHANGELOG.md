@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Bug fixes
+- Fixed ability to subscribe to multiple channels with one command, when push types
+are active. Previously, the server would erroneously send one "OK" response per
+channel subscribed, breaking QClient.
+
 ### New features
 - Possibility to choose between three different journal fsync policies through
 ``RAFT-SET-FSYNC-POLICY`` command.

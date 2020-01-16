@@ -2070,6 +2070,42 @@ TEST_F(Raft_e2e, pubsub) {
   ASSERT_EQ(mq->size(), 0u);
 }
 
+class ReconnectionCounter : public ReconnectionListener {
+public:
+
+  virtual void notifyConnectionLost(int64_t epoch, int errc,
+    const std::string &msg) override { }
+
+  virtual void notifyConnectionEstablished(int64_t epoch) override {
+    lastEpoch = epoch;
+  }
+
+  int64_t getEpoch() const {
+    return lastEpoch;
+  }
+
+private:
+  int64_t lastEpoch = 0u;
+};
+
+TEST_F(Raft_e2e, MultiSubscribeWithPushtypes) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  int leaderID = getLeaderID();
+  std::shared_ptr<ReconnectionCounter> listener = std::make_shared<ReconnectionCounter>();
+  tunnel(leaderID)->attachListener(listener.get());
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("activate-push-types").get(), "OK");
+  ASSERT_EQ(listener->getEpoch(), 1u);
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("subscribe", "a", "b").get(), "OK");
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("ping").get(), "PONG");
+  ASSERT_EQ(listener->getEpoch(), 1u);
+
+  ASSERT_TRUE(tunnel(leaderID)->detachListener(listener.get()));
+  listener.reset();
+}
+
 TEST_F(Raft_e2e, SharedDeque) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
