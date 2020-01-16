@@ -79,7 +79,7 @@ c8-test:
   dependencies:
   - c8
   script:
-    - yum -y localinstall cc7/RPMS/*
+    - yum -y localinstall c8/RPMS/*
     - quarkdb-tests
     - quarkdb-stress-tests
 
