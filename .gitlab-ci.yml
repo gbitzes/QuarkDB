@@ -73,6 +73,16 @@ cc7-test:
     - quarkdb-tests
     - quarkdb-stress-tests
 
+c8-test:
+  stage: test
+  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-c8
+  dependencies:
+  - c8
+  script:
+    - yum -y localinstall cc7/RPMS/*
+    - quarkdb-tests
+    - quarkdb-stress-tests
+
 fedora-test:
   stage: test
   image: gitlab-registry.cern.ch/eos/quarkdb/build-image-fedora
@@ -101,9 +111,10 @@ rpms:
   image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
   dependencies:
   - cc7
+  - c8
   - fedora
   script:
-   - for platform in cc7 fedora; do sudo -u stci -H packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
+   - for platform in cc7 c8 fedora; do sudo -u stci -H packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
   tags:
     - docker-cc7
   retry: 2
