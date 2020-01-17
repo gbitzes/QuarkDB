@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.1 (2020-01-17)
 
 ### Bug fixes
 - Fixed ability to subscribe to multiple channels with one command, when push types
