@@ -56,6 +56,11 @@ else()
 endif()
 
 #-------------------------------------------------------------------------------
+# Link the xrootd library with jemalloc?
+#-------------------------------------------------------------------------------
+option(XROOTD_JEMALLOC "Link xrootd library with jemalloc?" OFF)
+
+#-------------------------------------------------------------------------------
 # Look inside the rocksdb cache, which is used to greatly reduce compilation
 # time of QuarkDB.
 #

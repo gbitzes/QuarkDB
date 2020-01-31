@@ -17,7 +17,7 @@ connections.
 - Automatic fsync of the raft journal once per second.
 - Better cluster resilience in case of sudden machine powercuts.
 
-Thanks to Franck Eyraud (JRC) for the bug reports relating to shudden poweroff, and valuable discussion on fsync behavior.
+Thanks to Franck Eyraud (JRC) for the bug reports relating to sudden poweroff, and valuable discussion on fsync behavior.
 
 ## 0.4.0 (2019-12-06)
 

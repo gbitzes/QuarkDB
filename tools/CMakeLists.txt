@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.6)
 find_package (Threads)
 
 add_executable(quarkdb-server quarkdb-server.cc)
-target_link_libraries(quarkdb-server XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT} )
+target_link_libraries(quarkdb-server jemalloc XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT} )
 
 add_executable(quarkdb-create quarkdb-create.cc)
 target_link_libraries(quarkdb-create XrdQuarkDB)

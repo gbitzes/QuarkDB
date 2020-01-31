@@ -113,10 +113,10 @@ add_library(XrdQuarkDB SHARED
   ${BACKWARD_ENABLE}
 )
 
-if(BUILDING_WITH_TSAN)
-    set(JEMALLOC_LIBS "")
-else()
+if(XROOTD_JEMALLOC AND NOT BUILDING_WITH_TSAN)
     set(JEMALLOC_LIBS jemalloc)
+else()
+    set(JEMALLOC_LIBS "")
 endif()
 
 target_link_libraries(

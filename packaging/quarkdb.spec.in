@@ -7,6 +7,9 @@
 
 %if 0%{distribution} == 7
 %global __strip /opt/rh/devtoolset-8/root/bin/strip
+%define xrootd_jemalloc 1
+%else
+%define xrootd_jemalloc 0
 %endif
 
 #-------------------------------------------------------------------------------
@@ -69,7 +72,7 @@ source /opt/rh/devtoolset-8/enable
 
 mkdir build
 cd build
-%{cmake_cmd} ../ -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr @ROCKSDB_CACHED_BUILD@
+%{cmake_cmd} ../ -DXROOTD_JEMALLOC=%{xrootd_jemalloc} -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_INSTALL_PREFIX=$RPM_BUILD_ROOT/usr @ROCKSDB_CACHED_BUILD@
 %{__make}
 
 %install
