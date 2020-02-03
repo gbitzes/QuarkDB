@@ -2,7 +2,8 @@
 
 ## Configuration
 
-Three configuration options control password authentication in QuarkDB:
+Three configuration options control password authentication in QuarkDB. Please note that
+passwords need to contain a minimum of 32 characters.
 
 * __redis.password__: Ensures that clients need to prove they know this password
 in order to be able to connect. This includes other QuarkDB nodes: All QuarkDB
