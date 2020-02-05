@@ -1,6 +1,6 @@
 # QuarkDB
 
-[![build status](https://gitlab.cern.ch/eos/quarkdb/badges/master/build.svg)](https://gitlab.cern.ch/eos/quarkdb/commits/master)
+[![build status](https://gitlab.cern.ch/eos/quarkdb/badges/master/pipeline.svg)](https://gitlab.cern.ch/eos/quarkdb/commits/master)
 [![coverage report](https://gitlab.cern.ch/eos/quarkdb/badges/master/coverage.svg)](https://quarkdb.web.cern.ch/quarkdb/coverage/master/)
 
 [QuarkDB](https://gitlab.cern.ch/eos/quarkdb) is a highly available datastore that implements a small subset
