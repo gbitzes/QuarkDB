@@ -11,8 +11,7 @@ nodes part of the same cluster must be configured with the same password,
 otherwise they won't be able to communicate.
 
 * __redis.password_file__: An alternative to the above, except the password is
-read from the specified file. Note that, any whitespace at the end of the password
-file contents is completely ignored, including the ending new-line, if any.
+read from the specified file -- permissions must be `400` (`r-----`). Note that, any whitespace at the end of the password file contents is completely ignored, including the ending new-line, if any.
 
   This means, the three following password files will, in fact, give identical
   passwords:
