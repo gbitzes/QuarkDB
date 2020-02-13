@@ -41,25 +41,25 @@ protected:
   void simulateBadConnection(const std::string &str, size_t bytes) {
     size_t i = 0;
     while(i + bytes < str.size()) {
-      ASSERT_EQ(parser->fetch(request), 0);
+      ASSERT_EQ(parser->fetch(request, true), 0);
       link.Send(str.c_str()+i, bytes);
 
       i += bytes;
     }
 
     // send any left-over bytes
-    ASSERT_EQ(parser->fetch(request), 0);
+    ASSERT_EQ(parser->fetch(request, true), 0);
     link.Send(str.c_str()+i, str.size()-i);
   }
 
   void simulateMany(const std::string &str, RedisRequest &valid, size_t bytes) {
     for(size_t i = 1; i < bytes; i++) {
-      ASSERT_EQ(parser->fetch(request), 0);
+      ASSERT_EQ(parser->fetch(request, true), 0);
       simulateBadConnection(str, i);
-      ASSERT_EQ(parser->fetch(request), 1);
+      ASSERT_EQ(parser->fetch(request, true), 1);
       ASSERT_EQ(request, valid);
     }
-    ASSERT_EQ(parser->fetch(request), 0);
+    ASSERT_EQ(parser->fetch(request, true), 0);
   }
 
   Link link;
@@ -69,16 +69,16 @@ protected:
 
 
 TEST_F(Redis_Parser, T1) {
-  ASSERT_EQ(parser->fetch(request), 0);
+  ASSERT_EQ(parser->fetch(request, true), 0);
   link.Send("*2\r\n$3\r\nget\r\n$3\r\nabc\r\n*3\r\n$3\r\nset\r\n$3\r\nabc\r\n$5\r\nhello\r\n");
-  ASSERT_EQ(parser->fetch(request), 1);
+  ASSERT_EQ(parser->fetch(request, true), 1);
   ASSERT_EQ(request.size(), (size_t) 2);
   ASSERT_EQ(request[0], "get");
   ASSERT_EQ(request[1], "abc");
 
   request.clear();
 
-  ASSERT_EQ(parser->fetch(request), 1);
+  ASSERT_EQ(parser->fetch(request, true), 1);
   ASSERT_EQ(request.size(), (size_t) 3);
   ASSERT_EQ(request[0], "set");
   ASSERT_EQ(request[1], "abc");
@@ -86,9 +86,9 @@ TEST_F(Redis_Parser, T1) {
 }
 
 TEST_F(Redis_Parser, ZeroSizedString) {
-  ASSERT_EQ(parser->fetch(request), 0);
+  ASSERT_EQ(parser->fetch(request, true), 0);
   link.Send("*3\r\n$3\r\nset\r\n$0\r\n\r\n$3\r\nabc\r\n");
-  ASSERT_EQ(parser->fetch(request), -2);
+  ASSERT_EQ(parser->fetch(request, true), -2);
 }
 
 TEST_F(Redis_Parser, T2) {
@@ -123,34 +123,34 @@ TEST(RedisRequest, TransactionToPrintableString) {
 TEST_F(Redis_Parser, T3) {
   // test bogus data
   link.Send("hello there\r\n");
-  ASSERT_LT(parser->fetch(request), 0);
+  ASSERT_LT(parser->fetch(request, true), 0);
 }
 
 TEST_F(Redis_Parser, T4) {
   // bad integer
   link.Send("*lol\r\n");
-  ASSERT_LT(parser->fetch(request), 0);
+  ASSERT_LT(parser->fetch(request, true), 0);
 }
 
 TEST_F(Redis_Parser, T5) {
   // wrong string size
   link.Send("*1\r\n$5\r\naaa\r\n");
-  ASSERT_LE(parser->fetch(request), 0);
+  ASSERT_LE(parser->fetch(request, true), 0);
 }
 
 TEST_F(Redis_Parser, T6) {
   // bad string length integer
   link.Send("*1\r\n$asdf\r\n");
-  ASSERT_LT(parser->fetch(request), 0);
+  ASSERT_LT(parser->fetch(request, true), 0);
 }
 
 TEST_F(Redis_Parser, T7) {
   // corrupted \r\n
   link.Send("*1\r\n$3abc\n\n");
-  ASSERT_LT(parser->fetch(request), 0);
+  ASSERT_LT(parser->fetch(request, true), 0);
 }
 
 TEST_F(Redis_Parser, T8) {
   link.Send("*1\n\nabc");
-  ASSERT_LT(parser->fetch(request), 0);
+  ASSERT_LT(parser->fetch(request, true), 0);
 }

@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+- Security hardening of the redis parser for unauthenticated clients.
+
 ## 0.4.1 (2020-01-17)
 
 ### Bug fixes

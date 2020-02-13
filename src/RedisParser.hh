@@ -44,7 +44,7 @@ public:
   // returns negative on error
   //----------------------------------------------------------------------------
 
-  LinkStatus fetch(RedisRequest &req, bool allowZeroSizedStrings = true);
+  LinkStatus fetch(RedisRequest &req, bool authenticated);
 
   //----------------------------------------------------------------------------
   // Purge any and all incoming data.
@@ -86,7 +86,7 @@ private:
   //----------------------------------------------------------------------------
 
   int readInteger(char prefix, int& retval);
-  int readElement(PinnedBuffer &buff);
+  int readElement(PinnedBuffer &buff, bool authenticated);
   int readString(int nbytes, PinnedBuffer &buff);
 
 };

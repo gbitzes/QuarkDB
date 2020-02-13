@@ -51,7 +51,7 @@ TEST(RaftTalker, T1) {
   RedisRequest req;
 
   int rc;
-  while( (rc = parser.fetch(req)) == 0) ;
+  while( (rc = parser.fetch(req, true)) == 0) ;
   ASSERT_EQ(rc, 1);
 
   RedisRequest tmp = {"RAFT_HANDSHAKE", VERSION_FULL_STRING, clusterID, timeouts.toString()};
@@ -72,14 +72,14 @@ TEST(RaftTalker, T1) {
                3, // commit index
                entries // payload
              );
-  while( (rc = parser.fetch(req)) == 0) ;
+  while( (rc = parser.fetch(req, true)) == 0) ;
   ASSERT_EQ(rc, 1);
 
   tmp = {"CLIENT", "SETNAME", "some-client-name"};
   ASSERT_EQ(req, tmp);
   link.Send("+OK\r\n");
 
-  while( (rc = parser.fetch(req)) == 0) ;
+  while( (rc = parser.fetch(req, true)) == 0) ;
   ASSERT_EQ(rc, 1);
 
   tmp = {"QUARKDB_VERSION"};
@@ -88,7 +88,7 @@ TEST(RaftTalker, T1) {
 
   while( talker.getNodeVersion() != "1.33.7" ) ;
 
-  while( (rc = parser.fetch(req)) == 0) ;
+  while( (rc = parser.fetch(req, true)) == 0) ;
   ASSERT_EQ(rc, 1);
   tmp = {"RAFT_APPEND_ENTRIES", "its_me_ur_leader:1337",
          intToBinaryString(12) + intToBinaryString(7) + intToBinaryString(11) +

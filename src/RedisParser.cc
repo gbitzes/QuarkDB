@@ -46,7 +46,7 @@ int RedisParser::purge() {
   }
 }
 
-int RedisParser::fetch(RedisRequest &req, bool allowZeroSizedStrings) {
+int RedisParser::fetch(RedisRequest &req, bool authenticated) {
   if(request_size == 0) {
     req.clear();
 
@@ -57,23 +57,21 @@ int RedisParser::fetch(RedisRequest &req, bool allowZeroSizedStrings) {
     element_size = -1;
     current_element = 0;
 
+    if(!authenticated && request_size >= 5) {
+      qdb_warn("Unauthenticated client attempted to send request with " << request_size << " elements - shutting the connection down");
+      return -2;
+    }
+
     req.resize(request_size);
-    qdb_debug("Received size of redis request: " << request_size);
   }
 
   for( ; current_element < request_size; current_element++) {
-    int rc = readElement(req.getPinnedBuffer(current_element));
+    int rc = readElement(req.getPinnedBuffer(current_element), authenticated);
     if(rc <= 0) return rc;
     element_size = -1;
   }
 
   request_size = 0;
-
-  qdb_debug("Parsed redis request successfully.");
-  for(size_t i = 0; i < req.size(); i++) {
-    qdb_debug(req[i]);
-  }
-
   req.parseCommand();
 
   if(encounteredZeroSize) {
@@ -92,9 +90,6 @@ int RedisParser::readInteger(char prefix, int &retval) {
     if(rlen <= 0) return rlen;
 
     current_integer.append(prev);
-
-    qdb_debug("Received byte: " << prev << "'" << " " << (int)prev[0]);
-    qdb_debug("current_integer: " << quotes(current_integer));
   }
 
   if(current_integer[0] != prefix) {
@@ -121,13 +116,18 @@ int RedisParser::readInteger(char prefix, int &retval) {
   return 1; // success
 }
 
-int RedisParser::readElement(PinnedBuffer &str) {
-  qdb_debug("Element size: " << element_size);
+int RedisParser::readElement(PinnedBuffer &str, bool authenticated) {
   if(element_size == -1) {
     int retcode = readInteger('$', element_size);
     if(retcode <= 0) return retcode;
     if(element_size == 0) encounteredZeroSize = true;
   }
+
+  if(!authenticated && element_size >= 1048576) {
+    qdb_warn("Unauthenticated client attempted to send request containing element with " << element_size << " bytes - shutting the connection down");
+    return -2;
+  }
+
   return readString(element_size, str);
 }
 
@@ -146,6 +146,5 @@ int RedisParser::readString(int nbytes, PinnedBuffer &str) {
   }
 
   str.remove_suffix(2);
-  qdb_debug("Got string: " << str.sv());
   return rlen;
 }

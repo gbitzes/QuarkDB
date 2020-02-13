@@ -283,7 +283,7 @@ LinkStatus Connection::processRequests(Dispatcher *dispatcher, const InFlightTra
       qdb_throw("should never reach here");
     }
 
-    LinkStatus status = parser.fetch(currentRequest);
+    LinkStatus status = parser.fetch(currentRequest, authorization);
     InternalFilter::process(currentRequest);
 
     if(status < 0) {

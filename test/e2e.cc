@@ -2447,3 +2447,43 @@ TEST_F(Raft_e2e, SharedHash) {
   ASSERT_TRUE(hash2.get("k1", tmp));
   ASSERT_EQ(tmp, "v1");
 }
+
+TEST_F(Raft_e2e, NoAuth) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  // de-auth
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("auth", "aaaa").get(),
+    "(error) ERR invalid password");
+
+  // try command with too many arguments for un-authenticated clients
+  ASSERT_EQ(tunnel(leaderID)->exec("1", "2", "3", "4", "5", "6", "7", "8", "9", "10").get(),
+    nullptr);
+
+  // re-connect, re-auth
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("ping").get(),
+    "PONG");
+
+  // try command again
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("1", "2", "3", "4", "5", "6", "7", "8", "9", "10").get(),
+    "(error) ERR unknown command '1'");
+
+  // de-auth
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("auth", "aaaa").get(),
+    "(error) ERR invalid password");
+
+  // try command with huge payload, 1 MB
+  std::string payload(1048577, 'a');
+
+  ASSERT_EQ(tunnel(leaderID)->exec("SET", "key", payload).get(),
+    nullptr);
+
+  // re-connect, re-auth
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("ping").get(),
+    "PONG");
+
+  // ensure huge payload now succeeds
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("SET", "key", payload).get(),
+    "OK");
+}

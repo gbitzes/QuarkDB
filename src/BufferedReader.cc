@@ -99,12 +99,10 @@ LinkStatus BufferedReader::consumeInternal(size_t len, std::string &str) {
     remaining -= available_bytes;
 
     // add them
-    qdb_debug("Appending " << available_bytes << " bytes to str");
     str.append(buffers.front()->data() + position_read, available_bytes);
     position_read += available_bytes;
 
     if(position_read >= buffer_size) {
-      qdb_debug("An entire buffer has been consumed, releasing");
       // an entire buffer has been consumed
       buffers.pop_front();
       position_read = 0;
