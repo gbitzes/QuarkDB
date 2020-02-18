@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------
-// File: RecoveryRunner.hh
+// File: quarkdb-ldb.cc
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
 /************************************************************************
  * quarkdb - a redis-like highly available key-value store              *
- * Copyright (C) 2016 CERN/Switzerland                                  *
+ * Copyright (C) 2020 CERN/Switzerland                                  *
  *                                                                      *
  * This program is free software: you can redistribute it and/or modify *
  * it under the terms of the GNU General Public License as published by *
@@ -21,31 +21,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_RECOVERY_RUNNER_HH
-#define QUARKDB_RECOVERY_RUNNER_HH
-
 #include "recovery/RecoveryRunner.hh"
-#include "recovery/RecoveryDispatcher.hh"
-#include "netio/AsioPoller.hh"
 
-#include <vector>
-#include <rocksdb/db.h>
-
-namespace quarkdb {
-
-class RecoveryRunner {
-public:
-  RecoveryRunner(const std::string &path, int port);
-  static RedisEncodedResponse issueOneOffCommand(const std::string &path, RedisRequest &req);
-  static void DumpTool(int argc, char** argv);
-  static void LdbTool(int argc, char** argv);
-
-private:
-  RecoveryEditor editor;
-  RecoveryDispatcher dispatcher;
-  AsioPoller poller;
-};
-
+int main(int argc, char** argv) {
+  quarkdb::RecoveryRunner::LdbTool(argc, argv);
+  return 0;
 }
-
-#endif

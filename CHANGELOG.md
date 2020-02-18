@@ -4,6 +4,7 @@
 
 ### Improvements
 - Security hardening of the redis parser for unauthenticated clients.
+- Package and distribute ``quarkdb-ldb`` tool based on the one provided by RocksDB.
 
 ## 0.4.1 (2020-01-17)
 

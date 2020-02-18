@@ -23,6 +23,7 @@
 
 #include "RecoveryRunner.hh"
 #include <rocksdb/sst_dump_tool.h>
+#include <rocksdb/ldb_tool.h>
 
 using namespace quarkdb;
 
@@ -52,6 +53,11 @@ RedisEncodedResponse RecoveryRunner::issueOneOffCommand(const std::string &path,
 
 void RecoveryRunner::DumpTool(int argc, char** argv) {
   rocksdb::SSTDumpTool tool;
+  tool.Run(argc, argv);
+}
+
+void RecoveryRunner::LdbTool(int argc, char** argv) {
+  rocksdb::LDBTool tool;
   tool.Run(argc, argv);
 }
 
