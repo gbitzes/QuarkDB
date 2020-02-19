@@ -155,6 +155,7 @@ struct cmdMapInit {
     redis_cmd_map["quarkdb_version"] = {RedisCommand::QUARKDB_VERSION, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_checkpoint"] = {RedisCommand::QUARKDB_CHECKPOINT, CommandType::QUARKDB};
     redis_cmd_map["quarkdb_health"] = {RedisCommand::QUARKDB_HEALTH, CommandType::QUARKDB};
+    redis_cmd_map["quarkdb_verify_checksum"] = {RedisCommand::QUARKDB_VERIFY_CHECKSUM, CommandType::QUARKDB};
 
     // Compatibility: Keep raft_checkpoint, make identical to quarkdb_checkpoint.
     // Maybe remove in a few versions.

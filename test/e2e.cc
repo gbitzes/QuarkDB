@@ -821,6 +821,11 @@ TEST_F(Raft_e2e, test_many_redis_commands) {
     "3) \"12345\"\n"
     "4) \"1\"\n"
   );
+
+  ASSERT_REPLY_DESCRIBE(
+    tunnel(leaderID)->exec("quarkdb-verify-checksum").get(),
+    "1) state-machine: OK\n"
+  );
 }
 
 TEST_F(Raft_e2e, DequeTrimming) {

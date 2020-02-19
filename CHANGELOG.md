@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### New features
+- Implement command ``quarkdb-verify-checksum`` for manually running a full checksum scan.
+
 ### Improvements
 - Security hardening of the redis parser for unauthenticated clients.
 - Package and distribute ``quarkdb-ldb`` tool based on the one provided by RocksDB.

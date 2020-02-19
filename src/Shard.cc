@@ -258,6 +258,19 @@ LinkStatus Shard::dispatch(Connection *conn, RedisRequest &req) {
       stateMachine->getRequestCounter().fillHistorical(headers, data);
       return conn->raw(Formatter::vectorsWithHeaders(headers, data));
     }
+    case RedisCommand::QUARKDB_VERIFY_CHECKSUM: {
+      if(req.size() != 1) return conn->errArgs(req[0]);
+      InFlightRegistration registration(inFlightTracker);
+      if(!registration.ok()) {
+        return conn->err("unavailable");
+      }
+
+      rocksdb::Status st = stateMachine->verifyChecksum();
+
+      std::vector<std::string> output;
+      output.emplace_back(SSTR("state-machine: " << st.ToString()));
+      return conn->statusVector(output);
+    }
     default: {
       if(req.getCommandType() == CommandType::QUARKDB) {
         qdb_critical("Unable to dispatch command '" << req[0] << "' of type QUARKDB");
