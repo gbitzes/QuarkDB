@@ -4,6 +4,9 @@
 
 ### New features
 - Implement command ``quarkdb-verify-checksum`` for manually running a full checksum scan.
+- Addition of ``quarkdb-validate-checkpoint`` tool for ensuring that a given
+checkpoint is valid -- useful to run in backup scripts before streaming a given
+checkpoint for long-term storage.
 
 ### Improvements
 - Security hardening of the redis parser for unauthenticated clients.

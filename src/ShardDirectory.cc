@@ -105,11 +105,15 @@ StateMachine* ShardDirectory::getStateMachine() {
   return smptr;
 }
 
+bool ShardDirectory::hasRaftJournal(std::string &err) const {
+  return directoryExists(raftJournalPath(), err);
+}
+
 RaftJournal* ShardDirectory::getRaftJournal() {
   if(journalptr) return journalptr;
 
   std::string suberr;
-  if(!directoryExists(raftJournalPath(), suberr)) {
+  if(!hasRaftJournal(suberr)) {
     qdb_throw("Cannot open raft journal: " << suberr);
   }
 
@@ -117,15 +121,15 @@ RaftJournal* ShardDirectory::getRaftJournal() {
   return journalptr;
 }
 
-std::string ShardDirectory::currentPath() {
+std::string ShardDirectory::currentPath() const {
   return pathJoin(path, "current");
 }
 
-std::string ShardDirectory::stateMachinePath() {
+std::string ShardDirectory::stateMachinePath() const {
   return pathJoin(currentPath(), "state-machine");
 }
 
-std::string ShardDirectory::raftJournalPath() {
+std::string ShardDirectory::raftJournalPath() const {
   return pathJoin(currentPath(), "raft-journal");
 }
 

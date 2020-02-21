@@ -16,6 +16,9 @@ target_link_libraries(quarkdb-server jemalloc XrdQuarkDB ${CMAKE_THREAD_LIBS_INI
 add_executable(quarkdb-sst-inspect quarkdb-sst-inspect.cc)
 target_link_libraries(quarkdb-sst-inspect XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT} )
 
+add_executable(quarkdb-validate-checkpoint quarkdb-validate-checkpoint.cc)
+target_link_libraries(quarkdb-validate-checkpoint XrdQuarkDB ${CMAKE_THREAD_LIBS_INIT} )
+
 include_directories(
   ${XROOTD_INCLUDE_DIRS}
   ${CMAKE_SOURCE_DIR}/src   # need access to the private headers
@@ -27,6 +30,6 @@ include_directories(
 )
 
 install(
-  TARGETS quarkdb-create quarkdb-ldb quarkdb-recovery quarkdb-server quarkdb-sst-inspect
+  TARGETS quarkdb-create quarkdb-ldb quarkdb-recovery quarkdb-server quarkdb-sst-inspect quarkdb-validate-checkpoint
   RUNTIME DESTINATION ${CMAKE_INSTALL_FULL_BINDIR}
 )

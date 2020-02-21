@@ -90,7 +90,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_bindir}/quarkdb-sudo-tests
 %{_bindir}/quarkdb-bench
 %{_bindir}/quarkdb-create
+%{_bindir}/quarkdb-ldb
 %{_bindir}/quarkdb-recovery
 %{_bindir}/quarkdb-server
 %{_bindir}/quarkdb-sst-inspect
-%{_bindir}/quarkdb-ldb
+%{_bindir}/quarkdb-validate-checkpoint

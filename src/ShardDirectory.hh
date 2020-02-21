@@ -61,6 +61,7 @@ public:
   StateMachine *getStateMachineForBulkload();
   StateMachine *getStateMachine();
   RaftJournal *getRaftJournal();
+  bool hasRaftJournal(std::string &err) const;
 
   // Reset the contents of both the state machine and the raft journal.
   // Physical paths remain the same.
@@ -109,9 +110,9 @@ private:
 
   ResilveringHistory resilveringHistory;
 
-  std::string stateMachinePath();
-  std::string raftJournalPath();
-  std::string currentPath();
+  std::string stateMachinePath() const;
+  std::string raftJournalPath() const;
+  std::string currentPath() const;
   std::string resilveringHistoryPath();
 
   std::string getSupplanted(const ResilveringEventID &id);
