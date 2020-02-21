@@ -52,6 +52,16 @@ inline bool startsWith(std::string_view str, std::string_view prefix) {
   return true;
 }
 
+inline bool endsWith(std::string_view str, std::string_view suffix) {
+  if(suffix.size() > str.size()) return false;
+
+  for(size_t i = 0; i < suffix.size(); i++) {
+    if(str[str.size()-suffix.size()+i] != suffix[i]) return false;
+  }
+
+  return true;
+}
+
 inline bool isPrefix(const std::string &prefix, const char *buff, size_t n) {
   if(n < prefix.size()) return false;
 

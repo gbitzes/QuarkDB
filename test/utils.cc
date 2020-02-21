@@ -1104,3 +1104,15 @@ TEST(Synchronized, String) {
   syncstr.set("test");
   ASSERT_EQ(syncstr.get(), "test");
 }
+
+TEST(StringUtils, endsWith) {
+  ASSERT_TRUE(StringUtils::endsWith("some-string-123", "3"));
+  ASSERT_TRUE(StringUtils::endsWith("some-string-123", "123"));
+  ASSERT_TRUE(StringUtils::endsWith("some-string-123", "-123"));
+  ASSERT_TRUE(StringUtils::endsWith("some-string-123", "string-123"));
+
+  ASSERT_FALSE(StringUtils::endsWith("some-string-123", "4"));
+  ASSERT_FALSE(StringUtils::endsWith("some-string-123", "124"));
+  ASSERT_FALSE(StringUtils::endsWith("some-string-123", "-124"));
+  ASSERT_FALSE(StringUtils::endsWith("some-string-123", "strin4-123"));
+}
