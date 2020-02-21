@@ -31,7 +31,6 @@
 #include "utils/RequestCounter.hh"
 #include "storage/KeyDescriptor.hh"
 #include "storage/KeyLocators.hh"
-#include "storage/ConsistencyScanner.hh"
 #include "storage/KeyConstants.hh"
 #include "storage/LeaseInfo.hh"
 #include "health/HealthIndicator.hh"
@@ -41,6 +40,9 @@
 #include <condition_variable>
 
 namespace quarkdb {
+
+class ConsistencyScanner;
+class ParanoidManifestChecker;
 
 enum class LeaseAcquisitionStatus {
   kKeyTypeMismatch,
@@ -366,7 +368,7 @@ private:
 
   std::mutex writeMtx;
   std::unique_ptr<rocksdb::DB> db;
-
+  std::unique_ptr<ParanoidManifestChecker> manifestChecker;
   std::unique_ptr<ConsistencyScanner> consistencyScanner;
 
   const std::string filename;
@@ -375,6 +377,11 @@ private:
 
   Timekeeper timeKeeper;
   RequestCounter requestCounter;
+
+  //----------------------------------------------------------------------------
+  // Return health information regarding free space
+  //----------------------------------------------------------------------------
+  HealthIndicator getFreeSpaceHealth();
 };
 
 

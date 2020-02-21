@@ -26,6 +26,7 @@
 #include "storage/ReverseLocator.hh"
 #include "storage/PatternMatching.hh"
 #include "storage/ExpirationEventIterator.hh"
+#include "storage/ConsistencyScanner.hh"
 #include "StateMachine.hh"
 #include "test-utils.hh"
 #include <gtest/gtest.h>

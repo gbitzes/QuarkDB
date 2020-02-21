@@ -29,6 +29,7 @@
 #include "raft/RaftReplicator.hh"
 #include "raft/RaftConfig.hh"
 #include "raft/RaftTrimmer.hh"
+#include "storage/ConsistencyScanner.hh"
 #include "Configuration.hh"
 #include "QuarkDBNode.hh"
 #include "../test-utils.hh"

@@ -1,11 +1,11 @@
 // ----------------------------------------------------------------------
-// File: DirectoryIterator.hh
+// File: ParanoidManifestChecker.hh
 // Author: Georgios Bitzes - CERN
 // ----------------------------------------------------------------------
 
 /************************************************************************
  * quarkdb - a redis-like highly available key-value store              *
- * Copyright (C) 2016 CERN/Switzerland                                  *
+ * Copyright (C) 2020 CERN/Switzerland                                  *
  *                                                                      *
  * This program is free software: you can redistribute it and/or modify *
  * it under the terms of the GNU General Public License as published by *
@@ -21,59 +21,50 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef QUARKDB_DIRECTORY_ITERATOR_HH
-#define QUARKDB_DIRECTORY_ITERATOR_HH
+#ifndef QUARKDB_PARANOID_MANIFEST_CHECKER_HH
+#define QUARKDB_PARANOID_MANIFEST_CHECKER_HH
 
-#include <dirent.h>
-#include <string>
+#include "utils/AssistedThread.hh"
+#include <rocksdb/db.h>
 #include <string_view>
+#include "Status.hh"
+#include "utils/Synchronized.hh"
 
 namespace quarkdb {
 
-class DirectoryIterator {
+//------------------------------------------------------------------------------
+// We've observed in the past RocksDB corrupting its MANIFEST file, while new
+// SST files were being written.
+//
+// This is an attempt at detecting this problem early, but we're not sure if
+// it works, or how useful it might be.
+//------------------------------------------------------------------------------
+class ParanoidManifestChecker {
 public:
+  //----------------------------------------------------------------------------
+  // Constructor receiving the rocksdb path
+  //----------------------------------------------------------------------------
+  ParanoidManifestChecker(std::string_view path);
 
   //----------------------------------------------------------------------------
-  // Construct iterator object on the given path - must be a directory.
+  // Main thread checking the status on regular intervals
   //----------------------------------------------------------------------------
-  DirectoryIterator(std::string_view path);
+  void main(ThreadAssistant &assistant);
 
   //----------------------------------------------------------------------------
-  // Destructor
+  // Check the given DB path
   //----------------------------------------------------------------------------
-  ~DirectoryIterator();
+  static Status checkDB(std::string_view path);
 
   //----------------------------------------------------------------------------
-  // Checks if the iterator is in an error state. EOF is not an error state!
+  // Get last status
   //----------------------------------------------------------------------------
-  bool ok();
-
-  //----------------------------------------------------------------------------
-  // Retrieve the error message if the iterator object is in an error state.
-  // If no error state, returns an empty string.
-  //----------------------------------------------------------------------------
-  std::string err();
-
-  //----------------------------------------------------------------------------
-  // Checks whether we have reached the end.
-  //----------------------------------------------------------------------------
-  bool eof();
-
-  //----------------------------------------------------------------------------
-  // Retrieve next directory entry.
-  // This object retains ownership on the given pointer, never call free on it.
-  //
-  // If the iterator is in an error state, next() will only ever return nullptr.
-  //----------------------------------------------------------------------------
-  struct dirent* next();
+  Status getLastStatus() const;
 
 private:
-  std::string error;
-  std::string path;
-  bool reachedEnd;
-
-  DIR *dir;
-  struct dirent *nextEntry;
+  AssistedThread mThread;
+  std::string mPath;
+  Synchronized<Status> mLastStatus;
 };
 
 }

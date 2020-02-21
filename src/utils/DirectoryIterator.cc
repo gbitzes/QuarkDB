@@ -30,7 +30,7 @@ using namespace quarkdb;
 //------------------------------------------------------------------------------
 // Construct iterator object on the given path - must be a directory.
 //------------------------------------------------------------------------------
-DirectoryIterator::DirectoryIterator(const std::string &mypath)
+DirectoryIterator::DirectoryIterator(std::string_view mypath)
 : path(mypath), reachedEnd(false), dir(nullptr) {
 
   dir = opendir(path.c_str());

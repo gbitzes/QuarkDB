@@ -33,6 +33,8 @@
 #include "storage/ExpirationEventIterator.hh"
 #include "storage/ReverseLocator.hh"
 #include "storage/InternalKeyParsing.hh"
+#include "storage/ConsistencyScanner.hh"
+#include "storage/ParanoidManifestChecker.hh"
 #include "utils/IntToBinaryString.hh"
 #include "utils/TimeFormatting.hh"
 #include <sys/stat.h>
@@ -153,6 +155,7 @@ StateMachine::StateMachine(std::string_view f, bool write_ahead_log, bool bulk_l
   ensureClockSanity(!dirExists);
   retrieveLastApplied();
 
+  manifestChecker.reset(new ParanoidManifestChecker(filename));
   consistencyScanner.reset(new ConsistencyScanner(*this));
 }
 
@@ -184,6 +187,7 @@ void StateMachine::ensureClockSanity(bool justCreated) {
 }
 
 StateMachine::~StateMachine() {
+  manifestChecker.reset();
   consistencyScanner.reset();
 
   if(db) {
@@ -1879,10 +1883,10 @@ rocksdb::Status StateMachine::noop(LogIndex index) {
 }
 
 //------------------------------------------------------------------------------
-// Return health information about the state machine
+// Return health information regarding free space
 //------------------------------------------------------------------------------
-std::vector<HealthIndicator> StateMachine::getHealthIndicators() {
-  std::string description = "FREE-SPACE-SM";
+HealthIndicator StateMachine::getFreeSpaceHealth() {
+  std::string description = "SM-FREE-SPACE";
 
   struct statfs out;
   if(statfs(filename.c_str(), &out) != 0) {
@@ -1911,7 +1915,22 @@ std::vector<HealthIndicator> StateMachine::getHealthIndicators() {
     status = chooseWorstHealth(status, HealthStatus::kYellow);
   }
 
-  return { HealthIndicator(status, description, SSTR(freeBytes << " bytes (" << percentFree << "%)")) };
+  return HealthIndicator(status, description, SSTR(freeBytes << " bytes (" << percentFree << "%)"));
+}
+
+//------------------------------------------------------------------------------
+// Return health information about the state machine
+//------------------------------------------------------------------------------
+std::vector<HealthIndicator> StateMachine::getHealthIndicators() {
+  std::string description = "SM-MANIFEST-TIMEDIFF";
+  HealthStatus healthStatus = HealthStatus::kGreen;
+
+  Status status = manifestChecker->getLastStatus();
+  if(!status.ok()) {
+    healthStatus = HealthStatus::kRed;
+  }
+
+  return { getFreeSpaceHealth(), HealthIndicator(healthStatus, description, status.getMsg()) };
 }
 
 rocksdb::Status StateMachine::manualCompaction() {

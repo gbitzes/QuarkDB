@@ -86,6 +86,7 @@ add_library(XrdQuarkDB SHARED
   storage/KeyDescriptorBuilder.cc         storage/KeyDescriptorBuilder.hh
                                           storage/KeyLocators.hh
                                           storage/LeaseInfo.hh
+  storage/ParanoidManifestChecker.cc      storage/ParanoidManifestChecker.hh
                                           storage/PatternMatching.hh
   storage/Randomization.cc                storage/Randomization.hh
                                           storage/ReverseLocator.hh
