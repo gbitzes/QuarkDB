@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     ->check(pathValidator);
 
   app.add_flag("--accept-standalone", acceptStandalone, "No need to ensure that the raft journal is present -- use this flag for standalone instances");
-  app.add_flag("--eos", eos, "This QuarkDB instance contains the EOS namespace; additionally check eos-files-md and eos-containers-md");
+  app.add_flag("--eos", eos, "This QuarkDB instance contains the EOS namespace; additionally check eos-file-md and eos-container-md");
 
   //----------------------------------------------------------------------------
   // Parse
@@ -93,31 +93,31 @@ int main(int argc, char** argv) {
   if(eos) {
     size_t len = 0;
 
-    rocksdb::Status st = stateMachine->lhlen("eos-files-md", len);
+    rocksdb::Status st = stateMachine->lhlen("eos-file-md", len);
     if(!st.ok()) {
-      qdb_error("Status not ok when retrieving eos-files-md: " << st.ToString());
+      qdb_error("Status not ok when retrieving eos-file-md: " << st.ToString());
       return 1;
     }
 
     if(len == 0) {
-      qdb_error("eos-files-md length is zero!");
+      qdb_error("eos-file-md length is zero!");
       return 1;
     }
 
-    qdb_info("eos-files-md length: " << len);
+    qdb_info("eos-file-md length: " << len);
 
-    st = stateMachine->lhlen("eos-containers-md", len);
+    st = stateMachine->lhlen("eos-container-md", len);
     if(!st.ok()) {
-      qdb_error("Status not ok when retrieving eos-containers-md: " << st.ToString());
+      qdb_error("Status not ok when retrieving eos-container-md: " << st.ToString());
       return 1;
     }
 
     if(len == 0) {
-      qdb_error("eos-containers-md length is zero!");
+      qdb_error("eos-container-md length is zero!");
       return 1;
     }
 
-    qdb_info("eos-containers-md length: " << len);
+    qdb_info("eos-container-md length: " << len);
   }
 
   //----------------------------------------------------------------------------
