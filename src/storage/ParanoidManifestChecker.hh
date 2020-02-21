@@ -62,9 +62,9 @@ public:
   Status getLastStatus() const;
 
 private:
-  AssistedThread mThread;
   std::string mPath;
   Synchronized<Status> mLastStatus;
+  AssistedThread mThread;
 };
 
 }

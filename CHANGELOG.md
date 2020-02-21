@@ -11,6 +11,8 @@ checkpoint for long-term storage.
 ### Improvements
 - Security hardening of the redis parser for unauthenticated clients.
 - Package and distribute ``quarkdb-ldb`` tool based on the one provided by RocksDB.
+- Attempt to detect potential ``MANIFEST`` corruption early by measuring mtime lag
+compared to newest SST file.
 
 ## 0.4.1 (2020-01-17)
 
