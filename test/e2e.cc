@@ -49,6 +49,8 @@
 #include "qclient/shared/SharedHash.hh"
 #include "qclient/shared/SharedManager.hh"
 #include "qclient/shared/TransientSharedHash.hh"
+#include "qclient/shared/Communicator.hh"
+#include "qclient/shared/CommunicatorListener.hh"
 
 using namespace quarkdb;
 #define ASSERT_OK(msg) ASSERT_TRUE(msg.ok())
@@ -2451,6 +2453,35 @@ TEST_F(Raft_e2e, SharedHash) {
 
   ASSERT_TRUE(hash2.get("k1", tmp));
   ASSERT_EQ(tmp, "v1");
+}
+
+TEST_F(Raft_e2e, Communicator) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  qclient::Subscriber subscriber1(members(), reasonableSubscriptionOptions(true));
+  qclient::Subscriber subscriber2(members(), reasonableSubscriptionOptions(true));
+
+  Communicator communicator(&subscriber1, "comm-channel", nullptr, std::chrono::milliseconds(1),
+    std::chrono::seconds(60));
+  CommunicatorListener communicatorListener(&subscriber2, "comm-channel");
+
+  std::string reqID;
+  std::future<CommunicatorReply> fut = communicator.issue("i-like-trains", reqID);
+
+  RETRY_ASSERT_EQ(communicatorListener.size(), 1u);
+  qclient::CommunicatorRequest req = communicatorListener.front();
+
+  ASSERT_EQ(req.getID(), reqID);
+  ASSERT_EQ(req.getContents(), "i-like-trains");
+
+  req.sendReply(888, "aaaaa");
+
+  ASSERT_EQ(fut.wait_for(std::chrono::seconds(3)), std::future_status::ready);
+
+  CommunicatorReply reply = fut.get();
+  ASSERT_EQ(reply.status, 888);
+  ASSERT_EQ(reply.contents, "aaaaa");
 }
 
 TEST_F(Raft_e2e, NoAuth) {

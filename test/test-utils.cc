@@ -273,8 +273,9 @@ int TestCluster::getLeaderID() {
   return getServerID(state(0)->getSnapshot()->leader);
 }
 
-qclient::SubscriptionOptions TestCluster::reasonableSubscriptionOptions() {
+qclient::SubscriptionOptions TestCluster::reasonableSubscriptionOptions(bool pushtypes) {
   qclient::SubscriptionOptions opts;
+  opts.usePushTypes = pushtypes;
   opts.handshake = makeQClientHandshake();
   return opts;
 }

@@ -385,7 +385,7 @@ public:
   std::vector<RaftServer> retrieveLeaders();
   int getLeaderID();
 
-  qclient::SubscriptionOptions reasonableSubscriptionOptions();
+  qclient::SubscriptionOptions reasonableSubscriptionOptions(bool pushtypes = false);
 
 private:
   std::string rocksdbPath(int id = 0);
