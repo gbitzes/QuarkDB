@@ -28,6 +28,7 @@
 #include "test-utils.hh"
 #include <gtest/gtest.h>
 #include "qclient/QClient.hh"
+#include "qclient/ResponseBuilder.hh"
 
 using namespace qclient;
 using namespace quarkdb;
@@ -142,16 +143,6 @@ TEST(AuthenticationDispatcher, ChallengesBasicSanity) {
   ASSERT_TRUE(authorized);
 }
 
-qclient::redisReplyPtr strResponse(const std::string &str) {
-  qclient::redisReplyPtr reply(new redisReply());
-  reply->type = REDIS_REPLY_STRING;
-
-  reply->str = (char*) malloc(str.size());
-  memcpy(reply->str, str.c_str(), str.size());
-  reply->len = str.size();
-  return reply;
-}
-
 TEST(HmacAuthHandshake, BasicSanity) {
   std::string pw = "hunter2_hunter2_hunter2_hunter2_hunter2";
   HmacAuthHandshake handshake(pw);
@@ -161,7 +152,7 @@ TEST(HmacAuthHandshake, BasicSanity) {
   ASSERT_EQ(cmd.size(), 2u);
   ASSERT_EQ(cmd[0], "HMAC-AUTH-GENERATE-CHALLENGE");
 
-  qclient::redisReplyPtr reply = strResponse("some-string-to-sign");
+  qclient::redisReplyPtr reply = ResponseBuilder::makeStr("some-string-to-sign");
   ASSERT_EQ(qclient::Handshake::Status::INVALID, handshake.validateResponse(reply));
   handshake.restart();
 
@@ -169,7 +160,7 @@ TEST(HmacAuthHandshake, BasicSanity) {
   ASSERT_EQ(cmd.size(), 2u);
   ASSERT_EQ(cmd[0], "HMAC-AUTH-GENERATE-CHALLENGE");
   std::string challenge = authenticator.generateChallenge(cmd[1]);
-  reply = strResponse(challenge);
+  reply = ResponseBuilder::makeStr(challenge);
 
   ASSERT_EQ(qclient::Handshake::Status::VALID_INCOMPLETE, handshake.validateResponse(reply));
   cmd = handshake.provideHandshake();
@@ -177,7 +168,7 @@ TEST(HmacAuthHandshake, BasicSanity) {
   ASSERT_EQ(cmd[0], "HMAC-AUTH-VALIDATE-CHALLENGE");
   ASSERT_EQ(authenticator.validateSignature(cmd[1]), Authenticator::ValidationStatus::kOk);
 
-  reply = strResponse("OK");
+  reply = ResponseBuilder::makeStatus("OK");
   reply->type = REDIS_REPLY_STATUS;
   ASSERT_EQ(qclient::Handshake::Status::VALID_COMPLETE, handshake.validateResponse(reply));
 }
