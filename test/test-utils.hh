@@ -243,6 +243,7 @@ public:
   std::vector<RaftServer> nodes(int id = 0);
   qclient::Members members(int id = 0);
   RaftClusterID clusterID();
+  size_t getClusterSize() const;
 
   template<typename... Args>
   bool checkValueConsensus(const std::string &key, const std::string &value, const Args... args) {
@@ -400,6 +401,19 @@ private:
   std::vector<RaftServer> allNodes;
 
   std::map<int, TestNode*> testnodes;
+};
+
+// Given a test cluster, shut down the leader on regular intervals.
+class ClusterDestabilizer {
+public:
+  ClusterDestabilizer(TestCluster *testCluster);
+  ~ClusterDestabilizer();
+
+  void main(ThreadAssistant &assistant);
+
+private:
+  TestCluster *mTestCluster;
+  AssistedThread mThread;
 };
 
 // Convenience classes. Want to run tests on a simulated cluster of 3 nodes?

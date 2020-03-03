@@ -139,6 +139,10 @@ RaftClusterID TestCluster::clusterID() {
   return clusterid;
 }
 
+size_t TestCluster::getClusterSize() const {
+  return testnodes.size();
+}
+
 ShardDirectory* TestCluster::shardDirectory(int id) {
   return node(id)->shardDirectory();
 }
@@ -407,5 +411,27 @@ bool IptablesHelper::singleAcceptPackets(int port) {
   return system(SSTR("iptables -I OUTPUT -p tcp --dest 127.0.0.1 --dport " << port << " -j ACCEPT").c_str()) == 0;
 }
 
+ClusterDestabilizer::ClusterDestabilizer(TestCluster *testCluster)
+: mTestCluster(testCluster) {
+  mThread.reset(&ClusterDestabilizer::main, this);
+}
+
+ClusterDestabilizer::~ClusterDestabilizer() {}
+
+void ClusterDestabilizer::main(ThreadAssistant &assistant) {
+  assistant.wait_for(mTestCluster->timeouts().getLow());
+
+  while(!assistant.terminationRequested()) {
+    int leaderID = mTestCluster->getLeaderID();
+
+    if(leaderID >= 0) {
+      mTestCluster->spindown(leaderID);
+      assistant.wait_for(mTestCluster->timeouts().getLow());
+      mTestCluster->spinup(leaderID);
+    }
+
+    assistant.wait_for(mTestCluster->timeouts().getHigh() * 2);
+  }
+}
 
 }
