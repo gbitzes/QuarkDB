@@ -1732,6 +1732,9 @@ rocksdb::Status StateMachine::del(StagingArea &stagingArea, const ReqIterator &s
       remove_all_with_prefix(indexLocator.toView(), count, stagingArea);
       if(count != keyInfo.getSize()) qdb_throw("mismatch between keyInfo counter and number of elements deleted by remove_all_with_prefix: " << count << " vs " << keyInfo.getSize());
     }
+    else if(keyInfo.getKeyType() == KeyType::kLease) {
+      THROW_ON_ERROR(lease_release(stagingArea, it->sv(), 0u));
+    }
     else {
       qdb_throw("DEL called on unknown keytype - should never happen");
     }

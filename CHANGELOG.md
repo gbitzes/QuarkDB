@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Bug fixes
+- Running ``DEL`` on a lease key would cause all nodes in a cluster to crash
+with an assertion. ``DEL`` will now simply release the given lease, as if
+``lease-release`` had been called.
+
 ### New features
 - Implement command ``quarkdb-verify-checksum`` for manually running a full checksum scan.
 - Addition of ``quarkdb-validate-checkpoint`` tool for ensuring that a given
