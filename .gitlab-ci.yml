@@ -115,7 +115,7 @@ rpms:
   - fedora
   script:
    - automount
-   - echo "$STCI_PASSWORD" | kinit stci
+   - cat "$STCI_PASSWORD" | kinit stci
    - eosfusebind
    - for platform in cc7 c8 fedora; do packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
   tags:
