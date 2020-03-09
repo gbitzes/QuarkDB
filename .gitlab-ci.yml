@@ -114,6 +114,7 @@ rpms:
   - c8
   - fedora
   script:
+   - ls -l /eos
    - for platform in cc7 c8 fedora; do sudo -u stci -H packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
   tags:
     - docker-cc7
