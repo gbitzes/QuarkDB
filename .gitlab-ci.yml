@@ -146,18 +146,21 @@ docs:
 
 coverage:
   stage: publish
-  image: gitlab-registry.cern.ch/eos/quarkdb/build-image-cc7
+  image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
   dependencies:
   - ubuntu-asan
   script:
+   - automount
+   - cat "$STCI_PASSWORD" | kinit stci
+   - eosfusebind
    - chown -R stci build/coverage-report
    - SNAPSHOT=$(date +%s)
    - TARGET="/eos/project/q/quarkdb/www/coverage/${CI_COMMIT_REF_NAME}"
    - STAGING_AREA="$TARGET-${SNAPSHOT}"
-   - sudo -u stci -H cp -r build/coverage-report "$STAGING_AREA"
-   - sudo -u stci -H packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
+   - cp -r build/coverage-report "$STAGING_AREA"
+   - packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
   tags:
-   - docker-cc7
+   - docker-privileged
   retry: 2
   only:
     - branches@eos/quarkdb
