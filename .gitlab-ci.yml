@@ -133,7 +133,7 @@ docs:
    - automount
    - cat "$STCI_PASSWORD" | kinit stci
    - eosfusebind
-   - yum install -y npm
+   - yum install -y npm git
    - npm install -g gitbook-cli
    - npm install gitbook
    - gitbook build
