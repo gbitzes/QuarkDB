@@ -21,7 +21,8 @@ checkpoint for long-term storage.
 - Attempt to detect potential ``MANIFEST`` corruption early by measuring mtime lag
 compared to newest SST file.
 
-Thanks to Pete Eby (ORNL) for the bug report relating to replication becoming stuck.
+Many thanks to Pete Eby (ORNL) for finding and reporting the bug causing replication
+to become stuck.
 
 ## 0.4.1 (2020-01-17)
 
@@ -40,7 +41,7 @@ connections.
 - Automatic fsync of the raft journal once per second.
 - Better cluster resilience in case of sudden machine powercuts.
 
-Thanks to Franck Eyraud (JRC) for the bug reports relating to sudden poweroff, and valuable discussion on fsync behavior.
+Many thanks to Franck Eyraud (JRC) for the bug reports relating to sudden poweroff, and valuable discussion on fsync behavior.
 
 ## 0.4.0 (2019-12-06)
 
