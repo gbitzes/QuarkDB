@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Bug fixes
+- Under complicated conditions, replication towards a particular follower could become stuck.
+(to workaround, restart leader node)
 - Running ``DEL`` on a lease key would cause all nodes in a cluster to crash
 with an assertion. ``DEL`` will now simply release the given lease, as if
 ``lease-release`` had been called.
@@ -18,6 +20,8 @@ checkpoint for long-term storage.
 - Package and distribute ``quarkdb-ldb`` tool based on the one provided by RocksDB.
 - Attempt to detect potential ``MANIFEST`` corruption early by measuring mtime lag
 compared to newest SST file.
+
+Thanks to Pete Eby (ORNL) for the bug report relating to replication becoming stuck.
 
 ## 0.4.1 (2020-01-17)
 

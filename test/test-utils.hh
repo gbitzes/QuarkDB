@@ -107,6 +107,8 @@ class Publisher;
 #define RETRY_ASSERT_EQ(cond1, cond2) RETRY_ASSERT_EQ_3(cond1, cond2, NUMBER_OF_RETRIES, 10)
 #define RETRY_ASSERT_NE(cond1, cond2) RETRY_ASSERT_NE_3(cond1, cond2, NUMBER_OF_RETRIES, 10)
 
+#define RETRY_ASSERT_TRUE_10MIN(cond) RETRY_ASSERT_TRUE_3(cond, 100*60*10, 10)
+
 extern std::vector<RedisRequest> testreqs;
 
 // necessary because C macros are dumb and don't undestand
@@ -266,7 +268,7 @@ public:
   // - All state machines have already applied all entries in the journal
   template<typename... Args>
   bool checkFullConsensus(const Args... args) {
-    if(!checkStateConsensus(args...)) return false;
+    if(!checkStateConsensusQuiet(args...)) return false;
     std::vector<int> arguments = { args... };
 
     LogIndex targetEntry = journal(arguments[0])->getLogSize() - 1;
@@ -278,6 +280,7 @@ public:
       if(stateMachine(arguments[i])->getLastApplied() != targetEntry) return false;
     }
 
+    qdb_info("Achieved full consensus with journal size " << targetEntry);
     return true;
   }
 
@@ -335,7 +338,7 @@ public:
   }
 
   template<typename... Args>
-  bool checkStateConsensusWithSnapshots(std::vector<RaftStateSnapshotPtr> &snapshots,
+  bool checkStateConsensusWithSnapshots(bool quiet, std::vector<RaftStateSnapshotPtr> &snapshots,
     const Args... args) {
 
     std::vector<int> arguments = { args... };
@@ -372,15 +375,25 @@ public:
       return false;
     }
 
-    qdb_info("Achieved state consensus for term " << snapshots[0]->term << " with leader " << snapshots[0]->leader.toString());
+    if(!quiet) {
+      qdb_info("Achieved state consensus for term " << snapshots[0]->term << " with leader " << snapshots[0]->leader.toString());
+    }
+
     return true;
   }
 
   template<typename... Args>
   bool checkStateConsensus(const Args... args) {
     std::vector<RaftStateSnapshotPtr> snapshots;
-    return checkStateConsensusWithSnapshots(snapshots, args...);
+    return checkStateConsensusWithSnapshots(false, snapshots, args...);
   }
+
+  template<typename... Args>
+  bool checkStateConsensusQuiet(const Args... args) {
+    std::vector<RaftStateSnapshotPtr> snapshots;
+    return checkStateConsensusWithSnapshots(true, snapshots, args...);
+  }
+
 
   int getServerID(const RaftServer &srv);
   std::vector<RaftServer> retrieveLeaders();

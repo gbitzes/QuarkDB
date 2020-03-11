@@ -380,6 +380,32 @@ TEST_F(Replication, several_transitions) {
   ASSERT_TRUE(crossCheckJournals(0, 1, 2));
 }
 
+TEST_F(Replication, FollowerLaggingBy1m) {
+  Connection::setPhantomBatchLimit(1);
+
+  spinup(0); spinup(1);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1));
+  int leaderID = getLeaderID();
+
+  std::vector<std::future<redisReplyPtr>> futs;
+  for(size_t i = 0; i < 1'000'000; i++) {
+    futs.emplace_back(tunnel(leaderID)->exec("set", "abc", SSTR(i)));
+  }
+
+  for(size_t i = 0; i < futs.size(); i++) {
+    ASSERT_REPLY_DESCRIBE(futs[i].get(), "OK");
+  }
+
+  qdb_info("All writes processed, waiting until follower catches up...");
+
+  spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  // bringing the lagging follower up-to-date could take a while
+  RETRY_ASSERT_TRUE_10MIN(checkFullConsensus(0, 1, 2));
+  ASSERT_TRUE(crossCheckJournals(0, 1, 2));
+}
+
 TEST_F(Membership, prevent_promotion_of_outdated_observer) {
   // Only start nodes 0, 1, 2 of a 5-node cluster
   spinup(0); spinup(1); spinup(2);

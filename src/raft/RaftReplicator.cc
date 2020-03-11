@@ -354,12 +354,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
   const int64_t payloadLimit = 512;
   LogIndex nextIndex = firstNextIndex;
 
-  while(shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
-    if(!streamingUpdates) {
-      // Something went wrong while streaming, return to parent to stabilize
-      return nextIndex;
-    }
-
+  while(shutdown == 0 && streamingUpdates && state.isSnapshotCurrent(snapshot.get())) {
     std::chrono::steady_clock::time_point contact;
     std::future<redisReplyPtr> fut;
     int64_t payloadSize;
@@ -381,7 +376,7 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
 
     inFlightCV.notify_one();
 
-    while(inFlight.size() >= 512 && shutdown == 0 && state.isSnapshotCurrent(snapshot.get())) {
+    while(inFlight.size() >= 512 && shutdown == 0 && streamingUpdates && state.isSnapshotCurrent(snapshot.get())) {
       inFlightPoppedCV.wait_for(lock, contactDetails.getRaftTimeouts().getHeartbeatInterval());
     }
 
