@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.2 (2020-03-12)
 
 ### Bug fixes
 - Under complicated conditions (follower is very far behind leader + network instabilities),
