@@ -402,7 +402,7 @@ TEST_F(Replication, FollowerLaggingBy1m) {
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 
   // bringing the lagging follower up-to-date could take a while
-  RETRY_ASSERT_TRUE_10MIN(checkFullConsensus(0, 1, 2));
+  RETRY_ASSERT_TRUE_20MIN(checkFullConsensus(0, 1, 2));
   ASSERT_TRUE(crossCheckJournals(0, 1, 2));
 }
 

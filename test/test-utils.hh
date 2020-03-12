@@ -107,7 +107,7 @@ class Publisher;
 #define RETRY_ASSERT_EQ(cond1, cond2) RETRY_ASSERT_EQ_3(cond1, cond2, NUMBER_OF_RETRIES, 10)
 #define RETRY_ASSERT_NE(cond1, cond2) RETRY_ASSERT_NE_3(cond1, cond2, NUMBER_OF_RETRIES, 10)
 
-#define RETRY_ASSERT_TRUE_10MIN(cond) RETRY_ASSERT_TRUE_3(cond, 100*60*10, 10)
+#define RETRY_ASSERT_TRUE_20MIN(cond) RETRY_ASSERT_TRUE_3(cond, 100*60*20, 10)
 
 extern std::vector<RedisRequest> testreqs;
 
