@@ -3,8 +3,8 @@
 ## Unreleased
 
 ### Bug fixes
-- Under complicated conditions, replication towards a particular follower could become stuck.
-(to workaround, restart leader node)
+- Under complicated conditions (follower is very far behind leader + network instabilities),
+replication towards a particular follower could become stuck. (to workaround, restart leader node)
 - Running ``DEL`` on a lease key would cause all nodes in a cluster to crash
 with an assertion. ``DEL`` will now simply release the given lease, as if
 ``lease-release`` had been called.
@@ -21,8 +21,9 @@ checkpoint for long-term storage.
 - Attempt to detect potential ``MANIFEST`` corruption early by measuring mtime lag
 compared to newest SST file.
 
-Many thanks to Pete Eby (ORNL) for finding and reporting the bug causing replication
-to become stuck.
+Many thanks to Crystal Chua (AARNet) for the bug report and all support offered
+related to RocksDB's ``MANIFEST`` corruption issue, as well as to Pete Eby (ORNL)
+for finding and reporting the bug causing replication to become stuck.
 
 ## 0.4.1 (2020-01-17)
 

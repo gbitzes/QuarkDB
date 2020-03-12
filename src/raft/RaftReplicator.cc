@@ -91,9 +91,9 @@ RaftReplicaTracker::~RaftReplicaTracker() {
 }
 
 bool RaftReplicaTracker::buildPayload(LogIndex nextIndex, int64_t payloadLimit,
-  std::vector<std::string> &entries, int64_t &payloadSize, RaftTerm &lastEntryTerm) {
+  std::vector<std::string> &entries, RaftTerm &lastEntryTerm) {
 
-  payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
+  int64_t payloadSize = std::min(payloadLimit, journal.getLogSize() - nextIndex);
   entries.resize(payloadSize);
 
   RaftJournal::Iterator iterator = journal.getIterator(nextIndex, true);
@@ -322,10 +322,12 @@ bool RaftReplicaTracker::sendPayload(RaftTalker &talker, LogIndex nextIndex, int
   LogIndex commitIndexForTarget = journal.getCommitIndex();
 
   std::vector<RaftSerializedEntry> entries;
-  if(!buildPayload(nextIndex, payloadLimit, entries, payloadSize, lastEntryTerm)) {
+  if(!buildPayload(nextIndex, payloadLimit, entries, lastEntryTerm)) {
     state.observed(snapshot->term+1, {});
     return false;
   }
+
+  payloadSize = entries.size();
 
   contact = std::chrono::steady_clock::now();
   reply = talker.appendEntries(

@@ -82,7 +82,7 @@ private:
 
   void triggerResilvering();
   bool buildPayload(LogIndex nextIndex, int64_t payloadLimit, std::vector<RaftSerializedEntry> &entries,
-    int64_t &payloadSize, RaftTerm &lastEntryTerm);
+    RaftTerm &lastEntryTerm);
 
   bool sendPayload(RaftTalker &talker, LogIndex nextIndex, int64_t payloadLimit,
     std::future<redisReplyPtr> &reply, std::chrono::steady_clock::time_point &contact, int64_t &payloadSize,
