@@ -38,7 +38,7 @@ void ParanoidManifestChecker::main(ThreadAssistant &assistant) {
 
     Status st = checkDB(mPath);
     if(!st.ok()) {
-      qdb_error("Potential MANIFEST corruption for DB at " << mPath << "(" << st.getMsg() << ")");
+      qdb_error("Potential MANIFEST corruption for DB at " << mPath << "(" << st.getMsg() << "). Note: This detection mechanism for MANIFEST corruption can be iffy, time to worry only if this message starts appearing every 5 minutes.");
     }
 
     mLastStatus.set(st);
