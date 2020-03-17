@@ -54,6 +54,10 @@ bool operator<(struct timespec &one, struct timespec &two) {
   return one.tv_sec < two.tv_sec;
 }
 
+std::string timespecToString(struct timespec &spec) {
+  return SSTR(spec.tv_sec << "." << spec.tv_nsec);
+}
+
 Status ParanoidManifestChecker::checkDB(std::string_view path) {
   DirectoryIterator iter(path);
   struct dirent* entry = nullptr;
@@ -76,7 +80,7 @@ Status ParanoidManifestChecker::checkDB(std::string_view path) {
   }
 
   int secDiff = sstMtime.tv_sec - manifestMtime.tv_sec;
-  std::string diff = SSTR(secDiff << " sec");
+  std::string diff = SSTR(secDiff << " sec, " << timespecToString(sstMtime) << " vs " << timespecToString(manifestMtime));
 
   // 1 hour should be more than enough (?)
   if(secDiff >= 3600) {
