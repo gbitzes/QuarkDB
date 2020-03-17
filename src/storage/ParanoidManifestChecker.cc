@@ -63,7 +63,10 @@ Status ParanoidManifestChecker::checkDB(std::string_view path) {
   struct dirent* entry = nullptr;
 
   struct timespec manifestMtime;
+  manifestMtime.tv_sec = 0;
+
   struct timespec sstMtime;
+  sstMtime.tv_sec = 0;
 
   while((entry = iter.next())) {
     struct stat statbuf;
@@ -83,7 +86,7 @@ Status ParanoidManifestChecker::checkDB(std::string_view path) {
   std::string diff = SSTR(secDiff << " sec, " << timespecToString(sstMtime) << " vs " << timespecToString(manifestMtime));
 
   // 1 hour should be more than enough (?)
-  if(secDiff >= 3600) {
+  if(manifestMtime.tv_sec != 0 && sstMtime.tv_sec != 0 && secDiff >= 3600) {
     return Status(1, diff);
   }
 

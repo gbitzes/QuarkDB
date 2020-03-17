@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+- The mechanism meant to provide an early warning for potential ``MANIFEST``
+corruption was flaky, and would sometimes report a problem where none existed.
+
+Many thanks to Franck Eyraud (JRC) for the bug report concerning erroneous ``MANIFEST``-related
+warning.
+
 ## 0.4.2 (2020-03-12)
 
 ### Bug fixes
