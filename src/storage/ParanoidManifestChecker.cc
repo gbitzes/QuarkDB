@@ -82,8 +82,8 @@ Status ParanoidManifestChecker::checkDB(std::string_view path) {
     }
   }
 
-  int secDiff = sstMtime.tv_sec - manifestMtime.tv_sec;
-  std::string diff = SSTR(secDiff << " sec, " << timespecToString(sstMtime) << " vs " << timespecToString(manifestMtime));
+  int secDiff = manifestMtime.tv_sec - sstMtime.tv_sec;
+  std::string diff = SSTR(secDiff << " sec, sst:" << timespecToString(sstMtime) << " vs m:" << timespecToString(manifestMtime));
 
   // 1 hour should be more than enough (?)
   if(manifestMtime.tv_sec != 0 && sstMtime.tv_sec != 0 && secDiff >= 3600) {
