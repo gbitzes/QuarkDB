@@ -12,7 +12,8 @@ make-docs:
   stage: build
   image: fedora:latest
   script:
-    - dnf install -y mkdocs
+    - dnf install -y python3-pip
+    - pip3 install mkdocs
     - cd mkdocs
     - mkdocs build
   artifacts:
