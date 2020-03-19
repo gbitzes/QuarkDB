@@ -8,6 +8,17 @@ stages:
 before_script:
   - export GTEST_COLOR="1"
 
+make-docs:
+  stage: build
+  image: fedora:latest
+  script:
+    - dnf install -y mkdocs
+    - cd mkdocs
+    - mkdocs build
+  artifacts:
+    paths:
+    - mkdocs/site
+
 c8:
   stage: build
   image: gitlab-registry.cern.ch/eos/quarkdb/build-image-c8

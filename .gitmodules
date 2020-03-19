@@ -13,3 +13,6 @@
 [submodule "deps/asio"]
 	path = deps/asio
 	url = https://github.com/chriskohlhoff/asio
+[submodule "deps/mkdocs-material"]
+	path = deps/mkdocs-material
+	url = https://github.com/squidfunk/mkdocs-material.git
