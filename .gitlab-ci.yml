@@ -126,28 +126,28 @@ rpms:
     - branches@eos/quarkdb
     - tags@eos/quarkdb
 
-docs:
-  stage: publish
-  image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
-  script:
-   - automount
-   - cat "$STCI_PASSWORD" | kinit stci
-   - eosfusebind
-   - yum install -y npm git
-   - npm install -g gitbook-cli
-   - npm install gitbook
-   - gitbook build
-   - SNAPSHOT=$(date +%s)
-   - TARGET="/eos/project/q/quarkdb/www/docs/${CI_COMMIT_REF_NAME}"
-   - STAGING_AREA="$TARGET-${SNAPSHOT}"
-   - cp -r _book "$STAGING_AREA"
-   - packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
-  tags:
-   - docker-privileged
-  retry: 2
-  only:
-    - branches@eos/quarkdb
-    - tags@eos/quarkdb
+#docs:
+#  stage: publish
+#  image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
+#  script:
+#   - automount
+#   - cat "$STCI_PASSWORD" | kinit stci
+#   - eosfusebind
+#   - yum install -y npm git
+#   - npm install -g gitbook-cli
+#   - npm install gitbook
+#   - gitbook build
+#   - SNAPSHOT=$(date +%s)
+#   - TARGET="/eos/project/q/quarkdb/www/docs/${CI_COMMIT_REF_NAME}"
+#   - STAGING_AREA="$TARGET-${SNAPSHOT}"
+#   - cp -r _book "$STAGING_AREA"
+#   - packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
+#  tags:
+#   - docker-privileged
+#  retry: 2
+#  only:
+#    - branches@eos/quarkdb
+#    - tags@eos/quarkdb
 
 coverage:
   stage: publish
