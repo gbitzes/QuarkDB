@@ -15,7 +15,7 @@ make-docs:
     - dnf install -y python3-pip git
     - git submodule update --recursive --init
     - pip3 install mkdocs
-    - cp CHANGELOG.md mkdocs/release-notes.md
+    - cp CHANGELOG.md mkdocs/docs/release-notes.md
     - cd mkdocs
     - mkdocs build
     - cd ..
