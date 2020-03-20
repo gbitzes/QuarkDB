@@ -142,7 +142,7 @@ rpms:
 docs:
  stage: publish
  image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
-  dependencies:
+ dependencies:
   - make-docs
  script:
   - automount
