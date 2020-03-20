@@ -139,6 +139,29 @@ rpms:
     - branches@eos/quarkdb
     - tags@eos/quarkdb
 
+docs:
+ stage: publish
+ image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
+  dependencies:
+  - make-docs
+ script:
+  - automount
+  - cat "$STCI_PASSWORD" | kinit stci
+  - eosfusebind
+  - yum install -y git
+  - SNAPSHOT=$(date +%s)
+  - TARGET="/eos/project/q/quarkdb/www/mkdocs/${CI_COMMIT_REF_NAME}"
+  - STAGING_AREA="$TARGET-${SNAPSHOT}"
+  - tree
+  - cp -r make-docs/site "$STAGING_AREA"
+  - packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
+ tags:
+  - docker-privileged
+ retry: 2
+ only:
+   - branches@eos/quarkdb
+   - tags@eos/quarkdb
+
 #docs:
 #  stage: publish
 #  image: gitlab-registry.cern.ch/eos/gitlab-eos/cc7:latest
