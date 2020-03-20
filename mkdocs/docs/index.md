@@ -1,17 +1,23 @@
-# Welcome to MkDocs
+# QuarkDB, a highly available datastore
 
-For full documentation visit [mkdocs.org](https://mkdocs.org).
+## Introduction
 
-## Commands
+QuarkDB is a highly available datastore speaking a redis-compatible protocol, being
+developed by IT-ST at CERN.
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs help` - Print this help message.
+Highlights:
 
-## Project layout
+* Highly available through replication and the [raft](https://raft.github.io) distributed consensus algorithm.
+* Built on top of [rocksdb](https://github.com/facebook/rocksdb), a transactional key-value store.
+* Support for hashes, sets, strings, leases, `MULTI`, pubsub, and more.
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+We run it in production at CERN, serving as the namespace backend for [EOS](https://eos.web.cern.ch),
+storing metadata for billions of files.
+
+## Getting started
+
+Visit [this chapter](installation.md) for instructions on how to get a
+QuarkDB cluster up and running.
+
+There's also a short [screencast demo](https://asciinema.org/a/NdX791Ah4JVkGQnUQkBVm3dDJ),
+which shows how to set up a test cluster on localhost.

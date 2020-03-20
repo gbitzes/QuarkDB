@@ -34,3 +34,25 @@ theme:
     icon: "\uE80C"
   feature:
     tabs: true
+
+nav:
+  - Home: index.md
+  - Getting started:
+    - Installation: installation.md
+    - Configuration: configuration.md
+    - Troubleshooting: troubleshooting.md
+  - Operator's manual:
+    - Version upgrades: upgrading.md
+    - Backup & restore: backup.md
+  - Configuration:
+    - Password authentication: authentication.md
+    - Journal trimming: journal-trimming.md
+    - Resilvering: resilvering.md
+    - Fsync policy: fsync.md
+    - Bulkload mode: bulkload.md
+    - Membership updates: membership.md
+  - Advanced topics:
+    - Raft basics: raft.md
+    - Write path: write-path.md
+    - Raft extensions: raft-extensions.md
+  - Release notes: release-notes.md
