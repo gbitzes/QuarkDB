@@ -18,9 +18,11 @@ make-docs:
     - cp CHANGELOG.md mkdocs/release-notes.md
     - cd mkdocs
     - mkdocs build
+    - cd ..
+    - mv mkdocs/site "$CI_JOB_NAME"
   artifacts:
     paths:
-    - mkdocs/site
+    - "$CI_JOB_NAME"
 
 c8:
   stage: build
@@ -154,7 +156,7 @@ docs:
   - TARGET="/eos/project/q/quarkdb/www/mkdocs/${CI_COMMIT_REF_NAME}"
   - STAGING_AREA="$TARGET-${SNAPSHOT}"
   - tree
-  - cp -r make-docs/site "$STAGING_AREA"
+  - cp -r make-docs "$STAGING_AREA"
   - packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
  tags:
   - docker-privileged
