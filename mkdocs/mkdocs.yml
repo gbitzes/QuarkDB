@@ -14,8 +14,6 @@ theme:
 
   # Default values, taken from mkdocs_theme.yml
   language: en
-  feature:
-    tabs: true
   palette:
     primary: indigo
     accent: indigo
@@ -35,24 +33,28 @@ theme:
   feature:
     tabs: true
 
+extra_javascript:
+- expand-always.js
+
 nav:
-  - Home: index.md
-  - Getting started:
-    - Installation: installation.md
-    - Configuration: configuration.md
-    - Troubleshooting: troubleshooting.md
-  - Operator's manual:
-    - Version upgrades: upgrading.md
-    - Backup & restore: backup.md
-  - Configuration:
-    - Password authentication: authentication.md
-    - Journal trimming: journal-trimming.md
-    - Resilvering: resilvering.md
-    - Fsync policy: fsync.md
-    - Bulkload mode: bulkload.md
-    - Membership updates: membership.md
+  - Home:
+    - Home: index.md
+    - Getting started:
+      - Installation: installation.md
+      - Configuration: configuration.md
+      - Troubleshooting: troubleshooting.md
+    - Operator's manual:
+      - Version upgrades: upgrading.md
+      - Backup & restore: backup.md
+    - Configuration:
+      - Password authentication: authentication.md
+      - Journal trimming: journal-trimming.md
+      - Resilvering: resilvering.md
+      - Fsync policy: fsync.md
+      - Bulkload mode: bulkload.md
+      - Membership updates: membership.md
+    - Release notes: release-notes.md
   - Advanced topics:
     - Raft basics: raft.md
     - Write path: write-path.md
     - Raft extensions: raft-extensions.md
-  - Release notes: release-notes.md
