@@ -154,7 +154,7 @@ docs:
   - eosfusebind
   - yum install -y git tree
   - SNAPSHOT=$(date +%s)
-  - TARGET="/eos/project/q/quarkdb/www/mkdocs/${CI_COMMIT_REF_NAME}"
+  - TARGET="/eos/project/q/quarkdb/www/docs/${CI_COMMIT_REF_NAME}"
   - STAGING_AREA="$TARGET-${SNAPSHOT}"
   - tree
   - cp -r make-docs "$STAGING_AREA"
