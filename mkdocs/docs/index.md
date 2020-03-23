@@ -2,7 +2,7 @@
 
 ## Introduction
 
-QuarkDB is a highly available datastore speaking a redis-compatible protocol, being
+QuarkDB is a highly available datastore speaking the redis wire protocol (RESP2), being
 developed by IT-ST at CERN.
 
 Highlights:
@@ -17,7 +17,8 @@ storing metadata for billions of files.
 ## Getting started
 
 Visit [this chapter](installation.md) for instructions on how to get a
-QuarkDB cluster up and running.
+QuarkDB cluster up and running. Check out the [production checklist](checklist.md) before
+running in production.
 
 There's also a short [screencast demo](https://asciinema.org/a/NdX791Ah4JVkGQnUQkBVm3dDJ),
 which shows how to set up a test cluster on localhost.

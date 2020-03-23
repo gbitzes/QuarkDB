@@ -2,41 +2,42 @@
 
 ## Can I upgrade without downtime?
 
-**Yes**. It's possible to upgrade a QuarkDB cluster with minimal impact on availability:
-The time needed to perform a single leader election, which is typically a couple
-of seconds.
+_Yes_, a routine version upgrade should require only a single leader election.
+The recommended steps are the following:
 
-The recommended upgrade procedure is the following:
+1. Use ``raft-info`` to find out the current cluster leader.
 
-* Find out the current cluster leader by running ``raft-info`` command.
+2. For each of the _followers_, do the following _one by one_:
 
-* For each follower node, upgrade the system packages, restart the QuarkDB
-  service, and wait until the leader declares the node online, and having
-  an up-to-date journal.
-  Run ``raft-info`` on the leader node, check ``REPLICA`` section for this
-  information.
+    * Upgrade system packages.
 
-* Make sure to upgrade the followers _one by one_, not all at once. If you
-  simultaneously upgrade both followers on a 3-node cluster, for example, the
-  cluster will become unavailable due to loss of quorum until the nodes come
-  back online. This could take a couple of minutes.
+    * Restart the QuarkDB service.
 
-* Finally, upgrade and restart the leader. The followers will detect the
+    * Wait until the leader declares the node as back online, and as having an up-to-date
+    journal. Run ``raft-info`` on the leader node, check ``REPLICA`` section for this
+    information.
+
+3. Finally, upgrade and restart the leader. The followers will detect the
   absence of heartbeats, and elect a new leader among themselves within a
   few seconds.
 
-## Sub-optimal ways of upgrading QuarkDB
+Upgrading the followers _one by one_ and not all at once is **important**: If you
+simultaneously upgrade both followers on a 3-node cluster, the cluster could become
+unavailable for a couple of minutes due to loss of quorum until the nodes come back
+online.
+
+## What not to do
 
 All following methods are worse than the above, since they cause longer downtime
-than a single leader election:
+than a single leader election.
 
-* Restart the leader first. Inevitably, leadership will go to one of the followers,
-which will have to be restarted too at some point for an upgrade, resulting
+* Upgrade the leader first. Inevitably, leadership will jump to one of the followers,
+which will have to be restarted too at some point for the upgrade, resulting
 in 2 or more elections for the upgrade in total.
 
-* Restart all QuarkDB daemons at the same time: The cluster could potentially
-go down for long, depending on how quickly the processes are able to come back
-online. For large databases, this could take a couple of minutes.
+* Upgrade all QuarkDB daemons at the same time: The cluster could potentially
+go down for minutes, depending on how quickly the processes are able to come back
+online.
 
 * An upgrade when quorum is shaky: For example, if only 2 out of 3 nodes are
 available (maybe the third died from a broken hard drive), an upgrade of any

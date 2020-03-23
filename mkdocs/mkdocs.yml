@@ -33,17 +33,15 @@ theme:
   feature:
     tabs: true
 
-extra_javascript:
-- expand-always.js
-
 nav:
   - Home:
-    - Home: index.md
+    - Introduction: index.md
     - Getting started:
       - Installation: installation.md
       - Configuration: configuration.md
       - Troubleshooting: troubleshooting.md
     - Operator's manual:
+      - Checklist for production: checklist.md
       - Version upgrades: upgrading.md
       - Backup & restore: backup.md
     - Configuration:
