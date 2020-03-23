@@ -135,6 +135,7 @@ rpms:
    - cat "$STCI_PASSWORD" | kinit stci
    - eosfusebind
    - for platform in cc7 c8 fedora; do packaging/repo-manager.py --action add --base /eos/project/s/storage-ci/www/quarkdb --ref ${CI_COMMIT_REF_NAME} --packages ${platform}/RPMS/* ${platform}/SRPMS/* ; done
+   - sleep 60
   tags:
    - docker-privileged
   retry: 2
@@ -158,6 +159,7 @@ docs:
   - tree
   - cp -r make-docs "$STAGING_AREA"
   - packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
+  - sleep 60
  tags:
   - docker-privileged
  retry: 2
@@ -179,6 +181,7 @@ coverage:
    - STAGING_AREA="$TARGET-${SNAPSHOT}"
    - cp -r build/coverage-report "$STAGING_AREA"
    - packaging/replace-directory.sh "$STAGING_AREA" "$TARGET"
+   - sleep 60
   tags:
    - docker-privileged
   retry: 2
