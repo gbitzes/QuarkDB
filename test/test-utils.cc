@@ -32,6 +32,8 @@
 #include "raft/RaftJournal.hh"
 #include "QuarkDBNode.hh"
 #include "qclient/GlobalInterceptor.hh"
+#include "raft/RaftDispatcher.hh"
+
 #include <gtest/gtest.h>
 
 namespace quarkdb {
@@ -286,6 +288,22 @@ qclient::SubscriptionOptions TestCluster::reasonableSubscriptionOptions(bool pus
 
 RaftTimeouts TestCluster::timeouts() {
   return clusterTimeouts;
+}
+
+RaftVoteResponse TestCluster::issueManualVote(const RaftVoteRequest &votereq, int id) {
+  RaftStateSnapshotPtr snapshot = state(id)->getSnapshot();
+
+  // pre-vote
+  RaftVoteResponse preVoteOutcome = dispatcher(id)->requestVote(votereq, true);
+
+  // ensure nothing changed
+  EXPECT_EQ(snapshot, state(id)->getSnapshot());
+  EXPECT_EQ(snapshot->term, state(id)->getSnapshot()->term);
+
+  // real-vote
+  RaftVoteResponse realVoteOutcome = dispatcher(id)->requestVote(votereq, false);
+  EXPECT_EQ(preVoteOutcome.vote, realVoteOutcome.vote);
+  return realVoteOutcome;
 }
 
 TestNode::TestNode(RaftServer me, RaftClusterID clust, RaftTimeouts timeouts, const std::vector<RaftServer> &nd)

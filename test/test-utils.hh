@@ -21,8 +21,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
-#ifndef __QUARKDB_TEST_UTILS_H__
-#define __QUARKDB_TEST_UTILS_H__
+#ifndef QUARKDB_TEST_UTILS_HH
+#define QUARKDB_TEST_UTILS_HH
 
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -225,6 +225,11 @@ public:
   const RaftContactDetails* contactDetails(int id = 0);
   Publisher* publisher(int id = 0);
   RaftTimeouts timeouts();
+
+  // issue manual vote, with a pre-vote test before that.
+  // ensure pre-vote and vote match, and that pre-vote does not advance
+  // raft state.
+  RaftVoteResponse issueManualVote(const RaftVoteRequest &votereq, int id = 0);
 
   qclient::Options makeNoRedirectOptions(int id = 0);
   std::unique_ptr<qclient::Handshake> makeQClientHandshake(int id = 0);

@@ -404,11 +404,11 @@ TEST_F(Raft_Voting, no_double_voting_on_same_term) {
   req.lastTerm = 0;
   req.lastIndex = 2;
 
-  RaftVoteResponse resp = dispatcher()->requestVote(req);
+  RaftVoteResponse resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   req.candidate = myself(2);
-  resp = dispatcher()->requestVote(req);
+  resp =  issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 }
 
@@ -419,11 +419,11 @@ TEST_F(Raft_Voting, no_votes_for_previous_terms) {
   req.lastTerm = 0;
   req.lastIndex = 2;
 
-  RaftVoteResponse resp = dispatcher()->requestVote(req);
+  RaftVoteResponse resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   req.term = 0;
-  resp = dispatcher()->requestVote(req);
+  resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 }
 
@@ -434,7 +434,7 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   req.lastTerm = 0;
   req.lastIndex = 1;
 
-  RaftVoteResponse resp = dispatcher()->requestVote(req);
+  RaftVoteResponse resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   // add a few requests to the log
@@ -447,17 +447,17 @@ TEST_F(Raft_Voting, no_votes_to_outdated_logs) {
   req.lastTerm = 4;
   req.lastIndex = 30;
 
-  resp = dispatcher()->requestVote(req);
+  resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 
   req.lastTerm = 5;
   req.lastIndex = 2;
 
-  resp = dispatcher()->requestVote(req);
+  resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::REFUSED);
 
   req.lastIndex = 4;
-  resp = dispatcher()->requestVote(req);
+  resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 }
 
@@ -468,7 +468,7 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   req.lastTerm = 0;
   req.lastIndex = 1;
 
-  RaftVoteResponse resp = dispatcher()->requestVote(req);
+  RaftVoteResponse resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 
   // add a few requests to the log
@@ -485,18 +485,18 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   req.lastIndex = 1;
 
   // would overwrite committed entry #1
-  resp = dispatcher()->requestVote(req);
+  resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::VETO);
 
   req.lastTerm = 3;
   // contacting node is too far behind, and the addition of the leadership marker
   // would overwrite entry #2
-  resp = dispatcher()->requestVote(req);
+  resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::VETO);
 
   // contacting node's lastIndex has a higher term than local, committed lastIndex.
   req.lastTerm = 4;
-  ASSERT_EQ(dispatcher()->requestVote(req).vote, RaftVote::VETO);
+  ASSERT_EQ(issueManualVote(req).vote, RaftVote::VETO);
 
   // Case where lastIndex has been trimmed already
   RETRY_ASSERT_TRUE(stateMachine()->getLastApplied() >= 2);
@@ -504,7 +504,7 @@ TEST_F(Raft_Voting, veto_if_new_leader_would_overwrite_committed_entries) {
   req.lastIndex = 1;
   req.lastTerm = 3;
 
-  resp = dispatcher()->requestVote(req);
+  resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::VETO);
 }
 
@@ -522,7 +522,7 @@ TEST_F(Raft_Voting, smaller_log_but_last_index_higher_term) {
   req.lastTerm = 5;
   req.lastIndex = 2;
 
-  RaftVoteResponse resp = dispatcher()->requestVote(req);
+  RaftVoteResponse resp = issueManualVote(req);
   ASSERT_EQ(resp.vote, RaftVote::GRANTED);
 }
 
