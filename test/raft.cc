@@ -1064,3 +1064,15 @@ TEST(RaftHeartbeatTracker, BasicSanity) {
   ASSERT_FALSE(tracker.timeout(now+timeout));
   ASSERT_FALSE(tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
 }
+
+TEST(RaftVoteRequest, Describe) {
+  RaftVoteRequest voteReq;
+
+  voteReq.candidate = RaftServer("localhost", 1234);
+  voteReq.term = 777;
+  voteReq.lastIndex = 999;
+  voteReq.lastTerm = 555;
+
+  ASSERT_EQ("vote request [candidate=localhost:1234, term=777, lastIndex=999, lastTerm=555]", voteReq.describe(false));
+  ASSERT_EQ("pre-vote request [candidate=localhost:1234, term=777, lastIndex=999, lastTerm=555]", voteReq.describe(true));
+}

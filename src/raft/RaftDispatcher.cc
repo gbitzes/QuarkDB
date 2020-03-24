@@ -540,7 +540,7 @@ void RaftDispatcher::warnIfLagging(LogIndex leaderCommitIndex) {
 RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   std::scoped_lock lock(raftCommand);
   if(req.candidate == state.getMyself()) {
-    qdb_throw("received request vote from myself: " << state.getMyself().toString());
+    qdb_throw("received vote request from myself: " << req.describe(false));
   }
 
   if(!contains(state.getNodes(), req.candidate)) {
@@ -569,7 +569,7 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
 
   if(req.lastIndex <= journal.getCommitIndex()) {
     if(req.lastIndex < journal.getLogStart()) {
-      qdb_event("Vetoing vote request from " << req.candidate.toString() << " for term " << req.term << " because its lastIndex (" << req.lastIndex << ") is before my log start (" << journal.getLogStart() << ") - way too far behind me.");
+      qdb_event("Vetoing " << req.describe(false) << " because its lastIndex (" << req.lastIndex << ") is before my log start (" << journal.getLogStart() << ") - way too far behind me.");
       return {snapshot->term, RaftVote::VETO};
     }
 
@@ -585,25 +585,25 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
     // If the node were to ascend, it'll try and remove my req.lastIndex entry
     // as inconsistent, which I consider committed already... Veto!
     if(req.lastTerm != myLastIndexTerm) {
-      qdb_event("Vetoing vote request from " << req.candidate.toString() << " for term " << req.term << " because its ascension would overwrite my committed entry with index " << req.lastIndex);
+      qdb_event("Vetoing " << req.describe(false) << " because its ascension would overwrite my committed entry with index " << req.lastIndex);
       return {snapshot->term, RaftVote::VETO};
     }
 
     if(req.lastIndex+1 <= journal.getCommitIndex()) {
       // If the node were to ascend, it would add a leadership marker, and try
       // to remove my committed req.lastIndex+1 entry as conflicting. Veto!
-      qdb_event("Vetoing vote request from " << req.candidate.toString() << " for term " << req.term << " because its ascension would overwrite my committed entry with index " << req.lastIndex+1 << " through the addition of a leadership marker.");
+      qdb_event("Vetoing " << req.describe(false) << " because its ascension would overwrite my committed entry with index " << req.lastIndex+1 << " through the addition of a leadership marker.");
       return {snapshot->term, RaftVote::VETO};
     }
   }
 
   if(snapshot->term != req.term) {
-    qdb_event("Rejecting vote request from " << req.candidate.toString() << " for term " << req.term << " because of a term mismatch: " << snapshot->term << " vs " << req.term);
+    qdb_event("Rejecting " << req.describe(false) << " because of a term mismatch: " << snapshot->term << " vs " << req.term);
     return {snapshot->term, RaftVote::REFUSED};
   }
 
   if(!snapshot->votedFor.empty() && snapshot->votedFor != req.candidate) {
-    qdb_event("Rejecting vote request from " << req.candidate.toString() << " for term " << req.term << " since I've voted already in this term (" << snapshot->term << ") for " << snapshot->votedFor.toString());
+    qdb_event("Rejecting " << req.describe(false) << " since I've voted already in this term (" << snapshot->term << ") for " << snapshot->votedFor.toString());
     return {snapshot->term, RaftVote::REFUSED};
   }
 
@@ -615,12 +615,12 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   }
 
   if(req.lastTerm < myLastTerm) {
-    qdb_event("Rejecting vote request from " << req.candidate.toString() << " for term " << req.term << " since my log is more up-to-date, based on last term: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
+    qdb_event("Rejecting " << req.describe(false) << " since my journal is more up-to-date, based on last term: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
     return {snapshot->term, RaftVote::REFUSED};
   }
 
   if(req.lastTerm == myLastTerm && req.lastIndex < myLastIndex) {
-    qdb_event("Rejecting vote request from " << req.candidate.toString() << " for term " << req.term << " since my log is more up-to-date, based on last index: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
+    qdb_event("Rejecting " << req.describe(false) << " since my journal is more up-to-date, based on last index: " << myLastIndex << "," << myLastTerm << " vs " << req.lastIndex << "," << req.lastTerm);
     return {snapshot->term, RaftVote::REFUSED};
   }
 
@@ -637,11 +637,12 @@ RaftVoteResponse RaftDispatcher::requestVote(RaftVoteRequest &req) {
   // Therefore, register the heartbeat twice just to be sure.
   heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
   if(!state.grantVote(req.term, req.candidate)) {
-    qdb_warn("RaftState rejected the vote request from " << req.candidate.toString() << " and term " << req.term << " - probably benign race condition?");
+    qdb_warn("RaftState rejected " << req.describe(false) << " - probably benign race condition?");
     return {snapshot->term, RaftVote::REFUSED};
   }
   heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
 
+  qdb_event("Granted " << req.describe(false));
   return {snapshot->term, RaftVote::GRANTED};
 }
 

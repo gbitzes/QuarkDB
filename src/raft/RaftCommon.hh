@@ -179,6 +179,26 @@ struct RaftVoteRequest {
   RaftServer candidate;
   LogIndex lastIndex;
   RaftTerm lastTerm;
+
+  std::string describe(bool preVote) const {
+    std::ostringstream ss;
+
+    if(preVote) {
+      ss << "pre-vote request ";
+    }
+    else {
+      ss << "vote request ";
+    }
+
+    ss << "[candidate=" << candidate.toString() <<
+          ", term=" << term <<
+          ", lastIndex=" << lastIndex <<
+          ", lastTerm=" << lastTerm <<
+          "]";
+
+    return ss.str();
+  }
+
 };
 
 enum class RaftVote {
