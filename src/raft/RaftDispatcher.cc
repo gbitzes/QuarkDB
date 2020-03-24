@@ -177,6 +177,16 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
       journal.setFsyncPolicy(policy);
       return conn->ok();
     }
+    case RedisCommand::RAFT_REQUEST_PRE_VOTE: {
+      if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
+      RaftVoteRequest votereq;
+      if(!RaftParser::voteRequest(req, votereq)) {
+        return conn->err("malformed request");
+      }
+
+      RaftVoteResponse resp = requestVote(votereq, true);
+      return conn->vector(resp.toVector());
+    }
     case RedisCommand::RAFT_REQUEST_VOTE: {
       if(!conn->raftAuthorization) return conn->err("not authorized to issue raft commands");
       RaftVoteRequest votereq;
