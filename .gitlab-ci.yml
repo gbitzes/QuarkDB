@@ -15,11 +15,11 @@ make-docs:
     - dnf install -y python3-pip git
     - git submodule update --recursive --init
     - pip3 install mkdocs
-    - cp CHANGELOG.md mkdocs/docs/release-notes.md
-    - cd mkdocs
+    - cp CHANGELOG.md docs/docs/release-notes.md
+    - cd docs
     - mkdocs build
     - cd ..
-    - mv mkdocs/site "$CI_JOB_NAME"
+    - mv docs/site "$CI_JOB_NAME"
   artifacts:
     paths:
     - "$CI_JOB_NAME"

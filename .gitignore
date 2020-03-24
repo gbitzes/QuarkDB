@@ -4,4 +4,4 @@ _book/
 .vscode
 *.sublime-project
 *.sublime-workspace
-mkdocs/site
+docs/site
