@@ -60,7 +60,7 @@ public:
 
   RaftHeartbeatResponse heartbeat(const RaftHeartbeatRequest &req);
   RaftAppendEntriesResponse appendEntries(RaftAppendEntriesRequest &&req);
-  RaftVoteResponse requestVote(const RaftVoteRequest &req);
+  RaftVoteResponse requestVote(const RaftVoteRequest &req, bool preVote = false);
 
   //----------------------------------------------------------------------------
   // Return health information

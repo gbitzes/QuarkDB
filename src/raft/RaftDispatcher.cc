@@ -537,8 +537,8 @@ void RaftDispatcher::warnIfLagging(LogIndex leaderCommitIndex) {
   }
 }
 
-RaftVoteResponse RaftDispatcher::requestVote(const RaftVoteRequest &req) {
-  std::string reqDescr = req.describe(false);
+RaftVoteResponse RaftDispatcher::requestVote(const RaftVoteRequest &req, bool preVote) {
+  std::string reqDescr = req.describe(preVote);
 
   std::scoped_lock lock(raftCommand);
   if(req.candidate == state.getMyself()) {
@@ -549,7 +549,10 @@ RaftVoteResponse RaftDispatcher::requestVote(const RaftVoteRequest &req) {
     qdb_warn("Non-voting " << req.candidate.toString() << " is requesting a vote, even though it is not a voting member of the cluster as far I know.");
   }
 
-  state.observed(req.term, {});
+  if(!preVote) {
+    state.observed(req.term, {});
+  }
+
   RaftStateSnapshotPtr snapshot = state.getSnapshot();
 
   //----------------------------------------------------------------------------
@@ -599,14 +602,20 @@ RaftVoteResponse RaftDispatcher::requestVote(const RaftVoteRequest &req) {
     }
   }
 
-  if(snapshot->term != req.term) {
-    qdb_event("Rejecting " << reqDescr << " because of a term mismatch: " << snapshot->term << " vs " << req.term);
+  if(snapshot->term > req.term) {
+    qdb_event("Rejecting " << reqDescr << " because of term mismatch: " << snapshot->term << " vs " << req.term);
     return {snapshot->term, RaftVote::REFUSED};
   }
 
-  if(!snapshot->votedFor.empty() && snapshot->votedFor != req.candidate) {
-    qdb_event("Rejecting " << reqDescr << " since I've voted already in this term (" << snapshot->term << ") for " << snapshot->votedFor.toString());
-    return {snapshot->term, RaftVote::REFUSED};
+  if(!preVote) {
+    qdb_assert(snapshot->term == req.term);
+  }
+
+  if(snapshot->term == req.term) {
+    if(!snapshot->votedFor.empty() && snapshot->votedFor != req.candidate) {
+      qdb_event("Rejecting " << reqDescr << " since I've voted already in this term (" << snapshot->term << ") for " << snapshot->votedFor.toString());
+      return {snapshot->term, RaftVote::REFUSED};
+    }
   }
 
   LogIndex myLastIndex = journal.getLogSize()-1;
@@ -637,12 +646,14 @@ RaftVoteResponse RaftDispatcher::requestVote(const RaftVoteRequest &req) {
   // ... even though we JUST voted for a different node!
   //
   // Therefore, register the heartbeat twice just to be sure.
-  heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
-  if(!state.grantVote(req.term, req.candidate)) {
-    qdb_warn("RaftState rejected " << reqDescr << " - probably benign race condition?");
-    return {snapshot->term, RaftVote::REFUSED};
+  if(!preVote) {
+    heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
+    if(!state.grantVote(req.term, req.candidate)) {
+      qdb_warn("RaftState rejected " << reqDescr << " - probably benign race condition?");
+      return {snapshot->term, RaftVote::REFUSED};
+    }
+    heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
   }
-  heartbeatTracker.heartbeat(std::chrono::steady_clock::now());
 
   qdb_event("Granted " << reqDescr);
   return {snapshot->term, RaftVote::GRANTED};
