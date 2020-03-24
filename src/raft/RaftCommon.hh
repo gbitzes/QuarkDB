@@ -230,7 +230,6 @@ struct RaftVoteResponse {
 
     return ret;
   }
-
 };
 
 inline size_t calculateQuorumSize(size_t members) {

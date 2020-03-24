@@ -55,6 +55,14 @@ enum class ElectionOutcome {
   kVetoed
 };
 
+struct ElectionSingleTally {
+  bool timeout;
+  bool error;
+  RaftVoteResponse resp;
+};
+
+using ElectionTally = std::map<RaftServer, ElectionSingleTally>;
+
 class RaftElection {
 public:
   static ElectionOutcome perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails);
