@@ -42,6 +42,7 @@ nav:
       - Troubleshooting: troubleshooting.md
     - Operator's manual:
       - Checklist for production: checklist.md
+      - Disk space: disk-space.md
       - Version upgrades: upgrading.md
       - Backup & restore: backup.md
     - Configuration:
