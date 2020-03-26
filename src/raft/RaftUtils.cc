@@ -33,6 +33,41 @@
 
 namespace quarkdb {
 
+ElectionOutcome RaftElection::performPreVote(RaftVoteRequest votereq, RaftState &state, const RaftContactDetails &contactDetails) {
+  if(!votereq.candidate.empty()) {
+    qdb_throw("candidate member of votereq must be empty, it is filled out by this function");
+  }
+
+  votereq.candidate = state.getMyself();
+
+  qdb_info("Starting pre-vote round for term " << votereq.term);
+
+  std::chrono::steady_clock::time_point broadcastTimepoint = std::chrono::steady_clock::now();
+  std::vector<std::unique_ptr<RaftTalker>> talkers;
+  std::map<RaftServer, std::future<redisReplyPtr>> futures;
+
+  for(const RaftServer &node : state.getNodes()) {
+    if(node != votereq.candidate) {
+      talkers.emplace_back(new RaftTalker(node, contactDetails, "internal-vote-request"));
+      futures[node] = talkers.back()->requestVote(votereq, true);
+    }
+  }
+
+  std::chrono::steady_clock::time_point deadline = broadcastTimepoint + contactDetails.getRaftTimeouts().getHeartbeatInterval()*2;
+
+  qdb_info("Pre-vote requests have been sent off, will allow a window of "
+    << contactDetails.getRaftTimeouts().getLow().count() << "ms to receive replies.");
+
+  RaftVoteRegistry registry(votereq.term, true);
+
+  for(auto it = futures.begin(); it != futures.end(); it++) {
+    registry.registerVote(it->first, it->second, deadline);
+  }
+
+  qdb_info(registry.describeOutcome());
+  return registry.determineOutcome();
+}
+
 ElectionOutcome RaftElection::perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails) {
   if(!votereq.candidate.empty()) {
     qdb_throw("candidate member of votereq must be empty, it is filled out by this function");

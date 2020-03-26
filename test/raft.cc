@@ -811,7 +811,6 @@ TEST_F(Raft_Director, late_consensus) {
 
   // verify the node tried to ascend, and failed
   RaftStateSnapshotPtr snapshot = state(0)->getSnapshot();
-  ASSERT_GE(snapshot->term, 1);
   ASSERT_TRUE(snapshot->leader.empty());
   ASSERT_TRUE( (snapshot->status == RaftStatus::FOLLOWER) || (snapshot->status == RaftStatus::CANDIDATE) );
 

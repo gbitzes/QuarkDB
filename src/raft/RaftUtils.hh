@@ -48,16 +48,9 @@ public:
   static bool fetchLastResponse(const qclient::redisReplyPtr &source, std::vector<RaftEntry> &entries);
 };
 
-struct ElectionSingleTally {
-  bool timeout;
-  bool error;
-  RaftVoteResponse resp;
-};
-
-using ElectionTally = std::map<RaftServer, ElectionSingleTally>;
-
 class RaftElection {
 public:
+  static ElectionOutcome performPreVote(RaftVoteRequest votereq, RaftState &state, const RaftContactDetails &contactDetails);
   static ElectionOutcome perform(RaftVoteRequest votereq, RaftState &state, RaftLease &lease, const RaftContactDetails &contactDetails);
 };
 
