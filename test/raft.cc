@@ -31,6 +31,7 @@
 #include "raft/RaftJournal.hh"
 #include "raft/RaftLease.hh"
 #include "raft/RaftContactDetails.hh"
+#include "raft/RaftVoteRegistry.hh"
 #include "Version.hh"
 #include "test-utils.hh"
 #include "RedisParser.hh"
@@ -1076,3 +1077,125 @@ TEST(RaftVoteRequest, Describe) {
   ASSERT_EQ("vote request [candidate=localhost:1234, term=777, lastIndex=999, lastTerm=555]", voteReq.describe(false));
   ASSERT_EQ("pre-vote request [candidate=localhost:1234, term=777, lastIndex=999, lastTerm=555]", voteReq.describe(true));
 }
+
+TEST(RaftVoteRegistry, OneForOneAgainst) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::REFUSED));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+}
+
+TEST(RaftVoteRegistry, OneForOneVeto) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::VETO));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kVetoed);
+}
+
+TEST(RaftVoteRegistry, OneForOneNetErr) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerNetworkError(RaftServer("localhost", 7778));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+}
+
+TEST(RaftVoteRegistry, OneForOneParseErr) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerParseError(RaftServer("localhost", 7778));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+}
+
+TEST(RaftVoteRegistry, ParsingError) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerParseError(RaftServer("localhost", 7777));
+  registry.registerParseError(RaftServer("localhost", 7778));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kNotElected);
+}
+
+TEST(RaftVoteRegistry, PreVoteParsingError) {
+  RaftVoteRegistry registry(1, true);
+
+  registry.registerParseError(RaftServer("localhost", 7777));
+  registry.registerParseError(RaftServer("localhost", 7778));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+}
+
+TEST(RaftVoteRegistry, TwoAgainst) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::REFUSED));
+  registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::REFUSED));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kNotElected);
+}
+
+TEST(RaftVoteRegistry, TwoVetoes) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::VETO));
+  registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::VETO));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kVetoed);
+}
+
+TEST(RaftVoteRegistry, TwoFor) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::GRANTED));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+}
+
+TEST(RaftVoteRegistry, OneFor) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+}
+
+TEST(RaftVoteRegistry, OneAgainst) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::REFUSED));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kNotElected);
+}
+
+TEST(RaftVoteRegistry, TwoForOneAgainst) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerVote(RaftServer("localhost", 7780), RaftVoteResponse(1, RaftVote::REFUSED));
+  registry.registerVote(RaftServer("localhost", 7781), RaftVoteResponse(1, RaftVote::REFUSED));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+}
+
+TEST(RaftVoteRegistry, TwoForOneVeto) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::GRANTED));
+  registry.registerVote(RaftServer("localhost", 7780), RaftVoteResponse(1, RaftVote::REFUSED));
+  registry.registerVote(RaftServer("localhost", 7781), RaftVoteResponse(1, RaftVote::VETO));
+
+  ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kVetoed);
+}
+
+
+

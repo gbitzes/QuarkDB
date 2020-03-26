@@ -48,13 +48,6 @@ public:
   static bool fetchLastResponse(const qclient::redisReplyPtr &source, std::vector<RaftEntry> &entries);
 };
 
-
-enum class ElectionOutcome {
-  kElected,
-  kNotElected,
-  kVetoed
-};
-
 struct ElectionSingleTally {
   bool timeout;
   bool error;

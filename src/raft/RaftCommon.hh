@@ -208,6 +208,9 @@ enum class RaftVote {
 };
 
 struct RaftVoteResponse {
+  RaftVoteResponse(RaftTerm tr, RaftVote vt) : term(tr), vote(vt) {}
+  RaftVoteResponse() : term(0), vote(RaftVote::VETO) {}
+
   RaftTerm term;
   RaftVote vote;
 
@@ -230,6 +233,12 @@ struct RaftVoteResponse {
 
     return ret;
   }
+};
+
+enum class ElectionOutcome {
+  kElected,
+  kNotElected,
+  kVetoed
 };
 
 inline size_t calculateQuorumSize(size_t members) {

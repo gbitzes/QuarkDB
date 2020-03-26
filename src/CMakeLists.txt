@@ -59,11 +59,12 @@ add_library(XrdQuarkDB SHARED
   raft/RaftTimeouts.cc                    raft/RaftTimeouts.hh
   raft/RaftDirector.cc                    raft/RaftDirector.hh
   raft/RaftCommitTracker.cc               raft/RaftCommitTracker.hh
-  raft/RaftWriteTracker.cc                raft/RaftWriteTracker.hh
   raft/RaftGroup.cc                       raft/RaftGroup.hh
                                           raft/RaftMembers.hh
   raft/RaftTrimmer.cc                     raft/RaftTrimmer.hh
   raft/RaftLease.cc                       raft/RaftLease.hh
+  raft/RaftVoteRegistry.cc                raft/RaftVoteRegistry.hh
+  raft/RaftWriteTracker.cc                raft/RaftWriteTracker.hh
 
   recovery/RecoveryDispatcher.cc          recovery/RecoveryDispatcher.hh
   recovery/RecoveryEditor.cc              recovery/RecoveryEditor.hh
