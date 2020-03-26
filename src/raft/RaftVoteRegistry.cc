@@ -23,6 +23,8 @@
 
 #include "raft/RaftVoteRegistry.hh"
 #include "raft/RaftUtils.hh"
+#include "raft/RaftState.hh"
+#include "raft/RaftLease.hh"
 
 namespace quarkdb {
 
@@ -224,6 +226,28 @@ std::string RaftVoteRegistry::describeOutcome() const {
   }
 
   return ss.str();
+}
+
+//------------------------------------------------------------------------------
+// Observe terms and leases
+//------------------------------------------------------------------------------
+void RaftVoteRegistry::observeTermsAndLeases(RaftState &state, RaftLease &lease,
+    std::chrono::steady_clock::time_point broadcastTimepoint) {
+
+  qdb_assert(!mPreVote);
+
+  for(auto it = mContents.begin(); it != mContents.end(); it++) {
+    const SingleVote& sv = it->second;
+
+    if(sv.netError || sv.parseError) {
+      continue;
+    }
+
+    state.observed(sv.resp.term, {});
+    if(sv.resp.vote == RaftVote::GRANTED) {
+      lease.getHandler(it->first).heartbeat(broadcastTimepoint);
+    }
+  }
 }
 
 }

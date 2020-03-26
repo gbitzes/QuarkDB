@@ -30,6 +30,8 @@
 
 namespace quarkdb {
 
+class RaftState; class RaftLease;
+
 //------------------------------------------------------------------------------
 // Helper class for counting votes received during an election
 //------------------------------------------------------------------------------
@@ -94,6 +96,13 @@ public:
   // Describe outcome
   //----------------------------------------------------------------------------
   std::string describeOutcome() const;
+
+  //----------------------------------------------------------------------------
+  // Observe terms and leases
+  //----------------------------------------------------------------------------
+  void observeTermsAndLeases(RaftState &state, RaftLease &lease,
+    std::chrono::steady_clock::time_point broadcastTimepoint);
+
 
 private:
   RaftTerm mTerm;

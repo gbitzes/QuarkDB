@@ -1078,6 +1078,13 @@ TEST(RaftVoteRequest, Describe) {
   ASSERT_EQ("pre-vote request [candidate=localhost:1234, term=777, lastIndex=999, lastTerm=555]", voteReq.describe(true));
 }
 
+TEST(RaftVoteRegistry, DoubleVote) {
+  RaftVoteRegistry registry(1, false);
+
+  registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+  ASSERT_THROW(registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::REFUSED)), FatalException);
+}
+
 TEST(RaftVoteRegistry, OneForOneAgainst) {
   RaftVoteRegistry registry(1, false);
 
