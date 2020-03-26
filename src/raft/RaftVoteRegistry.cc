@@ -110,6 +110,61 @@ ElectionOutcome RaftVoteRegistry::determineOutcome() const {
 }
 
 //------------------------------------------------------------------------------
+// Count a specific type of vote
+//------------------------------------------------------------------------------
+size_t RaftVoteRegistry::count(RaftVote vote) const {
+  size_t num = 0;
+
+  for(auto it = mContents.begin(); it != mContents.end(); it++) {
+    const SingleVote& sv = it->second;
+
+    if(sv.netError || sv.parseError) {
+      continue;
+    }
+
+    if(sv.resp.vote == vote) {
+      num++;
+    }
+  }
+
+  return num;
+}
+
+//------------------------------------------------------------------------------
+// Count network errors
+//------------------------------------------------------------------------------
+size_t RaftVoteRegistry::countNetworkError() const {
+  size_t num = 0;
+
+  for(auto it = mContents.begin(); it != mContents.end(); it++) {
+    const SingleVote& sv = it->second;
+
+    if(sv.netError) {
+      num++;
+    }
+  }
+
+  return num;
+}
+
+//------------------------------------------------------------------------------
+// Count parse errors
+//------------------------------------------------------------------------------
+size_t RaftVoteRegistry::countParseError() const {
+  size_t num = 0;
+
+  for(auto it = mContents.begin(); it != mContents.end(); it++) {
+    const SingleVote& sv = it->second;
+
+    if(sv.parseError) {
+      num++;
+    }
+  }
+
+  return num;
+}
+
+//------------------------------------------------------------------------------
 // Register vote
 //------------------------------------------------------------------------------
 void RaftVoteRegistry::registerVote(const RaftServer &srv, std::future<qclient::redisReplyPtr> &fut, std::chrono::steady_clock::time_point deadline) {
@@ -132,6 +187,43 @@ void RaftVoteRegistry::registerVote(const RaftServer &srv, std::future<qclient::
   }
 
   return registerVote(srv, resp);
+}
+
+//------------------------------------------------------------------------------
+// Describe outcome
+//------------------------------------------------------------------------------
+std::string RaftVoteRegistry::describeOutcome() const {
+  std::ostringstream ss;
+
+  if(mPreVote) {
+    ss << "Pre-vote round";
+  }
+  else {
+    ss << "Election round";
+  }
+
+  const ElectionOutcome outcome = determineOutcome();
+  const size_t granted = count(RaftVote::GRANTED);
+  const size_t refused = count(RaftVote::REFUSED);
+  const size_t veto = count(RaftVote::VETO);
+
+  if(outcome == ElectionOutcome::kElected) {
+    ss << " successful";
+  }
+  else {
+    ss << " unsuccessful";
+  }
+
+  ss << " for term " << mTerm << ". Contacted " << mContents.size() << " nodes,";
+  ss << " received " << granted+refused+veto << " replies with a tally of ";
+  ss << granted << " positive votes, " << refused << " refused votes, and ";
+  ss << veto << " vetoes.";
+
+  if(granted >= calculateQuorumSize(mContents.size()+1) && veto > 0) {
+    qdb_critical("Received a quorum of positive votes (" << granted << ") plus vetoes: " << veto);
+  }
+
+  return ss.str();
 }
 
 }

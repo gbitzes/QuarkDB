@@ -1084,6 +1084,12 @@ TEST(RaftVoteRegistry, OneForOneAgainst) {
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
   registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::REFUSED));
 
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
+
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
 }
 
@@ -1093,7 +1099,15 @@ TEST(RaftVoteRegistry, OneForOneVeto) {
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
   registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::VETO));
 
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 1u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
+
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kVetoed);
+  ASSERT_EQ(registry.describeOutcome(),
+    "Election round unsuccessful for term 1. Contacted 2 nodes, received 2 replies with a tally of 1 positive votes, 0 refused votes, and 1 vetoes.");
 }
 
 TEST(RaftVoteRegistry, OneForOneNetErr) {
@@ -1101,6 +1115,12 @@ TEST(RaftVoteRegistry, OneForOneNetErr) {
 
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
   registry.registerNetworkError(RaftServer("localhost", 7778));
+
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 1u);
+  ASSERT_EQ(registry.countParseError(), 0u);
 
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
 }
@@ -1111,6 +1131,12 @@ TEST(RaftVoteRegistry, OneForOneParseErr) {
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
   registry.registerParseError(RaftServer("localhost", 7778));
 
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 1u);
+
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
 }
 
@@ -1119,6 +1145,12 @@ TEST(RaftVoteRegistry, ParsingError) {
 
   registry.registerParseError(RaftServer("localhost", 7777));
   registry.registerParseError(RaftServer("localhost", 7778));
+
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 2u);
 
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kNotElected);
 }
@@ -1129,7 +1161,15 @@ TEST(RaftVoteRegistry, PreVoteParsingError) {
   registry.registerParseError(RaftServer("localhost", 7777));
   registry.registerParseError(RaftServer("localhost", 7778));
 
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 2u);
+
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+  ASSERT_EQ(registry.describeOutcome(),
+    "Pre-vote round successful for term 1. Contacted 2 nodes, received 0 replies with a tally of 0 positive votes, 0 refused votes, and 0 vetoes.");
 }
 
 TEST(RaftVoteRegistry, TwoAgainst) {
@@ -1137,6 +1177,12 @@ TEST(RaftVoteRegistry, TwoAgainst) {
 
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::REFUSED));
   registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::REFUSED));
+
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 2u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
 
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kNotElected);
 }
@@ -1147,6 +1193,12 @@ TEST(RaftVoteRegistry, TwoVetoes) {
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::VETO));
   registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::VETO));
 
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 2u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
+
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kVetoed);
 }
 
@@ -1156,13 +1208,27 @@ TEST(RaftVoteRegistry, TwoFor) {
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
   registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::GRANTED));
 
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 2u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
+
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
+  ASSERT_EQ(registry.describeOutcome(),
+    "Election round successful for term 1. Contacted 2 nodes, received 2 replies with a tally of 2 positive votes, 0 refused votes, and 0 vetoes.");
 }
 
 TEST(RaftVoteRegistry, OneFor) {
   RaftVoteRegistry registry(1, false);
 
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::GRANTED));
+
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
 
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
 }
@@ -1171,6 +1237,12 @@ TEST(RaftVoteRegistry, OneAgainst) {
   RaftVoteRegistry registry(1, false);
 
   registry.registerVote(RaftServer("localhost", 7777), RaftVoteResponse(1, RaftVote::REFUSED));
+
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 0u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
 
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kNotElected);
 }
@@ -1183,6 +1255,12 @@ TEST(RaftVoteRegistry, TwoForOneAgainst) {
   registry.registerVote(RaftServer("localhost", 7780), RaftVoteResponse(1, RaftVote::REFUSED));
   registry.registerVote(RaftServer("localhost", 7781), RaftVoteResponse(1, RaftVote::REFUSED));
 
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 2u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 2u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 0u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
+
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kElected);
 }
 
@@ -1193,6 +1271,12 @@ TEST(RaftVoteRegistry, TwoForOneVeto) {
   registry.registerVote(RaftServer("localhost", 7778), RaftVoteResponse(1, RaftVote::GRANTED));
   registry.registerVote(RaftServer("localhost", 7780), RaftVoteResponse(1, RaftVote::REFUSED));
   registry.registerVote(RaftServer("localhost", 7781), RaftVoteResponse(1, RaftVote::VETO));
+
+  ASSERT_EQ(registry.count(RaftVote::GRANTED), 2u);
+  ASSERT_EQ(registry.count(RaftVote::REFUSED), 1u);
+  ASSERT_EQ(registry.count(RaftVote::VETO), 1u);
+  ASSERT_EQ(registry.countNetworkError(), 0u);
+  ASSERT_EQ(registry.countParseError(), 0u);
 
   ASSERT_EQ(registry.determineOutcome(), ElectionOutcome::kVetoed);
 }
