@@ -9,6 +9,12 @@ corruption was flaky, and would sometimes report a problem where none existed.
 Many thanks to Franck Eyraud (JRC) for the bug report concerning erroneous ``MANIFEST``-related
 warning.
 
+### Improvements
+- Implementation of an optional part of raft, pre-vote. This should prevent partitioned,
+or otherwise flaky rejoining servers from triggering needless elections. A node will first issue
+an experimental voting round before advancing its term, and start campaigning
+for real only if it has a good chance of winning.
+
 ## 0.4.2 (2020-03-12)
 
 ### Bug fixes
