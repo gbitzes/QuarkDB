@@ -47,7 +47,7 @@ public:
                                            RaftTerm prevTerm, LogIndex commit,
                                            const std::vector<RaftSerializedEntry> &entries);
 
-  std::future<redisReplyPtr> requestVote(const RaftVoteRequest &req, bool preVote = false);
+  std::future<redisReplyPtr> requestVote(const RaftVoteRequest &req);
   std::future<redisReplyPtr> fetch(LogIndex index);
 
   std::future<redisReplyPtr> resilveringStart(const ResilveringEventID &id);

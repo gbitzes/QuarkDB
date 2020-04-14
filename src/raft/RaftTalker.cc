@@ -203,15 +203,10 @@ std::future<redisReplyPtr> RaftTalker::appendEntries(
   return qcl->execute(payload);
 }
 
-std::future<redisReplyPtr> RaftTalker::requestVote(const RaftVoteRequest &req, bool preVote) {
+std::future<redisReplyPtr> RaftTalker::requestVote(const RaftVoteRequest &req) {
   RedisRequest payload;
 
-  if(preVote) {
-    payload.emplace_back("RAFT_REQUEST_PRE_VOTE");
-  }
-  else {
-    payload.emplace_back("RAFT_REQUEST_VOTE");
-  }
+  payload.emplace_back("RAFT_REQUEST_VOTE");
   payload.emplace_back(std::to_string(req.term));
   payload.emplace_back(req.candidate.toString());
   payload.emplace_back(std::to_string(req.lastIndex));
