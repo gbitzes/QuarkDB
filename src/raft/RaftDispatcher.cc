@@ -555,8 +555,28 @@ RaftVoteResponse RaftDispatcher::requestVote(const RaftVoteRequest &req, bool pr
     qdb_throw("received vote request from myself: " << reqDescr);
   }
 
+  //----------------------------------------------------------------------------
+  // Defend against disruptive servers.
+  // A node that has been removed from the cluster will often not know that,
+  // and will repeatedly start elections trying to depose the current leader,
+  // effectively making the cluster unavailable.
+  //
+  // If this node is not part of the cluster (that I know of) and I am already
+  // in contact with the leader, completely ignore its vote request, and don't
+  // take its term into consideration.
+  //
+  // If I don't have a leader, the situation is different though. Maybe this
+  // node was added later, and I just don't know about it yet. Process the
+  // request normally, since there's no leader to depose of, anyway.
+  //----------------------------------------------------------------------------
+
   if(!contains(state.getNodes(), req.candidate)) {
-    qdb_warn("Non-voting " << req.candidate.toString() << " is requesting a vote, even though it is not a voting member of the cluster as far I know.");
+    RaftStateSnapshotPtr snapshot = state.getSnapshot();
+    if(!snapshot->leader.empty()) {
+      qdb_misconfig("Non-voting " << req.candidate.toString() << " attempted to disrupt the cluster by starting an election for term " << req.term << ". Ignoring its request - shut down that node!");
+      return {snapshot->term, RaftVote::VETO};
+    }
+    qdb_warn("Non-voting " << req.candidate.toString() << " is requesting a vote, even though it is not a voting member of the cluster as far I know. Will still process its request, since I have no leader.");
   }
 
   if(!preVote) {
