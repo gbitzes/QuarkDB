@@ -127,19 +127,18 @@ void RaftDirector::runForLeader() {
   // it could have changed in-between
   RaftStateSnapshotPtr snapshot = state.getSnapshot();
 
-  // advance the term by one, become a candidate.
-  if(!state.observed(snapshot->term+1, {})) return;
-  if(!state.becomeCandidate(snapshot->term+1)) return;
-
   // prepare vote request
   RaftVoteRequest votereq;
   votereq.term = snapshot->term+1;
   votereq.lastIndex = journal.getLogSize()-1;
   if(!journal.fetch(votereq.lastIndex, votereq.lastTerm).ok()) {
     qdb_critical("Unable to fetch journal entry " << votereq.lastIndex << " when running for leader");
-    state.dropOut(snapshot->term+1);
     return;
   }
+
+  // advance the term by one, become a candidate.
+  if(!state.observed(snapshot->term+1, {})) return;
+  if(!state.becomeCandidate(snapshot->term+1)) return;
 
   ElectionOutcome electionOutcome = RaftElection::perform(votereq, state, lease, contactDetails);
 
