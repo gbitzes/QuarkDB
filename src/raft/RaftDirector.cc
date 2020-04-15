@@ -136,7 +136,26 @@ void RaftDirector::runForLeader() {
     return;
   }
 
-  // advance the term by one, become a candidate.
+  //----------------------------------------------------------------------------
+  // vvvvvvvvvvvvvvvvvvvvvvv OPTIONAL PART OF RAFT vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+  //----------------------------------------------------------------------------
+  ElectionOutcome prevoteOutcome = RaftElection::performPreVote(votereq, state, contactDetails);
+  if(prevoteOutcome == ElectionOutcome::kVetoed) {
+    lastHeartbeatBeforeVeto = lastHeartbeat;
+    qdb_info("Pre-vote round for term " << snapshot->term + 1 << " resulted in a veto. This means, the next leader of this cluster cannot be me. Stopping election attempts until I receive a heartbeat.");
+  }
+
+  if(prevoteOutcome != ElectionOutcome::kElected) return;
+  if(!state.isSnapshotCurrent(snapshot.get())) {
+    qdb_info("Raft state has progressed since successful pre-vote round, retrying from scratch.");
+    return;
+  }
+
+  //----------------------------------------------------------------------------
+  // ^^^^^^^^^^^^^^^^^^^^^^^ OPTIONAL PART OF RAFT ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  //----------------------------------------------------------------------------
+
+  // pre-vote succeeded, advance the term by one, become a candidate.
   if(!state.observed(snapshot->term+1, {})) return;
   if(!state.becomeCandidate(snapshot->term+1)) return;
 
