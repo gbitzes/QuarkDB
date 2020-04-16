@@ -248,15 +248,15 @@ inline size_t calculateQuorumSize(size_t members) {
 struct ReplicaStatus {
   RaftServer target;
   bool online;
-  LogIndex nextIndex;
+  LogIndex logSize;
   std::string version;
 
   ReplicaStatus() {}
   ReplicaStatus(const RaftServer &trg, bool onl, LogIndex indx, const std::string &ver = "N/A")
-  : target(trg), online(onl), nextIndex(indx), version(ver) {}
+  : target(trg), online(onl), logSize(indx), version(ver) {}
 
   bool upToDate(LogIndex leaderLogSize) const {
-    return online && (leaderLogSize - nextIndex < 30000);
+    return online && (leaderLogSize - logSize < 30000);
   }
 
   std::string toString(LogIndex currentLogSize) const {
@@ -278,7 +278,7 @@ struct ReplicaStatus {
         ss << "LAGGING    | ";
       }
 
-      ss << "NEXT-INDEX " << nextIndex;
+      ss << "LOG-SIZE " << logSize;
       ss << " | VERSION " << version;
     }
     else {

@@ -270,7 +270,7 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
           replicationStatus.removeReplica(srv);
         }
 
-        if(!replicationStatus.quorumUpToDate(leaderStatus.nextIndex)) {
+        if(!replicationStatus.quorumUpToDate(leaderStatus.logSize)) {
           return conn->err("membership update blocked, new cluster would not have an up-to-date quorum");
         }
         rc = journal.removeMember(snapshot->term, srv, err);

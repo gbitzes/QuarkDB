@@ -91,12 +91,12 @@ private:
   RaftServer target;
   RaftStateSnapshotPtr snapshot;
 
-  void updateStatus(bool online, LogIndex nextIndex);
+  void updateStatus(bool online, LogIndex logSize);
 
   // Values to report when getStatus is called. Updated infrequently to avoid
   // overhead of atomics.
   std::atomic<bool> statusOnline {false};
-  std::atomic<LogIndex> statusNextIndex {-1};
+  std::atomic<LogIndex> statusLogSize {-1};
   Synchronized<std::string> statusNodeVersion {"N/A"};
 
   RaftJournal &journal;

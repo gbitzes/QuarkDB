@@ -132,7 +132,7 @@ TEST(Utils, replication_status) {
   ASSERT_THROW(status.addReplica(replica), FatalException);
 
   replica.target = RaftServer("localhost", 456);
-  replica.nextIndex = 20000;
+  replica.logSize = 20000;
   status.addReplica(replica);
 
   replica.target = RaftServer("localhost", 567);

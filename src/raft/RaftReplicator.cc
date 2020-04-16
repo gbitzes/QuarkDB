@@ -274,6 +274,7 @@ void RaftReplicaTracker::monitorAckReception(ThreadAssistant &assistant) {
     }
 
     // All clear, acknowledgement is OK, carry on.
+    updateStatus(true, response.logSize);
     lastContact.heartbeat(item.sent);
 
     // Only update the commit tracker once we're replicating entries from our
@@ -388,7 +389,6 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
     // if there are more entries.
     nextIndex += payloadSize;
 
-    updateStatus(true, nextIndex);
     if(nextIndex >= journal.getLogSize()) {
       journal.waitForUpdates(nextIndex, contactDetails.getRaftTimeouts().getHeartbeatInterval());
     }
@@ -402,13 +402,13 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
   return nextIndex;
 }
 
-void RaftReplicaTracker::updateStatus(bool online, LogIndex nextIndex) {
+void RaftReplicaTracker::updateStatus(bool online, LogIndex logSize) {
   statusOnline = online;
-  statusNextIndex = nextIndex;
+  statusLogSize = logSize;
 }
 
 ReplicaStatus RaftReplicaTracker::getStatus() {
-  return { target, statusOnline, statusNextIndex, statusNodeVersion.get() };
+  return { target, statusOnline, statusLogSize, statusNodeVersion.get() };
 }
 
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
@@ -589,7 +589,7 @@ nextRound:
       trimmingBlock.enforce(nextIndex-2);
     }
 
-    updateStatus(onlineTracker.isOnline(), nextIndex);
+    updateStatus(onlineTracker.isOnline(), resp.logSize);
     if(!onlineTracker.isOnline() || needResilvering) {
       state.wait(contactDetails.getRaftTimeouts().getHeartbeatInterval());
     }
