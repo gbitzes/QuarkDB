@@ -256,7 +256,9 @@ struct ReplicaStatus {
   : target(trg), online(onl), logSize(indx), version(ver) {}
 
   bool upToDate(LogIndex leaderLogSize) const {
-    return online && (leaderLogSize - logSize < 30000);
+    if(!online) return false;
+    if(logSize < 0) return false;
+    return (leaderLogSize - logSize < 30000);
   }
 
   std::string toString(LogIndex currentLogSize) const {
@@ -278,7 +280,15 @@ struct ReplicaStatus {
         ss << "LAGGING    | ";
       }
 
-      ss << "LOG-SIZE " << logSize;
+      ss << "LOG-SIZE ";
+
+      if(logSize < 0) {
+        ss << "N/A";
+      }
+      else {
+        ss << logSize;
+      }
+
       ss << " | VERSION " << version;
     }
     else {

@@ -124,6 +124,34 @@ TEST(Utils, resilvering_history_parsing) {
   ASSERT_FALSE(history3 == history);
 }
 
+TEST(Utils, ReplicaStatus) {
+  ReplicaStatus replica { RaftServer("localhost", 123), false, -1 };
+  ASSERT_FALSE(replica.upToDate(1));
+  ASSERT_FALSE(replica.upToDate(100));
+  ASSERT_FALSE(replica.upToDate(1000));
+  ASSERT_FALSE(replica.upToDate(10000));
+  ASSERT_FALSE(replica.upToDate(100000));
+  ASSERT_EQ(replica.toString(123), "localhost:123 | OFFLINE");
+
+  replica = ReplicaStatus { RaftServer("localhost", 123), true, -1, "9.9.9" };
+  ASSERT_FALSE(replica.upToDate(1));
+  ASSERT_FALSE(replica.upToDate(100));
+  ASSERT_FALSE(replica.upToDate(1000));
+  ASSERT_FALSE(replica.upToDate(10000));
+  ASSERT_FALSE(replica.upToDate(100000));
+  ASSERT_EQ(replica.toString(123), "localhost:123 | ONLINE | LAGGING    | LOG-SIZE N/A | VERSION 9.9.9");
+
+  replica = ReplicaStatus { RaftServer("localhost", 123), true, 10 };
+  ASSERT_TRUE(replica.upToDate(100));
+  ASSERT_TRUE(replica.upToDate(1000));
+  ASSERT_TRUE(replica.upToDate(10000));
+  ASSERT_FALSE(replica.upToDate(100000));
+  ASSERT_EQ(replica.toString(123), "localhost:123 | ONLINE | UP-TO-DATE | LOG-SIZE 10 | VERSION N/A");
+  ASSERT_EQ(replica.toString(30000), "localhost:123 | ONLINE | UP-TO-DATE | LOG-SIZE 10 | VERSION N/A");
+  ASSERT_EQ(replica.toString(30009), "localhost:123 | ONLINE | UP-TO-DATE | LOG-SIZE 10 | VERSION N/A");
+  ASSERT_EQ(replica.toString(30010), "localhost:123 | ONLINE | LAGGING    | LOG-SIZE 10 | VERSION N/A");
+}
+
 TEST(Utils, replication_status) {
   ReplicationStatus status;
   ReplicaStatus replica { RaftServer("localhost", 123), true, 10000 };
