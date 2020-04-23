@@ -1147,3 +1147,39 @@ TEST(StringUtils, endsWith) {
   ASSERT_FALSE(StringUtils::endsWith("some-string-123", "-124"));
   ASSERT_FALSE(StringUtils::endsWith("some-string-123", "strin4-123"));
 }
+
+TEST(FileUtils, RecursiveFileCount) {
+  ASSERT_EQ(system("rm -rf /tmp/qdb-test-filecount/"), 0);
+  ASSERT_EQ(system("mkdir /tmp/qdb-test-filecount/"), 0);
+  ASSERT_EQ(system("touch /tmp/qdb-test-filecount/1"), 0);
+
+  std::string error;
+  size_t nitems;
+
+  ASSERT_FALSE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/dir1/", error, nitems));
+  ASSERT_EQ(error, "countFilesInDirectoryRecursively failed, unable to iterate directory: Unable to opendir: /tmp/qdb-test-filecount/dir1/");
+
+  ASSERT_TRUE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/", error, nitems));
+  ASSERT_EQ(nitems, 1u);
+
+  ASSERT_EQ(system("touch /tmp/qdb-test-filecount/2"), 0);
+  ASSERT_TRUE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/", error, nitems));
+  ASSERT_EQ(nitems, 2u);
+
+  ASSERT_EQ(system("mkdir /tmp/qdb-test-filecount/dir1/"), 0);
+  ASSERT_TRUE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/", error, nitems));
+  ASSERT_EQ(nitems, 2u);
+
+  ASSERT_EQ(system("touch /tmp/qdb-test-filecount/dir1/3"), 0);
+  ASSERT_TRUE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/", error, nitems));
+  ASSERT_EQ(nitems, 3u);
+
+  ASSERT_EQ(system("mkdir -p /tmp/qdb-test-filecount/dir1/dir2/dir3/dir4/dir5"), 0);
+  ASSERT_TRUE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/", error, nitems));
+  ASSERT_EQ(nitems, 3u);
+
+  ASSERT_EQ(system("touch /tmp/qdb-test-filecount/dir1/dir2/dir3/dir4/dir5/4"), 0);
+  ASSERT_TRUE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/", error, nitems));
+  ASSERT_EQ(nitems, 4u);
+
+}

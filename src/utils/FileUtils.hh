@@ -40,6 +40,7 @@ void write_file_or_die(std::string_view path, std::string_view contents);
 void rename_directory_or_die(const std::string &source, const std::string &destination);
 bool areFilePermissionsSecure(mode_t mode);
 bool readPasswordFile(const std::string &path, std::string &contents);
+bool countFilesInDirectoryRecursively(const std::string &path, std::string &err, size_t &nfiles);
 
 }
 

@@ -21,6 +21,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.*
  ************************************************************************/
 
+#include "utils/DirectoryIterator.hh"
 #include "utils/FileUtils.hh"
 #include "Utils.hh"
 #include <sys/stat.h>
@@ -217,5 +218,36 @@ void rename_directory_or_die(const std::string &source, const std::string &desti
   }
 }
 
+bool countFilesInDirectoryRecursively(const std::string &path, std::string &err, size_t &nfiles) {
+  size_t retval = 0;
+  DirectoryIterator iterator(path);
+
+  struct dirent *entry;
+  while( (entry = iterator.next()) ) {
+    if(strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
+
+    std::string currentPath = SSTR(path << "/" << entry->d_name);
+
+    if(entry->d_type == DT_DIR) {
+      size_t dirfiles = 0;
+      if(!countFilesInDirectoryRecursively(currentPath, err, dirfiles)) {
+        return false;
+      }
+
+      retval += dirfiles;
+    }
+    else {
+      retval++;
+    }
+  }
+
+  if(!iterator.ok()) {
+    err = SSTR("countFilesInDirectoryRecursively failed, unable to iterate directory: " << iterator.err());
+    return false;
+  }
+
+  nfiles = retval;
+  return true;
+}
 
 }
