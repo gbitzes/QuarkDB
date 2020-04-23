@@ -98,6 +98,7 @@ private:
   std::atomic<bool> statusOnline {false};
   std::atomic<LogIndex> statusLogSize {-1};
   Synchronized<std::string> statusNodeVersion {"N/A"};
+  std::atomic<int> statusResilveringProgress {-1};
 
   RaftJournal &journal;
   RaftState &state;

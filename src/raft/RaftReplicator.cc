@@ -405,10 +405,17 @@ LogIndex RaftReplicaTracker::streamUpdates(RaftTalker &talker, LogIndex firstNex
 void RaftReplicaTracker::updateStatus(bool online, LogIndex logSize) {
   statusOnline = online;
   statusLogSize = logSize;
+
+  if(resilverer) {
+    statusResilveringProgress = resilverer->getProgress();
+  }
+  else {
+    statusResilveringProgress = -1;
+  }
 }
 
 ReplicaStatus RaftReplicaTracker::getStatus() {
-  return { target, statusOnline, statusLogSize, statusNodeVersion.get() };
+  return { target, statusOnline, statusLogSize, statusNodeVersion.get(), statusResilveringProgress };
 }
 
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {

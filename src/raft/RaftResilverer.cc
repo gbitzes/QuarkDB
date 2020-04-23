@@ -123,6 +123,7 @@ bool RaftResilverer::copyFile(const std::string &path, const std::string &prefix
     err = SSTR("Error when coping " << path << ": " << verifier.err());
   }
 
+  mFilesSent++;
   return verifier.ok();
 }
 

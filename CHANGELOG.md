@@ -11,6 +11,7 @@ corruption was flaky, and would sometimes report a problem where none existed.
 or otherwise flaky rejoining servers from triggering unnecessary and disruptive elections.
 A node will first issue an experimental voting round before advancing its term, and start campaigning
 for earnest only if it has a good chance of winning.
+- Show resilvering progress in ``raft-info``.
 
 Many thanks to Franck Eyraud (JRC) for the bug report concerning erroneous ``MANIFEST``-related
 warning.

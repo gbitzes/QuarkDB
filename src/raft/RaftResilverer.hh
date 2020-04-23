@@ -54,7 +54,12 @@ public:
   ~RaftResilverer();
 
   ResilveringStatus getStatus();
+  size_t getProgress() const {
+    return mFilesSent;
+  }
+
 private:
+  std::atomic<size_t> mFilesSent {0};
   ShardDirectory &shardDirectory;
   RaftServer target;
   std::unique_ptr<RaftTrimmingBlock> trimmingBlock;

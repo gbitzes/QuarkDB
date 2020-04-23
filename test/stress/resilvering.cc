@@ -112,6 +112,8 @@ TEST_F(Resilvering, manual) {
   // Let's drive the resilvering logic of #2 manually.
   RaftResilverer resilverer(*shardDirectory(0), myself(2), *contactDetails(), *trimmer(0));
   RETRY_ASSERT_EQ(resilverer.getStatus().state, ResilveringState::SUCCEEDED);
+  ASSERT_GE(resilverer.getProgress(), 4u);
+  qdb_info("Files copied: " << resilverer.getProgress());
 
   // Ensure the data is there after resilvering.
   for(size_t i = 0; i < NENTRIES; i++) {
