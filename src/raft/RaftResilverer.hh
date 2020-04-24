@@ -28,6 +28,7 @@
 #include "utils/AssistedThread.hh"
 #include "Common.hh"
 #include "raft/RaftTalker.hh"
+#include "utils/Synchronized.hh"
 
 namespace quarkdb {
 
@@ -54,12 +55,19 @@ public:
   ~RaftResilverer();
 
   ResilveringStatus getStatus();
+
   size_t getProgress() const {
     return mFilesSent;
   }
 
+  size_t getTotalToSend() const {
+    return mFilesTotal;
+  }
+
 private:
   std::atomic<size_t> mFilesSent {0};
+  std::atomic<size_t> mFilesTotal {0};
+
   ShardDirectory &shardDirectory;
   RaftServer target;
   std::unique_ptr<RaftTrimmingBlock> trimmingBlock;

@@ -28,6 +28,7 @@
 #include "Utils.hh"
 #include "utils/Uuid.hh"
 #include "utils/DirectoryIterator.hh"
+#include "utils/FileUtils.hh"
 #include <dirent.h>
 #include <fstream>
 
@@ -180,6 +181,13 @@ void RaftResilverer::main(ThreadAssistant &assistant) {
     setStatus(ResilveringState::FAILED, SSTR("Could not create snapshot: " << err));
     return;
   }
+
+  size_t totalFiles = 0;
+  if(!countFilesInDirectoryRecursively(shardSnapshot->getPath(), err, totalFiles)) {
+    setStatus(ResilveringState::FAILED, err);
+  }
+
+  mFilesTotal = totalFiles;
 
   if(!copyDirectory(shardSnapshot->getPath(), "", err)) {
     setStatus(ResilveringState::FAILED, err);

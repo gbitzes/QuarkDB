@@ -115,6 +115,8 @@ TEST_F(Resilvering, manual) {
   ASSERT_GE(resilverer.getProgress(), 4u);
   qdb_info("Files copied: " << resilverer.getProgress());
 
+  ASSERT_EQ(resilverer.getProgress(), resilverer.getTotalToSend());
+
   // Ensure the data is there after resilvering.
   for(size_t i = 0; i < NENTRIES; i++) {
     std::string value;
