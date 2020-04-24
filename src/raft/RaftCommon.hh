@@ -250,11 +250,11 @@ struct ReplicaStatus {
   bool online;
   LogIndex logSize;
   std::string version;
-  int resilveringProgress;
+  std::string resilveringProgress;
 
   ReplicaStatus() {}
-  ReplicaStatus(const RaftServer &trg, bool onl, LogIndex indx, const std::string &ver = "N/A", int resilvering = -1)
-  : target(trg), online(onl), logSize(indx), version(ver), resilveringProgress(resilvering) {}
+  ReplicaStatus(const RaftServer &trg, bool onl, LogIndex indx, const std::string &ver = "N/A", const std::string &resilv = "")
+  : target(trg), online(onl), logSize(indx), version(ver), resilveringProgress(resilv) {}
 
   bool upToDate(LogIndex leaderLogSize) const {
     if(!online) return false;
@@ -274,7 +274,7 @@ struct ReplicaStatus {
     if(online) {
       ss << "| ONLINE | ";
 
-      if(resilveringProgress >= 0) {
+      if(!resilveringProgress.empty()) {
         ss << "RESILVERING-PROGRESS " << resilveringProgress << " | ";
       }
       else if(upToDate(currentLogSize)) {

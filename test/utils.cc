@@ -151,8 +151,8 @@ TEST(Utils, ReplicaStatus) {
   ASSERT_EQ(replica.toString(30009), "localhost:123 | ONLINE | UP-TO-DATE | LOG-SIZE 10 | VERSION N/A");
   ASSERT_EQ(replica.toString(30010), "localhost:123 | ONLINE | LAGGING    | LOG-SIZE 10 | VERSION N/A");
 
-  replica = ReplicaStatus { RaftServer("localhost", 123), true, 10, "9.9.9", 5 };
-  ASSERT_EQ(replica.toString(123), "localhost:123 | ONLINE | RESILVERING-PROGRESS 5 | LOG-SIZE 10 | VERSION 9.9.9");
+  replica = ReplicaStatus { RaftServer("localhost", 123), true, 10, "9.9.9", "5/15" };
+  ASSERT_EQ(replica.toString(123), "localhost:123 | ONLINE | RESILVERING-PROGRESS 5/15 | LOG-SIZE 10 | VERSION 9.9.9");
 }
 
 TEST(Utils, replication_status) {

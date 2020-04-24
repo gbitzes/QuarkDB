@@ -407,15 +407,15 @@ void RaftReplicaTracker::updateStatus(bool online, LogIndex logSize) {
   statusLogSize = logSize;
 
   if(resilverer) {
-    statusResilveringProgress = resilverer->getProgress();
+    statusResilveringProgress.set(SSTR(resilverer->getProgress() << "/" << resilverer->getTotalToSend()));
   }
   else {
-    statusResilveringProgress = -1;
+    statusResilveringProgress.set("");
   }
 }
 
 ReplicaStatus RaftReplicaTracker::getStatus() {
-  return { target, statusOnline, statusLogSize, statusNodeVersion.get(), statusResilveringProgress };
+  return { target, statusOnline, statusLogSize, statusNodeVersion.get(), statusResilveringProgress.get() };
 }
 
 void RaftReplicaTracker::sendHeartbeats(ThreadAssistant &assistant) {
