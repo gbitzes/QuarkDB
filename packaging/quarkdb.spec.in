@@ -76,6 +76,14 @@ cd build
 %{__make}
 
 %install
+
+# "make" will remember to use devtoolset, but find-debuginfo.sh apears to be
+# an implicit part of the install section, and we definitely want to use updated
+# binutils when generating debuginfo.
+%if 0%{distribution} == 7
+source /opt/rh/devtoolset-8/enable
+%endif
+
 cd build
 %{__make} install
 
