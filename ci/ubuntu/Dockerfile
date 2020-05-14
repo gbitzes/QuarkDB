@@ -1,7 +1,7 @@
 # An ubuntu image + build dependencies of quarkdb + precompiled xrootd.
 # Used to improve CI build time.
 
-FROM ubuntu:18.10
+FROM ubuntu:20.04
 MAINTAINER Georgios Bitzes, georgios.bitzes@cern.ch, CERN 2018
 
 RUN apt-get update; apt-get install -y git
