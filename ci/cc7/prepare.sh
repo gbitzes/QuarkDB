@@ -6,7 +6,7 @@ set -e
 ## step.
 ##------------------------------------------------------------------------------
 
-yum install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils
+yum install -y gcc-c++ cmake3 make rpm-build which git yum-plugin-priorities yum-utils python3
 
 ##------------------------------------------------------------------------------
 ## Extract quarkdb build dependencies from its specfile.
