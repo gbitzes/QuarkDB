@@ -230,9 +230,9 @@ c8-image:
   - ""
   tags:
   - docker-image-build
-  only:
-    variables:
-      - $BUILD_IMAGES == "1"
+  rules:
+  - if: '$BUILD_IMAGES == "1"'
+    when: always
 
 cc7-image:
   stage: build-image
@@ -244,9 +244,9 @@ cc7-image:
   - ""
   tags:
   - docker-image-build
-  only:
-    variables:
-      - $BUILD_IMAGES == "1"
+  rules:
+  - if: '$BUILD_IMAGES == "1"'
+    when: always
 
 fedora-image:
   stage: build-image
@@ -258,9 +258,9 @@ fedora-image:
   - ""
   tags:
   - docker-image-build
-  only:
-    variables:
-      - $BUILD_IMAGES == "1"
+  rules:
+  - if: '$BUILD_IMAGES == "1"'
+    when: always
 
 ubuntu-image:
   stage: build-image
@@ -272,6 +272,6 @@ ubuntu-image:
   - ""
   tags:
   - docker-image-build
-  only:
-    variables:
-      - $BUILD_IMAGES == "1"
+  rules:
+  - if: '$BUILD_IMAGES == "1"'
+    when: always
