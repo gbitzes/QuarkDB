@@ -128,6 +128,16 @@ struct RaftMembers {
     return false;
   }
 
+  bool demoteToObserver(const RaftServer &member, std::string &err) {
+    if(erase_element(nodes, member)) {
+      observers.push_back(member);
+      return true;
+    }
+
+    err = SSTR(member.toString() << " is not a full member.");
+    return false;
+  }
+
   std::string toString() const {
     std::ostringstream ss;
     ss << serializeNodes(nodes);

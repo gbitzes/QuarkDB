@@ -965,6 +965,37 @@ TEST(RaftMembers, no_observers) {
   ASSERT_EQ(members.toString(), members2.toString());
 }
 
+TEST(RaftMembers, DemoteToObserver) {
+  std::vector<RaftServer> nodes = {
+    {"server1", 245},
+    {"localhost", 789},
+    {"server2.cern.ch", 1789}
+  };
+
+  std::vector<RaftServer> observers;
+  RaftMembers members(nodes, observers);
+  ASSERT_EQ(members.nodes, nodes);
+  ASSERT_EQ(members.observers, observers);
+
+  std::string err;
+  ASSERT_FALSE(members.demoteToObserver(RaftServer("localhost", 788), err));
+  ASSERT_EQ(err, "localhost:788 is not a full member.");
+
+  ASSERT_TRUE(members.demoteToObserver(RaftServer("localhost", 789), err));
+
+  nodes = {
+    {"server1", 245},
+    {"server2.cern.ch", 1789}
+  };
+
+  observers = {
+    {"localhost", 789},
+  };
+
+  ASSERT_EQ(members.nodes, nodes);
+  ASSERT_EQ(members.observers, observers);
+}
+
 TEST(Raft_BlockedWrites, basic_sanity) {
   RaftBlockedWrites blockedWrites;
 
