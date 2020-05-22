@@ -72,6 +72,11 @@ private:
   LinkStatus service(Connection *conn, Transaction &tx);
 
   //----------------------------------------------------------------------------
+  // Check if the removal of the given node would be acceptable
+  //----------------------------------------------------------------------------
+  bool checkIfNodeRemovalAcceptable(const RaftServer &srv);
+
+  //----------------------------------------------------------------------------
   // Raft commands should not be run in parallel, but be serialized
   //----------------------------------------------------------------------------
   std::mutex raftCommand;

@@ -337,6 +337,12 @@ bool RaftJournal::promoteObserver(RaftTerm term, const RaftServer &observer, std
   return membershipUpdate(term, newMembers, err);
 }
 
+bool RaftJournal::demoteToObserver(RaftTerm term, const RaftServer &member, std::string &err) {
+  RaftMembers newMembers = getMembers();
+  if(!newMembers.demoteToObserver(member, err)) return false;
+  return membershipUpdate(term, newMembers, err);
+}
+
 bool RaftJournal::appendNoLock(LogIndex index, const RaftEntry &entry, bool important) {
   if(index != logSize) {
     qdb_warn("attempted to insert journal entry at an invalid position. index = " << index << ", logSize = " << logSize);

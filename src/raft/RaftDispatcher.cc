@@ -75,6 +75,25 @@ LinkStatus RaftDispatcher::dispatchPubsub(Connection *conn, RedisRequest &req) {
   return publisher.dispatch(conn, req);
 }
 
+//------------------------------------------------------------------------------
+// Check if the removal of the given node would be acceptable
+//------------------------------------------------------------------------------
+bool RaftDispatcher::checkIfNodeRemovalAcceptable(const RaftServer &srv) {
+  // Build a replication status object with how the full members would
+  // look like after the node removal
+
+  ReplicationStatus replicationStatus = replicator.getStatus();
+  replicationStatus.removeReplicas(journal.getMembership().observers);
+
+  ReplicaStatus leaderStatus = { state.getMyself(), true, journal.getLogSize() };
+  replicationStatus.addReplica(leaderStatus);
+  if(replicationStatus.contains(srv)) {
+    replicationStatus.removeReplica(srv);
+  }
+
+  return replicationStatus.quorumUpToDate(leaderStatus.logSize);
+}
+
 LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
   if(req.getCommandType() == CommandType::PUBSUB) {
     return dispatchPubsub(conn, req);
@@ -235,7 +254,8 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
     }
     case RedisCommand::RAFT_ADD_OBSERVER:
     case RedisCommand::RAFT_REMOVE_MEMBER:
-    case RedisCommand::RAFT_PROMOTE_OBSERVER: {
+    case RedisCommand::RAFT_PROMOTE_OBSERVER:
+    case RedisCommand::RAFT_DEMOTE_TO_OBSERVER: {
       std::scoped_lock lock(raftCommand);
       // We need to lock the journal for writes during a membership update.
       // Otherwise, a different client might race to acquire the same position
@@ -259,20 +279,10 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         rc = journal.addObserver(snapshot->term, srv, err);
       }
       else if(req.getCommand() == RedisCommand::RAFT_REMOVE_MEMBER) {
-        // Build a replication status object with how the full members would
-        // look like after the update
-        ReplicationStatus replicationStatus = replicator.getStatus();
-        replicationStatus.removeReplicas(journal.getMembership().observers);
-
-        ReplicaStatus leaderStatus = { state.getMyself(), true, journal.getLogSize() };
-        replicationStatus.addReplica(leaderStatus);
-        if(replicationStatus.contains(srv)) {
-          replicationStatus.removeReplica(srv);
-        }
-
-        if(!replicationStatus.quorumUpToDate(leaderStatus.logSize)) {
+        if(!checkIfNodeRemovalAcceptable(srv)) {
           return conn->err("membership update blocked, new cluster would not have an up-to-date quorum");
         }
+
         rc = journal.removeMember(snapshot->term, srv, err);
       }
       else if(req.getCommand() == RedisCommand::RAFT_PROMOTE_OBSERVER) {
@@ -282,6 +292,13 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
         }
 
         rc = journal.promoteObserver(snapshot->term, srv, err);
+      }
+      else if(req.getCommand() == RedisCommand::RAFT_DEMOTE_TO_OBSERVER) {
+        if(!checkIfNodeRemovalAcceptable(srv)) {
+          return conn->err("membership update blocked, new cluster would not have an up-to-date quorum");
+        }
+
+        rc = journal.demoteToObserver(snapshot->term, srv, err);
       }
       else {
         qdb_throw("should never happen");

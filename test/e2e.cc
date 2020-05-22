@@ -996,6 +996,11 @@ TEST_F(Raft_e2e, membership_updates) {
   ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_PROMOTE_OBSERVER", myself(victim).toString()), "OK");
   RETRY_ASSERT_EQ(dispatcher(leaderID)->info().commitIndex, index + 3);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+
+  // .. and demote again
+  ASSERT_REPLY(tunnel(leaderID)->exec("RAFT_DEMOTE_TO_OBSERVER", myself(victim).toString()), "OK");
+  RETRY_ASSERT_EQ(dispatcher(leaderID)->info().commitIndex, index + 4);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
 }
 
 TEST_F(Raft_e2e, reject_dangerous_membership_update) {

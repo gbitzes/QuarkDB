@@ -90,6 +90,7 @@ public:
   bool addObserver(RaftTerm term, const RaftServer &observer, std::string &err);
   bool promoteObserver(RaftTerm term, const RaftServer &obserer, std::string &err);
   bool removeMember(RaftTerm term, const RaftServer &member, std::string &err);
+  bool demoteToObserver(RaftTerm term, const RaftServer &member, std::string &err);
 
   bool appendLeadershipMarker(LogIndex index, RaftTerm term, const RaftServer &leader);
   bool simulateDataLoss(size_t numberOfEntries);
