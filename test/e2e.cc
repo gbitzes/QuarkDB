@@ -1083,7 +1083,10 @@ TEST_F(Raft_e2e, leader_steps_down_after_follower_loss) {
   RaftTerm term = state(leaderID)->getSnapshot()->term;
 
   int followerID = (leaderID + 1)%2;
+
+  ASSERT_TRUE(tunnel(followerID)->checkConnection(std::chrono::milliseconds(100)));
   spindown(followerID);
+  ASSERT_FALSE(tunnel(followerID)->checkConnection(std::chrono::milliseconds(100)));
 
   RETRY_ASSERT_TRUE(term < state(leaderID)->getSnapshot()->term);
   ASSERT_TRUE(state(leaderID)->getSnapshot()->leader.empty());
