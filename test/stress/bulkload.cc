@@ -197,7 +197,7 @@ TEST(Bulkload, CreateConsensusShardFromExistingSM) {
 
   std::unique_ptr<ShardDirectory> shardDir;
   RaftServer srv("localhost", 123);
-  Status st;
+  quarkdb::Status st;
   shardDir.reset(ShardDirectory::create("/tmp/quarkdb-tests-shard-from-existing-sm/shard", "cluster-id", "shar-id", {srv}, 99, FsyncPolicy::kAsync, std::move(sm), st ));
   st.assertOk();
   ASSERT_EQ(sm.get(), nullptr);
