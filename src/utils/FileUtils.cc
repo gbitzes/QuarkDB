@@ -250,4 +250,22 @@ bool countFilesInDirectoryRecursively(const std::string &path, std::string &err,
   return true;
 }
 
+Status ensureSameFilesystem(std::string_view path1, std::string_view path2) {
+  struct stat stat1, stat2;
+
+  if(stat(std::string(path1).c_str(), &stat1) != 0) {
+    return Status(EINVAL, SSTR("cannot stat " << path1 << ": " << errno));
+  }
+
+  if(stat(std::string(path2).c_str(), &stat2) != 0) {
+    return Status(EINVAL, SSTR("cannot stat " << path2 << ": " << errno));
+  }
+
+  if(stat1.st_dev != stat2.st_dev) {
+    return Status(EINVAL, SSTR("paths not on the same filesystem"));
+  }
+
+  return Status();
+}
+
 }

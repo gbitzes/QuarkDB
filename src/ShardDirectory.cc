@@ -375,6 +375,11 @@ std::string ShardDirectory::checkpoint(std::string_view path) {
     return SSTR("Could not mkdir " << path << ": " << errno << " (" << strerror(errno) << ")");
   }
 
+  Status sameFs = ensureSameFilesystem(path, this->path);
+  if(!sameFs.ok()) {
+    return SSTR(sameFs.getMsg() << " (checkpoint needs to be on same physical fs as " << this->path << ")");
+  }
+
   std::string checkpointCurrent = pathJoin(path, "current");
   if(mkdir(checkpointCurrent.c_str(), S_IRWXU) != 0) {
     return SSTR("Could not mkdir " << checkpointCurrent << ": " << errno << " (" << strerror(errno) << ")");
@@ -388,7 +393,6 @@ std::string ShardDirectory::checkpoint(std::string_view path) {
     return err;
   }
 
-  // TODO, switch to if(configuration.getMode() == Mode::raft)
   if(journalptr) {
     std::string journalCheckpoint = pathJoin(checkpointCurrent, "raft-journal");
     rocksdb::Status st = getRaftJournal()->checkpoint(journalCheckpoint);

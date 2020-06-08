@@ -25,6 +25,7 @@
 #define __QUARKDB_FILE_UTILS_H__
 
 #include <string>
+#include "../Status.hh"
 
 namespace quarkdb {
 
@@ -41,6 +42,7 @@ void rename_directory_or_die(const std::string &source, const std::string &desti
 bool areFilePermissionsSecure(mode_t mode);
 bool readPasswordFile(const std::string &path, std::string &contents);
 bool countFilesInDirectoryRecursively(const std::string &path, std::string &err, size_t &nfiles);
+Status ensureSameFilesystem(std::string_view path1, std::string_view path2);
 
 }
 
