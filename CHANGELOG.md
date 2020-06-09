@@ -6,12 +6,17 @@
 - The mechanism meant to provide an early warning for potential ``MANIFEST``
 corruption was flaky, and would sometimes report a problem where none existed.
 
-### Improvements
+### New features
 - Implementation of an optional part of raft, pre-vote. This should prevent partitioned,
 or otherwise flaky rejoining servers from triggering unnecessary and disruptive elections.
 A node will first issue an experimental voting round before advancing its term, and start campaigning
 for earnest only if it has a good chance of winning.
+- Ability to demote a full node to observer through command ``raft-demote-to-observer``.
+
+### Improvements
 - Show resilvering progress in ``raft-info``.
+- Checkpoint creation through ``quarkdb-checkpoint`` will now fail if a different
+physical filesystem is specified.
 
 Many thanks to Franck Eyraud (JRC) for the bug report concerning erroneous ``MANIFEST``-related
 warning.
