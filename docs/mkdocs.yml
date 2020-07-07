@@ -45,6 +45,7 @@ nav:
       - Disk space: disk-space.md
       - Version upgrades: upgrading.md
       - Backup & restore: backup.md
+      - Failure scenarios: failure-scenarios.md
     - Configuration:
       - Password authentication: authentication.md
       - Journal trimming: journal-trimming.md
