@@ -114,6 +114,8 @@ private:
 
   std::mutex mEntriesMtx;
   std::map<ActiveEntry*, std::unique_ptr<ActiveEntry>> mEntries;
+
+  std::mutex mAcceptorMtx;
 };
 
 }

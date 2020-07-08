@@ -70,8 +70,10 @@ AsioPoller::AsioPoller(int port, size_t threadPoolSize, Dispatcher *disp)
 AsioPoller::~AsioPoller() {
   mShutdown = true;
 
+  std::unique_lock lock(mAcceptorMtx);
   mAcceptor4.close();
   mAcceptor6.close();
+  lock.unlock();
 
   mContext.stop();
   mInFlightTracker.setAcceptingRequests(false);
@@ -95,11 +97,15 @@ void AsioPoller::workerThread(ThreadAssistant &assistant) {
 //------------------------------------------------------------------------------
 void AsioPoller::requestAccept4() {
   mNextSocket4 = asio::ip::tcp::socket(mContext);
+
+  std::scoped_lock lock(mAcceptorMtx);
   mAcceptor4.async_accept(mNextSocket4, std::bind(&AsioPoller::handleAccept4, this, std::placeholders::_1));
 }
 
 void AsioPoller::requestAccept6() {
   mNextSocket6 = asio::ip::tcp::socket(mContext);
+
+  std::scoped_lock lock(mAcceptorMtx);
   mAcceptor6.async_accept(mNextSocket6, std::bind(&AsioPoller::handleAccept6, this, std::placeholders::_1));
 }
 
