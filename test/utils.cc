@@ -1197,4 +1197,15 @@ TEST(ParanoidManifestChecker, BasicSanity) {
   Status st = ParanoidManifestChecker::compareMTimes(manifest, newestSst);
   ASSERT_FALSE(st.ok());
   ASSERT_EQ(st.getMsg(), "3990 sec, sst:4000.0 vs m:10.0");
+
+  newestSst.tv_sec = 20;
+  st = ParanoidManifestChecker::compareMTimes(manifest, newestSst);
+  ASSERT_TRUE(st.ok());
+  ASSERT_EQ(st.getMsg(), "10 sec, sst:20.0 vs m:10.0");
+
+  manifest.tv_sec = 30;
+  newestSst.tv_sec = 20;
+  st = ParanoidManifestChecker::compareMTimes(manifest, newestSst);
+  ASSERT_TRUE(st.ok());
+  ASSERT_EQ(st.getMsg(), "-10 sec, sst:20.0 vs m:30.0");
 }
