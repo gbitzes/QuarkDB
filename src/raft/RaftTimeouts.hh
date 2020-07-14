@@ -63,6 +63,12 @@ private:
   mutable std::uniform_int_distribution<> dist;
 };
 
+enum class TimeoutStatus {
+  kNo,
+  kYes,
+  kArtificial
+};
+
 class RaftHeartbeatTracker {
 public:
   RaftHeartbeatTracker(const RaftTimeouts timeouts);
@@ -70,7 +76,7 @@ public:
 
   milliseconds refreshRandomTimeout();
   void heartbeat(std::chrono::steady_clock::time_point now);
-  bool timeout(std::chrono::steady_clock::time_point now);
+  TimeoutStatus timeout(std::chrono::steady_clock::time_point now);
 
   std::chrono::steady_clock::time_point getLastHeartbeat();
 

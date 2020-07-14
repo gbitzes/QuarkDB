@@ -119,15 +119,20 @@ void RaftHeartbeatTracker::triggerTimeout() {
   artificialTimeout = true;
 }
 
-bool RaftHeartbeatTracker::timeout(std::chrono::steady_clock::time_point now) {
+TimeoutStatus RaftHeartbeatTracker::timeout(std::chrono::steady_clock::time_point now) {
   std::scoped_lock lock(lastHeartbeatMutex);
   if(artificialTimeout) {
     qdb_event("Triggering an artificial timeout.");
     artificialTimeout = false;
-    return true;
+    return TimeoutStatus::kArtificial;
   }
 
-  return now - lastHeartbeat > randomTimeout;
+  bool isTimeout = now - lastHeartbeat > randomTimeout;
+  if(isTimeout) {
+    return TimeoutStatus::kYes;
+  }
+
+  return TimeoutStatus::kNo;
 }
 
 milliseconds RaftHeartbeatTracker::getRandomTimeout() {

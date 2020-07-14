@@ -1080,21 +1080,21 @@ TEST(RaftHeartbeatTracker, BasicSanity) {
   ASSERT_GE(timeout, defaultTimeouts.getLow());
   ASSERT_LE(timeout, defaultTimeouts.getHigh());
 
-  ASSERT_FALSE(tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
-  ASSERT_FALSE(tracker.timeout(now+timeout));
-  ASSERT_TRUE(tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
+  ASSERT_EQ(TimeoutStatus::kNo, tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
+  ASSERT_EQ(TimeoutStatus::kNo, tracker.timeout(now+timeout));
+  ASSERT_EQ(TimeoutStatus::kYes, tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
 
   tracker.heartbeat(now - std::chrono::milliseconds(1));
 
-  ASSERT_FALSE(tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
-  ASSERT_FALSE(tracker.timeout(now+timeout));
-  ASSERT_TRUE(tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
+  ASSERT_EQ(TimeoutStatus::kNo, tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
+  ASSERT_EQ(TimeoutStatus::kNo, tracker.timeout(now+timeout));
+  ASSERT_EQ(TimeoutStatus::kYes, tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
 
   tracker.heartbeat(now + std::chrono::milliseconds(1));
 
-  ASSERT_FALSE(tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
-  ASSERT_FALSE(tracker.timeout(now+timeout));
-  ASSERT_FALSE(tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
+  ASSERT_EQ(TimeoutStatus::kNo, tracker.timeout(now + timeout - std::chrono::milliseconds(1)));
+  ASSERT_EQ(TimeoutStatus::kNo, tracker.timeout(now+timeout));
+  ASSERT_EQ(TimeoutStatus::kNo, tracker.timeout(now+timeout+std::chrono::milliseconds(1)));
 }
 
 TEST(RaftVoteRequest, Describe) {

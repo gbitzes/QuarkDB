@@ -150,7 +150,6 @@ void RaftDirector::runForLeader() {
     qdb_info("Raft state has progressed since successful pre-vote round, retrying from scratch.");
     return;
   }
-
   //----------------------------------------------------------------------------
   // ^^^^^^^^^^^^^^^^^^^^^^^ OPTIONAL PART OF RAFT ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
   //----------------------------------------------------------------------------
@@ -196,19 +195,22 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
       // Since a veto means the next cluster leader cannot be me, completely
       // abstain from starting elections until we receive a heartbeat.
     }
-    else if(heartbeatTracker.timeout(std::chrono::steady_clock::now())) {
-      RaftMembership membership = journal.getMembership();
+    else {
+      TimeoutStatus timeoutStatus = heartbeatTracker.timeout(std::chrono::steady_clock::now());
+      if(timeoutStatus == TimeoutStatus::kYes || timeoutStatus == TimeoutStatus::kArtificial) {
+        RaftMembership membership = journal.getMembership();
 
-      if(membership.inLimbo()) {
-        qdb_warn("This node is in limbo: I don't know who the nodes of this cluster are, and I am not receiving heartbeats. Run quarkdb-add-observer on the current leader to add me to the cluster.");
-      }
-      else if(contains(membership.nodes, state.getMyself())) {
-        qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
-        runForLeader();
-        return;
-      }
-      else {
-        qdb_warn("I am not receiving heartbeats - not running for leader since in membership epoch " << membership.epoch << " I am not a full node. Will keep on waiting. Maybe I am not part of the members? Run 'raft-info' on the current leader to check the current members, and then run 'quarkdb-add-observer' to add me.");
+        if(membership.inLimbo()) {
+          qdb_warn("This node is in limbo: I don't know who the nodes of this cluster are, and I am not receiving heartbeats. Run quarkdb-add-observer on the current leader to add me to the cluster.");
+        }
+        else if(contains(membership.nodes, state.getMyself())) {
+          qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
+          runForLeader();
+          return;
+        }
+        else {
+          qdb_warn("I am not receiving heartbeats - not running for leader since in membership epoch " << membership.epoch << " I am not a full node. Will keep on waiting. Maybe I am not part of the members? Run 'raft-info' on the current leader to check the current members, and then run 'quarkdb-add-observer' to add me.");
+        }
       }
     }
   }
