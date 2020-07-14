@@ -61,6 +61,11 @@ public:
   //----------------------------------------------------------------------------
   Status getLastStatus() const;
 
+  //----------------------------------------------------------------------------
+  // Compare mtimes, verify if sane
+  //----------------------------------------------------------------------------
+  static Status compareMTimes(struct timespec manifest, struct timespec newestSst);
+
 private:
   std::string mPath;
   Synchronized<Status> mLastStatus;

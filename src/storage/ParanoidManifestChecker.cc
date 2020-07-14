@@ -100,4 +100,19 @@ Status ParanoidManifestChecker::getLastStatus() const {
   return mLastStatus.get();
 }
 
+//------------------------------------------------------------------------------
+// Compare mtimes, verify if sane
+//------------------------------------------------------------------------------
+Status ParanoidManifestChecker::compareMTimes(struct timespec manifest, struct timespec newestSst) {
+  int secDiff = newestSst.tv_sec - manifest.tv_sec;
+  std::string diff = SSTR(secDiff << " sec, sst:" << timespecToString(newestSst) << " vs m:" << timespecToString(manifest));
+
+  // 1 hour should be more than enough (?)
+  if(manifest.tv_sec != 0 && newestSst.tv_sec != 0 && secDiff >= 3600) {
+    return Status(1, diff);
+  }
+
+  return Status(0, diff);
+}
+
 }

@@ -42,6 +42,7 @@
 #include "redis/InternalFilter.hh"
 #include "redis/RedisEncodedResponse.hh"
 #include "storage/Randomization.hh"
+#include "storage/ParanoidManifestChecker.hh"
 #include "pubsub/SimplePatternMatcher.hh"
 #include "pubsub/ThreadSafeMultiMap.hh"
 #include "pubsub/SubscriptionTracker.hh"
@@ -1181,5 +1182,19 @@ TEST(FileUtils, RecursiveFileCount) {
   ASSERT_EQ(system("touch /tmp/qdb-test-filecount/dir1/dir2/dir3/dir4/dir5/4"), 0);
   ASSERT_TRUE(countFilesInDirectoryRecursively("/tmp/qdb-test-filecount/", error, nitems));
   ASSERT_EQ(nitems, 4u);
+}
 
+TEST(ParanoidManifestChecker, BasicSanity) {
+  struct timespec manifest, newestSst;
+
+  manifest.tv_sec = 10;
+  manifest.tv_nsec = 0;
+
+  // SST file newer than manifest by more than 1 hour, something is wrong
+  newestSst.tv_sec = 4000;
+  newestSst.tv_nsec = 0;
+
+  Status st = ParanoidManifestChecker::compareMTimes(manifest, newestSst);
+  ASSERT_FALSE(st.ok());
+  ASSERT_EQ(st.getMsg(), "3990 sec, sst:4000.0 vs m:10.0");
 }
