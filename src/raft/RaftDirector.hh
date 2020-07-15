@@ -48,7 +48,7 @@ private:
   void main();
   void followerLoop(RaftStateSnapshotPtr &snapshot);
   void leaderLoop(RaftStateSnapshotPtr &snapshot);
-  void runForLeader();
+  void runForLeader(bool preVote);
   void applyCommits();
   bool checkBasicSanity();
 

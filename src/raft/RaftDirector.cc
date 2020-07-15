@@ -113,7 +113,7 @@ bool RaftDirector::checkBasicSanity() {
   return sanity;
 }
 
-void RaftDirector::runForLeader() {
+void RaftDirector::runForLeader(bool preVote) {
   if(!checkBasicSanity()) {
     qdb_warn("Not running for leader because basic sanity check failed, something's wrong with this node.");
     return;
@@ -139,16 +139,18 @@ void RaftDirector::runForLeader() {
   //----------------------------------------------------------------------------
   // vvvvvvvvvvvvvvvvvvvvvvv OPTIONAL PART OF RAFT vvvvvvvvvvvvvvvvvvvvvvvvvvvvv
   //----------------------------------------------------------------------------
-  ElectionOutcome prevoteOutcome = RaftElection::performPreVote(votereq, state, contactDetails);
-  if(prevoteOutcome == ElectionOutcome::kVetoed) {
-    lastHeartbeatBeforeVeto = lastHeartbeat;
-    qdb_info("Pre-vote round for term " << snapshot->term + 1 << " resulted in a veto. This means, the next leader of this cluster cannot be me. Stopping election attempts until I receive a heartbeat.");
-  }
+  if(preVote) {
+    ElectionOutcome prevoteOutcome = RaftElection::performPreVote(votereq, state, contactDetails);
+    if(prevoteOutcome == ElectionOutcome::kVetoed) {
+      lastHeartbeatBeforeVeto = lastHeartbeat;
+      qdb_info("Pre-vote round for term " << snapshot->term + 1 << " resulted in a veto. This means, the next leader of this cluster cannot be me. Stopping election attempts until I receive a heartbeat.");
+    }
 
-  if(prevoteOutcome != ElectionOutcome::kElected) return;
-  if(!state.isSnapshotCurrent(snapshot.get())) {
-    qdb_info("Raft state has progressed since successful pre-vote round, retrying from scratch.");
-    return;
+    if(prevoteOutcome != ElectionOutcome::kElected) return;
+    if(!state.isSnapshotCurrent(snapshot.get())) {
+      qdb_info("Raft state has progressed since successful pre-vote round, retrying from scratch.");
+      return;
+    }
   }
   //----------------------------------------------------------------------------
   // ^^^^^^^^^^^^^^^^^^^^^^^ OPTIONAL PART OF RAFT ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -199,13 +201,15 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
       TimeoutStatus timeoutStatus = heartbeatTracker.timeout(std::chrono::steady_clock::now());
       if(timeoutStatus == TimeoutStatus::kYes || timeoutStatus == TimeoutStatus::kArtificial) {
         RaftMembership membership = journal.getMembership();
+        // No prevote for artificial timeout
+        bool preVote = timeoutStatus == TimeoutStatus::kYes;
 
         if(membership.inLimbo()) {
           qdb_warn("This node is in limbo: I don't know who the nodes of this cluster are, and I am not receiving heartbeats. Run quarkdb-add-observer on the current leader to add me to the cluster.");
         }
         else if(contains(membership.nodes, state.getMyself())) {
           qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
-          runForLeader();
+          runForLeader(preVote);
           return;
         }
         else {
