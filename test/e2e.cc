@@ -2140,6 +2140,9 @@ TEST_F(Raft_e2e, SharedDeque) {
   RETRY_ASSERT_TRUE(deque1.size(sz));
   ASSERT_EQ(sz, 0u);
 
+  RETRY_ASSERT_TRUE(deque2.size(sz));
+  ASSERT_EQ(sz, 0u);
+
   qclient::Status st = deque2.push_back("turtles");
   ASSERT_TRUE(st);
   RETRY_ASSERT_TRUE(deque1.size(sz) && sz == 1);
