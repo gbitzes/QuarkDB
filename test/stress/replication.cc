@@ -380,6 +380,41 @@ TEST_F(Replication, several_transitions) {
   ASSERT_TRUE(crossCheckJournals(0, 1, 2));
 }
 
+TEST_F(Replication, ArtificiallyObservedTerm) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term").get(), 
+    "(error) ERR wrong number of arguments for 'raft-observe-term' command");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term", "aaa").get(), 
+    "(error) ERR cannot parse term: aaa");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term", "-1").get(), 
+    "(error) ERR cannot parse term: -1");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term", "1.1").get(), 
+    "(error) ERR cannot parse term: 1.1");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term", "2").get(), 
+    "(integer) 1");
+
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  leaderID = getLeaderID();
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term", "1").get(), 
+    "(integer) 0");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term", "2").get(), 
+    "(integer) 0");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("raft-observe-term", "100").get(), 
+    "(integer) 1");
+  
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+}
+
 TEST_F(Replication, FollowerLaggingBy1m) {
   Connection::setPhantomBatchLimit(1);
 

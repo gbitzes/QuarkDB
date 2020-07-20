@@ -339,6 +339,20 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->raw(Formatter::journalScan(nextCursor, entries));
     }
+    case RedisCommand::RAFT_OBSERVE_TERM: {
+      if(req.size() != 2) {
+        return conn->errArgs(req[0]);
+      }
+
+      RaftTerm term = 0;
+      if(!ParseUtils::parseInt64(req[1], term) || term < 0) {
+        return conn->err(SSTR("cannot parse term: " << req[1]));
+      }
+
+      qdb_event("Artificially observing raft term " << term);
+      bool outcome = state.observed(term, {});
+      return conn->integer(outcome);
+    }
     default: {
       // Must be either a read, or write at this point.
       qdb_assert(req.getCommandType() == CommandType::WRITE || req.getCommandType() == CommandType::READ);
