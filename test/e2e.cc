@@ -46,7 +46,7 @@
 #include "qclient/network/AsyncConnector.hh"
 #include "qclient/network/HostResolver.hh"
 #include "qclient/shared/SharedDeque.hh"
-#include "qclient/shared/SharedHash.hh"
+#include "qclient/shared/PersistentSharedHash.hh"
 #include "qclient/shared/SharedManager.hh"
 #include "qclient/shared/TransientSharedHash.hh"
 #include "qclient/shared/Communicator.hh"
@@ -2431,7 +2431,7 @@ TEST_F(Raft_e2e, PushTypes) {
   );
 }
 
-TEST_F(Raft_e2e, SharedHash) {
+TEST_F(Raft_e2e, PersistentSharedHash) {
   spinup(0); spinup(1); spinup(2);
   RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
   int leaderID = getLeaderID();
@@ -2447,7 +2447,7 @@ TEST_F(Raft_e2e, SharedHash) {
   subopts.handshake = makeQClientHandshake();
   qclient::SharedManager sm2(members(), std::move(subopts));
 
-  qclient::SharedHash hash1(&sm, "my-shared-hash");
+  qclient::PersistentSharedHash hash1(&sm, "my-shared-hash");
   RETRY_ASSERT_EQ(hash1.getCurrentVersion(), 1u);
 
   hash1.set("k2", "v2");
@@ -2457,7 +2457,7 @@ TEST_F(Raft_e2e, SharedHash) {
   ASSERT_TRUE(hash1.get("k2", tmp));
   ASSERT_EQ(tmp, "v2");
 
-  qclient::SharedHash hash2(&sm, "my-shared-hash");
+  qclient::PersistentSharedHash hash2(&sm, "my-shared-hash");
   RETRY_ASSERT_EQ(hash2.getCurrentVersion(), 2u);
   ASSERT_TRUE(hash2.get("k2", tmp));
   ASSERT_EQ(tmp, "v2");
