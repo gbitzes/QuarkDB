@@ -208,7 +208,7 @@ c8-koji-scratch:
   script:
     - dnf install -y epel-release
     - dnf install -y koji
-    - dnf install -y git rpm-build python2 python3
+    - dnf install -y git rpm-build python2 python3 cern-krb5-conf krb5-workstation
     - mkdir ~/.koji
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
