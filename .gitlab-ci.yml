@@ -206,8 +206,9 @@ c8-koji-scratch:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/c8-base
   script:
-    - yum install -y koji
-    - yum install -y git rpm-build python python3
+    - dnf install -y epel-release
+    - dnf install -y koji
+    - dnf install -y git rpm-build python2 python3
     - mkdir ~/.koji
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
