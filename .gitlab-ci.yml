@@ -199,6 +199,7 @@ cc7-koji-scratch:
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
+    - koji hello
     - koji build --scratch --wait quarkdb7 ./build/SRPMS/*.src.rpm
   when: manual
 
@@ -207,12 +208,12 @@ c8-koji-scratch:
   image: gitlab-registry.cern.ch/linuxsupport/c8-base
   script:
     - dnf install -y epel-release
-    - dnf install -y koji
-    - dnf install -y git rpm-build python2 python3 cern-krb5-conf krb5-workstation
+    - dnf install -y koji git rpm-build python2 python3 cern-krb5-conf krb5-workstation
     - mkdir ~/.koji
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
+    - koji hello
     - koji build --scratch --wait quarkdb8 ./build/SRPMS/*.src.rpm
   when: manual
 
@@ -226,6 +227,7 @@ cc7-koji:
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
+    - koji hello
     - koji build --wait quarkdb7 ./build/SRPMS/*.src.rpm
     - cd build/SRPMS
     - TAG_NAME=$(echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
