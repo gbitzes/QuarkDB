@@ -199,7 +199,7 @@ cc7-koji-scratch:
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
-    - koji hello
+    - koji moshimoshi
     - koji build --scratch --wait quarkdb7 ./build/SRPMS/*.src.rpm
   when: manual
 
@@ -213,7 +213,7 @@ c8-koji-scratch:
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
-    - koji hello
+    - koji moshimoshi
     - koji build --scratch --wait quarkdb8 ./build/SRPMS/*.src.rpm
   when: manual
 
@@ -227,7 +227,7 @@ cc7-koji:
     - cp ci/koji/config ~/.koji
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
-    - koji hello
+    - koji moshimoshi
     - koji build --wait quarkdb7 ./build/SRPMS/*.src.rpm
     - cd build/SRPMS
     - TAG_NAME=$(echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
