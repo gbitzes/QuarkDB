@@ -193,6 +193,7 @@ cc7-koji-scratch:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/cc7-base
   script:
+    - cp ci/koji/linuxsupport7-stable.repo /etc/yum.repos.d/
     - yum install -y koji
     - yum install -y git rpm-build python python3
     - mkdir ~/.koji
