@@ -207,6 +207,7 @@ c8-koji-scratch:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/c8-base
   script:
+    - cp ci/koji/linuxsupport8-stable.repo /etc/yum.repos.d/
     - dnf install -y epel-release
     - dnf install -y koji git rpm-build python2 python3 cern-krb5-conf krb5-workstation
     - mkdir ~/.koji
