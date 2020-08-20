@@ -189,7 +189,7 @@ coverage:
     - branches@eos/quarkdb
     - tags@eos/quarkdb
 
-cc7-koji-scratch-2:
+cc7-koji-scratch:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/rpmci/kojicli
   script:
@@ -199,29 +199,11 @@ cc7-koji-scratch-2:
     - koji build --scratch --wait quarkdb7 ./build/SRPMS/*.src.rpm
   when: manual
 
-cc7-koji-scratch:
-  stage: koji
-  image: gitlab-registry.cern.ch/linuxsupport/cc7-base
-  script:
-    - cp ci/koji/linuxsupport7-stable.repo /etc/yum.repos.d/
-    - yum install -y koji
-    - yum install -y git rpm-build python python3
-    - mkdir ~/.koji
-    - cp ci/koji/config ~/.koji
-    - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
-    - packaging/make-srpm.sh
-    - koji build --scratch --wait quarkdb7 ./build/SRPMS/*.src.rpm
-  when: manual
-
 c8-koji-scratch:
   stage: koji
-  image: gitlab-registry.cern.ch/linuxsupport/c8-base
+  image: gitlab-registry.cern.ch/linuxsupport/rpmci/kojicli
   script:
-    - cp ci/koji/linuxsupport8-stable.repo /etc/yum.repos.d/
-    - dnf install -y epel-release
-    - dnf install -y koji git rpm-build python2 python3 cern-krb5-conf krb5-workstation
-    - mkdir ~/.koji
-    - cp ci/koji/config ~/.koji
+    - dnf install -y git rpm-build python2 python3
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
     - koji build --scratch --wait quarkdb8 ./build/SRPMS/*.src.rpm
