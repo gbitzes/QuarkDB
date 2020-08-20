@@ -203,7 +203,7 @@ c8-koji-scratch:
   stage: koji
   image: gitlab-registry.cern.ch/linuxsupport/rpmci/kojicli
   script:
-    - dnf install -y git rpm-build python2 python3
+    - yum install -y git rpm-build python python3
     - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
     - packaging/make-srpm.sh
     - koji build --scratch --wait quarkdb8 ./build/SRPMS/*.src.rpm
