@@ -46,11 +46,6 @@ Requires: libzstd
 BuildRequires: lz4-devel
 Requires: lz4
 
-%if 0%{rhel} == 8
-BuildRequires: epel-release
-Requires: epel-release
-%endif
-
 %if 0%{distribution} == 7
 BuildRequires: centos-release-scl
 BuildRequires: devtoolset-8
