@@ -224,6 +224,21 @@ cc7-koji:
   only:
     - tags@eos/quarkdb
 
+c8-koji:
+  stage: koji
+  image: gitlab-registry.cern.ch/linuxsupport/rpmci/kojicli
+  script:
+    - yum install -y git rpm-build python python3
+    - echo "${QDBKOJI_PASSWORD}" | kinit qdbkoji
+    - packaging/make-srpm.sh
+    - koji build --wait quarkdb8 ./build/SRPMS/*.src.rpm
+    - cd build/SRPMS
+    - TAG_NAME=$(echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
+    - koji tag-build quarkdb8-qa ${TAG_NAME}
+    - koji tag-build quarkdb8-stable ${TAG_NAME}
+  only:
+    - tags@eos/quarkdb
+
 c8-image:
   stage: build-image
   variables:
