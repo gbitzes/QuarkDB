@@ -1,8 +1,0 @@
-[linuxsupport8-stable]
-name=linuxsupport [stable]
-baseurl=http://linuxsoft.cern.ch/internal/repos/linuxsupport8-stable/x86_64/os
-enabled=1
-gpgcheck=True
-gpgkey=file:///etc/pki/rpm-gpg/RPM-GPG-KEY-kojiv2
-includepkgs=koji python2-koji python3-koji aims2-client
-priority=2

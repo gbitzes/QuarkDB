@@ -1,5 +1,0 @@
-[koji]
-server = https://kojihub.cern.ch/kojihub
-weburl = https://koji.cern.ch/
-topurl = https://koji.cern.ch/kojifiles
-authtype = kerberos
