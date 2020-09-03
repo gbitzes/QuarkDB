@@ -55,7 +55,9 @@ nav:
       - Membership updates: membership.md
     - Release notes: release-notes.md
   - Command reference:
-    - Strings: ref-strings.md
+    - String types:
+      - GET: ref/get.md
+      - SET: ref/set.md
   - Advanced topics:
     - Raft basics: raft.md
     - Write path: write-path.md
