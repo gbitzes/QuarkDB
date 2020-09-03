@@ -54,6 +54,8 @@ nav:
       - Bulkload mode: bulkload.md
       - Membership updates: membership.md
     - Release notes: release-notes.md
+  - Command reference:
+    - Strings: ref-strings.md
   - Advanced topics:
     - Raft basics: raft.md
     - Write path: write-path.md
