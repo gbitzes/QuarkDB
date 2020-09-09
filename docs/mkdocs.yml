@@ -55,12 +55,15 @@ nav:
       - Membership updates: membership.md
     - Release notes: release-notes.md
   - Command reference:
-    - String types:
-      - GET: ref/get.md
-      - SET: ref/set.md
     - Authentication:
       - AUTH: ref/auth.md
       - HMAC signing challenges: ref/hmac-signing-challenges.md
+    - String types:
+      - GET: ref/get.md
+      - SET: ref/set.md
+    - Hash types:
+      - HGET: ref/hget.md
+      - HSET: ref/hset.md
   - Advanced topics:
     - Raft basics: raft.md
     - Write path: write-path.md

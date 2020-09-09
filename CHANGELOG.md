@@ -17,6 +17,7 @@ for earnest only if it has a good chance of winning.
 - Show resilvering progress in ``raft-info``.
 - Checkpoint creation through ``quarkdb-checkpoint`` will now fail if a different
 physical filesystem is specified.
+- RPMs now available for CentOS 8.
 
 Many thanks to Franck Eyraud (JRC) for the bug report concerning erroneous ``MANIFEST``-related
 warning.
