@@ -59,13 +59,13 @@ nav:
       - AUTH: ref/auth.md
       - HMAC signing challenges: ref/hmac-signing-challenges.md
     - String types:
-      - GET: ref/get.md
-      - SET: ref/set.md
+      - GET: ref/string/get.md
+      - SET: ref/string/set.md
     - Hash types:
-      - HGET: ref/hget.md
-      - HSET: ref/hset.md
-      - HMSET: ref/hmset.md
-      - HEXISTS: ref/hexists.md
+      - HGET: ref/hash/hget.md
+      - HSET: ref/hash/hset.md
+      - HMSET: ref/hash/hmset.md
+      - HEXISTS: ref/hash/hexists.md
   - Advanced topics:
     - Raft basics: raft.md
     - Write path: write-path.md
