@@ -64,6 +64,8 @@ nav:
     - Hash types:
       - HGET: ref/hget.md
       - HSET: ref/hset.md
+      - HMSET: ref/hmset.md
+      - HEXISTS: ref/hexists.md
   - Advanced topics:
     - Raft basics: raft.md
     - Write path: write-path.md

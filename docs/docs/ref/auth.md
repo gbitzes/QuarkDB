@@ -13,3 +13,7 @@ OK
 127.0.0.1:4445> get key
 "contents"
 ```
+
+The password should be supplied each time a reconnection occurs. In QClient,
+reconnections from transient network failures are handled transparently -- the password
+should be supplied as part of the handshake, not through a regular command.
