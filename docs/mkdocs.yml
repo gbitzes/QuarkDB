@@ -66,6 +66,7 @@ nav:
       - HSET: ref/hash/hset.md
       - HMSET: ref/hash/hmset.md
       - HEXISTS: ref/hash/hexists.md
+      - HKEYS: ref/hash/hkeys.md
   - Advanced topics:
     - Raft basics: raft.md
     - Write path: write-path.md
