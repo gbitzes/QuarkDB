@@ -34,9 +34,11 @@
 #include "storage/KeyConstants.hh"
 #include "storage/LeaseInfo.hh"
 #include "health/HealthIndicator.hh"
+#include "storage/WriteStallWarner.hh"
 #include <rocksdb/db.h>
 #include <rocksdb/utilities/write_batch_with_index.h>
 #include <rocksdb/utilities/debug.h>
+#include <rocksdb/listener.h>
 #include <condition_variable>
 
 namespace quarkdb {
@@ -377,6 +379,8 @@ private:
 
   Timekeeper timeKeeper;
   RequestCounter requestCounter;
+
+  std::shared_ptr<WriteStallWarner> writeStallWarner;
 
   //----------------------------------------------------------------------------
   // Return health information regarding free space

@@ -137,6 +137,10 @@ StateMachine::StateMachine(std::string_view f, bool write_ahead_log, bool bulk_l
   options.level_compaction_dynamic_level_bytes = true;
   options.disable_auto_compactions = false;
 
+  // Warn on write stalls
+  writeStallWarner.reset(new WriteStallWarner("state-machine"));
+  options.listeners.emplace_back(writeStallWarner);
+
   if(bulkLoad) {
     qdb_warn("Opening state machine in bulkload mode.");
     writeAheadLog = false;

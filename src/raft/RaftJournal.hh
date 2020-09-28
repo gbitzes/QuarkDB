@@ -31,6 +31,7 @@
 #include "RaftCommon.hh"
 #include "RaftMembers.hh"
 #include "utils/FsyncThread.hh"
+#include "storage/WriteStallWarner.hh"
 
 namespace quarkdb {
 
@@ -150,6 +151,8 @@ private:
 
   std::condition_variable commitNotifier;
   std::condition_variable logUpdated;
+
+  std::shared_ptr<WriteStallWarner> writeStallWarner;
 
   //----------------------------------------------------------------------------
   // Utility functions for write batches

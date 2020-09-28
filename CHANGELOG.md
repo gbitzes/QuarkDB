@@ -12,6 +12,7 @@ or otherwise flaky rejoining servers from triggering unnecessary and disruptive 
 A node will first issue an experimental voting round before advancing its term, and start campaigning
 for earnest only if it has a good chance of winning.
 - Ability to demote a full node to observer through command ``raft-demote-to-observer``.
+- Print warnings in the logs whenever write-stalls are triggered
 
 ### Improvements
 - Show resilvering progress in ``raft-info``.

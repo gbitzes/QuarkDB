@@ -93,6 +93,7 @@ add_library(XrdQuarkDB SHARED
                                           storage/ReverseLocator.hh
                                           storage/StagingArea.hh
   storage/VersionedHashRevisionTracker.cc storage/VersionedHashRevisionTracker.hh
+  storage/WriteStallWarner.cc             storage/WriteStallWarner.hh
 
                                           utils/AssistedThread.hh
                                           utils/CommandParsing.hh
