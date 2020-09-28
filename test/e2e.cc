@@ -47,6 +47,9 @@
 #include "qclient/network/HostResolver.hh"
 #include "qclient/shared/SharedDeque.hh"
 #include "qclient/shared/PersistentSharedHash.hh"
+#include "qclient/shared/SharedHash.hh"
+#include "qclient/shared/UpdateBatch.hh"
+#include "qclient/shared/SharedHashSubscription.hh"
 #include "qclient/shared/SharedManager.hh"
 #include "qclient/shared/TransientSharedHash.hh"
 #include "qclient/shared/Communicator.hh"
@@ -2429,6 +2432,67 @@ TEST_F(Raft_e2e, PushTypes) {
     "2) 1) \"field-1\"\n"
     "   2) \"v999\"\n"
   );
+}
+
+TEST_F(Raft_e2e, SharedHash) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+  qdb_info("LeaderID: " << leaderID);
+
+  qclient::SubscriptionOptions subopts;
+  subopts.handshake = makeQClientHandshake();
+
+  qclient::SharedManager sm(members(), std::move(subopts));
+
+  subopts.handshake = makeQClientHandshake();
+  qclient::SharedManager sm2(members(), std::move(subopts));
+
+  qclient::SharedHash hash3(&sm2, "my-shared-hash");
+  std::unique_ptr<SharedHashSubscription> subscription = hash3.subscribe();
+
+  qclient::SharedHash hash1(&sm, "my-shared-hash");
+  qclient::SharedHash hash2(&sm2, "my-shared-hash");
+
+  std::this_thread::sleep_for(std::chrono::seconds(1));
+
+  qclient::UpdateBatch batch;
+  batch.setDurable("durable value", "123");
+  batch.setTransient("transient value", "345");
+  batch.setLocal("local value", "999");
+
+  hash1.set(batch);
+
+  std::string tmp;
+  RETRY_ASSERT_TRUE(hash1.get("durable value", tmp));
+  ASSERT_EQ(tmp, "123");
+
+  RETRY_ASSERT_TRUE(hash1.get("transient value", tmp));
+  ASSERT_EQ(tmp, "345");
+
+  ASSERT_TRUE(hash1.get("local value", tmp));
+  ASSERT_EQ(tmp, "999");
+
+  RETRY_ASSERT_TRUE(hash2.get("durable value", tmp));
+  ASSERT_EQ(tmp, "123");
+
+  RETRY_ASSERT_TRUE(hash2.get("transient value", tmp));
+  ASSERT_EQ(tmp, "345");
+
+  ASSERT_FALSE(hash2.get("local value", tmp));
+
+  RETRY_ASSERT_EQ(subscription->size(), 2u);
+  qclient::SharedHashUpdate update;
+
+  ASSERT_TRUE(subscription->front(update));
+  ASSERT_EQ(update.key, "transient value");
+  ASSERT_EQ(update.value, "345");
+
+  subscription->pop_front();
+
+  ASSERT_TRUE(subscription->front(update));
+  ASSERT_EQ(update.key, "durable value");
+  ASSERT_EQ(update.value, "123");
 }
 
 TEST_F(Raft_e2e, PersistentSharedHash) {
