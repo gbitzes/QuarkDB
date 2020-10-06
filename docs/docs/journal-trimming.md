@@ -15,8 +15,8 @@ journal entries. Values below 1 million are probably not reasonable for a produc
 deployment, and values below 100k are disallowed.
 
 * The batch size to use during trimming: This many entries will be deleted at once
-when it's time to apply trimming. Default value is 1 million. Aim for batch sizes
-around `1/50` of the total number of entries to keep.
+when it's time to apply trimming. Default value is 200k. Too high batch sizes
+might cause write stalls -- values higher than 1 million are not recommended.
 
 You can change the above values with the following command towards the leader. This
 sets total number of entries to keep at 10M, and batch size at 200k.

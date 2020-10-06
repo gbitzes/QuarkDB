@@ -89,7 +89,7 @@ TrimmingConfig RaftConfig::getTrimmingConfig() {
 
   if(st.IsNotFound()) {
     // Return default values
-    return { 50000000, 1000000 };
+    return { 50000000, 200000 };
   }
   else if(!st.ok()) {
     qdb_throw("Error when retrieving journal trim limit: " << st.ToString());
