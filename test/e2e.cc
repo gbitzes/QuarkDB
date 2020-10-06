@@ -2454,7 +2454,7 @@ TEST_F(Raft_e2e, SharedHash) {
   qclient::SharedHash hash1(&sm, "my-shared-hash");
   qclient::SharedHash hash2(&sm2, "my-shared-hash");
 
-  std::this_thread::sleep_for(std::chrono::seconds(1));
+  RETRY_ASSERT_EQ(hash1.getPersistentRevision(), 0u);
 
   qclient::UpdateBatch batch;
   batch.setDurable("durable value", "123");
@@ -2462,6 +2462,8 @@ TEST_F(Raft_e2e, SharedHash) {
   batch.setLocal("local value", "999");
 
   hash1.set(batch);
+
+  RETRY_ASSERT_EQ(hash1.getPersistentRevision(), 1u);
 
   std::string tmp;
   RETRY_ASSERT_TRUE(hash1.get("durable value", tmp));
