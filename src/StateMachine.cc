@@ -1941,7 +1941,7 @@ std::vector<HealthIndicator> StateMachine::getHealthIndicators() {
 }
 
 rocksdb::Status StateMachine::manualCompaction() {
-  qdb_event("Triggering manual compaction.. auto-compaction will be disabled while the manual one is running.");
+  qdb_event("Triggering manual state machine compaction.. auto-compaction will be disabled while the manual one is running.");
   // Disabling auto-compactions is a hack to prevent write-stalling. Pending compaction
   // bytes will jump to the total size of the DB as soon as a manual compaction is
   // issued, which will most likely stall or completely stop writes for a long time.
@@ -1956,6 +1956,7 @@ rocksdb::Status StateMachine::manualCompaction() {
   rocksdb::Status st = db->CompactRange(opts, nullptr, nullptr);
 
   THROW_ON_ERROR(db->SetOptions( { {"disable_auto_compactions", "false"} } ));
+  qdb_event("Manual state machine compaction has completed with status " << st.ToString());
   return st;
 }
 

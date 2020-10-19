@@ -111,6 +111,7 @@ public:
 
   Iterator getIterator(LogIndex startingPoint, bool mustMatchStartingPoint);
   rocksdb::Status scanContents(LogIndex startingPoint, size_t count, std::string_view match, std::vector<RaftEntryWithIndex> &out, LogIndex &nextCursor);
+  rocksdb::Status manualCompaction();
 
 private:
   void openDB(const std::string &path);

@@ -683,6 +683,30 @@ rocksdb::Status RaftJournal::scanContents(LogIndex startingPoint, size_t count, 
 }
 
 //------------------------------------------------------------------------------
+// Trigger manual compaction of the journal
+//------------------------------------------------------------------------------
+rocksdb::Status RaftJournal::manualCompaction() {
+  qdb_event("Triggering manual journal compaction.. auto-compaction will be disabled while the manual one is running.");
+  // Disabling auto-compactions is a hack to prevent write-stalling. Pending compaction
+  // bytes will jump to the total size of the DB as soon as a manual compaction is
+  // issued, which will most likely stall or completely stop writes for a long time.
+  // (depends on the size of the DB)
+  // This is a recommendation by rocksdb devs as a workaround: Disabling auto
+  // compactions will disable write-stalling as well.
+  THROW_ON_ERROR(db->SetOptions( { {"disable_auto_compactions", "true"} } ));
+
+  rocksdb::CompactRangeOptions opts;
+  opts.bottommost_level_compaction = rocksdb::BottommostLevelCompaction::kForce;
+
+  rocksdb::Status st = db->CompactRange(opts, nullptr, nullptr);
+
+  THROW_ON_ERROR(db->SetOptions( { {"disable_auto_compactions", "false"} } ));
+
+  qdb_event("Manual journal compaction has completed with status " << st.ToString());
+  return st;
+}
+
+//------------------------------------------------------------------------------
 // Iterator
 //------------------------------------------------------------------------------
 RaftJournal::Iterator RaftJournal::getIterator(LogIndex startingPoint, bool mustMatchStartingPoint) {

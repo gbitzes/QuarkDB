@@ -339,6 +339,13 @@ LinkStatus RaftDispatcher::dispatch(Connection *conn, RedisRequest &req) {
 
       return conn->raw(Formatter::journalScan(nextCursor, entries));
     }
+    case RedisCommand::RAFT_JOURNAL_MANUAL_COMPACTION: {
+      if(req.size() != 1) {
+        return conn->errArgs(req[0]);
+      }
+
+      return conn->fromStatus(journal.manualCompaction());
+    }
     case RedisCommand::RAFT_OBSERVE_TERM: {
       if(req.size() != 2) {
         return conn->errArgs(req[0]);

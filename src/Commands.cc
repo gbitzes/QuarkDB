@@ -140,6 +140,7 @@ struct cmdMapInit {
     redis_cmd_map["raft_journal_scan"] = {RedisCommand::RAFT_JOURNAL_SCAN, CommandType::RAFT};
     redis_cmd_map["raft_set_fsync_policy"] = {RedisCommand::RAFT_SET_FSYNC_POLICY, CommandType::RAFT};
     redis_cmd_map["raft_observe_term"] = {RedisCommand::RAFT_OBSERVE_TERM, CommandType::RAFT};
+    redis_cmd_map["raft_journal_manual_compaction"] = {RedisCommand::RAFT_JOURNAL_MANUAL_COMPACTION, CommandType::RAFT};
 
     redis_cmd_map["activate_stale_reads"] = {RedisCommand::ACTIVATE_STALE_READS, CommandType::RAFT};
 
