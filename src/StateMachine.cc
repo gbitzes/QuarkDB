@@ -1301,6 +1301,8 @@ rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, std::stri
 }
 
 void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   // Assert we're not setting the clock back..
   ClockValue prevValue;
   getClock(stagingArea, prevValue);
@@ -1322,6 +1324,7 @@ void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
 }
 
 rocksdb::Status StateMachine::lease_get(StagingArea &stagingArea, std::string_view key, ClockValue clockUpdate, LeaseInfo &info) {
+  std::scoped_lock lock(mExpirationCacheMutex);
 
   // Advance clock, and clear out any expired leases.
   maybeAdvanceClock(stagingArea, clockUpdate);
@@ -1484,12 +1487,16 @@ rocksdb::Status StateMachine::hclone(StagingArea &stagingArea, std::string_view 
 }
 
 void StateMachine::advanceClock(ClockValue newValue, LogIndex index) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   StagingArea stagingArea(*this);
   advanceClock(stagingArea, newValue);
   stagingArea.commit(index);
 }
 
 ClockValue StateMachine::maybeAdvanceClock(StagingArea &stagingArea, ClockValue clockUpdate) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   // Get current clock time.
   ClockValue currentClock;
   getClock(stagingArea, currentClock);
@@ -1520,6 +1527,8 @@ void StateMachine::getClock(StagingArea &stagingArea, ClockValue &value) {
 }
 
 void StateMachine::lease_get_pending_expiration_events(StagingArea &stagingArea, ClockValue &staticClock, ClockValue &dynamicClock, std::vector<ExpirationEvent> &events) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   events.clear();
 
   getClock(stagingArea, staticClock);
@@ -1539,11 +1548,15 @@ void StateMachine::getType(StagingArea &stagingArea, std::string_view key, std::
 }
 
 void StateMachine::getClock(ClockValue &value) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   StagingArea stagingArea(*this, true);
   getClock(stagingArea, value);
 }
 
 LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, std::string_view key, std::string_view value, ClockValue clockUpdate, uint64_t duration, LeaseInfo &info) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   qdb_assert(!value.empty());
 
   // First, some timekeeping, update clock time if necessary.
@@ -1602,6 +1615,8 @@ LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, std
 }
 
 rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, std::string_view key, ClockValue clockUpdate) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   // First, some timekeeping, update clock time if necessary.
   if(clockUpdate != 0u) {
     // maybeAdvanceClock will also call this function.. Avoid infinite loop

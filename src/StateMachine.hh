@@ -40,6 +40,7 @@
 #include <rocksdb/utilities/debug.h>
 #include <rocksdb/listener.h>
 #include <condition_variable>
+#include <mutex>
 
 namespace quarkdb {
 
@@ -381,6 +382,8 @@ private:
   RequestCounter requestCounter;
 
   std::shared_ptr<WriteStallWarner> writeStallWarner;
+
+  std::recursive_mutex mExpirationCacheMutex;
 
   //----------------------------------------------------------------------------
   // Return health information regarding free space
