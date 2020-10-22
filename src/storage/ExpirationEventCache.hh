@@ -41,11 +41,11 @@ public:
   bool empty() const;
   void remove(ClockValue cl, const std::string &leaseName);
   size_t size() const;
+  void clear();
 
-  ClockValue getFrontClock();
+  ClockValue getFrontDeadline();
   std::string getFrontLease();
   void pop_front();
-
 
 private:
   mutable std::mutex mMutex;

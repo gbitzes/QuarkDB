@@ -33,6 +33,7 @@
 #include "storage/KeyLocators.hh"
 #include "storage/KeyConstants.hh"
 #include "storage/LeaseInfo.hh"
+#include "storage/ExpirationEventCache.hh"
 #include "health/HealthIndicator.hh"
 #include "storage/WriteStallWarner.hh"
 #include <rocksdb/db.h>
@@ -383,7 +384,9 @@ private:
 
   std::shared_ptr<WriteStallWarner> writeStallWarner;
 
+  ExpirationEventCache mExpirationCache;
   std::recursive_mutex mExpirationCacheMutex;
+  void loadExpirationCache();
 
   //----------------------------------------------------------------------------
   // Return health information regarding free space

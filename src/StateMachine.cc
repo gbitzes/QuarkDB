@@ -157,6 +157,7 @@ StateMachine::StateMachine(std::string_view f, bool write_ahead_log, bool bulk_l
   ensureCompatibleFormat(!dirExists);
   ensureBulkloadSanity(!dirExists);
   ensureClockSanity(!dirExists);
+  loadExpirationCache();
   retrieveLastApplied();
 
   manifestChecker.reset(new ParanoidManifestChecker(filename));
@@ -1300,6 +1301,18 @@ rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, std::stri
   return operation.finalize(descriptor.getEndIndex() - descriptor.getStartIndex() - 1);
 }
 
+void StateMachine::loadExpirationCache() {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
+  StagingArea stagingArea(*this);
+  ExpirationEventIterator iter(stagingArea);
+
+  while(iter.valid()) {
+    mExpirationCache.insert(iter.getDeadline(), std::string(iter.getRedisKey()));
+    iter.next();
+  }
+}
+
 void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
   std::scoped_lock lock(mExpirationCacheMutex);
 
@@ -1312,11 +1325,8 @@ void StateMachine::advanceClock(StagingArea &stagingArea, ClockValue newValue) {
   }
 
   // Clear out any leases past the deadline
-  ExpirationEventIterator iter(stagingArea);
-
-  while(iter.valid() && iter.getDeadline() <= newValue) {
-    qdb_assert(lease_release(stagingArea, std::string(iter.getRedisKey()), ClockValue(0)).ok());
-    iter.next();
+  while(!mExpirationCache.empty() && mExpirationCache.getFrontDeadline() <= newValue) {
+    qdb_assert(lease_release(stagingArea, std::string(mExpirationCache.getFrontLease()), ClockValue(0)).ok());
   }
 
   // Update value
@@ -1592,6 +1602,7 @@ LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, std
   if(operation.keyExists()) {
     // Lease extension.. need to wipe out old pending expiration event
     ExpirationEventLocator oldEvent(descriptor.getEndIndex(), key);
+    mExpirationCache.remove(descriptor.getEndIndex(), std::string(key));
     THROW_ON_ERROR(stagingArea.exists(oldEvent.toView()));
     stagingArea.singleDelete(oldEvent.toView());
   }
@@ -1603,6 +1614,7 @@ LeaseAcquisitionStatus StateMachine::lease_acquire(StagingArea &stagingArea, std
 
   // Store expiration event.
   ExpirationEventLocator newEvent(expirationTimestamp, key);
+  mExpirationCache.insert(expirationTimestamp, std::string(key));
   stagingArea.put(newEvent.toView(), "1");
 
   // Update lease value.
@@ -1636,6 +1648,7 @@ rocksdb::Status StateMachine::lease_release(StagingArea &stagingArea, std::strin
 
   ExpirationEventLocator event(descriptor.getEndIndex(), key);
   THROW_ON_ERROR(stagingArea.exists(event.toView()));
+  mExpirationCache.remove(descriptor.getEndIndex(), std::string(key));
   stagingArea.singleDelete(event.toView());
 
   LeaseLocator leaseLocator(key);
@@ -1847,8 +1860,11 @@ rocksdb::Status StateMachine::scan(StagingArea &stagingArea, std::string_view cu
 }
 
 rocksdb::Status StateMachine::flushall(StagingArea &stagingArea) {
+  std::scoped_lock lock(mExpirationCacheMutex);
+
   int64_t tmp;
   remove_all_with_prefix("", tmp, stagingArea);
+  mExpirationCache.clear();
   return rocksdb::Status::OK();
 }
 

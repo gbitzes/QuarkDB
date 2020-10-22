@@ -1213,7 +1213,6 @@ TEST(ParanoidManifestChecker, BasicSanity) {
 
 TEST(ExpirationEventCache, BasicSanity) {
   ExpirationEventCache cache;
-
   ASSERT_EQ(cache.size(), 0u);
 
   cache.insert(1, "my-lease-1");
@@ -1226,7 +1225,7 @@ TEST(ExpirationEventCache, BasicSanity) {
   ASSERT_THROW(cache.remove(1, "my-lease-2"), FatalException);
   ASSERT_EQ(cache.size(), 1u);
 
-  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontDeadline(), 1u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
   cache.pop_front();
   ASSERT_THROW(cache.pop_front(), FatalException);
@@ -1243,15 +1242,15 @@ TEST(ExpirationEventCache, ThreeLeases) {
 
   ASSERT_EQ(cache.size(), 3u);
 
-  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontDeadline(), 1u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
   cache.pop_front();
 
-  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontDeadline(), 1u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-2");
   cache.pop_front();
 
-  ASSERT_EQ(cache.getFrontClock(), 2u);
+  ASSERT_EQ(cache.getFrontDeadline(), 2u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-3");
   cache.pop_front();
 
@@ -1260,31 +1259,52 @@ TEST(ExpirationEventCache, ThreeLeases) {
 
 TEST(ExpirationEventCache, ThreeLeasesWithUpdates) {
   ExpirationEventCache cache;
-
   ASSERT_EQ(cache.size(), 0u);
 
   cache.insert(1, "my-lease-1");
   cache.insert(1, "my-lease-2");
   cache.insert(2, "my-lease-3");
 
-  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontDeadline(), 1u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
 
   cache.remove(1, "my-lease-2");
   ASSERT_THROW(cache.remove(1, "my-lease-2"), FatalException);
   cache.insert(10, "my-lease-2");
 
-  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontDeadline(), 1u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
   cache.pop_front();
 
-  ASSERT_EQ(cache.getFrontClock(), 2u);
+  ASSERT_EQ(cache.getFrontDeadline(), 2u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-3");
   cache.pop_front();
 
-  ASSERT_EQ(cache.getFrontClock(), 10u);
+  ASSERT_EQ(cache.getFrontDeadline(), 10u);
   ASSERT_EQ(cache.getFrontLease(), "my-lease-2");
   cache.pop_front();
 
   ASSERT_TRUE(cache.empty());
+}
+
+TEST(ExpirationEventCache, OneConstantlyUpdating) {
+  ExpirationEventCache cache;
+  ASSERT_EQ(cache.size(), 0u);
+
+  std::string leaseName = "my-lease";
+  cache.insert(0, leaseName);
+  cache.insert(200, "another-lease");
+
+  for(size_t i = 1; i < 100; i++) {
+    ASSERT_EQ(cache.size(), 2u);
+    ASSERT_EQ(cache.getFrontDeadline(), i-1);
+    ASSERT_EQ(cache.getFrontLease(), leaseName);
+
+    cache.remove(i-1, leaseName);
+    cache.insert(i, leaseName);
+
+    ASSERT_EQ(cache.size(), 2u);
+    ASSERT_EQ(cache.getFrontDeadline(), i);
+    ASSERT_EQ(cache.getFrontLease(), leaseName);
+  }
 }

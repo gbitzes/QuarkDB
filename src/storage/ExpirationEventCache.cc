@@ -53,7 +53,7 @@ bool ExpirationEventCache::empty() const {
 //------------------------------------------------------------------------------
 // Get clock value in the front item
 //------------------------------------------------------------------------------
-ClockValue ExpirationEventCache::getFrontClock() {
+ClockValue ExpirationEventCache::getFrontDeadline() {
   std::scoped_lock lock(mMutex);
   return mContents.begin()->first;
 }
@@ -71,8 +71,8 @@ std::string ExpirationEventCache::getFrontLease() {
 //------------------------------------------------------------------------------
 void ExpirationEventCache::pop_front() {
   std::scoped_lock lock(mMutex);
-  qdb_assert(!mContents.empty());
   qdb_assert(mStoredLeases.erase(mContents.begin()->second) == 1u);
+  qdb_assert(!mContents.empty());
   mContents.erase(mContents.begin());
 }
 
@@ -103,4 +103,13 @@ void ExpirationEventCache::remove(ClockValue cl, const std::string &leaseName) {
 size_t ExpirationEventCache::size() const {
   std::scoped_lock lock(mMutex);
   return mContents.size();
+}
+
+//------------------------------------------------------------------------------
+// Clear contents
+//------------------------------------------------------------------------------
+void ExpirationEventCache::clear() {
+  std::scoped_lock lock(mMutex);
+  mStoredLeases.clear();
+  mContents.clear();
 }
