@@ -80,6 +80,7 @@ add_library(XrdQuarkDB SHARED
   redis/Transaction.cc                    redis/Transaction.hh
 
   storage/ConsistencyScanner.cc           storage/ConsistencyScanner.hh
+  storage/ExpirationEventCache.cc         storage/ExpirationEventCache.hh
   storage/ExpirationEventIterator.cc      storage/ExpirationEventIterator.hh
   storage/InternalKeyParsing.cc           storage/InternalKeyParsing.hh
   storage/KeyConstants.cc                 storage/KeyConstants.hh

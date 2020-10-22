@@ -43,6 +43,7 @@
 #include "redis/RedisEncodedResponse.hh"
 #include "storage/Randomization.hh"
 #include "storage/ParanoidManifestChecker.hh"
+#include "storage/ExpirationEventCache.hh"
 #include "pubsub/SimplePatternMatcher.hh"
 #include "pubsub/ThreadSafeMultiMap.hh"
 #include "pubsub/SubscriptionTracker.hh"
@@ -1208,4 +1209,82 @@ TEST(ParanoidManifestChecker, BasicSanity) {
   st = ParanoidManifestChecker::compareMTimes(manifest, newestSst);
   ASSERT_TRUE(st.ok());
   ASSERT_EQ(st.getMsg(), "-10 sec, sst:20.0 vs m:30.0");
+}
+
+TEST(ExpirationEventCache, BasicSanity) {
+  ExpirationEventCache cache;
+
+  ASSERT_EQ(cache.size(), 0u);
+
+  cache.insert(1, "my-lease-1");
+  ASSERT_EQ(cache.size(), 1u);
+  
+  ASSERT_THROW(cache.insert(1, "my-lease-1"), FatalException);
+  ASSERT_THROW(cache.insert(2, "my-lease-1"), FatalException);
+  ASSERT_THROW(cache.insert(0, "my-lease-1"), FatalException);
+
+  ASSERT_THROW(cache.remove(1, "my-lease-2"), FatalException);
+  ASSERT_EQ(cache.size(), 1u);
+
+  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
+  cache.pop_front();
+  ASSERT_THROW(cache.pop_front(), FatalException);
+  ASSERT_TRUE(cache.empty());
+}
+
+TEST(ExpirationEventCache, ThreeLeases) {
+  ExpirationEventCache cache;
+  ASSERT_EQ(cache.size(), 0u);
+
+  cache.insert(1, "my-lease-1");
+  cache.insert(1, "my-lease-2");
+  cache.insert(2, "my-lease-3");
+
+  ASSERT_EQ(cache.size(), 3u);
+
+  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
+  cache.pop_front();
+
+  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-2");
+  cache.pop_front();
+
+  ASSERT_EQ(cache.getFrontClock(), 2u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-3");
+  cache.pop_front();
+
+  ASSERT_TRUE(cache.empty());
+}
+
+TEST(ExpirationEventCache, ThreeLeasesWithUpdates) {
+  ExpirationEventCache cache;
+
+  ASSERT_EQ(cache.size(), 0u);
+
+  cache.insert(1, "my-lease-1");
+  cache.insert(1, "my-lease-2");
+  cache.insert(2, "my-lease-3");
+
+  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
+
+  cache.remove(1, "my-lease-2");
+  ASSERT_THROW(cache.remove(1, "my-lease-2"), FatalException);
+  cache.insert(10, "my-lease-2");
+
+  ASSERT_EQ(cache.getFrontClock(), 1u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-1");
+  cache.pop_front();
+
+  ASSERT_EQ(cache.getFrontClock(), 2u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-3");
+  cache.pop_front();
+
+  ASSERT_EQ(cache.getFrontClock(), 10u);
+  ASSERT_EQ(cache.getFrontLease(), "my-lease-2");
+  cache.pop_front();
+
+  ASSERT_TRUE(cache.empty());
 }
