@@ -2443,6 +2443,8 @@ TEST_F(Raft_e2e, SharedHash) {
 
   qclient::SubscriptionOptions subopts;
   subopts.handshake = makeQClientHandshake();
+  subopts.retryStrategy = qclient::RetryStrategy::WithTimeout(
+                           std::chrono::minutes(2));
 
   qclient::SharedManager sm(members(), std::move(subopts));
 
@@ -2455,6 +2457,9 @@ TEST_F(Raft_e2e, SharedHash) {
   qclient::SharedHash hash1(&sm, "my-shared-hash");
   qclient::SharedHash hash2(&sm2, "my-shared-hash");
 
+  ASSERT_REPLY_DESCRIBE(sm.getQClient()->exec("PING").get(), "PONG");
+  ASSERT_REPLY_DESCRIBE(sm2.getQClient()->exec("PING").get(), "PONG");
+
   RETRY_ASSERT_EQ(hash1.getPersistentRevision(), 0u);
 
   qclient::UpdateBatch batch;
@@ -2462,7 +2467,7 @@ TEST_F(Raft_e2e, SharedHash) {
   batch.setTransient("transient value", "345");
   batch.setLocal("local value", "999");
 
-  hash1.set(batch);
+  hash1.set(batch).get();
 
   RETRY_ASSERT_EQ(hash1.getPersistentRevision(), 1u);
 
