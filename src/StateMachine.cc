@@ -1302,9 +1302,8 @@ rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, std::stri
 }
 
 void StateMachine::loadExpirationCache() {
-  // To be called only during construction -- no lock
-
   StagingArea stagingArea(*this);
+  std::scoped_lock lock(mExpirationCacheMutex);
   ExpirationEventIterator iter(stagingArea);
 
   while(iter.valid()) {
@@ -1497,9 +1496,8 @@ rocksdb::Status StateMachine::hclone(StagingArea &stagingArea, std::string_view 
 }
 
 void StateMachine::advanceClock(ClockValue newValue, LogIndex index) {
-  std::scoped_lock lock(mExpirationCacheMutex);
-
   StagingArea stagingArea(*this);
+  std::scoped_lock lock(mExpirationCacheMutex);
   advanceClock(stagingArea, newValue);
   stagingArea.commit(index);
 }
@@ -1558,9 +1556,8 @@ void StateMachine::getType(StagingArea &stagingArea, std::string_view key, std::
 }
 
 void StateMachine::getClock(ClockValue &value) {
-  std::scoped_lock lock(mExpirationCacheMutex);
-
   StagingArea stagingArea(*this, true);
+  std::scoped_lock lock(mExpirationCacheMutex);
   getClock(stagingArea, value);
 }
 
