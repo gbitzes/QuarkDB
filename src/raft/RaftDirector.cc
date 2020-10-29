@@ -205,7 +205,7 @@ void RaftDirector::followerLoop(RaftStateSnapshotPtr &snapshot) {
         bool preVote = timeoutStatus == TimeoutStatus::kYes;
 
         if(membership.inLimbo()) {
-          qdb_warn("This node is in limbo: I don't know who the nodes of this cluster are, and I am not receiving heartbeats. Run quarkdb-add-observer on the current leader to add me to the cluster.");
+          qdb_warn("This node is in limbo: I don't know who the nodes of this cluster are, and I am not receiving heartbeats. Run 'raft-add-observer " << state.getMyself().toString() << "' on the current leader to add me to the cluster.");
         }
         else if(contains(membership.nodes, state.getMyself())) {
           qdb_event(state.getMyself().toString() <<  ": TIMEOUT after " << randomTimeout.count() << "ms, I am not receiving heartbeats. Attempting to start election.");
