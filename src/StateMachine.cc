@@ -1302,7 +1302,7 @@ rocksdb::Status StateMachine::dequeTrimFront(StagingArea &stagingArea, std::stri
 }
 
 void StateMachine::loadExpirationCache() {
-  std::scoped_lock lock(mExpirationCacheMutex);
+  // To be called only during construction -- no lock
 
   StagingArea stagingArea(*this);
   ExpirationEventIterator iter(stagingArea);
