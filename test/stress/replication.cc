@@ -50,6 +50,21 @@ class CommunicatorTest : public TestCluster3NodesFixture {};
 class Membership : public TestCluster5NodesFixture {};
 class SingleNodeInitially : public TestCluster10Nodes1InitialFixture {};
 
+TEST_F(Replication, ArtificiallySlowWrite) {
+  spinup(0); spinup(1); spinup(2);
+  RETRY_ASSERT_TRUE(checkStateConsensus(0, 1, 2));
+  int leaderID = getLeaderID();
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("artificially-slow-write-never-use-this", "-1").get(),
+   "(error) ERR Invalid argument: value is not an integer or out of range");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("artificially-slow-write-never-use-this", "test").get(),
+   "(error) ERR Invalid argument: value is not an integer or out of range");
+
+  ASSERT_REPLY_DESCRIBE(tunnel(leaderID)->exec("artificially-slow-write-never-use-this", "1000").get(),
+   "OK");
+}
+
 TEST_F(Replication, entries_50k_with_follower_loss) {
   Connection::setPhantomBatchLimit(1);
 

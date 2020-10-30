@@ -118,6 +118,8 @@ struct cmdMapInit {
     redis_cmd_map["tx_readonly"] = {RedisCommand::TX_READONLY, CommandType::READ};
     redis_cmd_map["tx_readwrite"] = {RedisCommand::TX_READWRITE, CommandType::WRITE};
 
+    redis_cmd_map["artificially_slow_write_never_use_this"] = {RedisCommand::ARTIFICIALLY_SLOW_WRITE_NEVER_USE_THIS, CommandType::WRITE};
+
     // These have been retained for compatibility, to ensure old raft journal
     // entries can still be processed correctly. TODO: Remove after a couple of releases.
     redis_cmd_map["multiop_read"] = {RedisCommand::TX_READONLY, CommandType::READ};

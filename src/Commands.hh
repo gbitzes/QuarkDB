@@ -68,6 +68,8 @@ enum class RedisCommand {
   HINCRBYFLOAT,
   HCLONE,
 
+  ARTIFICIALLY_SLOW_WRITE_NEVER_USE_THIS,
+
   LHMSET,
   LHSET,
   LHGET,

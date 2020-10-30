@@ -1357,6 +1357,18 @@ rocksdb::Status StateMachine::lease_get(StagingArea &stagingArea, std::string_vi
   return rocksdb::Status::OK();
 }
 
+rocksdb::Status StateMachine::artificiallySlowWriteNeverUseThis(StagingArea &stagingArea, std::string_view sleepStr) {
+  // Artificially block the state machine for the specified duration of time
+  int64_t sleepMs;
+
+  if(!ParseUtils::parseInt64(sleepStr, sleepMs) || sleepMs < 0) {
+    return malformed("value is not an integer or out of range");
+  }
+  
+  std::this_thread::sleep_for(std::chrono::milliseconds(sleepMs));
+  return rocksdb::Status::OK();
+}
+
 rocksdb::Status StateMachine::vhset(StagingArea &stagingArea, std::string_view key, std::string_view field, std::string_view value, uint64_t &version) {
   WriteOperation operation(stagingArea, key, KeyType::kVersionedHash);
   if(!operation.valid()) return wrong_type();

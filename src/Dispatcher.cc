@@ -442,6 +442,11 @@ RedisEncodedResponse RedisDispatcher::dispatchWrite(StagingArea &stagingArea, Re
       if(!st.ok()) return Formatter::fromStatus(st);
       return Formatter::ok();
     }
+    case RedisCommand::ARTIFICIALLY_SLOW_WRITE_NEVER_USE_THIS: {
+      if(request.size() != 2) return errArgs(request);
+      rocksdb::Status st = store.artificiallySlowWriteNeverUseThis(stagingArea, request[1]);
+      return Formatter::fromStatus(st);
+    }
     case RedisCommand::VHSET: {
       if(request.size() !=  4) return errArgs(request);
 

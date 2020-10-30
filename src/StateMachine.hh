@@ -214,6 +214,8 @@ public:
   rocksdb::Status vhgetall(std::string_view key, std::vector<std::string> &res, uint64_t &version);
   rocksdb::Status rawScanTombstones(std::string_view seek, size_t count, std::vector<std::string> &keys);
 
+  rocksdb::Status artificiallySlowWriteNeverUseThis(StagingArea &stagingArea, std::string_view sleepTime);
+
   //----------------------------------------------------------------------------
   // Internal configuration, not exposed to users through 'KEYS' and friends.
   // Has completely its own key namespace and does not interact in any way
