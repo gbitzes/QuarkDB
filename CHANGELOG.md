@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.3 (2020-11-13)
 
 ### Bug fixes
 - The mechanism meant to provide an early warning for potential ``MANIFEST``
@@ -12,7 +12,7 @@ or otherwise flaky rejoining servers from triggering unnecessary and disruptive 
 A node will first issue an experimental voting round before advancing its term, and start campaigning
 for earnest only if it has a good chance of winning.
 - Ability to demote a full node to observer through command ``raft-demote-to-observer``.
-- Print warnings in the logs whenever write-stalls are triggered
+- Print warnings in the logs whenever write-stalls are triggered.
 
 ### Improvements
 - Show resilvering progress in ``raft-info``.
@@ -21,6 +21,7 @@ physical filesystem is specified.
 - RPMs now available for CentOS 8.
 - Print explicit warnings in the log in case of write stalling.
 - Reduce default trimming batch size to 200k.
+- Add in-memory cache for leases to significantly speed up all lease-related operations.
 
 Many thanks to Franck Eyraud (JRC) for the bug report concerning erroneous ``MANIFEST``-related
 warning.
