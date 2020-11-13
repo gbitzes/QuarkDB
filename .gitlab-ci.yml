@@ -218,7 +218,7 @@ cc7-koji:
     - packaging/make-srpm.sh
     - koji build --wait quarkdb7 ./build/SRPMS/*.src.rpm
     - cd build/SRPMS
-    - TAG_NAME=$(echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
+    - TAG_NAME=$(echo *.src.rpm | python2 -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
     - koji tag-build quarkdb7-qa ${TAG_NAME}
     - koji tag-build quarkdb7-stable ${TAG_NAME}
   only:
@@ -233,7 +233,7 @@ c8-koji:
     - packaging/make-srpm.sh
     - koji build --wait quarkdb8 ./build/SRPMS/*.src.rpm
     - cd build/SRPMS
-    - TAG_NAME=$(echo *.src.rpm | python -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
+    - TAG_NAME=$(echo *.src.rpm | python2 -c "import sys; inp = sys.stdin.readlines()[0][0:-1]; print('.'.join(inp.split('.')[0:-2])); ")
     - koji tag-build quarkdb8-qa ${TAG_NAME}
     - koji tag-build quarkdb8-stable ${TAG_NAME}
   only:
