@@ -223,6 +223,7 @@ cc7-koji:
     - koji tag-build quarkdb7-stable ${TAG_NAME}
   only:
     - tags@eos/quarkdb
+  allow_failure: true
 
 c8-koji:
   stage: koji
@@ -238,6 +239,7 @@ c8-koji:
     - koji tag-build quarkdb8-stable ${TAG_NAME}
   only:
     - tags@eos/quarkdb
+  allow_failure: true
 
 c8-image:
   stage: build-image
